@@ -1,6 +1,6 @@
 ## OpenSearch AI Flow Framework
 
-This project is an OpenSearch plugin that provides enables builders to innovate AI apps on OpenSearch with configurable automation for OpenSearch AI use cases. 
+This project is an OpenSearch plugin that enables builders to innovate AI apps on OpenSearch with configurable automation for OpenSearch AI use cases. 
 
 The current process of using ML offerings in OpenSearch, such as Semantic Search , requires users to handle complex setup and pre-processing tasks, and send verbose user queries, both of which can be time-consuming and error-prone.
 
