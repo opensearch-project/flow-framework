@@ -36,8 +36,8 @@ publishing {
               }
               developers {
                 developer {
-                  name = "OpenSearch"
-                  url = "https://github.com/opensearch-project/opensearch-plugin-template-java"
+                  name = "OpenSearch AI Flow Framework Plugin"
+                  url = "https://github.com/opensearch-project/opensearch-ai-flow-framework"
                 }
               }
             }
