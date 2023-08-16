@@ -2,11 +2,10 @@ name: Build and Test Plugin
 
 on:
   push:
-    branches:
-      - "*"
+    branches-ignore:
+      - 'whitesource-remediate/**'
   pull_request:
-    branches:
-      - "*"
+    types: [opened, synchronize, reopened]
 
 jobs:
   spotless:
