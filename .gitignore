@@ -10,6 +10,7 @@ out/
 # eclipse files
 .classpath
 .project
+.settings
 
 # gradle stuff
 .gradle/

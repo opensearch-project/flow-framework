@@ -1,0 +1,35 @@
+name: Build and Test Plugin
+
+on:
+  push:
+    branches:
+      - "*"
+  pull_request:
+    branches:
+      - "*"
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        os:
+          - ubuntu-latest
+          - macOS-latest
+          - windows-latest
+        java:
+          - 17
+    name: Build and Test Plugin Template
+    if: github.repository == 'opensearch-project/opensearch-ai-flow-framework'
+    runs-on: ${{ matrix.os }}
+
+    steps:
+    - uses: actions/checkout@v3
+    - name: Set up JDK ${{ matrix.java }}
+      uses: actions/setup-java@v3
+      with:
+        java-version: ${{ matrix.java }}
+        distribution: temurin
+
+    - name: Build and Run Tests
+      run: |
+          ./gradlew check
