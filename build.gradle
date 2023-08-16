@@ -61,6 +61,7 @@ validateNebulaPom.enabled = false
 buildscript {
     ext {
         opensearch_version = System.getProperty("opensearch.version", "3.0.0-SNAPSHOT")
+        System.setProperty('tests.security.manager', 'false')
     }
 
     repositories {
@@ -130,6 +131,14 @@ allprojects {
 test {
     include '**/*Tests.class'
 }
+
+jacocoTestReport {
+    dependsOn test
+    reports {
+        xml.required = true
+    }
+}
+tasks.named("check").configure { dependsOn(jacocoTestReport) }
 
 task integTest(type: RestIntegTestTask) {
     description = "Run tests against a cluster"
