@@ -44,7 +44,13 @@ jobs:
       with:
         java-version: ${{ matrix.java }}
         distribution: temurin
-
     - name: Build and Run Tests
       run: |
           ./gradlew check
+    - name: Upload Coverage Report
+      if: |
+        ${{ matrix.os == 'ubuntu-latest'
+          && success() }}
+      uses: codecov/codecov-action@v3
+      with:
+        file: ./build/reports/jacoco/test/jacocoTestReport.xml
