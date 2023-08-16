@@ -89,11 +89,11 @@ repositories {
 
 dependencies {
     implementation "org.opensearch:opensearch:${opensearch_version}"
-    compileOnly "com.google.guava:guava:32.0.1-jre"
+    compileOnly "com.google.guava:guava:32.1.2-jre"
 
     configurations.all {
         resolutionStrategy {
-            force("com.google.guava:guava:32.0.1-jre") // CVE for 31.1
+            force("com.google.guava:guava:32.1.2-jre") // CVE for 31.1
         }
     }
 }
