@@ -1,0 +1,55 @@
+name: Build and Test Plugin
+
+on:
+  push:
+    branches-ignore:
+      - 'whitesource-remediate/**'
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+jobs:
+  spotless:
+    if: github.repository == 'opensearch-project/opensearch-ai-flow-framework'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Spotless Check
+        run: ./gradlew spotlessCheck
+  javadoc:
+    if: github.repository == 'opensearch-project/opensearch-ai-flow-framework'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Javadoc CheckStyle
+        run: ./gradlew checkstyleMain
+      - name: Javadoc Check
+        run: ./gradlew javadoc
+  build:
+    needs: [spotless, javadoc]
+    strategy:
+      matrix:
+        os:
+          - ubuntu-latest
+          - macOS-latest
+          - windows-latest
+        java:
+          - 17
+    name: Build and Test Plugin Template
+    if: github.repository == 'opensearch-project/opensearch-ai-flow-framework'
+    runs-on: ${{ matrix.os }}
+
+    steps:
+    - uses: actions/checkout@v3
+    - name: Set up JDK ${{ matrix.java }}
+      uses: actions/setup-java@v3
+      with:
+        java-version: ${{ matrix.java }}
+        distribution: temurin
+    - name: Build and Run Tests
+      run: |
+          ./gradlew check
+    - name: Upload Coverage Report
+      if: matrix.os == 'ubuntu-latest'
+      uses: codecov/codecov-action@v3
+      with:
+        file: ./build/reports/jacoco/test/jacocoTestReport.xml

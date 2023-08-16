@@ -1,0 +1,181 @@
+import java.nio.file.Files
+import org.opensearch.gradle.test.RestIntegTestTask
+
+apply plugin: 'java'
+apply plugin: 'idea'
+apply plugin: 'opensearch.opensearchplugin'
+apply plugin: 'opensearch.yaml-rest-test'
+apply plugin: 'opensearch.pluginzip'
+// for formatting and license headers
+apply plugin: 'com.diffplug.spotless'
+apply from: 'formatter/formatting.gradle'
+// for javadocs and checks spotless doesn't do
+apply plugin: 'checkstyle'
+// for coverage and diff
+apply plugin: 'jacoco'
+apply plugin: 'com.form.diff-coverage'
+
+def pluginName = 'flow-framework'
+def pluginDescription = 'OpenSearch plugin that enables builders to innovate AI apps on OpenSearch'
+def projectPath = 'org.opensearch'
+def pathToPlugin = 'flowframework'
+def pluginClassName = 'FlowFrameworkPlugin'
+group = "org.opensearch.flowframework"
+
+publishing {
+    publications {
+        pluginZip(MavenPublication) { publication ->
+            pom {
+              name = pluginName
+              description = pluginDescription
+              licenses {
+                license {
+                  name = "The Apache License, Version 2.0"
+                  url = "http://www.apache.org/licenses/LICENSE-2.0.txt"
+                }
+              }
+              developers {
+                developer {
+                  name = "OpenSearch AI Flow Framework Plugin"
+                  url = "https://github.com/opensearch-project/opensearch-ai-flow-framework"
+                }
+              }
+            }
+        }
+    }
+}
+
+opensearchplugin {
+    name pluginName
+    description pluginDescription
+    classname "${projectPath}.${pathToPlugin}.${pluginClassName}"
+    licenseFile rootProject.file('LICENSE')
+    noticeFile rootProject.file('NOTICE')
+}
+
+// This requires an additional Jar not published as part of build-tools
+loggerUsageCheck.enabled = false
+
+// No need to validate pom, as we do not upload to maven/sonatype
+validateNebulaPom.enabled = false
+
+buildscript {
+    ext {
+        opensearch_version = System.getProperty("opensearch.version", "3.0.0-SNAPSHOT")
+        System.setProperty('tests.security.manager', 'false')
+    }
+
+    repositories {
+        mavenLocal()
+        maven { url "https://aws.oss.sonatype.org/content/repositories/snapshots" }
+        mavenCentral()
+        maven { url "https://plugins.gradle.org/m2/" }
+        maven { url 'https://jitpack.io' }
+    }
+
+    dependencies {
+        classpath "org.opensearch.gradle:build-tools:${opensearch_version}"
+        classpath "com.diffplug.spotless:spotless-plugin-gradle:6.20.0"
+        classpath "com.github.form-com.diff-coverage-gradle:diff-coverage:0.9.4"
+    }
+}
+
+repositories {
+    mavenLocal()
+    maven { url "https://aws.oss.sonatype.org/content/repositories/snapshots" }
+    mavenCentral()
+    maven { url "https://plugins.gradle.org/m2/" }
+}
+
+dependencies {
+    implementation "org.opensearch:opensearch:${opensearch_version}"
+    compileOnly "com.google.guava:guava:32.0.1-jre"
+
+    configurations.all {
+        resolutionStrategy {
+            force("com.google.guava:guava:32.0.1-jre") // CVE for 31.1
+        }
+    }
+}
+
+test {
+    include '**/*Tests.class'
+}
+
+jacocoTestReport {
+    dependsOn test
+    reports {
+        xml.required = true
+    }
+}
+tasks.named("check").configure { dependsOn(jacocoTestReport) }
+
+task integTest(type: RestIntegTestTask) {
+    description = "Run tests against a cluster"
+    testClassesDirs = sourceSets.test.output.classesDirs
+    classpath = sourceSets.test.runtimeClasspath
+}
+tasks.named("check").configure { dependsOn(integTest) }
+
+integTest {
+    // The --debug-jvm command-line option makes the cluster debuggable; this makes the tests debuggable
+    if (System.getProperty("test.debug") != null) {
+        jvmArgs '-agentlib:jdwp=transport=dt_socket,server=y,suspend=y,address=*:5005'
+    }
+}
+
+testClusters.integTest {
+    testDistribution = "INTEG_TEST"
+
+    // This installs our plugin into the testClusters
+    plugin(project.tasks.bundlePlugin.archiveFile)
+}
+
+run {
+    useCluster testClusters.integTest
+}
+
+// updateVersion: Task to auto update version to the next development iteration
+task updateVersion {
+    onlyIf { System.getProperty('newVersion') }
+    doLast {
+        ext.newVersion = System.getProperty('newVersion')
+        println "Setting version to ${newVersion}."
+         // String tokenization to support -SNAPSHOT
+        ant.replaceregexp(file:'build.gradle', match: '"opensearch.version", "\\d.*"', replace: '"opensearch.version", "' + newVersion.tokenize('-')[0] + '-SNAPSHOT"', flags:'g', byline:true)
+    }
+}
+
+// Get uncommitted files via git diff
+// https://github.com/form-com/diff-coverage-gradle/issues/73
+ext.createDiffFile = { ->
+    def file = Files.createTempFile(URLEncoder.encode(project.name, 'UTF-8'), '.diff').toFile()
+    def diffBase = 'refs/remotes/origin/main'
+    // Only run locally
+    if (!System.getenv('CI')) {
+        file.withOutputStream { out ->
+            exec {
+                commandLine 'git', 'diff', '--no-color', '--minimal', diffBase
+                standardOutput = out
+            }
+        }
+    }
+    return file
+}
+
+diffCoverageReport {
+    afterEvaluate {
+        diffSource.file = createDiffFile()
+    }
+
+    // View report at build/reports/jacoco/diffCoverage/html/index.html
+    reports {
+        html = true
+    }
+
+    violationRules {
+        minBranches = 0.60
+        minLines = 0.75
+        failOnViolation = true
+    }
+}
