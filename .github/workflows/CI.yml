@@ -9,7 +9,14 @@ on:
       - "*"
 
 jobs:
+  spotless:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Spotless Check
+        run: ./gradlew spotlessCheck
   build:
+    needs: [spotless]
     strategy:
       matrix:
         os:

@@ -5,6 +5,7 @@ apply plugin: 'idea'
 apply plugin: 'opensearch.opensearchplugin'
 apply plugin: 'opensearch.yaml-rest-test'
 apply plugin: 'opensearch.pluginzip'
+apply plugin: 'com.diffplug.spotless'
 
 def pluginName = 'ai-flow-framework'
 def pluginDescription = 'OpenSearch plugin that enables builders to innovate AI apps on OpenSearch'
@@ -64,6 +65,7 @@ buildscript {
 
     dependencies {
         classpath "org.opensearch.gradle:build-tools:${opensearch_version}"
+        classpath "com.diffplug.spotless:spotless-plugin-gradle:6.20.0"
     }
 }
 
@@ -72,6 +74,37 @@ repositories {
     maven { url "https://aws.oss.sonatype.org/content/repositories/snapshots" }
     mavenCentral()
     maven { url "https://plugins.gradle.org/m2/" }
+}
+
+allprojects {
+    spotless {
+        java {
+            // Normally this isn't necessary, but we have Java sources in
+            // non-standard places
+            target '**/*.java'
+
+            removeUnusedImports()
+            importOrder 'java', 'javax', 'org', 'com'
+            eclipse().configFile rootProject.file('formatter/formatterConfig.xml')
+            trimTrailingWhitespace()
+            endWithNewline();
+
+            // See DEVELOPER_GUIDE.md for details of when to enable this.
+            if (System.getProperty('spotless.paddedcell') != null) {
+                paddedCell()
+            }
+        }
+        format 'misc', {
+            target '*.md', '*.gradle', '**/*.json', '**/*.yaml', '**/*.yml', '**/*.svg'
+
+            trimTrailingWhitespace()
+            endWithNewline()
+        }
+        format("license", {
+            licenseHeaderFile("${rootProject.file("formatter/license-header.txt")}", "package ");
+            target("src/*/java/**/*.java")
+        })
+    }
 }
 
 test {
