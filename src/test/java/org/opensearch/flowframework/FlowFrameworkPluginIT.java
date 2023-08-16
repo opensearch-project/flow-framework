@@ -6,7 +6,7 @@
  * this file be licensed under the Apache-2.0 license or a
  * compatible open source license.
  */
-package org.opensearch.aiflow;
+package org.opensearch.flowframework;
 
 import static org.hamcrest.Matchers.containsString;
 
@@ -38,6 +38,6 @@ public class FlowFrameworkPluginIT extends OpenSearchIntegTestCase {
         String body = EntityUtils.toString(response.getEntity(), StandardCharsets.UTF_8);
 
         logger.info("response body: {}", body);
-        assertThat(body, containsString("aiflow"));
+        assertThat(body, containsString("flowframework"));
     }
 }

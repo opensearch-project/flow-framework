@@ -5,4 +5,4 @@
         h: component
 
   - match:
-      $body: /^ai-flow-framework\n$/
+      $body: /^flow-framework\n$/
