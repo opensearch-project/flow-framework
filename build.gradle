@@ -85,6 +85,17 @@ repositories {
     maven { url "https://plugins.gradle.org/m2/" }
 }
 
+dependencies {
+    implementation "org.opensearch:opensearch:${opensearch_version}"
+    compileOnly "com.google.guava:guava:32.0.1-jre"
+
+    configurations.all {
+        resolutionStrategy {
+            force("com.google.guava:guava:32.0.1-jre") // CVE for 31.1
+        }
+    }
+}
+
 allprojects {
     spotless {
         java {
