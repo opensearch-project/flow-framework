@@ -9,12 +9,14 @@ on:
 
 jobs:
   spotless:
+    if: github.repository == 'opensearch-project/opensearch-ai-flow-framework'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
       - name: Spotless Check
         run: ./gradlew spotlessCheck
   javadoc:
+    if: github.repository == 'opensearch-project/opensearch-ai-flow-framework'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
