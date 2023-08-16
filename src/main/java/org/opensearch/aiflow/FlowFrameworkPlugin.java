@@ -10,6 +10,9 @@ package org.opensearch.aiflow;
 
 import org.opensearch.plugins.Plugin;
 
+/**
+ * An OpenSearch plugin that enables builders to innovate AI apps on OpenSearch.
+ */
 public class FlowFrameworkPlugin extends Plugin {
     // Implement the relevant Plugin Interfaces here
 }
