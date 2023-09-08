@@ -8,6 +8,8 @@
  */
 package org.opensearch.flowframework.workflow;
 
+import java.util.concurrent.CompletableFuture;
+
 /**
  * Interface for the workflow setup of different building blocks.
  */
@@ -15,8 +17,10 @@ public interface Workflow {
 
     /**
      * Triggers the processing of the building block.
+     *
+     * @return CompletableFuture of the building block.
      * @throws Exception if execution fails
      */
-    void process() throws Exception;
+    CompletableFuture<Workflow> execute() throws Exception;
 
 }
