@@ -21,79 +21,25 @@ import java.util.List;
 import java.util.Map;
 import java.util.Queue;
 import java.util.Set;
-import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
+/**
+ * Utility class for parsing templates.
+ */
 public class TemplateParser {
 
-    public static void main(String[] args) {
-        String json = "{\n"
-            + "    \"sequence\": {\n"
-            + "        \"nodes\": [\n"
-            + "            {\n"
-            + "                \"id\": \"fetch_model\"\n"
-            + "            },\n"
-            + "            {\n"
-            + "                \"id\": \"create_ingest_pipeline\"\n"
-            + "            },\n"
-            + "            {\n"
-            + "                \"id\": \"create_search_pipeline\"\n"
-            + "            },\n"
-            + "            {\n"
-            + "                \"id\": \"create_neural_search_index\"\n"
-            + "            }\n"
-            + "        ],\n"
-            + "        \"edges\": [\n"
-            + "            {\n"
-            + "                \"source\": \"fetch_model\",\n"
-            + "                \"dest\": \"create_ingest_pipeline\"\n"
-            + "            },\n"
-            + "            {\n"
-            + "                \"source\": \"fetch_model\",\n"
-            + "                \"dest\": \"create_search_pipeline\"\n"
-            + "            },\n"
-            + "            {\n"
-            + "                \"source\": \"create_ingest_pipeline\",\n"
-            + "                \"dest\": \"create_neural_search_index\"\n"
-            + "            },\n"
-            + "            {\n"
-            + "                \"source\": \"create_search_pipeline\",\n"
-            + "                \"dest\": \"create_neural_search_index\"\n"
-            // + " }\n,"
-            // + " {\n"
-            // + " \"source\": \"create_neural_search_index\",\n"
-            // + " \"dest\": \"fetch_model\"\n"
-            + "            }\n"
-            + "        ]\n"
-            + "    }\n"
-            + "}";
+    /**
+     * Prevent instantiating this class.
+     */
+    private TemplateParser() {}
 
-        System.out.println(json);
-
-        System.out.println("Parsing graph to sequence...");
-        List<ProcessNode> processSequence = parseJsonGraphToSequence(json);
-        List<CompletableFuture<String>> futureList = new ArrayList<>();
-
-        for (ProcessNode n : processSequence) {
-            Set<ProcessNode> predecessors = n.getPredecessors();
-            System.out.format(
-                "Queueing process [%s].  %s.%n",
-                n.getId(),
-                predecessors.isEmpty()
-                    ? "Can start immediately!"
-                    : String.format(
-                        "Must wait for [%s] to complete first.",
-                        predecessors.stream().map(p -> p.getId()).collect(Collectors.joining(", "))
-                    )
-            );
-            futureList.add(n.execute());
-        }
-        futureList.forEach(CompletableFuture::join);
-        System.out.println("All done!");
-    }
-
-    private static List<ProcessNode> parseJsonGraphToSequence(String json) {
+    /**
+     * Parse a JSON representation of nodes and edges into a topologically sorted list of process nodes.
+     * @param json A string containing a JSON representation of nodes and edges
+     * @return A list of Process Nodes sorted topologically.  All predecessors of any node will occur prior to it in the list.
+     */
+    public static List<ProcessNode> parseJsonGraphToSequence(String json) {
         Gson gson = new Gson();
         JsonObject jsonObject = gson.fromJson(json, JsonObject.class);
 
