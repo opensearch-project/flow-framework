@@ -8,6 +8,8 @@
  */
 package org.opensearch.flowframework.template;
 
+import org.opensearch.flowframework.workflow.Workflow;
+
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
@@ -22,24 +24,37 @@ import java.util.stream.Collectors;
  */
 public class ProcessNode {
     private final String id;
-    private CompletableFuture<String> future = null;
+    private final Workflow workflow;
+    private CompletableFuture<?> future = null;
 
     // will be populated during graph parsing
     private Set<ProcessNode> predecessors = Collections.emptySet();
 
     /**
-     * Create this node with a unique id.
+     * Create this node linked to its executing process.
+     *
+     * @param id A string identifying the workflow step
+     * @param workflow A java class implementing {@link Workflow} to be executed when it's this node's turn.
      */
-    ProcessNode(String id) {
+    ProcessNode(String id, Workflow workflow) {
         this.id = id;
+        this.workflow = workflow;
     }
 
     /**
      * Returns the node's id.
      * @return the node id.
      */
-    public String getId() {
+    public String id() {
         return id;
+    }
+
+    /**
+     * Returns the node's workflow implementation.
+     * @return the workflow step
+     */
+    public Workflow workflow() {
+        return workflow;
     }
 
     /**
@@ -49,7 +64,7 @@ public class ProcessNode {
      * @return A future indicating the processing state of this node.
      * Returns {@code null} if it has not begun executing, should not happen if a workflow is sorted and executed topologically.
      */
-    public CompletableFuture<String> getFuture() {
+    public CompletableFuture<?> getFuture() {
         return future;
     }
 
@@ -77,11 +92,11 @@ public class ProcessNode {
      *
      * @return this node's future. This is returned immediately, while process execution continues asynchronously.
      */
-    public CompletableFuture<String> execute() {
+    public CompletableFuture<?> execute() {
         this.future = new CompletableFuture<>();
         CompletableFuture.runAsync(() -> {
             if (!predecessors.isEmpty()) {
-                List<CompletableFuture<String>> predFutures = predecessors.stream().map(p -> p.getFuture()).collect(Collectors.toList());
+                List<CompletableFuture<?>> predFutures = predecessors.stream().map(p -> p.getFuture()).collect(Collectors.toList());
                 CompletableFuture<Void> waitForPredecessors = CompletableFuture.allOf(predFutures.toArray(new CompletableFuture<?>[0]));
                 try {
                     waitForPredecessors.orTimeout(30, TimeUnit.SECONDS).get();
@@ -93,18 +108,16 @@ public class ProcessNode {
                 return;
             }
             System.out.println(">>> Starting " + this.id);
-            // TODO: Here is where we would call out to workflow step API
-            workflowExecute(this.id);
+            try {
+                // TODO collect the future from this step and use it in our own completion
+                this.workflow.execute();
+            } catch (Exception e) {
+                // TODO remove the exception on workflow, instead handle exceptional completion
+            }
             System.out.println("<<< Finished " + this.id);
-            future.complete(this.id);
+            future.complete(null);
         });
         return this.future;
-    }
-
-    private void workflowExecute(String s) {
-        try {
-            Thread.sleep(s.contains("ingest") ? 8000 : 4000);
-        } catch (InterruptedException e) {}
     }
 
     @Override

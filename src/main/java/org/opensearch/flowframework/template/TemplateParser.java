@@ -11,6 +11,7 @@ package org.opensearch.flowframework.template;
 import com.google.gson.Gson;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
+import org.opensearch.flowframework.workflow.Workflow;
 
 import java.util.ArrayDeque;
 import java.util.ArrayList;
@@ -37,9 +38,10 @@ public class TemplateParser {
     /**
      * Parse a JSON representation of nodes and edges into a topologically sorted list of process nodes.
      * @param json A string containing a JSON representation of nodes and edges
+     * @param workflowSteps A map linking JSON node names to Java objects implementing {@link Workflow}
      * @return A list of Process Nodes sorted topologically.  All predecessors of any node will occur prior to it in the list.
      */
-    public static List<ProcessNode> parseJsonGraphToSequence(String json) {
+    public static List<ProcessNode> parseJsonGraphToSequence(String json, Map<String, Workflow> workflowSteps) {
         Gson gson = new Gson();
         JsonObject jsonObject = gson.fromJson(json, JsonObject.class);
 
@@ -51,7 +53,7 @@ public class TemplateParser {
         for (JsonElement nodeJson : graph.getAsJsonArray("nodes")) {
             JsonObject nodeObject = nodeJson.getAsJsonObject();
             String nodeId = nodeObject.get("id").getAsString();
-            nodes.add(new ProcessNode(nodeId));
+            nodes.add(new ProcessNode(nodeId, workflowSteps.get(nodeId)));
         }
 
         for (JsonElement edgeJson : graph.getAsJsonArray("edges")) {
@@ -68,7 +70,7 @@ public class TemplateParser {
         // Define the graph
         Set<ProcessSequenceEdge> graph = new HashSet<>(edges);
         // Map node id string to object
-        Map<String, ProcessNode> nodeMap = nodes.stream().collect(Collectors.toMap(ProcessNode::getId, Function.identity()));
+        Map<String, ProcessNode> nodeMap = nodes.stream().collect(Collectors.toMap(ProcessNode::id, Function.identity()));
         // Build predecessor and successor maps
         Map<ProcessNode, Set<ProcessSequenceEdge>> predecessorEdges = new HashMap<>();
         Map<ProcessNode, Set<ProcessSequenceEdge>> successorEdges = new HashMap<>();
