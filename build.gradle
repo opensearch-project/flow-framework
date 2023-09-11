@@ -53,6 +53,7 @@ opensearchplugin {
     noticeFile rootProject.file('NOTICE')
 }
 
+dependencyLicenses.enabled = false
 // This requires an additional Jar not published as part of build-tools
 loggerUsageCheck.enabled = false
 
@@ -62,6 +63,20 @@ validateNebulaPom.enabled = false
 buildscript {
     ext {
         opensearch_version = System.getProperty("opensearch.version", "3.0.0-SNAPSHOT")
+        buildVersionQualifier = System.getProperty("build.version_qualifier", "")
+        isSnapshot = "true" == System.getProperty("build.snapshot", "true")
+        version_tokens = opensearch_version.tokenize('-')
+        opensearch_build = version_tokens[0] + '.0'
+        plugin_no_snapshot = opensearch_build
+        if (buildVersionQualifier) {
+            opensearch_build += "-${buildVersionQualifier}"
+            plugin_no_snapshot += "-${buildVersionQualifier}"
+        }
+        if (isSnapshot) {
+            opensearch_build += "-SNAPSHOT"
+        }
+        opensearch_group = "org.opensearch"
+        opensearch_no_snapshot = opensearch_build.replace("-SNAPSHOT","")
         System.setProperty('tests.security.manager', 'false')
     }
 
@@ -89,7 +104,9 @@ repositories {
 
 dependencies {
     implementation "org.opensearch:opensearch:${opensearch_version}"
+    implementation 'org.junit.jupiter:junit-jupiter:5.8.1'
     compileOnly "com.google.guava:guava:32.1.2-jre"
+    api group: 'org.opensearch', name:'opensearch-ml-client', version: "${opensearch_build}"
 
     configurations.all {
         resolutionStrategy {
