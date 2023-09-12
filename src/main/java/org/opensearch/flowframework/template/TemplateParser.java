@@ -11,6 +11,8 @@ package org.opensearch.flowframework.template;
 import com.google.gson.Gson;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.opensearch.flowframework.workflow.Workflow;
 
 import java.util.ArrayDeque;
@@ -29,6 +31,8 @@ import java.util.stream.Collectors;
  * Utility class for parsing templates.
  */
 public class TemplateParser {
+
+    private static final Logger logger = LogManager.getLogger(TemplateParser.class);
 
     /**
      * Prevent instantiating this class.
@@ -87,7 +91,7 @@ public class TemplateParser {
         if (sourceNodes.isEmpty()) {
             throw new IllegalArgumentException("No start node detected: all nodes have a predecessor.");
         }
-        System.out.println("Start node(s): " + sourceNodes);
+        logger.debug("Start node(s): {}", sourceNodes);
 
         // List to contain sorted elements
         List<ProcessNode> sortedNodes = new ArrayList<>();
@@ -110,7 +114,7 @@ public class TemplateParser {
         if (!graph.isEmpty()) {
             throw new IllegalArgumentException("Cycle detected: " + graph);
         }
-        System.out.println("Execution sequence: " + sortedNodes);
+        logger.debug("Execution sequence: {}", sortedNodes);
         return sortedNodes;
     }
 }

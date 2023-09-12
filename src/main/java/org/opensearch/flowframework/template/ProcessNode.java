@@ -8,6 +8,8 @@
  */
 package org.opensearch.flowframework.template;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.opensearch.flowframework.workflow.Workflow;
 
 import java.util.Collections;
@@ -23,6 +25,9 @@ import java.util.stream.Collectors;
  * Representation of a process node in a workflow graph.  Tracks predecessor nodes which must be completed before it can start execution.
  */
 public class ProcessNode {
+
+    private static final Logger logger = LogManager.getLogger(ProcessNode.class);
+
     private final String id;
     private final Workflow workflow;
     private CompletableFuture<?> future = null;
@@ -107,14 +112,14 @@ public class ProcessNode {
             if (future.isCompletedExceptionally()) {
                 return;
             }
-            System.out.println(">>> Starting " + this.id);
+            logger.debug(">>> Starting {}", this.id);
             try {
                 // TODO collect the future from this step and use it in our own completion
                 this.workflow.execute();
             } catch (Exception e) {
                 // TODO remove the exception on workflow, instead handle exceptional completion
             }
-            System.out.println("<<< Finished " + this.id);
+            logger.debug("<<< Finished {}", this.id);
             future.complete(null);
         });
         return this.future;

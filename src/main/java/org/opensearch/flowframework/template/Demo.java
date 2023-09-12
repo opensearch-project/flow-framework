@@ -8,8 +8,13 @@
  */
 package org.opensearch.flowframework.template;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.opensearch.flowframework.workflow.Workflow;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -23,11 +28,13 @@ import java.util.stream.Collectors;
  */
 public class Demo {
 
+    private static final Logger logger = LogManager.getLogger(Demo.class);
+
     private static Map<String, Workflow> workflowMap = new HashMap<>();
     static {
         workflowMap.put("fetch_model", new DemoWorkflowStep(3000));
-        workflowMap.put("create_ingest_pipeline", new DemoWorkflowStep(4000));
-        workflowMap.put("create_search_pipeline", new DemoWorkflowStep(8000));
+        workflowMap.put("create_ingest_pipeline", new DemoWorkflowStep(3000));
+        workflowMap.put("create_search_pipeline", new DemoWorkflowStep(5000));
         workflowMap.put("create_neural_search_index", new DemoWorkflowStep(2000));
     }
 
@@ -37,65 +44,35 @@ public class Demo {
      * @param args unused
      */
     public static void main(String[] args) {
-        String json = "{\n"
-            + "    \"sequence\": {\n"
-            + "        \"nodes\": [\n"
-            + "            {\n"
-            + "                \"id\": \"fetch_model\"\n"
-            + "            },\n"
-            + "            {\n"
-            + "                \"id\": \"create_ingest_pipeline\"\n"
-            + "            },\n"
-            + "            {\n"
-            + "                \"id\": \"create_search_pipeline\"\n"
-            + "            },\n"
-            + "            {\n"
-            + "                \"id\": \"create_neural_search_index\"\n"
-            + "            }\n"
-            + "        ],\n"
-            + "        \"edges\": [\n"
-            + "            {\n"
-            + "                \"source\": \"fetch_model\",\n"
-            + "                \"dest\": \"create_ingest_pipeline\"\n"
-            + "            },\n"
-            + "            {\n"
-            + "                \"source\": \"fetch_model\",\n"
-            + "                \"dest\": \"create_search_pipeline\"\n"
-            + "            },\n"
-            + "            {\n"
-            + "                \"source\": \"create_ingest_pipeline\",\n"
-            + "                \"dest\": \"create_neural_search_index\"\n"
-            + "            },\n"
-            + "            {\n"
-            + "                \"source\": \"create_search_pipeline\",\n"
-            + "                \"dest\": \"create_neural_search_index\"\n"
-            + "            }\n"
-            + "        ]\n"
-            + "    }\n"
-            + "}";
+        String path = "src/test/resources/template/demo.json";
+        String json;
+        try {
+            json = new String(Files.readAllBytes(Paths.get(path)));
+        } catch (IOException e) {
+            logger.error("Failed to read JSON at path {}", path);
+            return;
+        }
 
-        System.out.println(json);
-
-        System.out.println("Parsing graph to sequence...");
+        logger.info("Parsing graph to sequence...");
         List<ProcessNode> processSequence = TemplateParser.parseJsonGraphToSequence(json, workflowMap);
         List<CompletableFuture<?>> futureList = new ArrayList<>();
 
         for (ProcessNode n : processSequence) {
             Set<ProcessNode> predecessors = n.getPredecessors();
-            System.out.format(
-                "Queueing process [%s].  %s.%n",
+            logger.info(
+                "Queueing process [{}].{}",
                 n.id(),
                 predecessors.isEmpty()
-                    ? "Can start immediately!"
+                    ? " Can start immediately!"
                     : String.format(
-                        "Must wait for [%s] to complete first.",
+                        " Must wait for [%s] to complete first.",
                         predecessors.stream().map(p -> p.id()).collect(Collectors.joining(", "))
                     )
             );
             futureList.add(n.execute());
         }
         futureList.forEach(CompletableFuture::join);
-        System.out.println("All done!");
+        logger.info("All done!");
     }
 
 }
