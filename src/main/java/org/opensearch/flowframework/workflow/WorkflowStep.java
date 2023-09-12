@@ -8,6 +8,8 @@
  */
 package org.opensearch.flowframework.workflow;
 
+import org.opensearch.common.Nullable;
+
 import java.util.concurrent.CompletableFuture;
 
 /**
@@ -17,10 +19,10 @@ public interface WorkflowStep {
 
     /**
      * Triggers the processing of the building block.
-     *
+     * @param data for input/output params of the building blocks.
      * @return CompletableFuture of the building block.
      */
-    CompletableFuture<WorkflowStep> execute();
+    CompletableFuture<WorkflowData> execute(@Nullable WorkflowData data);
 
     /**
      *
