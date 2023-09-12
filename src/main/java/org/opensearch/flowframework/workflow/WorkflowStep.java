@@ -13,14 +13,19 @@ import java.util.concurrent.CompletableFuture;
 /**
  * Interface for the workflow setup of different building blocks.
  */
-public interface Workflow {
+public interface WorkflowStep {
 
     /**
      * Triggers the processing of the building block.
      *
      * @return CompletableFuture of the building block.
-     * @throws Exception if execution fails
      */
-    CompletableFuture<Workflow> execute() throws Exception;
+    CompletableFuture<WorkflowStep> execute();
+
+    /**
+     *
+     * @return the name of this workflow step.
+     */
+    String getName();
 
 }
