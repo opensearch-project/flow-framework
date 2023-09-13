@@ -8,19 +8,26 @@
  */
 package org.opensearch.flowframework.workflow;
 
+import org.opensearch.common.Nullable;
+
 import java.util.concurrent.CompletableFuture;
 
 /**
  * Interface for the workflow setup of different building blocks.
  */
-public interface Workflow {
+public interface WorkflowStep {
 
     /**
      * Triggers the processing of the building block.
-     *
+     * @param data for input/output params of the building blocks.
      * @return CompletableFuture of the building block.
-     * @throws Exception if execution fails
      */
-    CompletableFuture<Workflow> execute() throws Exception;
+    CompletableFuture<WorkflowData> execute(@Nullable WorkflowData data);
+
+    /**
+     *
+     * @return the name of this workflow step.
+     */
+    String getName();
 
 }
