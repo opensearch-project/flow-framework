@@ -1,0 +1,14 @@
+name: Add Backport Label
+on:
+  pull_request_target:
+    branches: main
+    types: opened
+
+jobs:
+  add_labels:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions-ecosystem/action-add-labels@v1
+        with:
+          labels: backport 2.x
