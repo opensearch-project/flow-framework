@@ -8,22 +8,37 @@
  */
 package org.opensearch.flowframework.template;
 
-import org.opensearch.flowframework.workflow.Workflow;
+import org.opensearch.flowframework.workflow.WorkflowData;
+import org.opensearch.flowframework.workflow.WorkflowStep;
 
 import java.util.concurrent.CompletableFuture;
 
-public class DemoWorkflowStep implements Workflow {
+public class DemoWorkflowStep implements WorkflowStep {
 
     private final long delay;
+    private final String name;
 
     public DemoWorkflowStep(long delay) {
         this.delay = delay;
+        this.name = "DEMO_DELAY_" + delay;
     }
 
     @Override
-    public CompletableFuture<Workflow> execute() throws Exception {
-        Thread.sleep(this.delay);
-        return null;
+    public CompletableFuture<WorkflowData> execute(WorkflowData data) {
+        CompletableFuture<WorkflowData> future = new CompletableFuture<>();
+        CompletableFuture.runAsync(() -> {
+            try {
+                Thread.sleep(this.delay);
+                future.complete(null);
+            } catch (InterruptedException e) {
+                future.completeExceptionally(e);
+            }
+        });
+        return future;
     }
 
+    @Override
+    public String getName() {
+        return name;
+    }
 }

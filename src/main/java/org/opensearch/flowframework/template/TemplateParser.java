@@ -13,7 +13,7 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.opensearch.flowframework.workflow.Workflow;
+import org.opensearch.flowframework.workflow.WorkflowStep;
 
 import java.util.ArrayDeque;
 import java.util.ArrayList;
@@ -42,10 +42,10 @@ public class TemplateParser {
     /**
      * Parse a JSON representation of nodes and edges into a topologically sorted list of process nodes.
      * @param json A string containing a JSON representation of nodes and edges
-     * @param workflowSteps A map linking JSON node names to Java objects implementing {@link Workflow}
+     * @param workflowSteps A map linking JSON node names to Java objects implementing {@link WorkflowStep}
      * @return A list of Process Nodes sorted topologically.  All predecessors of any node will occur prior to it in the list.
      */
-    public static List<ProcessNode> parseJsonGraphToSequence(String json, Map<String, Workflow> workflowSteps) {
+    public static List<ProcessNode> parseJsonGraphToSequence(String json, Map<String, WorkflowStep> workflowSteps) {
         Gson gson = new Gson();
         JsonObject jsonObject = gson.fromJson(json, JsonObject.class);
 

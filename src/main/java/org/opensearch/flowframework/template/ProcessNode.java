@@ -10,7 +10,8 @@ package org.opensearch.flowframework.template;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.opensearch.flowframework.workflow.Workflow;
+import org.opensearch.flowframework.workflow.WorkflowData;
+import org.opensearch.flowframework.workflow.WorkflowStep;
 
 import java.util.Collections;
 import java.util.List;
@@ -29,8 +30,8 @@ public class ProcessNode {
     private static final Logger logger = LogManager.getLogger(ProcessNode.class);
 
     private final String id;
-    private final Workflow workflow;
-    private CompletableFuture<?> future = null;
+    private final WorkflowStep workflowStep;
+    private CompletableFuture<WorkflowData> future = null;
 
     // will be populated during graph parsing
     private Set<ProcessNode> predecessors = Collections.emptySet();
@@ -39,11 +40,11 @@ public class ProcessNode {
      * Create this node linked to its executing process.
      *
      * @param id A string identifying the workflow step
-     * @param workflow A java class implementing {@link Workflow} to be executed when it's this node's turn.
+     * @param workflowStep A java class implementing {@link WorkflowStep} to be executed when it's this node's turn.
      */
-    ProcessNode(String id, Workflow workflow) {
+    ProcessNode(String id, WorkflowStep workflowStep) {
         this.id = id;
-        this.workflow = workflow;
+        this.workflowStep = workflowStep;
     }
 
     /**
@@ -58,8 +59,8 @@ public class ProcessNode {
      * Returns the node's workflow implementation.
      * @return the workflow step
      */
-    public Workflow workflow() {
-        return workflow;
+    public WorkflowStep workflowStep() {
+        return workflowStep;
     }
 
     /**
@@ -69,7 +70,7 @@ public class ProcessNode {
      * @return A future indicating the processing state of this node.
      * Returns {@code null} if it has not begun executing, should not happen if a workflow is sorted and executed topologically.
      */
-    public CompletableFuture<?> getFuture() {
+    public CompletableFuture<WorkflowData> getFuture() {
         return future;
     }
 
@@ -97,11 +98,11 @@ public class ProcessNode {
      *
      * @return this node's future. This is returned immediately, while process execution continues asynchronously.
      */
-    public CompletableFuture<?> execute() {
+    public CompletableFuture<WorkflowData> execute() {
         this.future = new CompletableFuture<>();
         CompletableFuture.runAsync(() -> {
             if (!predecessors.isEmpty()) {
-                List<CompletableFuture<?>> predFutures = predecessors.stream().map(p -> p.getFuture()).collect(Collectors.toList());
+                List<CompletableFuture<WorkflowData>> predFutures = predecessors.stream().map(p -> p.getFuture()).collect(Collectors.toList());
                 CompletableFuture<Void> waitForPredecessors = CompletableFuture.allOf(predFutures.toArray(new CompletableFuture<?>[0]));
                 try {
                     waitForPredecessors.orTimeout(30, TimeUnit.SECONDS).get();
@@ -113,14 +114,16 @@ public class ProcessNode {
                 return;
             }
             logger.debug(">>> Starting {}", this.id);
+            CompletableFuture<WorkflowData> stepFuture = this.workflowStep.execute(null);
+            stepFuture.join();
             try {
-                // TODO collect the future from this step and use it in our own completion
-                this.workflow.execute();
-            } catch (Exception e) {
-                // TODO remove the exception on workflow, instead handle exceptional completion
+                future.complete(stepFuture.get());
+                logger.debug("<<< Completed {}", this.id);
+            } catch (InterruptedException | ExecutionException e) {
+                // TODO: better handling of getCause
+                future.completeExceptionally(e);
+                logger.debug("<<< Completed Exceptionally {}", this.id);
             }
-            logger.debug("<<< Finished {}", this.id);
-            future.complete(null);
         });
         return this.future;
     }

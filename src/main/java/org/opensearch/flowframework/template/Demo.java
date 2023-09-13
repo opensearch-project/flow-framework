@@ -10,7 +10,7 @@ package org.opensearch.flowframework.template;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.opensearch.flowframework.workflow.Workflow;
+import org.opensearch.flowframework.workflow.WorkflowStep;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -30,7 +30,7 @@ public class Demo {
 
     private static final Logger logger = LogManager.getLogger(Demo.class);
 
-    private static Map<String, Workflow> workflowMap = new HashMap<>();
+    private static Map<String, WorkflowStep> workflowMap = new HashMap<>();
     static {
         workflowMap.put("fetch_model", new DemoWorkflowStep(3000));
         workflowMap.put("create_ingest_pipeline", new DemoWorkflowStep(3000));
