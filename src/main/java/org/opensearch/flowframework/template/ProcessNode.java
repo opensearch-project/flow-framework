@@ -98,11 +98,13 @@ public class ProcessNode {
      *
      * @return this node's future. This is returned immediately, while process execution continues asynchronously.
      */
-    public CompletableFuture<WorkflowData> execute() {
+    public CompletableFuture<WorkflowData> execute(WorkflowData data) {
         this.future = new CompletableFuture<>();
         CompletableFuture.runAsync(() -> {
             if (!predecessors.isEmpty()) {
-                List<CompletableFuture<WorkflowData>> predFutures = predecessors.stream().map(p -> p.getFuture()).collect(Collectors.toList());
+                List<CompletableFuture<WorkflowData>> predFutures = predecessors.stream()
+                    .map(p -> p.getFuture())
+                    .collect(Collectors.toList());
                 CompletableFuture<Void> waitForPredecessors = CompletableFuture.allOf(predFutures.toArray(new CompletableFuture<?>[0]));
                 try {
                     waitForPredecessors.orTimeout(30, TimeUnit.SECONDS).get();
@@ -114,7 +116,7 @@ public class ProcessNode {
                 return;
             }
             logger.debug(">>> Starting {}", this.id);
-            CompletableFuture<WorkflowData> stepFuture = this.workflowStep.execute(null);
+            CompletableFuture<WorkflowData> stepFuture = this.workflowStep.execute(data);
             stepFuture.join();
             try {
                 future.complete(stepFuture.get());

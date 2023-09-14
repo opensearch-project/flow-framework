@@ -8,7 +8,16 @@
  */
 package org.opensearch.flowframework.workflow;
 
+import java.util.Map;
+
 /**
  * Interface for handling the input/output of the building blocks.
  */
-public interface WorkflowData {}
+public interface WorkflowData {
+
+    /**
+     * Accesses a map containing the content of the workflow step. This represents the data associated with a Rest API request.
+     * @return the content of this step.
+     */
+    Map<String, Object> getContent();
+}

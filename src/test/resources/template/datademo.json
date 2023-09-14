@@ -1,0 +1,11 @@
+{
+	"sequence": {
+		"nodes": [
+			{
+				"id": "create_index",
+				"index_name": "demo"
+			}
+		],
+		"edges": []
+	}
+}

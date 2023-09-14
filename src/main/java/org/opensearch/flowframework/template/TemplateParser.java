@@ -13,6 +13,7 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.opensearch.action.admin.indices.create.CreateIndexRequest;
 import org.opensearch.flowframework.workflow.WorkflowStep;
 
 import java.util.ArrayDeque;
@@ -57,7 +58,12 @@ public class TemplateParser {
         for (JsonElement nodeJson : graph.getAsJsonArray("nodes")) {
             JsonObject nodeObject = nodeJson.getAsJsonObject();
             String nodeId = nodeObject.get("id").getAsString();
-            nodes.add(new ProcessNode(nodeId, workflowSteps.get(nodeId)));
+            WorkflowStep workflowStep = workflowSteps.get(nodeId);
+            if (workflowStep instanceof CreateIndexWorkflowStep) {
+                CreateIndexRequest request = new CreateIndexRequest(nodeObject.get("index_name").getAsString());
+                ((CreateIndexWorkflowStep) workflowStep).setData(new CreateIndexRequestData(request));
+            }
+            nodes.add(new ProcessNode(nodeId, workflowStep));
         }
 
         for (JsonElement edgeJson : graph.getAsJsonArray("edges")) {
