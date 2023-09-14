@@ -8,6 +8,7 @@
  */
 package org.opensearch.flowframework;
 
+import com.google.common.collect.ImmutableList;
 import org.opensearch.client.Client;
 import org.opensearch.cluster.metadata.IndexNameExpressionResolver;
 import org.opensearch.cluster.service.ClusterService;
@@ -23,7 +24,6 @@ import org.opensearch.threadpool.ThreadPool;
 import org.opensearch.watcher.ResourceWatcherService;
 
 import java.util.Collection;
-import java.util.Collections;
 import java.util.function.Supplier;
 
 /**
@@ -47,10 +47,9 @@ public class FlowFrameworkPlugin extends Plugin {
         IndexNameExpressionResolver indexNameExpressionResolver,
         Supplier<RepositoriesService> repositoriesServiceSupplier
     ) {
-        // TODO create ingest pipeline workflow item here
         this.client = client;
         CreateIngestPipelineStep createIngestPipelineStep = new CreateIngestPipelineStep(client);
 
-        return Collections.emptyList();
+        return ImmutableList.of(createIngestPipelineStep);
     }
 }

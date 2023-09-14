@@ -17,7 +17,7 @@ public class CreateIngestPipelineResponseData implements WorkflowData {
 
     public CreateIngestPipelineResponseData(String ingestPipelineId) {
         super();
-        // PutPipelineAction returns only an acknodledged response, returning ingest pipeline id instead
+        // PutPipelineAction returns only an ack response, returning ingest pipeline id instead
         content.put("pipelineId", ingestPipelineId);
     }
 

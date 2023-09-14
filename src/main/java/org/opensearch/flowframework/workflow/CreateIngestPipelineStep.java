@@ -28,10 +28,14 @@ public class CreateIngestPipelineStep implements WorkflowStep {
     private static final Logger logger = LogManager.getLogger(CreateIngestPipelineStep.class);
     private static final String NAME = "create_ingest_pipeline_step";
 
+    // Client to store a pipeline in the cluster state
     private final ClusterAdminClient clusterAdminClient;
+    // Client to store response data into global context index
+    private final Client client;
 
     public CreateIngestPipelineStep(Client client) {
         this.clusterAdminClient = client.admin().cluster();
+        this.client = client;
     }
 
     @Override
@@ -58,9 +62,13 @@ public class CreateIngestPipelineStep implements WorkflowStep {
         if (putPipelineRequest != null) {
             String pipelineId = putPipelineRequest.getId();
             clusterAdminClient.putPipeline(putPipelineRequest, ActionListener.wrap(response -> {
+
+                // Return create pipeline response to workflow data
                 logger.info("Created pipeline : " + pipelineId);
                 CreateIngestPipelineResponseData responseData = new CreateIngestPipelineResponseData(pipelineId);
                 createIngestPipelineFuture.complete(responseData);
+
+                // TODO : Use node client to index response data to global context (pending global context index implementation)
             }, exception -> {
                 logger.error("Failed to create pipeline : " + exception.getMessage());
                 createIngestPipelineFuture.completeExceptionally(exception);
