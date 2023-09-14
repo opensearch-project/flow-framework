@@ -98,27 +98,33 @@ public class ProcessNode {
      *
      * @return this node's future. This is returned immediately, while process execution continues asynchronously.
      */
-    public CompletableFuture<WorkflowData> execute(WorkflowData data) {
+    public CompletableFuture<WorkflowData> execute() {
         this.future = new CompletableFuture<>();
         CompletableFuture.runAsync(() -> {
+            List<CompletableFuture<WorkflowData>> predFutures = predecessors.stream().map(p -> p.getFuture()).collect(Collectors.toList());
             if (!predecessors.isEmpty()) {
-                List<CompletableFuture<WorkflowData>> predFutures = predecessors.stream()
-                    .map(p -> p.getFuture())
-                    .collect(Collectors.toList());
                 CompletableFuture<Void> waitForPredecessors = CompletableFuture.allOf(predFutures.toArray(new CompletableFuture<?>[0]));
                 try {
                     waitForPredecessors.orTimeout(30, TimeUnit.SECONDS).get();
                 } catch (InterruptedException | ExecutionException e) {
                     future.completeExceptionally(e);
+                    return;
                 }
             }
-            if (future.isCompletedExceptionally()) {
-                return;
+            logger.debug(">>> Starting {}.", this.id);
+            // get the input data from predecessor(s)
+            WorkflowData[] input = new WorkflowData[predFutures.size()];
+            for (int i = 0; i < predFutures.size(); i++) {
+                try {
+                    input[i] = predFutures.get(i).get();
+                } catch (InterruptedException | ExecutionException e) {
+                    future.completeExceptionally(e);
+                    return;
+                }
             }
-            logger.debug(">>> Starting {}", this.id);
-            CompletableFuture<WorkflowData> stepFuture = this.workflowStep.execute(data);
-            stepFuture.join();
+            CompletableFuture<WorkflowData> stepFuture = this.workflowStep.execute(input);
             try {
+                stepFuture.join();
                 future.complete(stepFuture.get());
                 logger.debug("<<< Completed {}", this.id);
             } catch (InterruptedException | ExecutionException e) {

@@ -10,7 +10,9 @@ package org.opensearch.flowframework.template;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.opensearch.action.admin.indices.create.CreateIndexResponse;
 import org.opensearch.flowframework.workflow.WorkflowData;
+import org.opensearch.flowframework.workflow.WorkflowInputData;
 import org.opensearch.flowframework.workflow.WorkflowStep;
 
 import java.util.Map;
@@ -21,30 +23,35 @@ public class CreateIndexWorkflowStep implements WorkflowStep {
     private static final Logger logger = LogManager.getLogger(CreateIndexWorkflowStep.class);
 
     private final String name;
-    private WorkflowData data = null;
+    private WorkflowInputData inputData = null;
 
     public CreateIndexWorkflowStep() {
         this.name = "CREATE_INDEX";
     }
 
     @Override
-    public CompletableFuture<WorkflowData> execute(WorkflowData data) {
-        // TODO, need to handle this better, we are pre-running execute all the time so passing a param is silly
-        if (data != null) {
-            this.data = data;
-        }
+    public CompletableFuture<WorkflowData> execute(WorkflowData... data) {
+        logger.debug("Executing with " + data.length + " args");
         CompletableFuture<WorkflowData> future = new CompletableFuture<>();
         CompletableFuture.runAsync(() -> {
-            if (this.data instanceof CreateIndexRequestData) {
-                Map<String, String> params = ((CreateIndexRequestData) this.data).getParams();
-                Map<String, Object> content = ((CreateIndexRequestData) this.data).getContent();
-                logger.debug("Received params: {}, content: {}", params, content);
-                future.complete(null);
-            } else {
-                logger.debug("Wrong data type!");
-                future.completeExceptionally(new IllegalArgumentException("Expected CreateIndexRequestData here."));
+            if (inputData != null) {
+                Map<String, String> params = inputData.getParams();
+                Map<String, Object> content = inputData.getContent();
+                logger.debug("Initialized params: {}, content: {}", params, content);
             }
+            for (WorkflowData wfData : data) {
+                Map<String, Object> content = wfData.getContent();
+                logger.debug("Received content from previous step: {}", content);
+            }
+            // do some work
+            try {
+                Thread.sleep(2000);
+            } catch (InterruptedException e) {}
+            // Simulate response of created index
+            CreateIndexResponse response = new CreateIndexResponse(true, true, inputData.getParams().get("index"));
+            future.complete(new CreateIndexResponseData(response));
         });
+
         return future;
     }
 
@@ -53,11 +60,7 @@ public class CreateIndexWorkflowStep implements WorkflowStep {
         return name;
     }
 
-    public WorkflowData getData() {
-        return data;
-    }
-
-    public void setData(WorkflowData data) {
-        this.data = data;
+    public void setInput(WorkflowInputData data) {
+        this.inputData = data;
     }
 }

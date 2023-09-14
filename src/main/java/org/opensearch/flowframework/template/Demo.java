@@ -30,6 +30,8 @@ public class Demo {
 
     private static final Logger logger = LogManager.getLogger(Demo.class);
 
+    // This is temporary. We need a factory class to generate these workflow steps
+    // based on a field in the JSON.
     private static Map<String, WorkflowStep> workflowMap = new HashMap<>();
     static {
         workflowMap.put("fetch_model", new DemoWorkflowStep(3000));
@@ -70,7 +72,7 @@ public class Demo {
                     )
             );
             // TODO need to handle this better, passing an argument when we start them all at the beginning is silly
-            futureList.add(n.execute(null));
+            futureList.add(n.execute());
         }
         futureList.forEach(CompletableFuture::join);
         logger.info("All done!");

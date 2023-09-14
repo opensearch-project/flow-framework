@@ -61,7 +61,7 @@ public class TemplateParser {
             WorkflowStep workflowStep = workflowSteps.get(nodeId);
             if (workflowStep instanceof CreateIndexWorkflowStep) {
                 CreateIndexRequest request = new CreateIndexRequest(nodeObject.get("index_name").getAsString());
-                ((CreateIndexWorkflowStep) workflowStep).setData(new CreateIndexRequestData(request));
+                ((CreateIndexWorkflowStep) workflowStep).setInput(new CreateIndexRequestData(request));
             }
             nodes.add(new ProcessNode(nodeId, workflowStep));
         }

@@ -19,10 +19,10 @@ public interface WorkflowStep {
 
     /**
      * Triggers the processing of the building block.
-     * @param data for input/output params of the building blocks.
-     * @return CompletableFuture of the building block.
+     * @param data for input params of the building blocks.
+     * @return CompletableFuture of the building block containing its output data.
      */
-    CompletableFuture<WorkflowData> execute(@Nullable WorkflowData data);
+    CompletableFuture<WorkflowData> execute(@Nullable WorkflowData... data);
 
     /**
      *

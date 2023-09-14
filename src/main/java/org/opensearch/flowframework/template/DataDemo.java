@@ -30,9 +30,12 @@ public class DataDemo {
 
     private static final Logger logger = LogManager.getLogger(DataDemo.class);
 
+    // This is temporary. We need a factory class to generate these workflow steps
+    // based on a field in the JSON.
     private static Map<String, WorkflowStep> workflowMap = new HashMap<>();
     static {
         workflowMap.put("create_index", new CreateIndexWorkflowStep());
+        workflowMap.put("create_another_index", new CreateIndexWorkflowStep());
     }
 
     /**
@@ -66,7 +69,7 @@ public class DataDemo {
                         predecessors.stream().map(p -> p.id()).collect(Collectors.joining(", "))
                     )
             );
-            futureList.add(n.execute(null));
+            futureList.add(n.execute());
         }
         futureList.forEach(CompletableFuture::join);
         logger.info("All done!");

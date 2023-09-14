@@ -4,8 +4,17 @@
 			{
 				"id": "create_index",
 				"index_name": "demo"
+			},
+			{
+				"id": "create_another_index",
+				"index_name": "second_demo"
 			}
 		],
-		"edges": []
+		"edges": [
+            {
+                "source": "create_index",
+                "dest": "create_another_index"
+            }
+		]
 	}
 }

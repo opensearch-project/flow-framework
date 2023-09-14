@@ -24,7 +24,7 @@ public class DemoWorkflowStep implements WorkflowStep {
     }
 
     @Override
-    public CompletableFuture<WorkflowData> execute(WorkflowData data) {
+    public CompletableFuture<WorkflowData> execute(WorkflowData... data) {
         CompletableFuture<WorkflowData> future = new CompletableFuture<>();
         CompletableFuture.runAsync(() -> {
             try {
