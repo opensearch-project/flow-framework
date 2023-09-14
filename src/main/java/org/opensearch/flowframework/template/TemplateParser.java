@@ -28,6 +28,9 @@ import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
+import demo.CreateIndexRequestData;
+import demo.CreateIndexWorkflowStep;
+
 /**
  * Utility class for parsing templates.
  */

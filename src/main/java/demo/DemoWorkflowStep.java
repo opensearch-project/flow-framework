@@ -6,11 +6,12 @@
  * this file be licensed under the Apache-2.0 license or a
  * compatible open source license.
  */
-package org.opensearch.flowframework.template;
+package demo;
 
 import org.opensearch.flowframework.workflow.WorkflowData;
 import org.opensearch.flowframework.workflow.WorkflowStep;
 
+import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
 public class DemoWorkflowStep implements WorkflowStep {
@@ -24,7 +25,7 @@ public class DemoWorkflowStep implements WorkflowStep {
     }
 
     @Override
-    public CompletableFuture<WorkflowData> execute(WorkflowData... data) {
+    public CompletableFuture<WorkflowData> execute(List<WorkflowData> data) {
         CompletableFuture<WorkflowData> future = new CompletableFuture<>();
         CompletableFuture.runAsync(() -> {
             try {

@@ -13,6 +13,7 @@ import org.apache.logging.log4j.Logger;
 import org.opensearch.flowframework.workflow.WorkflowData;
 import org.opensearch.flowframework.workflow.WorkflowStep;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
@@ -107,18 +108,18 @@ public class ProcessNode {
                 try {
                     waitForPredecessors.orTimeout(30, TimeUnit.SECONDS).get();
                 } catch (InterruptedException | ExecutionException e) {
-                    future.completeExceptionally(e);
+                    handleException(e);
                     return;
                 }
             }
             logger.debug(">>> Starting {}.", this.id);
             // get the input data from predecessor(s)
-            WorkflowData[] input = new WorkflowData[predFutures.size()];
-            for (int i = 0; i < predFutures.size(); i++) {
+            List<WorkflowData> input = new ArrayList<WorkflowData>();
+            for (CompletableFuture<WorkflowData> cf : predFutures) {
                 try {
-                    input[i] = predFutures.get(i).get();
+                    input.add(cf.get());
                 } catch (InterruptedException | ExecutionException e) {
-                    future.completeExceptionally(e);
+                    handleException(e);
                     return;
                 }
             }
@@ -128,12 +129,16 @@ public class ProcessNode {
                 future.complete(stepFuture.get());
                 logger.debug("<<< Completed {}", this.id);
             } catch (InterruptedException | ExecutionException e) {
-                // TODO: better handling of getCause
-                future.completeExceptionally(e);
-                logger.debug("<<< Completed Exceptionally {}", this.id);
+                handleException(e);
             }
         });
         return this.future;
+    }
+
+    private void handleException(Exception e) {
+        // TODO: better handling of getCause
+        this.future.completeExceptionally(e);
+        logger.debug("<<< Completed Exceptionally {}", this.id);
     }
 
     @Override

@@ -6,7 +6,7 @@
  * this file be licensed under the Apache-2.0 license or a
  * compatible open source license.
  */
-package org.opensearch.flowframework.template;
+package demo;
 
 import org.opensearch.action.admin.indices.create.CreateIndexRequest;
 import org.opensearch.flowframework.workflow.WorkflowInputData;
