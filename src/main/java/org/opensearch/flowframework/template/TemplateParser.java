@@ -36,6 +36,14 @@ public class TemplateParser {
 
     private static final Logger logger = LogManager.getLogger(TemplateParser.class);
 
+    // Field names in the JSON. Package private for tests.
+    static final String WORKFLOW = "sequence";
+    static final String NODES = "nodes";
+    static final String NODE_ID = "id";
+    static final String EDGES = "edges";
+    static final String SOURCE = "source";
+    static final String DESTINATION = "dest";
+
     /**
      * Prevent instantiating this class.
      */
@@ -51,25 +59,23 @@ public class TemplateParser {
         Gson gson = new Gson();
         JsonObject jsonObject = gson.fromJson(json, JsonObject.class);
 
-        // TODO: make this name a constant and make sure it is consistent with template
-        JsonObject graph = jsonObject.getAsJsonObject("sequence");
+        JsonObject graph = jsonObject.getAsJsonObject(WORKFLOW);
 
         List<ProcessNode> nodes = new ArrayList<>();
         List<ProcessSequenceEdge> edges = new ArrayList<>();
 
-        // TODO: make this name a constant and make sure it is consistent with template
-        for (JsonElement nodeJson : graph.getAsJsonArray("nodes")) {
+        for (JsonElement nodeJson : graph.getAsJsonArray(NODES)) {
             JsonObject nodeObject = nodeJson.getAsJsonObject();
-            String nodeId = nodeObject.get("id").getAsString();
+            String nodeId = nodeObject.get(NODE_ID).getAsString();
             // The below steps will be replaced by a generator class that instantiates a WorkflowStep
             // based on user_input data from the template.
             WorkflowStep workflowStep = workflowSteps.get(nodeId);
             // temporary demo POC of getting from a request to input data
             // this will be refactored into something pulling from user template
-            WorkflowData input = WorkflowData.EMPTY;
+            WorkflowData inputData = WorkflowData.EMPTY;
             if (List.of("create_index", "create_another_index").contains(nodeId)) {
                 CreateIndexRequest request = new CreateIndexRequest(nodeObject.get("index_name").getAsString());
-                input = new WorkflowData() {
+                inputData = new WorkflowData() {
 
                     @Override
                     public Map<String, Object> getContent() {
@@ -85,14 +91,16 @@ public class TemplateParser {
 
                 };
             }
-            nodes.add(new ProcessNode(nodeId, workflowStep, input));
+            nodes.add(new ProcessNode(nodeId, workflowStep, inputData));
         }
 
-        // TODO: make this name a constant and make sure it is consistent with template
-        for (JsonElement edgeJson : graph.getAsJsonArray("edges")) {
+        for (JsonElement edgeJson : graph.getAsJsonArray(EDGES)) {
             JsonObject edgeObject = edgeJson.getAsJsonObject();
-            String sourceNodeId = edgeObject.get("source").getAsString();
-            String destNodeId = edgeObject.get("dest").getAsString();
+            String sourceNodeId = edgeObject.get(SOURCE).getAsString();
+            String destNodeId = edgeObject.get(DESTINATION).getAsString();
+            if (sourceNodeId.equals(destNodeId)) {
+                throw new IllegalArgumentException("Edge connects node " + sourceNodeId + " to itself.");
+            }
             edges.add(new ProcessSequenceEdge(sourceNodeId, destNodeId));
         }
 
@@ -113,8 +121,15 @@ public class TemplateParser {
             predecessorEdges.computeIfAbsent(dest, k -> new HashSet<>()).add(edge);
             successorEdges.computeIfAbsent(source, k -> new HashSet<>()).add(edge);
         }
+        // update predecessors on the node object
+        nodes.stream().filter(n -> predecessorEdges.containsKey(n)).forEach(n -> {
+            n.setPredecessors(predecessorEdges.get(n).stream().map(e -> nodeMap.get(e.getSource())).collect(Collectors.toSet()));
+        });
+
         // See https://en.wikipedia.org/wiki/Topological_sorting#Kahn's_algorithm
-        // Find start node(s) which have no predecessors
+        // L ← Empty list that will contain the sorted elements
+        List<ProcessNode> sortedNodes = new ArrayList<>();
+        // S ← Set of all nodes with no incoming edge
         Queue<ProcessNode> sourceNodes = new ArrayDeque<>();
         nodes.stream().filter(n -> !predecessorEdges.containsKey(n)).forEach(n -> sourceNodes.add(n));
         if (sourceNodes.isEmpty()) {
@@ -122,21 +137,21 @@ public class TemplateParser {
         }
         logger.debug("Start node(s): {}", sourceNodes);
 
-        // List to contain sorted elements
-        List<ProcessNode> sortedNodes = new ArrayList<>();
-        // Keep adding successors
+        // while S is not empty do
         while (!sourceNodes.isEmpty()) {
+            // remove a node n from S
             ProcessNode n = sourceNodes.poll();
+            // add n to L
             sortedNodes.add(n);
-            if (predecessorEdges.containsKey(n)) {
-                n.setPredecessors(predecessorEdges.get(n).stream().map(e -> nodeMap.get(e.getSource())).collect(Collectors.toSet()));
-            }
-            // Add successors to the queue
+            // for each node m with an edge e from n to m do
             for (ProcessSequenceEdge e : successorEdges.getOrDefault(n, Collections.emptySet())) {
+                ProcessNode m = nodeMap.get(e.getDestination());
+                // remove edge e from the graph
                 graph.remove(e);
-                ProcessNode dest = nodeMap.get(e.getDestination());
-                if (!sourceNodes.contains(dest) && !sortedNodes.contains(dest)) {
-                    sourceNodes.add(dest);
+                // if m has no other incoming edges then
+                if (!predecessorEdges.get(m).stream().anyMatch(i -> graph.contains(i))) {
+                    // insert m into S
+                    sourceNodes.add(m);
                 }
             }
         }

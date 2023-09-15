@@ -81,7 +81,7 @@ public class ProcessNode {
      * Returns the input data for this node.
      * @return the input data
      */
-    public WorkflowData getInput() {
+    public WorkflowData input() {
         return input;
     }
 
