@@ -6,7 +6,7 @@
  * this file be licensed under the Apache-2.0 license or a
  * compatible open source license.
  */
-package org.opensearch.flowframework.workflow;
+package org.opensearch.flowframework.workflow.CreateIndex;
 
 import com.google.common.base.Charsets;
 import com.google.common.io.Resources;
@@ -17,9 +17,13 @@ import org.opensearch.action.admin.indices.create.CreateIndexRequest;
 import org.opensearch.action.admin.indices.create.CreateIndexResponse;
 import org.opensearch.client.Client;
 import org.opensearch.common.xcontent.XContentType;
+import org.opensearch.flowframework.workflow.WorkflowData;
+import org.opensearch.flowframework.workflow.WorkflowStep;
 
 import java.io.IOException;
 import java.net.URL;
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
 public class CreateIndexStep implements WorkflowStep {
@@ -33,26 +37,43 @@ public class CreateIndexStep implements WorkflowStep {
     }
 
     @Override
-    public CompletableFuture<WorkflowData> execute(WorkflowData data) {
-
+    public CompletableFuture<WorkflowData> execute(List<WorkflowData> data) {
+        CompletableFuture<WorkflowData> future = new CompletableFuture<>();
         ActionListener<CreateIndexResponse> actionListener = new ActionListener<>() {
 
             @Override
             public void onResponse(CreateIndexResponse createIndexResponse) {
                 logger.info("created index:{}");
+                future.complete(new WorkflowData() {
+                    @Override
+                    public Map<String, Object> getContent() {
+                        return Map.of("index", createIndexResponse.index());
+                    }
+                });
             }
 
             @Override
             public void onFailure(Exception e) {
                 logger.error("Index creation failed", e);
+                future.completeExceptionally(e);
             }
         };
 
-        // Fetch indexName, fileName and settings from WorkflowData
-        CreateIndexRequest request = new CreateIndexRequest(indexName).mapping(getIndexMappings(fileName), XContentType.JSON)
+        String index = null;
+
+        for (WorkflowData workflowData : data) {
+            // Fetch index from content i.e. request body of execute API
+            Map<String, Object> content = workflowData.getContent();
+            index = (String) content.get("index");
+        }
+
+        // TODO:
+        // 1. Map index type -> fileName
+        // 2. Create settings based on the index settings received from content
+        CreateIndexRequest request = new CreateIndexRequest(index).mapping(getIndexMappings(fileName), XContentType.JSON)
             .settings(settings);
         client.admin().indices().create(request, actionListener);
-        return null;
+        return future;
     }
 
     @Override
