@@ -14,6 +14,7 @@ import com.google.gson.JsonObject;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.opensearch.action.admin.indices.create.CreateIndexRequest;
+import org.opensearch.flowframework.workflow.WorkflowData;
 import org.opensearch.flowframework.workflow.WorkflowStep;
 
 import java.util.ArrayDeque;
@@ -27,9 +28,6 @@ import java.util.Queue;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
-
-import demo.CreateIndexRequestData;
-import demo.CreateIndexWorkflowStep;
 
 /**
  * Utility class for parsing templates.
@@ -53,22 +51,44 @@ public class TemplateParser {
         Gson gson = new Gson();
         JsonObject jsonObject = gson.fromJson(json, JsonObject.class);
 
+        // TODO: make this name a constant and make sure it is consistent with template
         JsonObject graph = jsonObject.getAsJsonObject("sequence");
 
         List<ProcessNode> nodes = new ArrayList<>();
         List<ProcessSequenceEdge> edges = new ArrayList<>();
 
+        // TODO: make this name a constant and make sure it is consistent with template
         for (JsonElement nodeJson : graph.getAsJsonArray("nodes")) {
             JsonObject nodeObject = nodeJson.getAsJsonObject();
             String nodeId = nodeObject.get("id").getAsString();
+            // The below steps will be replaced by a generator class that instantiates a WorkflowStep
+            // based on user_input data from the template.
             WorkflowStep workflowStep = workflowSteps.get(nodeId);
-            if (workflowStep instanceof CreateIndexWorkflowStep) {
+            // temporary demo POC of getting from a request to input data
+            // this will be refactored into something pulling from user template
+            WorkflowData input = WorkflowData.EMPTY;
+            if (List.of("create_index", "create_another_index").contains(nodeId)) {
                 CreateIndexRequest request = new CreateIndexRequest(nodeObject.get("index_name").getAsString());
-                ((CreateIndexWorkflowStep) workflowStep).setInput(new CreateIndexRequestData(request));
+                input = new WorkflowData() {
+
+                    @Override
+                    public Map<String, Object> getContent() {
+                        // See CreateIndexRequest ParseFields for source of content keys needed
+                        return Map.of("mappings", request.mappings(), "settings", request.settings(), "aliases", request.aliases());
+                    }
+
+                    @Override
+                    public Map<String, String> getParams() {
+                        // See RestCreateIndexAction for source of param keys needed
+                        return Map.of("index", request.index());
+                    }
+
+                };
             }
-            nodes.add(new ProcessNode(nodeId, workflowStep));
+            nodes.add(new ProcessNode(nodeId, workflowStep, input));
         }
 
+        // TODO: make this name a constant and make sure it is consistent with template
         for (JsonElement edgeJson : graph.getAsJsonArray("edges")) {
             JsonObject edgeObject = edgeJson.getAsJsonObject();
             String sourceNodeId = edgeObject.get("source").getAsString();

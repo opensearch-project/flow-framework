@@ -32,6 +32,7 @@ public class ProcessNode {
 
     private final String id;
     private final WorkflowStep workflowStep;
+    private final WorkflowData input;
     private CompletableFuture<WorkflowData> future = null;
 
     // will be populated during graph parsing
@@ -44,8 +45,20 @@ public class ProcessNode {
      * @param workflowStep A java class implementing {@link WorkflowStep} to be executed when it's this node's turn.
      */
     ProcessNode(String id, WorkflowStep workflowStep) {
+        this(id, workflowStep, WorkflowData.EMPTY);
+    }
+
+    /**
+     * Create this node linked to its executing process.
+     *
+     * @param id A string identifying the workflow step
+     * @param workflowStep A java class implementing {@link WorkflowStep} to be executed when it's this node's turn.
+     * @param input Input required by the node
+     */
+    public ProcessNode(String id, WorkflowStep workflowStep, WorkflowData input) {
         this.id = id;
         this.workflowStep = workflowStep;
+        this.input = input;
     }
 
     /**
@@ -62,6 +75,14 @@ public class ProcessNode {
      */
     public WorkflowStep workflowStep() {
         return workflowStep;
+    }
+
+    /**
+     * Returns the input data for this node.
+     * @return the input data
+     */
+    public WorkflowData getInput() {
+        return input;
     }
 
     /**
@@ -115,6 +136,7 @@ public class ProcessNode {
             logger.debug(">>> Starting {}.", this.id);
             // get the input data from predecessor(s)
             List<WorkflowData> input = new ArrayList<WorkflowData>();
+            input.add(this.input);
             for (CompletableFuture<WorkflowData> cf : predFutures) {
                 try {
                     input.add(cf.get());

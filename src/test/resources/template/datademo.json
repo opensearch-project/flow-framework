@@ -11,10 +11,10 @@
 			}
 		],
 		"edges": [
-            {
-                "source": "create_index",
-                "dest": "create_another_index"
-            }
+			{
+				"source": "create_index",
+				"dest": "create_another_index"
+			}
 		]
 	}
 }
