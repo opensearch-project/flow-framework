@@ -35,6 +35,7 @@ allprojects {
 
             trimTrailingWhitespace()
             endWithNewline()
+            indentWithSpaces(4)
         }
         format("license", {
             licenseHeaderFile("${rootProject.file("formatter/license-header.txt")}", "package ");

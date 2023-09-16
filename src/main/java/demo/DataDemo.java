@@ -10,16 +10,19 @@ package demo;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.opensearch.common.SuppressForbidden;
+import org.opensearch.common.io.PathUtils;
 import org.opensearch.flowframework.template.ProcessNode;
 import org.opensearch.flowframework.template.TemplateParser;
 import org.opensearch.flowframework.workflow.WorkflowStep;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
-import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
@@ -45,11 +48,12 @@ public class DataDemo {
      *
      * @param args unused
      */
+    @SuppressForbidden(reason = "just a demo class that will be deleted")
     public static void main(String[] args) {
         String path = "src/test/resources/template/datademo.json";
         String json;
         try {
-            json = new String(Files.readAllBytes(Paths.get(path)));
+            json = new String(Files.readAllBytes(PathUtils.get(path)), StandardCharsets.UTF_8);
         } catch (IOException e) {
             logger.error("Failed to read JSON at path {}", path);
             return;
@@ -67,6 +71,7 @@ public class DataDemo {
                 predecessors.isEmpty()
                     ? " Can start immediately!"
                     : String.format(
+                        Locale.getDefault(),
                         " Must wait for [%s] to complete first.",
                         predecessors.stream().map(p -> p.id()).collect(Collectors.joining(", "))
                     )

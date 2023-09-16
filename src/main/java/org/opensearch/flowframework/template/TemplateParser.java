@@ -127,9 +127,9 @@ public class TemplateParser {
         });
 
         // See https://en.wikipedia.org/wiki/Topological_sorting#Kahn's_algorithm
-        // L ← Empty list that will contain the sorted elements
+        // L <- Empty list that will contain the sorted elements
         List<ProcessNode> sortedNodes = new ArrayList<>();
-        // S ← Set of all nodes with no incoming edge
+        // S <- Set of all nodes with no incoming edge
         Queue<ProcessNode> sourceNodes = new ArrayDeque<>();
         nodes.stream().filter(n -> !predecessorEdges.containsKey(n)).forEach(n -> sourceNodes.add(n));
         if (sourceNodes.isEmpty()) {

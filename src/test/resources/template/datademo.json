@@ -1,20 +1,20 @@
 {
-	"sequence": {
-		"nodes": [
-			{
-				"id": "create_index",
-				"index_name": "demo"
-			},
-			{
-				"id": "create_another_index",
-				"index_name": "second_demo"
-			}
-		],
-		"edges": [
-			{
-				"source": "create_index",
-				"dest": "create_another_index"
-			}
-		]
-	}
+    "sequence": {
+        "nodes": [
+            {
+                "id": "create_index",
+                "index_name": "demo"
+            },
+            {
+                "id": "create_another_index",
+                "index_name": "second_demo"
+            }
+        ],
+        "edges": [
+            {
+                "source": "create_index",
+                "dest": "create_another_index"
+            }
+        ]
+    }
 }

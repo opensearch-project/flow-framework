@@ -14,11 +14,18 @@ import org.opensearch.flowframework.workflow.WorkflowStep;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
+/**
+ * Demo workflowstep to show sequenced execution
+ */
 public class DemoWorkflowStep implements WorkflowStep {
 
     private final long delay;
     private final String name;
 
+    /**
+     * Instantiate a step with a delay.
+     * @param delay milliseconds to take pretending to do work while really sleeping
+     */
     public DemoWorkflowStep(long delay) {
         this.delay = delay;
         this.name = "DEMO_DELAY_" + delay;

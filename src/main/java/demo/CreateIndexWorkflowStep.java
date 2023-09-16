@@ -18,12 +18,18 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
+/**
+ * Sample to show other devs how to pass data around.  Will be deleted once other PRs are merged.
+ */
 public class CreateIndexWorkflowStep implements WorkflowStep {
 
     private static final Logger logger = LogManager.getLogger(CreateIndexWorkflowStep.class);
 
     private final String name;
 
+    /**
+     * Instantiate this class.
+     */
     public CreateIndexWorkflowStep() {
         this.name = "CREATE_INDEX";
     }
