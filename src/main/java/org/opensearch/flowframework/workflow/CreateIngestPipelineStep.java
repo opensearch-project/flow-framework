@@ -48,11 +48,13 @@ public class CreateIngestPipelineStep implements WorkflowStep {
 
         // Extract required content from workflow data
         for (WorkflowData workflowData : data) {
-            logger.debug("Previous step sent params: {}, content: {}", workflowData.getParams(), workflowData.getContent());
 
+            Map<String, String> parameters = workflowData.getParams();
             Map<String, Object> content = workflowData.getContent();
-            if (content.containsKey("id")) {
-                pipelineId = (String) content.get("id");
+            logger.debug("Previous step sent params: {}, content: {}", parameters, content);
+
+            if (parameters.containsKey("id")) {
+                pipelineId = (String) parameters.get("id");
             }
             if (content.containsKey("source")) {
                 source = (String) content.get("source");
