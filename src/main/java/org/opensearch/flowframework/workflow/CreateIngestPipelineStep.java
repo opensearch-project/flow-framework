@@ -54,7 +54,7 @@ public class CreateIngestPipelineStep implements WorkflowStep {
             logger.debug("Previous step sent params: {}, content: {}", parameters, content);
 
             if (parameters.containsKey("id")) {
-                pipelineId = (String) parameters.get("id");
+                pipelineId = parameters.get("id");
             }
             if (content.containsKey("source")) {
                 source = (String) content.get("source");
