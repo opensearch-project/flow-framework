@@ -13,11 +13,12 @@ import org.apache.logging.log4j.Logger;
 import org.opensearch.action.ingest.PutPipelineRequest;
 import org.opensearch.client.Client;
 import org.opensearch.client.ClusterAdminClient;
+import org.opensearch.common.xcontent.XContentType;
 import org.opensearch.core.action.ActionListener;
-import org.opensearch.core.common.bytes.BytesReference;
-import org.opensearch.core.xcontent.MediaType;
+import org.opensearch.core.common.bytes.BytesArray;
 
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
 /**
@@ -42,40 +43,51 @@ public class CreateIngestPipelineStep implements WorkflowStep {
     public CompletableFuture<WorkflowData> execute(List<WorkflowData> data) {
 
         CompletableFuture<WorkflowData> createIngestPipelineFuture = new CompletableFuture<>();
-        PutPipelineRequest putPipelineRequest = null;
+        String pipelineId = null;
+        String source = null;
 
-        // TODO : Still not clear if this is the correct way to retrieve data from the parsed use case tempalte
+        // Extract required content from workflow data
         for (WorkflowData workflowData : data) {
-            if (workflowData instanceof WorkflowInputData) {
+            logger.debug("Previous step sent params: {}, content: {}", workflowData.getParams(), workflowData.getContent());
 
-                WorkflowInputData inputData = (WorkflowInputData) workflowData;
-                logger.debug("Previous step sent params: {}, content: {}", inputData.getParams(), workflowData.getContent());
-
-                // Extract params and content to create request
-                String pipelineId = inputData.getParams().get("id");
-                BytesReference source = (BytesReference) inputData.getContent().get("source");
-                MediaType mediaType = (MediaType) inputData.getContent().get("mediaType");
-                putPipelineRequest = new PutPipelineRequest(pipelineId, source, mediaType);
+            Map<String, Object> content = workflowData.getContent();
+            if (content.containsKey("id")) {
+                pipelineId = (String) content.get("id");
+            }
+            if (content.containsKey("source")) {
+                source = (String) content.get("source");
+            }
+            if (pipelineId != null && source != null) {
+                break;
             }
         }
 
-        if (putPipelineRequest != null) {
-            String pipelineId = putPipelineRequest.getId();
+        // Create PutPipelineRequest and execute
+        if (pipelineId != null && source != null) {
+            PutPipelineRequest putPipelineRequest = new PutPipelineRequest(pipelineId, new BytesArray(source), XContentType.JSON);
             clusterAdminClient.putPipeline(putPipelineRequest, ActionListener.wrap(response -> {
 
-                // Return create pipeline response to workflow data
-                logger.info("Created pipeline : " + pipelineId);
-                CreateIngestPipelineResponseData responseData = new CreateIngestPipelineResponseData(pipelineId);
-                createIngestPipelineFuture.complete(responseData);
+                logger.info("Created pipeline : " + putPipelineRequest.getId());
+
+                // PutPipelineRequest returns only an AcknowledgeResponse, returning pipelineId instead
+                createIngestPipelineFuture.complete(new WorkflowData() {
+                    @Override
+                    public Map<String, Object> getContent() {
+                        return Map.of("pipelineId", putPipelineRequest.getId());
+                    }
+                });
 
                 // TODO : Use node client to index response data to global context (pending global context index implementation)
+
             }, exception -> {
                 logger.error("Failed to create pipeline : " + exception.getMessage());
                 createIngestPipelineFuture.completeExceptionally(exception);
             }));
         } else {
+            // Required workflow data not found
             createIngestPipelineFuture.completeExceptionally(new Exception("Failed to create pipeline"));
         }
+
         return createIngestPipelineFuture;
     }
 
