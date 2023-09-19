@@ -37,6 +37,10 @@ public class CreateIndexWorkflowStep implements WorkflowStep {
     @Override
     public CompletableFuture<WorkflowData> execute(List<WorkflowData> data) {
         CompletableFuture<WorkflowData> future = new CompletableFuture<>();
+        // TODO we will be passing a thread pool to this object when it's instantiated
+        // we should either add the generic executor from that pool to this call
+        // or use executorservice.submit or any of various threading options
+        // https://github.com/opensearch-project/opensearch-ai-flow-framework/issues/42
         CompletableFuture.runAsync(() -> {
             String inputIndex = null;
             boolean first = true;
@@ -61,8 +65,6 @@ public class CreateIndexWorkflowStep implements WorkflowStep {
             } catch (InterruptedException e) {}
             // Simulate response of created index
             CreateIndexResponse response = new CreateIndexResponse(true, true, inputIndex);
-            // OLD UNSCALABLE WAY: future.complete(new CreateIndexResponseData(response));
-            // Better way with an anonymous class:
             future.complete(new WorkflowData() {
                 @Override
                 public Map<String, Object> getContent() {

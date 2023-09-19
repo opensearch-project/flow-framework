@@ -122,18 +122,23 @@ public class ProcessNode {
      */
     public CompletableFuture<WorkflowData> execute() {
         this.future = new CompletableFuture<>();
+        // TODO this class will be instantiated with the OpenSearch thread pool (or one for tests!)
+        // the generic executor from that pool should be passed to this runAsync call
+        // https://github.com/opensearch-project/opensearch-ai-flow-framework/issues/42
         CompletableFuture.runAsync(() -> {
             List<CompletableFuture<WorkflowData>> predFutures = predecessors.stream().map(p -> p.getFuture()).collect(Collectors.toList());
             if (!predecessors.isEmpty()) {
                 CompletableFuture<Void> waitForPredecessors = CompletableFuture.allOf(predFutures.toArray(new CompletableFuture<?>[0]));
                 try {
+                    // We need timeouts to be part of the user template or in settings
+                    // https://github.com/opensearch-project/opensearch-ai-flow-framework/issues/45
                     waitForPredecessors.orTimeout(30, TimeUnit.SECONDS).get();
                 } catch (InterruptedException | ExecutionException e) {
                     handleException(e);
                     return;
                 }
             }
-            logger.debug(">>> Starting {}.", this.id);
+            logger.info(">>> Starting {}.", this.id);
             // get the input data from predecessor(s)
             List<WorkflowData> input = new ArrayList<WorkflowData>();
             input.add(this.input);

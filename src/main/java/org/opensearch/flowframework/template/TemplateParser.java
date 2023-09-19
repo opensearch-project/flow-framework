@@ -69,9 +69,10 @@ public class TemplateParser {
             String nodeId = nodeObject.get(NODE_ID).getAsString();
             // The below steps will be replaced by a generator class that instantiates a WorkflowStep
             // based on user_input data from the template.
+            // https://github.com/opensearch-project/opensearch-ai-flow-framework/issues/41
             WorkflowStep workflowStep = workflowSteps.get(nodeId);
             // temporary demo POC of getting from a request to input data
-            // this will be refactored into something pulling from user template
+            // this will be refactored into something pulling from user template as part of the above issue
             WorkflowData inputData = WorkflowData.EMPTY;
             if (List.of("create_index", "create_another_index").contains(nodeId)) {
                 CreateIndexRequest request = new CreateIndexRequest(nodeObject.get("index_name").getAsString());
