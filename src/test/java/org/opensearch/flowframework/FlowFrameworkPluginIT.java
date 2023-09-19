@@ -22,8 +22,6 @@ import java.nio.charset.StandardCharsets;
 import java.util.Collection;
 import java.util.Collections;
 
-import static org.hamcrest.Matchers.containsString;
-
 @ThreadLeakScope(ThreadLeakScope.Scope.NONE)
 @OpenSearchIntegTestCase.ClusterScope(scope = OpenSearchIntegTestCase.Scope.SUITE)
 public class FlowFrameworkPluginIT extends OpenSearchIntegTestCase {
@@ -38,6 +36,6 @@ public class FlowFrameworkPluginIT extends OpenSearchIntegTestCase {
         String body = EntityUtils.toString(response.getEntity(), StandardCharsets.UTF_8);
 
         logger.info("response body: {}", body);
-        assertThat(body, containsString("flowframework"));
+        assertTrue(body.contains("flowframework"));
     }
 }
