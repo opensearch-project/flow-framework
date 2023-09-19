@@ -14,16 +14,13 @@ import org.opensearch.common.SuppressForbidden;
 import org.opensearch.common.io.PathUtils;
 import org.opensearch.flowframework.template.ProcessNode;
 import org.opensearch.flowframework.template.TemplateParser;
-import org.opensearch.flowframework.workflow.WorkflowStep;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
-import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
@@ -34,14 +31,6 @@ import java.util.stream.Collectors;
 public class DataDemo {
 
     private static final Logger logger = LogManager.getLogger(DataDemo.class);
-
-    // This is temporary. We need a factory class to generate these workflow steps
-    // based on a field in the JSON.
-    private static Map<String, WorkflowStep> workflowMap = new HashMap<>();
-    static {
-        workflowMap.put("create_index", new CreateIndexWorkflowStep());
-        workflowMap.put("create_another_index", new CreateIndexWorkflowStep());
-    }
 
     /**
      * Demonstrate parsing a JSON graph.
@@ -60,7 +49,7 @@ public class DataDemo {
         }
 
         logger.info("Parsing graph to sequence...");
-        List<ProcessNode> processSequence = TemplateParser.parseJsonGraphToSequence(json, workflowMap);
+        List<ProcessNode> processSequence = TemplateParser.parseJsonGraphToSequence(json);
         List<CompletableFuture<?>> futureList = new ArrayList<>();
 
         for (ProcessNode n : processSequence) {

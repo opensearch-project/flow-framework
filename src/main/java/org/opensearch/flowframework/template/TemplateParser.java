@@ -13,9 +13,9 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.opensearch.action.admin.indices.create.CreateIndexRequest;
 import org.opensearch.flowframework.workflow.WorkflowData;
 import org.opensearch.flowframework.workflow.WorkflowStep;
+import org.opensearch.flowframework.workflow.WorkflowStepFactory;
 
 import java.util.ArrayDeque;
 import java.util.ArrayList;
@@ -36,13 +36,16 @@ public class TemplateParser {
 
     private static final Logger logger = LogManager.getLogger(TemplateParser.class);
 
-    // Field names in the JSON. Package private for tests.
+    // Field names in the JSON.
+    // Currently package private for tests.
+    // These may eventually become part of the template definition in which case they might be better declared public
     static final String WORKFLOW = "sequence";
     static final String NODES = "nodes";
     static final String NODE_ID = "id";
     static final String EDGES = "edges";
     static final String SOURCE = "source";
     static final String DESTINATION = "dest";
+    static final String STEP_TYPE = "step_type";
 
     /**
      * Prevent instantiating this class.
@@ -52,10 +55,9 @@ public class TemplateParser {
     /**
      * Parse a JSON representation of nodes and edges into a topologically sorted list of process nodes.
      * @param json A string containing a JSON representation of nodes and edges
-     * @param workflowSteps A map linking JSON node names to Java objects implementing {@link WorkflowStep}
      * @return A list of Process Nodes sorted topologically.  All predecessors of any node will occur prior to it in the list.
      */
-    public static List<ProcessNode> parseJsonGraphToSequence(String json, Map<String, WorkflowStep> workflowSteps) {
+    public static List<ProcessNode> parseJsonGraphToSequence(String json) {
         Gson gson = new Gson();
         JsonObject jsonObject = gson.fromJson(json, JsonObject.class);
 
@@ -67,20 +69,9 @@ public class TemplateParser {
         for (JsonElement nodeJson : graph.getAsJsonArray(NODES)) {
             JsonObject nodeObject = nodeJson.getAsJsonObject();
             String nodeId = nodeObject.get(NODE_ID).getAsString();
-            // The below steps will be replaced by a generator class that instantiates a WorkflowStep
-            // based on user_input data from the template.
-            // https://github.com/opensearch-project/opensearch-ai-flow-framework/issues/41
-            WorkflowStep workflowStep = workflowSteps.get(nodeId);
-            // temporary demo POC of getting from a request to input data
-            // this will be refactored into something pulling from user template as part of the above issue
+            String stepType = nodeObject.get(STEP_TYPE).getAsString();
+            WorkflowStep workflowStep = WorkflowStepFactory.get().createStep(stepType);
             WorkflowData inputData = WorkflowData.EMPTY;
-            if (List.of("create_index", "create_another_index").contains(nodeId)) {
-                CreateIndexRequest request = new CreateIndexRequest(nodeObject.get("index_name").getAsString());
-                inputData = new WorkflowData(
-                    Map.of("mappings", request.mappings(), "settings", request.settings(), "aliases", request.aliases()),
-                    Map.of("index", request.index())
-                );
-            }
             nodes.add(new ProcessNode(nodeId, workflowStep, inputData));
         }
 

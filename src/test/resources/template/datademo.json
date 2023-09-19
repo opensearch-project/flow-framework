@@ -3,10 +3,12 @@
         "nodes": [
             {
                 "id": "create_index",
+                "step_type": "create_index",
                 "index_name": "demo"
             },
             {
                 "id": "create_another_index",
+                "step_type": "create_index",
                 "index_name": "second_demo"
             }
         ],

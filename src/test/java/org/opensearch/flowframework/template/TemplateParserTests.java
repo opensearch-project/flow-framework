@@ -50,7 +50,7 @@ public class TemplateParserTests extends OpenSearchTestCase {
 
     // Less verbose parser
     private static List<ProcessNode> parse(String json) {
-        return TemplateParser.parseJsonGraphToSequence(json, Collections.emptyMap());
+        return TemplateParser.parseJsonGraphToSequence(json);
     }
 
     @Override
