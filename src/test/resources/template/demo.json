@@ -1,0 +1,36 @@
+{
+    "sequence": {
+        "nodes": [
+            {
+                "id": "fetch_model"
+            },
+            {
+                "id": "create_ingest_pipeline"
+            },
+            {
+                "id": "create_search_pipeline"
+            },
+            {
+                "id": "create_neural_search_index"
+            }
+        ],
+        "edges": [
+            {
+                "source": "fetch_model",
+                "dest": "create_ingest_pipeline"
+            },
+            {
+                "source": "fetch_model",
+                "dest": "create_search_pipeline"
+            },
+            {
+                "source": "create_ingest_pipeline",
+                "dest": "create_neural_search_index"
+            },
+            {
+                "source": "create_search_pipeline",
+                "dest": "create_neural_search_index"
+            }
+        ]
+    }
+}
