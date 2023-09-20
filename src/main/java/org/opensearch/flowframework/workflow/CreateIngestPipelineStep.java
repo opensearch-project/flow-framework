@@ -34,6 +34,11 @@ public class CreateIngestPipelineStep implements WorkflowStep {
     // Client to store response data into global context index
     private final Client client;
 
+    /**
+     * Instantiates a new CreateIngestPipelineStep
+     *
+     * @param client The client to create a pipeline and store workflow data into the global context index
+     */
     public CreateIngestPipelineStep(Client client) {
         this.clusterAdminClient = client.admin().cluster();
         this.client = client;
@@ -51,10 +56,11 @@ public class CreateIngestPipelineStep implements WorkflowStep {
 
             Map<String, String> parameters = workflowData.getParams();
             Map<String, Object> content = workflowData.getContent();
+
             logger.debug("Previous step sent params: {}, content: {}", parameters, content);
 
-            if (parameters.containsKey("id")) {
-                pipelineId = parameters.get("id");
+            if (content.containsKey("id")) {
+                pipelineId = (String) content.get("id");
             }
             if (content.containsKey("source")) {
                 source = (String) content.get("source");
