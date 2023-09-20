@@ -64,7 +64,7 @@ public class TemplateParser {
         JsonObject graph = jsonObject.getAsJsonObject(WORKFLOW);
 
         List<ProcessNode> nodes = new ArrayList<>();
-        List<ProcessSequenceEdge> edges = new ArrayList<>();
+        List<WorkflowEdge> edges = new ArrayList<>();
 
         for (JsonElement nodeJson : graph.getAsJsonArray(NODES)) {
             JsonObject nodeObject = nodeJson.getAsJsonObject();
@@ -82,21 +82,21 @@ public class TemplateParser {
             if (sourceNodeId.equals(destNodeId)) {
                 throw new IllegalArgumentException("Edge connects node " + sourceNodeId + " to itself.");
             }
-            edges.add(new ProcessSequenceEdge(sourceNodeId, destNodeId));
+            edges.add(new WorkflowEdge(sourceNodeId, destNodeId));
         }
 
         return topologicalSort(nodes, edges);
     }
 
-    private static List<ProcessNode> topologicalSort(List<ProcessNode> nodes, List<ProcessSequenceEdge> edges) {
+    private static List<ProcessNode> topologicalSort(List<ProcessNode> nodes, List<WorkflowEdge> edges) {
         // Define the graph
-        Set<ProcessSequenceEdge> graph = new HashSet<>(edges);
+        Set<WorkflowEdge> graph = new HashSet<>(edges);
         // Map node id string to object
         Map<String, ProcessNode> nodeMap = nodes.stream().collect(Collectors.toMap(ProcessNode::id, Function.identity()));
         // Build predecessor and successor maps
-        Map<ProcessNode, Set<ProcessSequenceEdge>> predecessorEdges = new HashMap<>();
-        Map<ProcessNode, Set<ProcessSequenceEdge>> successorEdges = new HashMap<>();
-        for (ProcessSequenceEdge edge : edges) {
+        Map<ProcessNode, Set<WorkflowEdge>> predecessorEdges = new HashMap<>();
+        Map<ProcessNode, Set<WorkflowEdge>> successorEdges = new HashMap<>();
+        for (WorkflowEdge edge : edges) {
             ProcessNode source = nodeMap.get(edge.getSource());
             ProcessNode dest = nodeMap.get(edge.getDestination());
             predecessorEdges.computeIfAbsent(dest, k -> new HashSet<>()).add(edge);
@@ -125,7 +125,7 @@ public class TemplateParser {
             // add n to L
             sortedNodes.add(n);
             // for each node m with an edge e from n to m do
-            for (ProcessSequenceEdge e : successorEdges.getOrDefault(n, Collections.emptySet())) {
+            for (WorkflowEdge e : successorEdges.getOrDefault(n, Collections.emptySet())) {
                 ProcessNode m = nodeMap.get(e.getDestination());
                 // remove edge e from the graph
                 graph.remove(e);

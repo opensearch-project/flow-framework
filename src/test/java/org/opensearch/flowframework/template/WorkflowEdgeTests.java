@@ -10,7 +10,7 @@ package org.opensearch.flowframework.template;
 
 import org.opensearch.test.OpenSearchTestCase;
 
-public class ProcessSequenceEdgeTests extends OpenSearchTestCase {
+public class WorkflowEdgeTests extends OpenSearchTestCase {
 
     @Override
     public void setUp() throws Exception {
@@ -18,15 +18,15 @@ public class ProcessSequenceEdgeTests extends OpenSearchTestCase {
     }
 
     public void testEdge() {
-        ProcessSequenceEdge edgeAB = new ProcessSequenceEdge("A", "B");
+        WorkflowEdge edgeAB = new WorkflowEdge("A", "B");
         assertEquals("A", edgeAB.getSource());
         assertEquals("B", edgeAB.getDestination());
         assertEquals("A->B", edgeAB.toString());
 
-        ProcessSequenceEdge edgeAB2 = new ProcessSequenceEdge("A", "B");
+        WorkflowEdge edgeAB2 = new WorkflowEdge("A", "B");
         assertEquals(edgeAB, edgeAB2);
 
-        ProcessSequenceEdge edgeAC = new ProcessSequenceEdge("A", "C");
+        WorkflowEdge edgeAC = new WorkflowEdge("A", "C");
         assertNotEquals(edgeAB, edgeAC);
     }
 }

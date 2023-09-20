@@ -8,12 +8,19 @@
  */
 package org.opensearch.flowframework.template;
 
+import org.opensearch.core.xcontent.ToXContentFragment;
+import org.opensearch.core.xcontent.XContentBuilder;
+
+import java.io.IOException;
 import java.util.Objects;
 
 /**
- * Representation of an edge between process nodes in a workflow graph.
+ * This represents an edge between process nodes (steps) in a workflow graph in the {@link Template}.
  */
-public class ProcessSequenceEdge {
+public class WorkflowEdge implements ToXContentFragment {
+    public static final String DEST_FIELD = "dest";
+    public static final String SOURCE_FIELD = "source";
+
     private final String source;
     private final String destination;
 
@@ -23,9 +30,17 @@ public class ProcessSequenceEdge {
      * @param source The source node id.
      * @param destination The destination node id.
      */
-    ProcessSequenceEdge(String source, String destination) {
+    WorkflowEdge(String source, String destination) {
         this.source = source;
         this.destination = destination;
+    }
+
+    @Override
+    public XContentBuilder toXContent(XContentBuilder builder, Params params) throws IOException {
+        XContentBuilder xContentBuilder = builder.startObject();
+        xContentBuilder.field(SOURCE_FIELD, this.source);
+        xContentBuilder.field(DEST_FIELD, this.destination);
+        return xContentBuilder.endObject();
     }
 
     /**
@@ -56,7 +71,7 @@ public class ProcessSequenceEdge {
         if (this == obj) return true;
         if (obj == null) return false;
         if (getClass() != obj.getClass()) return false;
-        ProcessSequenceEdge other = (ProcessSequenceEdge) obj;
+        WorkflowEdge other = (WorkflowEdge) obj;
         return Objects.equals(destination, other.destination) && Objects.equals(source, other.source);
     }
 
