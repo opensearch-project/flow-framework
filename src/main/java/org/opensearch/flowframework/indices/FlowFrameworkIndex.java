@@ -13,11 +13,7 @@ import static org.opensearch.flowframework.constant.CommonValue.GLOBAL_CONTEXT_I
 import static org.opensearch.flowframework.constant.CommonValue.GLOBAL_CONTEXT_INDEX_SCHEMA_VERSION;
 
 public enum FlowFrameworkIndex {
-    GLOBAL_CONTEXT(
-            GLOBAL_CONTEXT_INDEX_NAME,
-            GLOBAL_CONTEXT_INDEX_MAPPING,
-            GLOBAL_CONTEXT_INDEX_SCHEMA_VERSION
-    );
+    GLOBAL_CONTEXT(GLOBAL_CONTEXT_INDEX_NAME, GLOBAL_CONTEXT_INDEX_MAPPING, GLOBAL_CONTEXT_INDEX_SCHEMA_VERSION);
 
     private final String indexName;
     private final String mapping;
