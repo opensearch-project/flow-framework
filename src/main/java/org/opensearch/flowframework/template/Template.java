@@ -11,59 +11,206 @@ package org.opensearch.flowframework.template;
 import org.opensearch.Version;
 import org.opensearch.core.xcontent.ToXContentObject;
 import org.opensearch.core.xcontent.XContentBuilder;
+import org.opensearch.core.xcontent.XContentParser;
 import org.opensearch.flowframework.workflow.Workflow;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+
+import static org.opensearch.core.xcontent.XContentParserUtils.ensureExpectedToken;
 
 /**
  * The Template is the central data structure which configures workflows. This object is used to parse JSON communicated via REST API.
  */
 public class Template implements ToXContentObject {
 
+    private static final String WORKFLOWS_FIELD = "workflows";
+    private static final String USER_INPUTS_FIELD = "user_inputs";
+    private static final String COMPATIBILITY_FIELD = "compatibility";
+    private static final String TEMPLATE_FIELD = "template";
+    private static final String VERSION_FIELD = "version";
+    private static final String OPERATIONS_FIELD = "operations";
+    private static final String USE_CASE_FIELD = "use_case";
+    private static final String DESCRIPTION_FIELD = "description";
+    private static final String NAME_FIELD = "name";
     // TODO: Some of thse are placeholders based on the template design
-    // Current code is only using user inputs and workflows
-    private String name = null;
-    private String description = null;
-    private String useCase = null;
-    private String[] operations = null; // probably an ENUM actually
-    private Version templateVersion = null;
-    private Version[] compatibilityVersion = null;
-    private Map<String, String> userInputs = new HashMap<>();
-    private Map<String, Workflow> workflows = new HashMap<>();
+    // Change as needed to match defined template
+    private final String name;
+    private final String description;
+    private final String useCase; // probably an ENUM actually
+    private final String[] operations; // probably an ENUM actually
+    private final Version templateVersion;
+    private final Version[] compatibilityVersion;
+    private final Map<String, String> userInputs;
+    private final Map<String, Workflow> workflows;
+
+    /**
+     * Instantiate the object representing a use case template
+     *
+     * @param name The template's name
+     * @param description A description of the template's use case
+     * @param useCase A string defining the internal use case type
+     * @param operations Expected operations of this template. Should match defined workflows.
+     * @param templateVersion The version of this template
+     * @param compatibilityVersion OpenSearch version compatibility of this template
+     * @param userInputs Optional user inputs to apply globally
+     * @param workflows Workflow graph definitions corresponding to the defined operations.
+     */
+    public Template(
+        String name,
+        String description,
+        String useCase,
+        String[] operations,
+        Version templateVersion,
+        Version[] compatibilityVersion,
+        Map<String, String> userInputs,
+        Map<String, Workflow> workflows
+    ) {
+        this.name = name;
+        this.description = description;
+        this.useCase = useCase;
+        this.operations = operations;
+        this.templateVersion = templateVersion;
+        this.compatibilityVersion = compatibilityVersion;
+        this.userInputs = userInputs;
+        this.workflows = workflows;
+    }
 
     @Override
     public XContentBuilder toXContent(XContentBuilder builder, Params params) throws IOException {
         XContentBuilder xContentBuilder = builder.startObject();
-        xContentBuilder.field("name", this.name);
-        xContentBuilder.field("description", this.description);
-        xContentBuilder.field("use_case", this.useCase);
-        xContentBuilder.field("operations", this.operations);
-
-        xContentBuilder.startObject("version");
-        xContentBuilder.field("template", this.templateVersion);
-        xContentBuilder.startArray("compatibility");
-        for (Version v : this.compatibilityVersion) {
-            xContentBuilder.value(v);
+        xContentBuilder.field(NAME_FIELD, this.name);
+        xContentBuilder.field(DESCRIPTION_FIELD, this.description);
+        xContentBuilder.field(USE_CASE_FIELD, this.useCase);
+        xContentBuilder.startArray(OPERATIONS_FIELD);
+        for (String op : this.operations) {
+            xContentBuilder.value(op);
         }
         xContentBuilder.endArray();
-        xContentBuilder.endObject();
 
-        xContentBuilder.startObject("user_inputs");
-        for (Entry<String, String> e : userInputs.entrySet()) {
-            xContentBuilder.field(e.getKey(), e.getValue());
+        if (this.templateVersion != null || this.compatibilityVersion.length > 0) {
+            xContentBuilder.startObject(VERSION_FIELD);
+            if (this.templateVersion != null) {
+                xContentBuilder.field(TEMPLATE_FIELD, this.templateVersion);
+            }
+            if (this.compatibilityVersion.length > 0) {
+                xContentBuilder.startArray(COMPATIBILITY_FIELD);
+                for (Version v : this.compatibilityVersion) {
+                    xContentBuilder.value(v);
+                }
+                xContentBuilder.endArray();
+            }
+            xContentBuilder.endObject();
         }
-        xContentBuilder.endObject();
 
-        xContentBuilder.startObject("workflows");
+        if (!this.userInputs.isEmpty()) {
+            xContentBuilder.startObject(USER_INPUTS_FIELD);
+            for (Entry<String, String> e : userInputs.entrySet()) {
+                xContentBuilder.field(e.getKey(), e.getValue());
+            }
+            xContentBuilder.endObject();
+        }
+
+        xContentBuilder.startObject(WORKFLOWS_FIELD);
         for (Entry<String, Workflow> e : workflows.entrySet()) {
             xContentBuilder.field(e.getKey(), e.getValue(), params);
         }
         xContentBuilder.endObject();
 
         return xContentBuilder.endObject();
+    }
+
+    /**
+     * Parse raw json content into a workflow node instance.
+     *
+     * @param parser json based content parser
+     * @throws IOException if content can't be parsed correctly
+     */
+    public static Template parse(XContentParser parser) throws IOException {
+        String name = null;
+        String description = "";
+        String useCase = "";
+        String[] operations = new String[0];
+        Version templateVersion = null;
+        Version[] compatibilityVersion = new Version[0];
+        Map<String, String> userInputs = new HashMap<>();
+        Map<String, Workflow> workflows = new HashMap<>();
+
+        ensureExpectedToken(XContentParser.Token.START_OBJECT, parser.currentToken(), parser);
+        while (parser.nextToken() != XContentParser.Token.END_OBJECT) {
+            String fieldName = parser.currentName();
+            parser.nextToken();
+            switch (fieldName) {
+                case NAME_FIELD:
+                    name = parser.text();
+                    break;
+                case DESCRIPTION_FIELD:
+                    description = parser.text();
+                    break;
+                case USE_CASE_FIELD:
+                    useCase = parser.text();
+                    break;
+                case OPERATIONS_FIELD:
+                    ensureExpectedToken(XContentParser.Token.START_ARRAY, parser.currentToken(), parser);
+                    List<String> operationsList = new ArrayList<>();
+                    while (parser.nextToken() != XContentParser.Token.END_ARRAY) {
+                        operationsList.add(parser.text());
+                    }
+                    operations = operationsList.toArray(new String[0]);
+                    break;
+                case VERSION_FIELD:
+                    ensureExpectedToken(XContentParser.Token.START_OBJECT, parser.currentToken(), parser);
+                    while (parser.nextToken() != XContentParser.Token.END_OBJECT) {
+                        String versionFieldName = parser.currentName();
+                        parser.nextToken();
+                        switch (versionFieldName) {
+                            case TEMPLATE_FIELD:
+                                templateVersion = Version.fromString(parser.text());
+                                break;
+                            case COMPATIBILITY_FIELD:
+                                ensureExpectedToken(XContentParser.Token.START_ARRAY, parser.currentToken(), parser);
+                                List<Version> compatibilityList = new ArrayList<>();
+                                while (parser.nextToken() != XContentParser.Token.END_ARRAY) {
+                                    compatibilityList.add(Version.fromString(parser.text()));
+                                }
+                                compatibilityVersion = compatibilityList.toArray(new Version[0]);
+                                break;
+                            default:
+                                throw new IOException("Unable to parse field [" + fieldName + "] in a version object.");
+                        }
+
+                    }
+                    break;
+                case USER_INPUTS_FIELD:
+                    ensureExpectedToken(XContentParser.Token.START_OBJECT, parser.currentToken(), parser);
+                    while (parser.nextToken() != XContentParser.Token.END_OBJECT) {
+                        String inputFieldName = parser.currentName();
+                        parser.nextToken();
+                        userInputs.put(inputFieldName, parser.text());
+                    }
+                    break;
+                case WORKFLOWS_FIELD:
+                    ensureExpectedToken(XContentParser.Token.START_OBJECT, parser.currentToken(), parser);
+                    while (parser.nextToken() != XContentParser.Token.END_OBJECT) {
+                        String workflowFieldName = parser.currentName();
+                        parser.nextToken();
+                        workflows.put(workflowFieldName, Workflow.parse(parser));
+                    }
+                    break;
+
+                default:
+                    throw new IOException("Unable to parse field [" + fieldName + "] in a template object.");
+            }
+        }
+        if (name == null) {
+            throw new IOException("An template object requires a name.");
+        }
+
+        return new Template(name, description, useCase, operations, templateVersion, compatibilityVersion, userInputs, workflows);
     }
 
 }

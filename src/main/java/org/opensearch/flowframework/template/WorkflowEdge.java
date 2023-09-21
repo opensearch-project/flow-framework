@@ -10,9 +10,12 @@ package org.opensearch.flowframework.template;
 
 import org.opensearch.core.xcontent.ToXContentFragment;
 import org.opensearch.core.xcontent.XContentBuilder;
+import org.opensearch.core.xcontent.XContentParser;
 
 import java.io.IOException;
 import java.util.Objects;
+
+import static org.opensearch.core.xcontent.XContentParserUtils.ensureExpectedToken;
 
 /**
  * This represents an edge between process nodes (steps) in a workflow graph in the {@link Template}.
@@ -41,6 +44,38 @@ public class WorkflowEdge implements ToXContentFragment {
         xContentBuilder.field(SOURCE_FIELD, this.source);
         xContentBuilder.field(DEST_FIELD, this.destination);
         return xContentBuilder.endObject();
+    }
+
+    /**
+     * Parse raw json content into a workflow edge instance.
+     *
+     * @param parser json based content parser
+     * @throws IOException if content can't be parsed correctly
+     */
+    public static WorkflowEdge parse(XContentParser parser) throws IOException {
+        String source = null;
+        String destination = null;
+
+        ensureExpectedToken(XContentParser.Token.START_OBJECT, parser.currentToken(), parser);
+        while (parser.nextToken() != XContentParser.Token.END_OBJECT) {
+            String fieldName = parser.currentName();
+            parser.nextToken();
+            switch (fieldName) {
+                case SOURCE_FIELD:
+                    source = parser.text();
+                    break;
+                case DEST_FIELD:
+                    destination = parser.text();
+                    break;
+                default:
+                    throw new IOException("Unable to parse field [" + fieldName + "] in an edge object.");
+            }
+        }
+        if (source == null || destination == null) {
+            throw new IOException("An edge object requires both a source and dest field.");
+        }
+
+        return new WorkflowEdge(source, destination);
     }
 
     /**
