@@ -17,4 +17,21 @@ public class FlowFrameworkException extends RuntimeException {
     public FlowFrameworkException(String message) {
         super(message);
     }
+
+    /**
+     * Constructor with specified cause.
+     * @param cause exception cause
+     */
+    public FlowFrameworkException(Throwable cause) {
+        super(cause);
+    }
+
+    /**
+     * Constructor with specified error message adn cause.
+     * @param message error message
+     * @param cause exception cause
+     */
+    public FlowFrameworkException(String message, Throwable cause) {
+        super(message, cause);
+    }
 }

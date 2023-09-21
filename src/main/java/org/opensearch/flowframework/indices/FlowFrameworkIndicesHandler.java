@@ -8,11 +8,8 @@
  */
 package org.opensearch.flowframework.indices;
 
-import lombok.AccessLevel;
-import lombok.RequiredArgsConstructor;
-import lombok.experimental.FieldDefaults;
-import lombok.extern.log4j.Log4j2;
-
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.opensearch.action.admin.indices.create.CreateIndexRequest;
 import org.opensearch.action.admin.indices.create.CreateIndexResponse;
 import org.opensearch.action.admin.indices.mapping.put.PutMappingRequest;
@@ -31,15 +28,19 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 import static org.opensearch.flowframework.constant.CommonValue.*;
 
-@FieldDefaults(makeFinal = true, level = AccessLevel.PRIVATE)
-@RequiredArgsConstructor
-@Log4j2
 public class FlowFrameworkIndicesHandler {
 
-    ClusterService clusterService;
-    Client client;
+    private static final Logger logger = LogManager.getLogger(FlowFrameworkIndicesHandler.class);
     private static final Map<String, Object> indexSettings = Map.of("index.auto_expand_replicas", "0-1");
     private static final Map<String, AtomicBoolean> indexMappingUpdated = new HashMap<>();
+
+    private ClusterService clusterService;
+    private Client client;
+
+    public FlowFrameworkIndicesHandler(ClusterService clusterService, Client client) {
+        this.clusterService = clusterService;
+        this.client = client;
+    }
 
     static {
         for (FlowFrameworkIndex flowFrameworkIndex : FlowFrameworkIndex.values()) {
@@ -60,62 +61,61 @@ public class FlowFrameworkIndicesHandler {
             if (!clusterService.state().metadata().hasIndex(indexName)) {
                 ActionListener<CreateIndexResponse> actionListener = ActionListener.wrap(r -> {
                     if (r.isAcknowledged()) {
-                        log.info("create index:{}", indexName);
+                        logger.info("create index:{}", indexName);
                         internalListener.onResponse(true);
                     } else {
                         internalListener.onResponse(false);
                     }
                 }, e -> {
-                    log.error("Failed to create index " + indexName, e);
+                    logger.error("Failed to create index " + indexName, e);
                     internalListener.onFailure(e);
                 });
                 CreateIndexRequest request = new CreateIndexRequest(indexName).mapping(mapping).settings(indexSettings);
                 client.admin().indices().create(request, actionListener);
             } else {
-                log.debug("index:{} is already created", indexName);
+                logger.debug("index:{} is already created", indexName);
                 if (indexMappingUpdated.containsKey(indexName) && !indexMappingUpdated.get(indexName).get()) {
                     shouldUpdateIndex(indexName, index.getVersion(), ActionListener.wrap(r -> {
                         if (r) {
                             // return true if update index is needed
-                            client
-                                    .admin()
-                                    .indices()
-                                    .putMapping(
-                                            new PutMappingRequest().indices(indexName).source(mapping, XContentType.JSON),
-                                            ActionListener.wrap(response -> {
-                                                if (response.isAcknowledged()) {
-                                                    UpdateSettingsRequest updateSettingRequest = new UpdateSettingsRequest();
-                                                    updateSettingRequest.indices(indexName).settings(indexSettings);
-                                                    client
-                                                            .admin()
-                                                            .indices()
-                                                            .updateSettings(updateSettingRequest, ActionListener.wrap(updateResponse -> {
-                                                                if (response.isAcknowledged()) {
-                                                                    indexMappingUpdated.get(indexName).set(true);
-                                                                    internalListener.onResponse(true);
-                                                                } else {
-                                                                    internalListener
-                                                                            .onFailure(new FlowFrameworkException("Failed to update index setting for: " + indexName));
-                                                                }
-                                                            }, exception -> {
-                                                                log.error("Failed to update index setting for: " + indexName, exception);
-                                                                internalListener.onFailure(exception);
-                                                            }));
-                                                } else {
-                                                    internalListener.onFailure(new FlowFrameworkException("Failed to update index: " + indexName));
-                                                }
-                                            }, exception -> {
-                                                log.error("Failed to update index " + indexName, exception);
-                                                internalListener.onFailure(exception);
-                                            })
-                                    );
+                            client.admin()
+                                .indices()
+                                .putMapping(
+                                    new PutMappingRequest().indices(indexName).source(mapping, XContentType.JSON),
+                                    ActionListener.wrap(response -> {
+                                        if (response.isAcknowledged()) {
+                                            UpdateSettingsRequest updateSettingRequest = new UpdateSettingsRequest();
+                                            updateSettingRequest.indices(indexName).settings(indexSettings);
+                                            client.admin()
+                                                .indices()
+                                                .updateSettings(updateSettingRequest, ActionListener.wrap(updateResponse -> {
+                                                    if (response.isAcknowledged()) {
+                                                        indexMappingUpdated.get(indexName).set(true);
+                                                        internalListener.onResponse(true);
+                                                    } else {
+                                                        internalListener.onFailure(
+                                                            new FlowFrameworkException("Failed to update index setting for: " + indexName)
+                                                        );
+                                                    }
+                                                }, exception -> {
+                                                    logger.error("Failed to update index setting for: " + indexName, exception);
+                                                    internalListener.onFailure(exception);
+                                                }));
+                                        } else {
+                                            internalListener.onFailure(new FlowFrameworkException("Failed to update index: " + indexName));
+                                        }
+                                    }, exception -> {
+                                        logger.error("Failed to update index " + indexName, exception);
+                                        internalListener.onFailure(exception);
+                                    })
+                                );
                         } else {
                             // no need to update index if it does not exist or the version is already up-to-date.
                             indexMappingUpdated.get(indexName).set(true);
                             internalListener.onResponse(true);
                         }
                     }, e -> {
-                        log.error("Failed to update index mapping", e);
+                        logger.error("Failed to update index mapping", e);
                         internalListener.onFailure(e);
                     }));
                 } else {
@@ -124,7 +124,7 @@ public class FlowFrameworkIndicesHandler {
                 }
             }
         } catch (Exception e) {
-            log.error("Failed to init index " + indexName, e);
+            logger.error("Failed to init index " + indexName, e);
             listener.onFailure(e);
         }
     }
