@@ -12,36 +12,15 @@ import org.opensearch.test.OpenSearchTestCase;
 
 import java.util.Collections;
 import java.util.List;
-import java.util.stream.Collectors;
 
-import static org.opensearch.flowframework.template.TemplateParser.DESTINATION;
-import static org.opensearch.flowframework.template.TemplateParser.EDGES;
-import static org.opensearch.flowframework.template.TemplateParser.NODES;
-import static org.opensearch.flowframework.template.TemplateParser.NODE_ID;
-import static org.opensearch.flowframework.template.TemplateParser.SOURCE;
-import static org.opensearch.flowframework.template.TemplateParser.WORKFLOW;
+import static org.opensearch.flowframework.template.GraphJsonUtil.edge;
+import static org.opensearch.flowframework.template.GraphJsonUtil.node;
+import static org.opensearch.flowframework.template.GraphJsonUtil.workflow;
 
 public class TemplateParserTests extends OpenSearchTestCase {
 
     private static final String NO_START_NODE_DETECTED = "No start node detected: all nodes have a predecessor.";
     private static final String CYCLE_DETECTED = "Cycle detected:";
-
-    // Input JSON generators
-    private static String node(String id) {
-        return "{\"" + NODE_ID + "\": \"" + id + "\"}";
-    }
-
-    private static String edge(String sourceId, String destId) {
-        return "{\"" + SOURCE + "\": \"" + sourceId + "\", \"" + DESTINATION + "\": \"" + destId + "\"}";
-    }
-
-    private static String workflow(List<String> nodes, List<String> edges) {
-        return "{\"" + WORKFLOW + "\": {" + arrayField(NODES, nodes) + ", " + arrayField(EDGES, edges) + "}}";
-    }
-
-    private static String arrayField(String fieldName, List<String> objects) {
-        return "\"" + fieldName + "\": [" + objects.stream().collect(Collectors.joining(", ")) + "]";
-    }
 
     // Output list elements
     private static ProcessNode expectedNode(String id) {

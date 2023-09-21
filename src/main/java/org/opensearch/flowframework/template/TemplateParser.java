@@ -13,6 +13,7 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.opensearch.flowframework.workflow.Workflow;
 import org.opensearch.flowframework.workflow.WorkflowData;
 import org.opensearch.flowframework.workflow.WorkflowStep;
 import org.opensearch.flowframework.workflow.WorkflowStepFactory;
@@ -36,17 +37,6 @@ public class TemplateParser {
 
     private static final Logger logger = LogManager.getLogger(TemplateParser.class);
 
-    // Field names in the JSON.
-    // Currently package private for tests.
-    // These may eventually become part of the template definition in which case they might be better declared public
-    static final String WORKFLOW = "sequence";
-    static final String NODES = "nodes";
-    static final String NODE_ID = "id";
-    static final String EDGES = "edges";
-    static final String SOURCE = "source";
-    static final String DESTINATION = "dest";
-    static final String STEP_TYPE = "step_type";
-
     /**
      * Prevent instantiating this class.
      */
@@ -61,24 +51,24 @@ public class TemplateParser {
         Gson gson = new Gson();
         JsonObject jsonObject = gson.fromJson(json, JsonObject.class);
 
-        JsonObject graph = jsonObject.getAsJsonObject(WORKFLOW);
+        JsonObject graph = jsonObject.getAsJsonObject("workflow");
 
         List<ProcessNode> nodes = new ArrayList<>();
         List<WorkflowEdge> edges = new ArrayList<>();
 
-        for (JsonElement nodeJson : graph.getAsJsonArray(NODES)) {
+        for (JsonElement nodeJson : graph.getAsJsonArray(Workflow.NODES_FIELD)) {
             JsonObject nodeObject = nodeJson.getAsJsonObject();
-            String nodeId = nodeObject.get(NODE_ID).getAsString();
-            String stepType = nodeObject.get(STEP_TYPE).getAsString();
+            String nodeId = nodeObject.get(WorkflowNode.ID_FIELD).getAsString();
+            String stepType = nodeObject.get(WorkflowNode.TYPE_FIELD).getAsString();
             WorkflowStep workflowStep = WorkflowStepFactory.get().createStep(stepType);
             WorkflowData inputData = WorkflowData.EMPTY;
             nodes.add(new ProcessNode(nodeId, workflowStep, inputData));
         }
 
-        for (JsonElement edgeJson : graph.getAsJsonArray(EDGES)) {
+        for (JsonElement edgeJson : graph.getAsJsonArray(Workflow.EDGES_FIELD)) {
             JsonObject edgeObject = edgeJson.getAsJsonObject();
-            String sourceNodeId = edgeObject.get(SOURCE).getAsString();
-            String destNodeId = edgeObject.get(DESTINATION).getAsString();
+            String sourceNodeId = edgeObject.get(WorkflowEdge.SOURCE_FIELD).getAsString();
+            String destNodeId = edgeObject.get(WorkflowEdge.DEST_FIELD).getAsString();
             if (sourceNodeId.equals(destNodeId)) {
                 throw new IllegalArgumentException("Edge connects node " + sourceNodeId + " to itself.");
             }
