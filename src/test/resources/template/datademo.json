@@ -3,11 +3,13 @@
         "nodes": [
             {
                 "id": "create_index",
-                "index_name": "demo"
+                "index_name": "demo",
+                "type": "knn"
             },
             {
                 "id": "create_another_index",
-                "index_name": "second_demo"
+                "index_name": "second_demo",
+                "type": "knn"
             }
         ],
         "edges": [

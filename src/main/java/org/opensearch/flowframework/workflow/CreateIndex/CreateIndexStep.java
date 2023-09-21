@@ -55,7 +55,7 @@ public class CreateIndexStep implements WorkflowStep {
                 future.complete(new WorkflowData() {
                     @Override
                     public Map<String, Object> getContent() {
-                        return Map.of("index", createIndexResponse.index());
+                        return Map.of("index-name", createIndexResponse.index());
                     }
                 });
             }
@@ -72,12 +72,10 @@ public class CreateIndexStep implements WorkflowStep {
         Settings settings = null;
 
         for (WorkflowData workflowData : data) {
-            // Fetch index from content i.e. request body of execute API
             Map<String, Object> content = workflowData.getContent();
-            index = (String) content.get("index");
+            index = (String) content.get("index-name");
             type = (String) content.get("type");
-            settings = (Settings) content.get("settings");
-            if (index != null && type != null) {
+            if (index != null && type != null && settings != null) {
                 break;
             }
         }
@@ -86,8 +84,10 @@ public class CreateIndexStep implements WorkflowStep {
         // 1. Create settings based on the index settings received from content
 
         try {
-            CreateIndexRequest request = new CreateIndexRequest(index).mapping(getIndexMappings(type), XContentType.JSON)
-                .settings(settings);
+            CreateIndexRequest request = new CreateIndexRequest(index).mapping(
+                getIndexMappings("mappings/" + type + ".json"),
+                XContentType.JSON
+            );
             client.admin().indices().create(request, actionListener);
         } catch (Exception e) {
             logger.error("Failed to find the right mapping for the index", e);
