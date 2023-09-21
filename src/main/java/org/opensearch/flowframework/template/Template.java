@@ -9,6 +9,8 @@
 package org.opensearch.flowframework.template;
 
 import org.opensearch.Version;
+import org.opensearch.common.xcontent.json.JsonXContent;
+import org.opensearch.common.xcontent.yaml.YamlXContent;
 import org.opensearch.core.xcontent.ToXContentObject;
 import org.opensearch.core.xcontent.XContentBuilder;
 import org.opensearch.core.xcontent.XContentParser;
@@ -16,6 +18,7 @@ import org.opensearch.flowframework.workflow.Workflow;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -28,24 +31,32 @@ import static org.opensearch.core.xcontent.XContentParserUtils.ensureExpectedTok
  */
 public class Template implements ToXContentObject {
 
-    private static final String WORKFLOWS_FIELD = "workflows";
-    private static final String USER_INPUTS_FIELD = "user_inputs";
-    private static final String COMPATIBILITY_FIELD = "compatibility";
-    private static final String TEMPLATE_FIELD = "template";
-    private static final String VERSION_FIELD = "version";
-    private static final String OPERATIONS_FIELD = "operations";
-    private static final String USE_CASE_FIELD = "use_case";
-    private static final String DESCRIPTION_FIELD = "description";
-    private static final String NAME_FIELD = "name";
-    // TODO: Some of thse are placeholders based on the template design
-    // Change as needed to match defined template
+    /** The template field name for template name */
+    public static final String NAME_FIELD = "name";
+    /** The template field name for template description */
+    public static final String DESCRIPTION_FIELD = "description";
+    /** The template field name for template use case */
+    public static final String USE_CASE_FIELD = "use_case";
+    /** The template field name for template operations */
+    public static final String OPERATIONS_FIELD = "operations";
+    /** The template field name for template version information */
+    public static final String VERSION_FIELD = "version";
+    /** The template field name for template version */
+    public static final String TEMPLATE_FIELD = "template";
+    /** The template field name for template compatibility with OpenSearch versions */
+    public static final String COMPATIBILITY_FIELD = "compatibility";
+    /** The template field name for template user inputs */
+    public static final String USER_INPUTS_FIELD = "user_inputs";
+    /** The template field name for template workflows */
+    public static final String WORKFLOWS_FIELD = "workflows";
+
     private final String name;
     private final String description;
     private final String useCase; // probably an ENUM actually
     private final String[] operations; // probably an ENUM actually
     private final Version templateVersion;
     private final Version[] compatibilityVersion;
-    private final Map<String, String> userInputs;
+    private final Map<String, Object> userInputs;
     private final Map<String, Workflow> workflows;
 
     /**
@@ -67,7 +78,7 @@ public class Template implements ToXContentObject {
         String[] operations,
         Version templateVersion,
         Version[] compatibilityVersion,
-        Map<String, String> userInputs,
+        Map<String, Object> userInputs,
         Map<String, Workflow> workflows
     ) {
         this.name = name;
@@ -109,7 +120,7 @@ public class Template implements ToXContentObject {
 
         if (!this.userInputs.isEmpty()) {
             xContentBuilder.startObject(USER_INPUTS_FIELD);
-            for (Entry<String, String> e : userInputs.entrySet()) {
+            for (Entry<String, Object> e : userInputs.entrySet()) {
                 xContentBuilder.field(e.getKey(), e.getValue());
             }
             xContentBuilder.endObject();
@@ -128,6 +139,7 @@ public class Template implements ToXContentObject {
      * Parse raw json content into a workflow node instance.
      *
      * @param parser json based content parser
+     * @return an instance of the template
      * @throws IOException if content can't be parsed correctly
      */
     public static Template parse(XContentParser parser) throws IOException {
@@ -137,7 +149,7 @@ public class Template implements ToXContentObject {
         String[] operations = new String[0];
         Version templateVersion = null;
         Version[] compatibilityVersion = new Version[0];
-        Map<String, String> userInputs = new HashMap<>();
+        Map<String, Object> userInputs = new HashMap<>();
         Map<String, Workflow> workflows = new HashMap<>();
 
         ensureExpectedToken(XContentParser.Token.START_OBJECT, parser.currentToken(), parser);
@@ -182,15 +194,22 @@ public class Template implements ToXContentObject {
                             default:
                                 throw new IOException("Unable to parse field [" + fieldName + "] in a version object.");
                         }
-
                     }
                     break;
                 case USER_INPUTS_FIELD:
                     ensureExpectedToken(XContentParser.Token.START_OBJECT, parser.currentToken(), parser);
                     while (parser.nextToken() != XContentParser.Token.END_OBJECT) {
                         String inputFieldName = parser.currentName();
-                        parser.nextToken();
-                        userInputs.put(inputFieldName, parser.text());
+                        switch (parser.nextToken()) {
+                            case VALUE_STRING:
+                                userInputs.put(inputFieldName, parser.text());
+                                break;
+                            case START_OBJECT:
+                                userInputs.put(inputFieldName, parseStringToStringMap(parser));
+                                break;
+                            default:
+                                throw new IOException("Unable to parse field [" + inputFieldName + "] in a user inputs object.");
+                        }
                     }
                     break;
                 case WORKFLOWS_FIELD:
@@ -213,4 +232,87 @@ public class Template implements ToXContentObject {
         return new Template(name, description, useCase, operations, templateVersion, compatibilityVersion, userInputs, workflows);
     }
 
+    /**
+     * Builds an XContent object representing a map of String keys to String values.
+     *
+     * @param xContentBuilder An XContent builder whose position is at the start of the map object to build
+     * @param map A map as key-value String pairs.
+     * @throws IOException on a build failure
+     */
+    public static void buildStringToStringMap(XContentBuilder xContentBuilder, Map<?, ?> map) throws IOException {
+        xContentBuilder.startObject();
+        for (Entry<?, ?> e : map.entrySet()) {
+            xContentBuilder.field((String) e.getKey(), (String) e.getValue());
+        }
+        xContentBuilder.endObject();
+    }
+
+    /**
+     * Parses an XContent object representing a map of String keys to String values.
+     *
+     * @param parser An XContent parser whose position is at the start of the map object to parse
+     * @return A map as identified by the key-value pairs in the XContent
+     * @throws IOException on a parse failure
+     */
+    public static Map<String, String> parseStringToStringMap(XContentParser parser) throws IOException {
+        ensureExpectedToken(XContentParser.Token.START_OBJECT, parser.currentToken(), parser);
+        Map<String, String> map = new HashMap<>();
+        while (parser.nextToken() != XContentParser.Token.END_OBJECT) {
+            String fieldName = parser.currentName();
+            parser.nextToken();
+            map.put(fieldName, parser.text());
+        }
+        return map;
+    }
+
+    /**
+     * Output this object in a compact JSON string.
+     *
+     * @return a JSON representation of the template.
+     */
+    public String toJson() {
+        try {
+            XContentBuilder builder = JsonXContent.contentBuilder();
+            return this.toXContent(builder, EMPTY_PARAMS).toString();
+        } catch (IOException e) {
+            e.printStackTrace();
+            return "{\"error\": \"couldn't create JSON\"}";
+        }
+    }
+
+    /**
+     * Output this object in YAML.
+     *
+     * @return a YAML representation of the template.
+     */
+    public String toYaml() {
+        try {
+            XContentBuilder builder = YamlXContent.contentBuilder();
+            return this.toXContent(builder, EMPTY_PARAMS).toString();
+        } catch (IOException e) {
+            e.printStackTrace();
+            return "error: couldn't create YAML";
+        }
+    }
+
+    @Override
+    public String toString() {
+        return "Template [name="
+            + name
+            + ", description="
+            + description
+            + ", useCase="
+            + useCase
+            + ", operations="
+            + Arrays.toString(operations)
+            + ", templateVersion="
+            + templateVersion
+            + ", compatibilityVersion="
+            + Arrays.toString(compatibilityVersion)
+            + ", userInputs="
+            + userInputs
+            + ", workflows="
+            + workflows
+            + "]";
+    }
 }

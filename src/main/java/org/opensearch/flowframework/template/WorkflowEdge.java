@@ -8,7 +8,7 @@
  */
 package org.opensearch.flowframework.template;
 
-import org.opensearch.core.xcontent.ToXContentFragment;
+import org.opensearch.core.xcontent.ToXContentObject;
 import org.opensearch.core.xcontent.XContentBuilder;
 import org.opensearch.core.xcontent.XContentParser;
 
@@ -20,9 +20,12 @@ import static org.opensearch.core.xcontent.XContentParserUtils.ensureExpectedTok
 /**
  * This represents an edge between process nodes (steps) in a workflow graph in the {@link Template}.
  */
-public class WorkflowEdge implements ToXContentFragment {
-    public static final String DEST_FIELD = "dest";
+public class WorkflowEdge implements ToXContentObject {
+
+    /** The template field name for source node */
     public static final String SOURCE_FIELD = "source";
+    /** The template field name for destination node */
+    public static final String DEST_FIELD = "dest";
 
     private final String source;
     private final String destination;
@@ -33,7 +36,7 @@ public class WorkflowEdge implements ToXContentFragment {
      * @param source The source node id.
      * @param destination The destination node id.
      */
-    WorkflowEdge(String source, String destination) {
+    public WorkflowEdge(String source, String destination) {
         this.source = source;
         this.destination = destination;
     }
@@ -50,6 +53,7 @@ public class WorkflowEdge implements ToXContentFragment {
      * Parse raw json content into a workflow edge instance.
      *
      * @param parser json based content parser
+     * @return the parsed WorkflowEdge instance
      * @throws IOException if content can't be parsed correctly
      */
     public static WorkflowEdge parse(XContentParser parser) throws IOException {
