@@ -8,6 +8,9 @@
  */
 package org.opensearch.flowframework.constant;
 
+/**
+ * Representation of common names that used across the project
+ */
 public class CommonName {
     public static final String GLOBAL_CONTEXT_INDEX_NAME = ".opensearch-flow-framework-global-context";
 

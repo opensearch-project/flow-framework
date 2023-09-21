@@ -26,8 +26,13 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import static org.opensearch.flowframework.constant.CommonValue.*;
+import static org.opensearch.flowframework.constant.CommonValue.META;
+import static org.opensearch.flowframework.constant.CommonValue.NO_SCHEMA_VERSION;
+import static org.opensearch.flowframework.constant.CommonValue.SCHEMA_VERSION_FIELD;
 
+/**
+ * Flow Framework Indices Handler
+ */
 public class FlowFrameworkIndicesHandler {
 
     private static final Logger logger = LogManager.getLogger(FlowFrameworkIndicesHandler.class);
@@ -37,6 +42,11 @@ public class FlowFrameworkIndicesHandler {
     private ClusterService clusterService;
     private Client client;
 
+    /**
+     * Handler constructor
+     * @param clusterService cluster service
+     * @param client client
+     */
     public FlowFrameworkIndicesHandler(ClusterService clusterService, Client client) {
         this.clusterService = clusterService;
         this.client = client;
@@ -48,10 +58,19 @@ public class FlowFrameworkIndicesHandler {
         }
     }
 
+    /**
+     * Initiate global context index if it's absent
+     * @param listener action listner
+     */
     public void initGlobalContextIndexIfAbsent(ActionListener<Boolean> listener) {
         initFlowFrameworkIndexIfAbsent(FlowFrameworkIndex.GLOBAL_CONTEXT, listener);
     }
 
+    /**
+     * General method for initiate flow framework indices or update index mapping if it's needed
+     * @param index flow framework index
+     * @param listener action listener
+     */
     public void initFlowFrameworkIndexIfAbsent(FlowFrameworkIndex index, ActionListener<Boolean> listener) {
         String indexName = index.getIndexName();
         String mapping = index.getMapping();
@@ -135,7 +154,7 @@ public class FlowFrameworkIndicesHandler {
      * @param newVersion new index mapping version
      * @param listener action listener, if update index is needed, will pass true to its onResponse method
      */
-    public void shouldUpdateIndex(String indexName, Integer newVersion, ActionListener<Boolean> listener) {
+    private void shouldUpdateIndex(String indexName, Integer newVersion, ActionListener<Boolean> listener) {
         IndexMetadata indexMetaData = clusterService.state().getMetadata().indices().get(indexName);
         if (indexMetaData == null) {
             listener.onResponse(Boolean.FALSE);
