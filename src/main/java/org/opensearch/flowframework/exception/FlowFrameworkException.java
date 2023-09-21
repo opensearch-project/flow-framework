@@ -8,6 +8,9 @@
  */
 package org.opensearch.flowframework.exception;
 
+/**
+ * Representation of Flow Framework Exceptions
+ */
 public class FlowFrameworkException extends RuntimeException {
     /**
      * Constructor with error message.

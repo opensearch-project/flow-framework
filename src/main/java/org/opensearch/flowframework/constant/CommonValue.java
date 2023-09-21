@@ -8,6 +8,9 @@
  */
 package org.opensearch.flowframework.constant;
 
+/**
+ * Representation of common values that are used across project
+ */
 public class CommonValue {
 
     public static Integer NO_SCHEMA_VERSION = 0;

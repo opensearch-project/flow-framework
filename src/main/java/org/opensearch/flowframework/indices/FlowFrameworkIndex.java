@@ -12,6 +12,9 @@ import static org.opensearch.flowframework.constant.CommonName.GLOBAL_CONTEXT_IN
 import static org.opensearch.flowframework.constant.CommonValue.GLOBAL_CONTEXT_INDEX_MAPPING;
 import static org.opensearch.flowframework.constant.CommonValue.GLOBAL_CONTEXT_INDEX_SCHEMA_VERSION;
 
+/**
+ * An enumeration of Flow Framework indices
+ */
 public enum FlowFrameworkIndex {
     GLOBAL_CONTEXT(GLOBAL_CONTEXT_INDEX_NAME, GLOBAL_CONTEXT_INDEX_MAPPING, GLOBAL_CONTEXT_INDEX_SCHEMA_VERSION);
 
