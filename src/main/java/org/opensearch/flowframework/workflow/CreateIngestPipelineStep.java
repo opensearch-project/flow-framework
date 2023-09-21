@@ -156,10 +156,11 @@ public class CreateIngestPipelineStep implements WorkflowStep {
      * {
      *  "description" : "<description>",
      *  "processors" : [
-     *      "text_embedding" : {
-     *          "model_id" : "<model_id>",
-     *          "field_map" : {
-     *              "<input_field_name>" : "<output_field_name>"
+     *      {
+     *          "text_embedding" : {
+     *              "model_id" : "<model_id>",
+     *              "field_map" : {
+     *                  "<input_field_name>" : "<output_field_name>"
      *          }
      *      }
      *  ]
