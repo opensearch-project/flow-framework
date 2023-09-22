@@ -31,7 +31,7 @@ public class TemplateParserTests extends OpenSearchTestCase {
     private static List<String> parse(String json) throws IOException {
         XContentParser parser = TemplateTestJsonUtil.jsonToParser(json);
         Workflow w = Workflow.parse(parser);
-        return TemplateParser.parseWorkflowToSequence(w).stream().map(ProcessNode::id).collect(Collectors.toList());
+        return WorkflowProcessSorter.sortProcessNodes(w).stream().map(ProcessNode::id).collect(Collectors.toList());
     }
 
     @Override

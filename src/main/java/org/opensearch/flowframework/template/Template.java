@@ -9,8 +9,10 @@
 package org.opensearch.flowframework.template;
 
 import org.opensearch.Version;
+import org.opensearch.common.xcontent.LoggingDeprecationHandler;
 import org.opensearch.common.xcontent.json.JsonXContent;
 import org.opensearch.common.xcontent.yaml.YamlXContent;
+import org.opensearch.core.xcontent.NamedXContentRegistry;
 import org.opensearch.core.xcontent.ToXContentObject;
 import org.opensearch.core.xcontent.XContentBuilder;
 import org.opensearch.core.xcontent.XContentParser;
@@ -225,6 +227,23 @@ public class Template implements ToXContentObject {
         }
 
         return new Template(name, description, useCase, operations, templateVersion, compatibilityVersion, userInputs, workflows);
+    }
+
+    /**
+     * Parse a JSON use case template
+     *
+     * @param json A string containing a JSON representation of a use case template
+     * @return A {@link Template} represented by the JSON.
+     * @throws IOException on failure to parse
+     */
+    public static Template parse(String json) throws IOException {
+        XContentParser parser = JsonXContent.jsonXContent.createParser(
+            NamedXContentRegistry.EMPTY,
+            LoggingDeprecationHandler.INSTANCE,
+            json
+        );
+        ensureExpectedToken(XContentParser.Token.START_OBJECT, parser.nextToken(), parser);
+        return parse(parser);
     }
 
     /**

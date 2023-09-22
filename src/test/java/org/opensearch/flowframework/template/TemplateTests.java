@@ -65,7 +65,7 @@ public class TemplateTests extends OpenSearchTestCase {
         String json = TemplateTestJsonUtil.parseToJson(template);
         assertEquals(expectedJson, json);
 
-        Template templateX = TemplateParser.parseJsonToTemplate(json);
+        Template templateX = Template.parse(json);
         assertEquals("test", templateX.name());
         assertEquals("a test template", templateX.description());
         assertEquals("test use case", templateX.useCase());

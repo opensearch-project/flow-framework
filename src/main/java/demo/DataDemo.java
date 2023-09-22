@@ -14,7 +14,7 @@ import org.opensearch.common.SuppressForbidden;
 import org.opensearch.common.io.PathUtils;
 import org.opensearch.flowframework.template.ProcessNode;
 import org.opensearch.flowframework.template.Template;
-import org.opensearch.flowframework.template.TemplateParser;
+import org.opensearch.flowframework.template.WorkflowProcessSorter;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -26,7 +26,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 
 /**
- * Demo class exercising {@link TemplateParser}. This will be moved to a unit test.
+ * Demo class exercising {@link WorkflowProcessSorter}. This will be moved to a unit test.
  */
 public class DataDemo {
 
@@ -50,8 +50,8 @@ public class DataDemo {
         }
 
         logger.info("Parsing graph to sequence...");
-        Template t = TemplateParser.parseJsonToTemplate(json);
-        List<ProcessNode> processSequence = TemplateParser.parseWorkflowToSequence(t.workflows().get("datademo"));
+        Template t = Template.parse(json);
+        List<ProcessNode> processSequence = WorkflowProcessSorter.sortProcessNodes(t.workflows().get("datademo"));
         List<CompletableFuture<?>> futureList = new ArrayList<>();
 
         for (ProcessNode n : processSequence) {

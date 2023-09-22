@@ -10,16 +10,11 @@ package org.opensearch.flowframework.template;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.opensearch.common.xcontent.LoggingDeprecationHandler;
-import org.opensearch.common.xcontent.json.JsonXContent;
-import org.opensearch.core.xcontent.NamedXContentRegistry;
-import org.opensearch.core.xcontent.XContentParser;
 import org.opensearch.flowframework.workflow.Workflow;
 import org.opensearch.flowframework.workflow.WorkflowData;
 import org.opensearch.flowframework.workflow.WorkflowStep;
 import org.opensearch.flowframework.workflow.WorkflowStepFactory;
 
-import java.io.IOException;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -32,51 +27,39 @@ import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
-import static org.opensearch.core.xcontent.XContentParserUtils.ensureExpectedToken;
-
 /**
- * Utility class for parsing templates.
+ * Utility class converting a workflow of nodes and edges into a topologically sorted list of Process Nodes.
  */
-public class TemplateParser {
+public class WorkflowProcessSorter {
 
-    private static final Logger logger = LogManager.getLogger(TemplateParser.class);
+    private static final Logger logger = LogManager.getLogger(WorkflowProcessSorter.class);
 
     /**
      * Prevent instantiating this class.
      */
-    private TemplateParser() {}
+    private WorkflowProcessSorter() {}
 
     /**
-     * Parse a JSON use case template
-     *
-     * @param json A string containing a JSON representation of a use case template
-     * @return A {@link Template} represented by the JSON.
-     * @throws IOException on failure to parse
-     */
-    public static Template parseJsonToTemplate(String json) throws IOException {
-        logger.info("Parsing template...");
-        XContentParser parser = JsonXContent.jsonXContent.createParser(
-            NamedXContentRegistry.EMPTY,
-            LoggingDeprecationHandler.INSTANCE,
-            json
-        );
-        ensureExpectedToken(XContentParser.Token.START_OBJECT, parser.nextToken(), parser);
-        return Template.parse(parser);
-    }
-
-    /**
-     * Parse a JSON representation of nodes and edges into a topologically sorted list of process nodes.
-     * @param workflow A string containing a JSON representation of nodes and edges
+     * Sort a workflow into a topologically sorted list of process nodes.
+     * @param workflow A workflow with (unsorted) nodes and edges which define predecessors and successors
      * @return A list of Process Nodes sorted topologically.  All predecessors of any node will occur prior to it in the list.
      */
-    public static List<ProcessNode> parseWorkflowToSequence(Workflow workflow) {
+    public static List<ProcessNode> sortProcessNodes(Workflow workflow) {
         List<WorkflowNode> sortedNodes = topologicalSort(workflow.nodes(), workflow.edges());
 
         List<ProcessNode> nodes = new ArrayList<>();
         Map<String, ProcessNode> idToNodeMap = new HashMap<>();
         for (WorkflowNode node : sortedNodes) {
             WorkflowStep step = WorkflowStepFactory.get().createStep(node.type());
-            WorkflowData data = new WorkflowData(node.inputs());
+            WorkflowData data = new WorkflowData() {
+                public Map<String, Object> getContent() {
+                    return node.inputs();
+                };
+
+                public Map<String, String> getParams() {
+                    return workflow.userParams();
+                };
+            };
             List<ProcessNode> predecessorNodes = workflow.edges()
                 .stream()
                 .filter(e -> e.destination().equals(node.id()))
