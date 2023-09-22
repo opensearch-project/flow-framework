@@ -117,7 +117,11 @@ dependencies {
 
 test {
     include '**/*Tests.class'
+    systemProperty 'tests.security.manager', 'false'
 }
+
+def opensearch_tmp_dir = rootProject.file('build/private/opensearch_tmp').absoluteFile
+opensearch_tmp_dir.mkdirs()
 
 jacocoTestReport {
     dependsOn test
@@ -135,6 +139,29 @@ task integTest(type: RestIntegTestTask) {
 tasks.named("check").configure { dependsOn(integTest) }
 
 integTest {
+    dependsOn "bundlePlugin"
+    systemProperty 'tests.security.manager', 'false'
+    systemProperty 'java.io.tmpdir', opensearch_tmp_dir.absolutePath
+    systemProperty "https", System.getProperty("https")
+    systemProperty "user", System.getProperty("user")
+    systemProperty "password", System.getProperty("password")
+
+//    // Only rest case can run with remote cluster
+//    if (System.getProperty("tests.rest.cluster") != null) {
+//        filter {
+//            includeTestsMatching "org.opensearch.flowframework.rest.*IT"
+//        }
+//    }
+//
+//    if (System.getProperty("https") == null || System.getProperty("https") == "false") {
+//        filter {
+//        }
+//    }
+
+    filter {
+        excludeTestsMatching "org.opensearch.flowframework.indices.*Tests"
+    }
+
     // The --debug-jvm command-line option makes the cluster debuggable; this makes the tests debuggable
     if (System.getProperty("test.debug") != null) {
         jvmArgs '-agentlib:jdwp=transport=dt_socket,server=y,suspend=y,address=*:5005'
