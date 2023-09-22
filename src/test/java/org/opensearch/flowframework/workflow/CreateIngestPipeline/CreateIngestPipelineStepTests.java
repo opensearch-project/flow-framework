@@ -108,4 +108,48 @@ public class CreateIngestPipelineStepTests extends OpenSearchTestCase {
         assertEquals(outpuData.getContent(), future.get().getContent());
     }
 
+    public void testCreateIngestPipelineStepFailure() {
+
+        CreateIngestPipelineStep createIngestPipelineStep = new CreateIngestPipelineStep(client);
+
+        ArgumentCaptor<ActionListener> actionListenerCaptor = ArgumentCaptor.forClass(ActionListener.class);
+        CompletableFuture<WorkflowData> future = createIngestPipelineStep.execute(List.of(inputData));
+
+        assertFalse(future.isDone());
+
+        // Mock put pipeline request execution and return false
+        verify(clusterAdminClient, times(1)).putPipeline(any(PutPipelineRequest.class), actionListenerCaptor.capture());
+        actionListenerCaptor.getValue().onFailure(new Exception());
+
+        assertTrue(future.isDone());
+        assertThrows(Exception.class, () -> future.get());
+    }
+
+    public void testMissingData() {
+        CreateIngestPipelineStep createIngestPipelineStep = new CreateIngestPipelineStep(client);
+
+        // Data with missing input and output fields
+        WorkflowData incorrectData = new WorkflowData() {
+
+            @Override
+            public Map<String, Object> getContent() {
+                return Map.of("id", "pipelineId", "description", "some description", "type", "text_embedding", "model_id", "model_id");
+            }
+
+            @Override
+            public Map<String, String> getParams() {
+                return Map.of();
+            }
+        };
+
+        CompletableFuture<WorkflowData> future = createIngestPipelineStep.execute(List.of(incorrectData));
+        assertTrue(future.isDone());
+
+        try {
+            future.get();
+        } catch (Exception e) {
+            assertTrue(e.getMessage().contains("Failed to create ingest pipeline, required inputs not found"));
+        }
+    }
+
 }
