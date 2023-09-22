@@ -47,25 +47,14 @@ public class CreateIngestPipelineStepTests extends OpenSearchTestCase {
 
             @Override
             public Map<String, Object> getContent() {
-                return Map.of(
-                    "id",
-                    "pipelineId",
-                    "description",
-                    "some description",
-                    "type",
-                    "text_embedding",
-                    "model_id",
-                    "model_id",
-                    "input_field_name",
-                    "inputField",
-                    "output_field_name",
-                    "outputField"
+                return Map.ofEntries(
+                    Map.entry("id", "pipelineId"),
+                    Map.entry("description", "some description"),
+                    Map.entry("type", "text_embedding"),
+                    Map.entry("model_id", "model_id"),
+                    Map.entry("input_field_name", "inputField"),
+                    Map.entry("output_field_name", "outputField")
                 );
-            }
-
-            @Override
-            public Map<String, String> getParams() {
-                return Map.of();
             }
         };
 
@@ -74,12 +63,7 @@ public class CreateIngestPipelineStepTests extends OpenSearchTestCase {
 
             @Override
             public Map<String, Object> getContent() {
-                return Map.of("pipelineId", "pipelineId");
-            }
-
-            @Override
-            public Map<String, String> getParams() {
-                return Map.of();
+                return Map.ofEntries(Map.entry("pipelineId", "pipelineId"));
             }
         };
 
@@ -104,11 +88,11 @@ public class CreateIngestPipelineStepTests extends OpenSearchTestCase {
         verify(clusterAdminClient, times(1)).putPipeline(any(PutPipelineRequest.class), actionListenerCaptor.capture());
         actionListenerCaptor.getValue().onResponse(new AcknowledgedResponse(true));
 
-        assertTrue(future.isDone());
+        assertTrue(future.isDone() && !future.isCompletedExceptionally());
         assertEquals(outpuData.getContent(), future.get().getContent());
     }
 
-    public void testCreateIngestPipelineStepFailure() {
+    public void testCreateIngestPipelineStepFailure() throws InterruptedException {
 
         CreateIngestPipelineStep createIngestPipelineStep = new CreateIngestPipelineStep(client);
 
@@ -119,13 +103,17 @@ public class CreateIngestPipelineStepTests extends OpenSearchTestCase {
 
         // Mock put pipeline request execution and return false
         verify(clusterAdminClient, times(1)).putPipeline(any(PutPipelineRequest.class), actionListenerCaptor.capture());
-        actionListenerCaptor.getValue().onFailure(new Exception());
+        actionListenerCaptor.getValue().onFailure(new Exception("Failed to create ingest pipeline"));
 
-        assertTrue(future.isDone());
-        assertThrows(Exception.class, () -> future.get());
+        assertTrue(future.isDone() && future.isCompletedExceptionally());
+        try {
+            future.get();
+        } catch (ExecutionException e) {
+            assertTrue(e.getMessage().contains("Failed to create ingest pipeline"));
+        }
     }
 
-    public void testMissingData() {
+    public void testMissingData() throws InterruptedException {
         CreateIngestPipelineStep createIngestPipelineStep = new CreateIngestPipelineStep(client);
 
         // Data with missing input and output fields
@@ -133,21 +121,21 @@ public class CreateIngestPipelineStepTests extends OpenSearchTestCase {
 
             @Override
             public Map<String, Object> getContent() {
-                return Map.of("id", "pipelineId", "description", "some description", "type", "text_embedding", "model_id", "model_id");
-            }
-
-            @Override
-            public Map<String, String> getParams() {
-                return Map.of();
+                return Map.ofEntries(
+                    Map.entry("id", "pipelineId"),
+                    Map.entry("description", "some description"),
+                    Map.entry("type", "text_embedding"),
+                    Map.entry("model_id", "model_id")
+                );
             }
         };
 
         CompletableFuture<WorkflowData> future = createIngestPipelineStep.execute(List.of(incorrectData));
-        assertTrue(future.isDone());
+        assertTrue(future.isDone() && future.isCompletedExceptionally());
 
         try {
             future.get();
-        } catch (Exception e) {
+        } catch (ExecutionException e) {
             assertTrue(e.getMessage().contains("Failed to create ingest pipeline, required inputs not found"));
         }
     }

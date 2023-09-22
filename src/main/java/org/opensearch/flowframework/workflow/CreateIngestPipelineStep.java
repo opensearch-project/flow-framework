@@ -101,6 +101,8 @@ public class CreateIngestPipelineStep implements WorkflowStep {
                     case OUTPUT_FIELD:
                         outputFieldName = (String) content.get(OUTPUT_FIELD);
                         break;
+                    default:
+                        break;
                 }
             }
 
@@ -138,7 +140,7 @@ public class CreateIngestPipelineStep implements WorkflowStep {
                 // TODO : Use node client to index response data to global context (pending global context index implementation)
 
             }, exception -> {
-                logger.error("Failed to create ignest pipeline : " + exception.getMessage());
+                logger.error("Failed to create ingest pipeline : " + exception.getMessage());
                 createIngestPipelineFuture.completeExceptionally(exception);
             }));
         }
