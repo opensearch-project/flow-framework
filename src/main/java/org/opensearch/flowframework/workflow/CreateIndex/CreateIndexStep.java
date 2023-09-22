@@ -51,7 +51,7 @@ public class CreateIndexStep implements WorkflowStep {
 
             @Override
             public void onResponse(CreateIndexResponse createIndexResponse) {
-                logger.info("created index:{}", createIndexResponse.index());
+                logger.info("created index: {}", createIndexResponse.index());
                 future.complete(new WorkflowData() {
                     @Override
                     public Map<String, Object> getContent() {
@@ -108,7 +108,7 @@ public class CreateIndexStep implements WorkflowStep {
      * @return index mapping
      * @throws IOException IOException if mapping file can't be read correctly
      */
-    public static String getIndexMappings(String mapping) throws IOException {
+    private static String getIndexMappings(String mapping) throws IOException {
         URL url = CreateIndexStep.class.getClassLoader().getResource(mapping);
         return Resources.toString(url, Charsets.UTF_8);
     }

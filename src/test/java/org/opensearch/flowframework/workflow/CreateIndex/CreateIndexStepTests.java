@@ -49,14 +49,7 @@ public class CreateIndexStepTests extends OpenSearchTestCase {
 
             @Override
             public Map<String, Object> getContent() {
-                // See CreateIndexRequest ParseFields for source of content keys needed
-                return Map.of("index-name", "demo", "type", "knn");
-            }
-
-            @Override
-            public Map<String, String> getParams() {
-                // See RestCreateIndexAction for source of param keys needed
-                return Map.of();
+                return Map.ofEntries(Map.entry("index-name", "demo"), Map.entry("type", "knn"));
             }
 
         };
@@ -80,7 +73,7 @@ public class CreateIndexStepTests extends OpenSearchTestCase {
         verify(indicesAdminClient, times(1)).create(any(CreateIndexRequest.class), actionListenerCaptor.capture());
         actionListenerCaptor.getValue().onResponse(new CreateIndexResponse(true, true, "demo"));
 
-        assertTrue(future.isDone());
+        assertTrue(future.isDone() && !future.isCompletedExceptionally());
 
         Map<String, Object> outputData = Map.of("index-name", "demo");
         assertEquals(outputData, future.get().getContent());
@@ -96,10 +89,11 @@ public class CreateIndexStepTests extends OpenSearchTestCase {
         assertFalse(future.isDone());
         verify(indicesAdminClient, times(1)).create(any(CreateIndexRequest.class), actionListenerCaptor.capture());
 
-        actionListenerCaptor.getValue().onFailure(new Exception());
+        actionListenerCaptor.getValue().onFailure(new Exception("Failed to create an index"));
 
-        assertTrue(future.isDone());
-        assertThrows(Exception.class, () -> future.get().getContent());
-
+        assertTrue(future.isCompletedExceptionally());
+        ExecutionException ex = assertThrows(ExecutionException.class, () -> future.get().getContent());
+        assertTrue(ex.getCause() instanceof Exception);
+        assertEquals("Failed to create an index", ex.getCause().getMessage());
     }
 }
