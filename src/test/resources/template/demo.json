@@ -2,10 +2,7 @@
     "name": "demo-template",
     "description": "Demonstrates workflow steps and passing around of input/output",
     "user_inputs": {
-        "index_name": "my-knn-index",
-        "index_settings": {
-
-        }
+        "knn_index_name": "my-knn-index"
     },
     "workflows": {
         "demo": {
@@ -47,16 +44,23 @@
             ]
         },
         "datademo": {
+            "user_params": {
+                "workflow_id": "workflow_demo"
+            },
             "nodes": [
                 {
                     "id": "create_index",
                     "type": "create_index",
-                    "index_name": "demo"
+                    "inputs": {
+                        "index_name": "demo"
+                    }
                 },
                 {
                     "id": "create_another_index",
                     "type": "create_index",
-                    "index_name": "second_demo"
+                    "inputs": {
+                        "index_name": "second_demo"
+                    }
                 }
             ],
             "edges": [

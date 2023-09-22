@@ -75,6 +75,6 @@ public class WorkflowStepFactory {
         }
         // TODO: replace this with a FlowFrameworkException
         // https://github.com/opensearch-project/opensearch-ai-flow-framework/pull/43
-        throw new UnsupportedOperationException("No workflow steps of type [" + type + "] are implemented.");
+        return stepMap.get("placeholder");
     }
 }
