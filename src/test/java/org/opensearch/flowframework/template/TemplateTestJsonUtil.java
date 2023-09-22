@@ -8,15 +8,24 @@
  */
 package org.opensearch.flowframework.template;
 
+import org.opensearch.common.xcontent.LoggingDeprecationHandler;
+import org.opensearch.common.xcontent.json.JsonXContent;
+import org.opensearch.core.xcontent.NamedXContentRegistry;
+import org.opensearch.core.xcontent.ToXContent;
+import org.opensearch.core.xcontent.ToXContentObject;
+import org.opensearch.core.xcontent.XContentParser;
 import org.opensearch.flowframework.workflow.Workflow;
 
+import java.io.IOException;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import static org.opensearch.core.xcontent.XContentParserUtils.ensureExpectedToken;
+
 /**
- * Utility methods to create a JSON string useful for testing nodes and edges
+ * Utility methods for tests of template JSON
  */
-public class GraphJsonUtil {
+public class TemplateTestJsonUtil {
 
     public static String node(String id) {
         return "{\"" + WorkflowNode.ID_FIELD + "\": \"" + id + "\", \"" + WorkflowNode.TYPE_FIELD + "\": \"" + "placeholder" + "\"}";
@@ -34,4 +43,17 @@ public class GraphJsonUtil {
         return "\"" + fieldName + "\": [" + objects.stream().collect(Collectors.joining(", ")) + "]";
     }
 
+    public static String parseToJson(ToXContentObject object) throws IOException {
+        return object.toXContent(JsonXContent.contentBuilder(), ToXContent.EMPTY_PARAMS).toString();
+    }
+
+    public static XContentParser jsonToParser(String json) throws IOException {
+        XContentParser parser = JsonXContent.jsonXContent.createParser(
+            NamedXContentRegistry.EMPTY,
+            LoggingDeprecationHandler.INSTANCE,
+            json
+        );
+        ensureExpectedToken(XContentParser.Token.START_OBJECT, parser.nextToken(), parser);
+        return parser;
+    }
 }

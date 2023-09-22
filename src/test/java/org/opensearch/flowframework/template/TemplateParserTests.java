@@ -8,9 +8,6 @@
  */
 package org.opensearch.flowframework.template;
 
-import org.opensearch.common.xcontent.LoggingDeprecationHandler;
-import org.opensearch.common.xcontent.json.JsonXContent;
-import org.opensearch.core.xcontent.NamedXContentRegistry;
 import org.opensearch.core.xcontent.XContentParser;
 import org.opensearch.flowframework.workflow.Workflow;
 import org.opensearch.test.OpenSearchTestCase;
@@ -20,10 +17,9 @@ import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 
-import static org.opensearch.core.xcontent.XContentParserUtils.ensureExpectedToken;
-import static org.opensearch.flowframework.template.GraphJsonUtil.edge;
-import static org.opensearch.flowframework.template.GraphJsonUtil.node;
-import static org.opensearch.flowframework.template.GraphJsonUtil.workflow;
+import static org.opensearch.flowframework.template.TemplateTestJsonUtil.edge;
+import static org.opensearch.flowframework.template.TemplateTestJsonUtil.node;
+import static org.opensearch.flowframework.template.TemplateTestJsonUtil.workflow;
 
 public class TemplateParserTests extends OpenSearchTestCase {
 
@@ -33,12 +29,7 @@ public class TemplateParserTests extends OpenSearchTestCase {
 
     // Wrap parser into string list
     private static List<String> parse(String json) throws IOException {
-        XContentParser parser = JsonXContent.jsonXContent.createParser(
-            NamedXContentRegistry.EMPTY,
-            LoggingDeprecationHandler.INSTANCE,
-            json
-        );
-        ensureExpectedToken(XContentParser.Token.START_OBJECT, parser.nextToken(), parser);
+        XContentParser parser = TemplateTestJsonUtil.jsonToParser(json);
         Workflow w = Workflow.parse(parser);
         return TemplateParser.parseWorkflowToSequence(w).stream().map(ProcessNode::id).collect(Collectors.toList());
     }

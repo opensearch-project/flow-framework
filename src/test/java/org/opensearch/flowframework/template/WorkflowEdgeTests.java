@@ -8,7 +8,10 @@
  */
 package org.opensearch.flowframework.template;
 
+import org.opensearch.core.xcontent.XContentParser;
 import org.opensearch.test.OpenSearchTestCase;
+
+import java.io.IOException;
 
 public class WorkflowEdgeTests extends OpenSearchTestCase {
 
@@ -17,7 +20,7 @@ public class WorkflowEdgeTests extends OpenSearchTestCase {
         super.setUp();
     }
 
-    public void testEdge() {
+    public void testEdge() throws IOException {
         WorkflowEdge edgeAB = new WorkflowEdge("A", "B");
         assertEquals("A", edgeAB.source());
         assertEquals("B", edgeAB.destination());
@@ -28,5 +31,15 @@ public class WorkflowEdgeTests extends OpenSearchTestCase {
 
         WorkflowEdge edgeAC = new WorkflowEdge("A", "C");
         assertNotEquals(edgeAB, edgeAC);
+
+        String expectedJson = "{\"source\":\"A\",\"dest\":\"B\"}";
+        String json = TemplateTestJsonUtil.parseToJson(edgeAB);
+        assertEquals(expectedJson, json);
+
+        XContentParser parser = TemplateTestJsonUtil.jsonToParser(json);
+        WorkflowEdge edgeX = WorkflowEdge.parse(parser);
+        assertEquals("A", edgeX.source());
+        assertEquals("B", edgeX.destination());
+        assertEquals("A->B", edgeX.toString());
     }
 }
