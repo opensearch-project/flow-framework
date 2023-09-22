@@ -19,8 +19,8 @@ public class WorkflowEdgeTests extends OpenSearchTestCase {
 
     public void testEdge() {
         WorkflowEdge edgeAB = new WorkflowEdge("A", "B");
-        assertEquals("A", edgeAB.getSource());
-        assertEquals("B", edgeAB.getDestination());
+        assertEquals("A", edgeAB.source());
+        assertEquals("B", edgeAB.destination());
         assertEquals("A->B", edgeAB.toString());
 
         WorkflowEdge edgeAB2 = new WorkflowEdge("A", "B");

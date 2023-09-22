@@ -13,6 +13,7 @@ import org.apache.logging.log4j.Logger;
 import org.opensearch.common.SuppressForbidden;
 import org.opensearch.common.io.PathUtils;
 import org.opensearch.flowframework.template.ProcessNode;
+import org.opensearch.flowframework.template.Template;
 import org.opensearch.flowframework.template.TemplateParser;
 
 import java.io.IOException;
@@ -21,7 +22,6 @@ import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
-import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 
@@ -36,10 +36,11 @@ public class DataDemo {
      * Demonstrate parsing a JSON graph.
      *
      * @param args unused
+     * @throws IOException on a failure
      */
     @SuppressForbidden(reason = "just a demo class that will be deleted")
-    public static void main(String[] args) {
-        String path = "src/test/resources/template/datademo.json";
+    public static void main(String[] args) throws IOException {
+        String path = "src/test/resources/template/demo.json";
         String json;
         try {
             json = new String(Files.readAllBytes(PathUtils.get(path)), StandardCharsets.UTF_8);
@@ -49,11 +50,12 @@ public class DataDemo {
         }
 
         logger.info("Parsing graph to sequence...");
-        List<ProcessNode> processSequence = TemplateParser.parseJsonGraphToSequence(json);
+        Template t = TemplateParser.parseJsonToTemplate(json);
+        List<ProcessNode> processSequence = TemplateParser.parseWorkflowToSequence(t.workflows().get("datademo"));
         List<CompletableFuture<?>> futureList = new ArrayList<>();
 
         for (ProcessNode n : processSequence) {
-            Set<ProcessNode> predecessors = n.getPredecessors();
+            List<ProcessNode> predecessors = n.predecessors();
             logger.info(
                 "Queueing process [{}].{}",
                 n.id(),

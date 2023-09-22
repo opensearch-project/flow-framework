@@ -12,18 +12,14 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.opensearch.common.SuppressForbidden;
 import org.opensearch.common.io.PathUtils;
-import org.opensearch.common.xcontent.LoggingDeprecationHandler;
-import org.opensearch.common.xcontent.json.JsonXContent;
-import org.opensearch.core.xcontent.NamedXContentRegistry;
-import org.opensearch.core.xcontent.XContentParser;
 import org.opensearch.flowframework.template.Template;
 import org.opensearch.flowframework.template.TemplateParser;
+import org.opensearch.flowframework.workflow.Workflow;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
-
-import static org.opensearch.core.xcontent.XContentParserUtils.ensureExpectedToken;
+import java.util.Map.Entry;
 
 /**
  * Demo class exercising {@link TemplateParser}. This will be moved to a unit test.
@@ -49,15 +45,14 @@ public class TemplateParseDemo {
             return;
         }
 
-        logger.info("Parsing template...");
-        XContentParser parser = JsonXContent.jsonXContent.createParser(
-            NamedXContentRegistry.EMPTY,
-            LoggingDeprecationHandler.INSTANCE,
-            json
-        );
-        ensureExpectedToken(XContentParser.Token.START_OBJECT, parser.nextToken(), parser);
-        Template t = Template.parse(parser);
+        Template t = TemplateParser.parseJsonToTemplate(json);
+
         System.out.println(t.toJson());
         System.out.println(t.toYaml());
+
+        for (Entry<String, Workflow> e : t.workflows().entrySet()) {
+            logger.info("Parsing {} workflow.", e.getKey());
+            TemplateParser.parseWorkflowToSequence(e.getValue());
+        }
     }
 }

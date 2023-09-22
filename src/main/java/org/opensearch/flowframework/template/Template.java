@@ -18,7 +18,6 @@ import org.opensearch.flowframework.workflow.Workflow;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -53,9 +52,9 @@ public class Template implements ToXContentObject {
     private final String name;
     private final String description;
     private final String useCase; // probably an ENUM actually
-    private final String[] operations; // probably an ENUM actually
+    private final List<String> operations; // probably an ENUM actually
     private final Version templateVersion;
-    private final Version[] compatibilityVersion;
+    private final List<Version> compatibilityVersion;
     private final Map<String, Object> userInputs;
     private final Map<String, Workflow> workflows;
 
@@ -75,20 +74,20 @@ public class Template implements ToXContentObject {
         String name,
         String description,
         String useCase,
-        String[] operations,
+        List<String> operations,
         Version templateVersion,
-        Version[] compatibilityVersion,
+        List<Version> compatibilityVersion,
         Map<String, Object> userInputs,
         Map<String, Workflow> workflows
     ) {
         this.name = name;
         this.description = description;
         this.useCase = useCase;
-        this.operations = operations;
+        this.operations = List.copyOf(operations);
         this.templateVersion = templateVersion;
-        this.compatibilityVersion = compatibilityVersion;
-        this.userInputs = userInputs;
-        this.workflows = workflows;
+        this.compatibilityVersion = List.copyOf(compatibilityVersion);
+        this.userInputs = Map.copyOf(userInputs);
+        this.workflows = Map.copyOf(workflows);
     }
 
     @Override
@@ -103,12 +102,12 @@ public class Template implements ToXContentObject {
         }
         xContentBuilder.endArray();
 
-        if (this.templateVersion != null || this.compatibilityVersion.length > 0) {
+        if (this.templateVersion != null || !this.compatibilityVersion.isEmpty()) {
             xContentBuilder.startObject(VERSION_FIELD);
             if (this.templateVersion != null) {
                 xContentBuilder.field(TEMPLATE_FIELD, this.templateVersion);
             }
-            if (this.compatibilityVersion.length > 0) {
+            if (!this.compatibilityVersion.isEmpty()) {
                 xContentBuilder.startArray(COMPATIBILITY_FIELD);
                 for (Version v : this.compatibilityVersion) {
                     xContentBuilder.value(v);
@@ -146,9 +145,9 @@ public class Template implements ToXContentObject {
         String name = null;
         String description = "";
         String useCase = "";
-        String[] operations = new String[0];
+        List<String> operations = new ArrayList<>();
         Version templateVersion = null;
-        Version[] compatibilityVersion = new Version[0];
+        List<Version> compatibilityVersion = new ArrayList<>();
         Map<String, Object> userInputs = new HashMap<>();
         Map<String, Workflow> workflows = new HashMap<>();
 
@@ -168,11 +167,9 @@ public class Template implements ToXContentObject {
                     break;
                 case OPERATIONS_FIELD:
                     ensureExpectedToken(XContentParser.Token.START_ARRAY, parser.currentToken(), parser);
-                    List<String> operationsList = new ArrayList<>();
                     while (parser.nextToken() != XContentParser.Token.END_ARRAY) {
-                        operationsList.add(parser.text());
+                        operations.add(parser.text());
                     }
-                    operations = operationsList.toArray(new String[0]);
                     break;
                 case VERSION_FIELD:
                     ensureExpectedToken(XContentParser.Token.START_OBJECT, parser.currentToken(), parser);
@@ -185,11 +182,9 @@ public class Template implements ToXContentObject {
                                 break;
                             case COMPATIBILITY_FIELD:
                                 ensureExpectedToken(XContentParser.Token.START_ARRAY, parser.currentToken(), parser);
-                                List<Version> compatibilityList = new ArrayList<>();
                                 while (parser.nextToken() != XContentParser.Token.END_ARRAY) {
-                                    compatibilityList.add(Version.fromString(parser.text()));
+                                    compatibilityVersion.add(Version.fromString(parser.text()));
                                 }
-                                compatibilityVersion = compatibilityList.toArray(new Version[0]);
                                 break;
                             default:
                                 throw new IOException("Unable to parse field [" + fieldName + "] in a version object.");
@@ -293,6 +288,70 @@ public class Template implements ToXContentObject {
         }
     }
 
+    /**
+     * The name of this template
+     * @return the name
+     */
+    public String name() {
+        return name;
+    }
+
+    /**
+     * A description of what this template does
+     * @return the description
+     */
+    public String description() {
+        return description;
+    }
+
+    /**
+     * A canonical use case name for this template
+     * @return the useCase
+     */
+    public String useCase() {
+        return useCase;
+    }
+
+    /**
+     * Operations this use case supports
+     * @return the operations
+     */
+    public List<String> operations() {
+        return operations;
+    }
+
+    /**
+     * The version of this template
+     * @return the templateVersion
+     */
+    public Version templateVersion() {
+        return templateVersion;
+    }
+
+    /**
+     * OpenSearch version compatibility of this template
+     * @return the compatibilityVersion
+     */
+    public List<Version> compatibilityVersion() {
+        return compatibilityVersion;
+    }
+
+    /**
+     * A map of user inputs
+     * @return the userInputs
+     */
+    public Map<String, Object> userInputs() {
+        return userInputs;
+    }
+
+    /**
+     * Workflows encoded in this template, generally corresponding to the operations returned by {@link #operations()}.
+     * @return the workflows
+     */
+    public Map<String, Workflow> workflows() {
+        return workflows;
+    }
+
     @Override
     public String toString() {
         return "Template [name="
@@ -302,11 +361,11 @@ public class Template implements ToXContentObject {
             + ", useCase="
             + useCase
             + ", operations="
-            + Arrays.toString(operations)
+            + operations
             + ", templateVersion="
             + templateVersion
             + ", compatibilityVersion="
-            + Arrays.toString(compatibilityVersion)
+            + compatibilityVersion
             + ", userInputs="
             + userInputs
             + ", workflows="

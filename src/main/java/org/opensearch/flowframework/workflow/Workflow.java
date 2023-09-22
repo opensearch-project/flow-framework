@@ -17,7 +17,6 @@ import org.opensearch.flowframework.template.WorkflowNode;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -40,8 +39,8 @@ public class Workflow implements ToXContentObject {
     public static final String EDGES_FIELD = "edges";
 
     private final Map<String, String> userParams;
-    private final WorkflowNode[] nodes;
-    private final WorkflowEdge[] edges;
+    private final List<WorkflowNode> nodes;
+    private final List<WorkflowEdge> edges;
 
     /**
      * Create this workflow with any user params and the graph of nodes and edges.
@@ -50,10 +49,10 @@ public class Workflow implements ToXContentObject {
      * @param nodes An array of {@link WorkflowNode} objects
      * @param edges An array of {@link WorkflowEdge} objects.
      */
-    public Workflow(Map<String, String> userParams, WorkflowNode[] nodes, WorkflowEdge[] edges) {
-        this.userParams = userParams;
-        this.nodes = nodes;
-        this.edges = edges;
+    public Workflow(Map<String, String> userParams, List<WorkflowNode> nodes, List<WorkflowEdge> edges) {
+        this.userParams = Map.copyOf(userParams);
+        this.nodes = List.copyOf(nodes);
+        this.edges = List.copyOf(edges);
     }
 
     @Override
@@ -82,16 +81,16 @@ public class Workflow implements ToXContentObject {
     }
 
     /**
-     * Parse raw json content into a workflow instance.
+     * Parse raw JSON content into a workflow instance.
      *
-     * @param parser json based content parser
+     * @param parser JSON based content parser
      * @return the parsed Workflow instance
      * @throws IOException if content can't be parsed correctly
      */
     public static Workflow parse(XContentParser parser) throws IOException {
         Map<String, String> userParams = new HashMap<>();
-        WorkflowNode[] nodes = null;
-        WorkflowEdge[] edges = null;
+        List<WorkflowNode> nodes = new ArrayList<>();
+        List<WorkflowEdge> edges = new ArrayList<>();
 
         ensureExpectedToken(XContentParser.Token.START_OBJECT, parser.currentToken(), parser);
         while (parser.nextToken() != XContentParser.Token.END_OBJECT) {
@@ -109,40 +108,58 @@ public class Workflow implements ToXContentObject {
                 case NODES_FIELD:
                 case STEPS_FIELD:
                     ensureExpectedToken(XContentParser.Token.START_ARRAY, parser.currentToken(), parser);
-                    List<WorkflowNode> nodesList = new ArrayList<>();
                     while (parser.nextToken() != XContentParser.Token.END_ARRAY) {
-                        nodesList.add(WorkflowNode.parse(parser));
+                        nodes.add(WorkflowNode.parse(parser));
                     }
-                    nodes = nodesList.toArray(new WorkflowNode[0]);
                     break;
                 case EDGES_FIELD:
                     ensureExpectedToken(XContentParser.Token.START_ARRAY, parser.currentToken(), parser);
-                    List<WorkflowEdge> edgesList = new ArrayList<>();
                     while (parser.nextToken() != XContentParser.Token.END_ARRAY) {
-                        edgesList.add(WorkflowEdge.parse(parser));
+                        edges.add(WorkflowEdge.parse(parser));
                     }
-                    edges = edgesList.toArray(new WorkflowEdge[0]);
                     break;
             }
 
         }
-        if (nodes == null || nodes.length == 0) {
+        if (nodes.isEmpty()) {
             throw new IOException("A workflow must have at least one node.");
         }
-        if (edges == null || edges.length == 0) {
+        if (edges.isEmpty()) {
             // infer edges from sequence of nodes
-            List<WorkflowEdge> edgesList = new ArrayList<>();
             // Start iteration at 1, will skip for a one-node array
-            for (int i = 1; i < nodes.length; i++) {
-                edgesList.add(new WorkflowEdge(nodes[i - 1].getId(), nodes[i].getId()));
+            for (int i = 1; i < nodes.size(); i++) {
+                edges.add(new WorkflowEdge(nodes.get(i - 1).id(), nodes.get(i).id()));
             }
-            edges = edgesList.toArray(new WorkflowEdge[0]);
         }
         return new Workflow(userParams, nodes, edges);
     }
 
+    /**
+     * Get user parameters. These will be passed to all workflow nodes and available as {@link WorkflowData#getParams()}
+     * @return the userParams
+     */
+    public Map<String, String> userParams() {
+        return userParams;
+    }
+
+    /**
+     * Get the nodes in the workflow. Ordering matches the user template which may or may not match execution order.
+     * @return the nodes
+     */
+    public List<WorkflowNode> nodes() {
+        return nodes;
+    }
+
+    /**
+     * Get the edges in the workflow. These specify connections of nodes which form a graph.
+     * @return the edges
+     */
+    public List<WorkflowEdge> edges() {
+        return edges;
+    }
+
     @Override
     public String toString() {
-        return "Workflow [userParams=" + userParams + ", nodes=" + Arrays.toString(nodes) + ", edges=" + Arrays.toString(edges) + "]";
+        return "Workflow [userParams=" + userParams + ", nodes=" + nodes + ", edges=" + edges + "]";
     }
 }

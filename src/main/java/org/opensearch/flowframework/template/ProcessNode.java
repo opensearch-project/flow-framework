@@ -14,10 +14,7 @@ import org.opensearch.flowframework.workflow.WorkflowData;
 import org.opensearch.flowframework.workflow.WorkflowStep;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
-import java.util.Objects;
-import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
@@ -33,32 +30,22 @@ public class ProcessNode {
     private final String id;
     private final WorkflowStep workflowStep;
     private final WorkflowData input;
-    private CompletableFuture<WorkflowData> future = null;
-
-    // will be populated during graph parsing
-    private Set<ProcessNode> predecessors = Collections.emptySet();
+    private final List<ProcessNode> predecessors;
+    private final CompletableFuture<WorkflowData> future = new CompletableFuture<>();
 
     /**
-     * Create this node linked to its executing process.
+     * Create this node linked to its executing process, including input data and any predecessor nodes.
      *
      * @param id A string identifying the workflow step
      * @param workflowStep A java class implementing {@link WorkflowStep} to be executed when it's this node's turn.
+     * @param input Input required by the node encoded in a {@link WorkflowData} instance.
+     * @param predecessors Nodes preceding this one in the workflow
      */
-    ProcessNode(String id, WorkflowStep workflowStep) {
-        this(id, workflowStep, WorkflowData.EMPTY);
-    }
-
-    /**
-     * Create this node linked to its executing process.
-     *
-     * @param id A string identifying the workflow step
-     * @param workflowStep A java class implementing {@link WorkflowStep} to be executed when it's this node's turn.
-     * @param input Input required by the node
-     */
-    public ProcessNode(String id, WorkflowStep workflowStep, WorkflowData input) {
+    public ProcessNode(String id, WorkflowStep workflowStep, WorkflowData input, List<ProcessNode> predecessors) {
         this.id = id;
         this.workflowStep = workflowStep;
         this.input = input;
+        this.predecessors = predecessors;
     }
 
     /**
@@ -92,27 +79,18 @@ public class ProcessNode {
      * @return A future indicating the processing state of this node.
      * Returns {@code null} if it has not begun executing, should not happen if a workflow is sorted and executed topologically.
      */
-    public CompletableFuture<WorkflowData> getFuture() {
+    public CompletableFuture<WorkflowData> future() {
         return future;
     }
 
     /**
      * Returns the predecessors of this node in the workflow.
-     * The predecessor's {@link #getFuture()} must complete before execution begins on this node.
+     * The predecessor's {@link #future()} must complete before execution begins on this node.
      *
      * @return a set of predecessor nodes, if any.  At least one node in the graph must have no predecessors and serve as a start node.
      */
-    public Set<ProcessNode> getPredecessors() {
+    public List<ProcessNode> predecessors() {
         return predecessors;
-    }
-
-    /**
-     * Sets the predecessor node.  Called by {@link TemplateParser}.
-     *
-     * @param predecessors The predecessors of this node.
-     */
-    void setPredecessors(Set<ProcessNode> predecessors) {
-        this.predecessors = Set.copyOf(predecessors);
     }
 
     /**
@@ -121,12 +99,11 @@ public class ProcessNode {
      * @return this node's future. This is returned immediately, while process execution continues asynchronously.
      */
     public CompletableFuture<WorkflowData> execute() {
-        this.future = new CompletableFuture<>();
         // TODO this class will be instantiated with the OpenSearch thread pool (or one for tests!)
         // the generic executor from that pool should be passed to this runAsync call
         // https://github.com/opensearch-project/opensearch-ai-flow-framework/issues/42
         CompletableFuture.runAsync(() -> {
-            List<CompletableFuture<WorkflowData>> predFutures = predecessors.stream().map(p -> p.getFuture()).collect(Collectors.toList());
+            List<CompletableFuture<WorkflowData>> predFutures = predecessors.stream().map(p -> p.future()).collect(Collectors.toList());
             if (!predecessors.isEmpty()) {
                 CompletableFuture<Void> waitForPredecessors = CompletableFuture.allOf(predFutures.toArray(new CompletableFuture<?>[0]));
                 try {
@@ -166,20 +143,6 @@ public class ProcessNode {
         // TODO: better handling of getCause
         this.future.completeExceptionally(e);
         logger.debug("<<< Completed Exceptionally {}", this.id);
-    }
-
-    @Override
-    public int hashCode() {
-        return Objects.hash(id);
-    }
-
-    @Override
-    public boolean equals(Object obj) {
-        if (this == obj) return true;
-        if (obj == null) return false;
-        if (getClass() != obj.getClass()) return false;
-        ProcessNode other = (ProcessNode) obj;
-        return Objects.equals(id, other.id);
     }
 
     @Override

@@ -53,7 +53,7 @@ public class WorkflowNode implements ToXContentObject {
     public WorkflowNode(String id, String type, Map<String, Object> inputs) {
         this.id = id;
         this.type = type;
-        this.inputs = inputs;
+        this.inputs = Map.copyOf(inputs);
     }
 
     @Override
@@ -140,7 +140,7 @@ public class WorkflowNode implements ToXContentObject {
      * Return this node's id
      * @return the id
      */
-    public String getId() {
+    public String id() {
         return id;
     }
 
@@ -148,7 +148,7 @@ public class WorkflowNode implements ToXContentObject {
      * Return this node's type
      * @return the type
      */
-    public String getType() {
+    public String type() {
         return type;
     }
 
@@ -156,7 +156,7 @@ public class WorkflowNode implements ToXContentObject {
      * Return this node's input data
      * @return the inputs
      */
-    public Map<String, Object> getInputs() {
+    public Map<String, Object> inputs() {
         return inputs;
     }
 

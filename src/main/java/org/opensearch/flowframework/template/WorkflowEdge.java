@@ -87,7 +87,7 @@ public class WorkflowEdge implements ToXContentObject {
      *
      * @return the source node id.
      */
-    public String getSource() {
+    public String source() {
         return source;
     }
 
@@ -96,7 +96,7 @@ public class WorkflowEdge implements ToXContentObject {
      *
      * @return the destination node id.
      */
-    public String getDestination() {
+    public String destination() {
         return destination;
     }
 

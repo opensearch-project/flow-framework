@@ -41,11 +41,11 @@ public class ProcessNodeTests extends OpenSearchTestCase {
             public String getName() {
                 return "test";
             }
-        });
+        }, WorkflowData.EMPTY, Collections.emptyList());
         assertEquals("A", nodeA.id());
         assertEquals("test", nodeA.workflowStep().getName());
         assertEquals(WorkflowData.EMPTY, nodeA.input());
-        assertEquals(Collections.emptySet(), nodeA.getPredecessors());
+        assertEquals(Collections.emptyList(), nodeA.predecessors());
         assertEquals("A", nodeA.toString());
 
         // TODO: This test is flaky on Windows. Disabling until thread pool is integrated
@@ -55,11 +55,5 @@ public class ProcessNodeTests extends OpenSearchTestCase {
         // f.orTimeout(5, TimeUnit.SECONDS);
         // assertTrue(f.isDone());
         // assertEquals(WorkflowData.EMPTY, f.get());
-
-        ProcessNode nodeB = new ProcessNode("B", null);
-        assertNotEquals(nodeA, nodeB);
-
-        ProcessNode nodeA2 = new ProcessNode("A", null);
-        assertEquals(nodeA, nodeA2);
     }
 }
