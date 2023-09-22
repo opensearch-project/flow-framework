@@ -79,7 +79,7 @@ public class CreateIngestPipelineStep implements WorkflowStep {
 
             Map<String, String> parameters = workflowData.getParams();
             Map<String, Object> content = workflowData.getContent();
-            logger.debug("Previous step sent params: {}, content: {}", parameters, content);
+            logger.info("Previous step sent params: {}, content: {}", parameters, content);
 
             for (Entry<String, Object> entry : content.entrySet()) {
                 switch (entry.getKey()) {
@@ -105,13 +105,13 @@ public class CreateIngestPipelineStep implements WorkflowStep {
             }
 
             // Determmine if fields have been populated, else iterate over remaining workflow data
-            if (Stream.of(pipelineId, description, modelId, inputFieldName, outputFieldName).allMatch(x -> x != null)) {
+            if (Stream.of(pipelineId, description, modelId, type, inputFieldName, outputFieldName).allMatch(x -> x != null)) {
                 try {
                     configuration = BytesReference.bytes(
-                        buildIngestPipelineRequestContent(description, modelId, inputFieldName, outputFieldName)
+                        buildIngestPipelineRequestContent(description, modelId, type, inputFieldName, outputFieldName)
                     );
                 } catch (IOException e) {
-                    logger.error("Failed to create ingest pipeline : " + e.getMessage());
+                    logger.error("Failed to create ingest pipeline configuration: " + e.getMessage());
                     createIngestPipelineFuture.completeExceptionally(e);
                 }
                 break;
@@ -157,7 +157,7 @@ public class CreateIngestPipelineStep implements WorkflowStep {
      *  "description" : "<description>",
      *  "processors" : [
      *      {
-     *          "text_embedding" : {
+     *          "<type>" : {
      *              "model_id" : "<model_id>",
      *              "field_map" : {
      *                  "<input_field_name>" : "<output_field_name>"
@@ -168,6 +168,7 @@ public class CreateIngestPipelineStep implements WorkflowStep {
      *
      * @param description The description of the ingest pipeline configuration
      * @param modelId The ID of the model that will be used in the embedding interface
+     * @param type The processor type
      * @param inputFieldName The field name used to cache text for text embeddings
      * @param outputFieldName The field name in which output text is stored
      * @throws IOException if the request content fails to be generated
@@ -176,6 +177,7 @@ public class CreateIngestPipelineStep implements WorkflowStep {
     private XContentBuilder buildIngestPipelineRequestContent(
         String description,
         String modelId,
+        String type,
         String inputFieldName,
         String outputFieldName
     ) throws IOException {
@@ -183,10 +185,12 @@ public class CreateIngestPipelineStep implements WorkflowStep {
             .startObject()
             .field(DESCRIPTION_FIELD, description)
             .startArray(PROCESSORS_FIELD)
-            .startObject(TYPE_FIELD)
+            .startObject()
+            .startObject(type)
             .field(MODEL_ID_FIELD, modelId)
             .startObject(FIELD_MAP)
             .field(inputFieldName, outputFieldName)
+            .endObject()
             .endObject()
             .endObject()
             .endArray()
