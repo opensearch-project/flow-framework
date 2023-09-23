@@ -70,6 +70,7 @@ public class WorkflowNode implements ToXContentObject {
             } else if (e.getValue() instanceof Map<?, ?>) {
                 Template.buildStringToStringMap(xContentBuilder, (Map<?, ?>) e.getValue());
             } else if (e.getValue() instanceof Object[]) {
+                // This assumes an array of maps for "processor" key
                 xContentBuilder.startArray();
                 for (Map<?, ?> map : (Map<?, ?>[]) e.getValue()) {
                     Template.buildStringToStringMap(xContentBuilder, map);
@@ -112,6 +113,9 @@ public class WorkflowNode implements ToXContentObject {
                         switch (parser.nextToken()) {
                             case VALUE_STRING:
                                 inputs.put(inputFieldName, parser.text());
+                                break;
+                            case START_OBJECT:
+                                inputs.put(inputFieldName, Template.parseStringToStringMap(parser));
                                 break;
                             case START_ARRAY:
                                 List<Map<String, String>> mapList = new ArrayList<>();
