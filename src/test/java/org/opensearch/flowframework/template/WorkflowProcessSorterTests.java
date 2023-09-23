@@ -21,7 +21,7 @@ import static org.opensearch.flowframework.template.TemplateTestJsonUtil.edge;
 import static org.opensearch.flowframework.template.TemplateTestJsonUtil.node;
 import static org.opensearch.flowframework.template.TemplateTestJsonUtil.workflow;
 
-public class TemplateParserTests extends OpenSearchTestCase {
+public class WorkflowProcessSorterTests extends OpenSearchTestCase {
 
     private static final String MUST_HAVE_AT_LEAST_ONE_NODE = "A workflow must have at least one node.";
     private static final String NO_START_NODE_DETECTED = "No start node detected: all nodes have a predecessor.";
@@ -130,5 +130,16 @@ public class TemplateParserTests extends OpenSearchTestCase {
         assertEquals(2, workflow.size());
         assertTrue(workflow.contains("A"));
         assertTrue(workflow.contains("B"));
+    }
+
+    public void testExceptions() throws IOException {
+        Exception ex = assertThrows(
+            IllegalArgumentException.class,
+            () -> parse(workflow(List.of(node("A"), node("B")), List.of(edge("C", "B"))))
+        );
+        assertEquals("Edge source C does not correspond to a node.", ex.getMessage());
+
+        ex = assertThrows(IllegalArgumentException.class, () -> parse(workflow(List.of(node("A"), node("B")), List.of(edge("A", "C")))));
+        assertEquals("Edge destination C does not correspond to a node.", ex.getMessage());
     }
 }
