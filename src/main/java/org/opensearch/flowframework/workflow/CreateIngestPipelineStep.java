@@ -48,8 +48,6 @@ public class CreateIngestPipelineStep implements WorkflowStep {
 
     // Client to store a pipeline in the cluster state
     private final ClusterAdminClient clusterAdminClient;
-    // Client to store response data into global context index
-    private final Client client;
 
     /**
      * Instantiates a new CreateIngestPipelineStep
@@ -58,7 +56,6 @@ public class CreateIngestPipelineStep implements WorkflowStep {
      */
     public CreateIngestPipelineStep(Client client) {
         this.clusterAdminClient = client.admin().cluster();
-        this.client = client;
     }
 
     @Override
@@ -77,9 +74,7 @@ public class CreateIngestPipelineStep implements WorkflowStep {
         // Extract required content from workflow data and generate the ingest pipeline configuration
         for (WorkflowData workflowData : data) {
 
-            Map<String, String> parameters = workflowData.getParams();
             Map<String, Object> content = workflowData.getContent();
-            logger.info("Previous step sent params: {}, content: {}", parameters, content);
 
             for (Entry<String, Object> entry : content.entrySet()) {
                 switch (entry.getKey()) {

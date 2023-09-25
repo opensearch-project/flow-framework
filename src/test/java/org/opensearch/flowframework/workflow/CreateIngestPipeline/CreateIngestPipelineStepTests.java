@@ -106,11 +106,10 @@ public class CreateIngestPipelineStepTests extends OpenSearchTestCase {
         actionListenerCaptor.getValue().onFailure(new Exception("Failed to create ingest pipeline"));
 
         assertTrue(future.isDone() && future.isCompletedExceptionally());
-        try {
-            future.get();
-        } catch (ExecutionException e) {
-            assertTrue(e.getMessage().contains("Failed to create ingest pipeline"));
-        }
+
+        ExecutionException exception = assertThrows(ExecutionException.class, () -> future.get());
+        assertTrue(exception.getCause() instanceof Exception);
+        assertEquals("Failed to create ingest pipeline", exception.getCause().getMessage());
     }
 
     public void testMissingData() throws InterruptedException {
@@ -133,11 +132,9 @@ public class CreateIngestPipelineStepTests extends OpenSearchTestCase {
         CompletableFuture<WorkflowData> future = createIngestPipelineStep.execute(List.of(incorrectData));
         assertTrue(future.isDone() && future.isCompletedExceptionally());
 
-        try {
-            future.get();
-        } catch (ExecutionException e) {
-            assertTrue(e.getMessage().contains("Failed to create ingest pipeline, required inputs not found"));
-        }
+        ExecutionException exception = assertThrows(ExecutionException.class, () -> future.get());
+        assertTrue(exception.getCause() instanceof Exception);
+        assertEquals("Failed to create ingest pipeline, required inputs not found", exception.getCause().getMessage());
     }
 
 }
