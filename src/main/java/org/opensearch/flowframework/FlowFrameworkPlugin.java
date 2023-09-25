@@ -16,6 +16,7 @@ import org.opensearch.core.common.io.stream.NamedWriteableRegistry;
 import org.opensearch.core.xcontent.NamedXContentRegistry;
 import org.opensearch.env.Environment;
 import org.opensearch.env.NodeEnvironment;
+import org.opensearch.flowframework.workflow.CreateIndex.CreateIndexStep;
 import org.opensearch.flowframework.workflow.CreateIngestPipelineStep;
 import org.opensearch.plugins.Plugin;
 import org.opensearch.repositories.RepositoriesService;
@@ -49,7 +50,7 @@ public class FlowFrameworkPlugin extends Plugin {
     ) {
         this.client = client;
         CreateIngestPipelineStep createIngestPipelineStep = new CreateIngestPipelineStep(client);
-
-        return ImmutableList.of(createIngestPipelineStep);
+        CreateIndexStep createIndexStep = new CreateIndexStep(client);
+        return ImmutableList.of(createIngestPipelineStep, createIndexStep);
     }
 }
