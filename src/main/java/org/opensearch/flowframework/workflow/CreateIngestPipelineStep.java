@@ -125,12 +125,7 @@ public class CreateIngestPipelineStep implements WorkflowStep {
                 logger.info("Created ingest pipeline : " + putPipelineRequest.getId());
 
                 // PutPipelineRequest returns only an AcknowledgeResponse, returning pipelineId instead
-                createIngestPipelineFuture.complete(new WorkflowData() {
-                    @Override
-                    public Map<String, Object> getContent() {
-                        return Map.of("pipelineId", putPipelineRequest.getId());
-                    }
-                });
+                createIngestPipelineFuture.complete(new WorkflowData(Map.of("pipelineId", putPipelineRequest.getId())));
 
                 // TODO : Use node client to index response data to global context (pending global context index implementation)
 

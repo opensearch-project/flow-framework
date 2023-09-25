@@ -43,29 +43,19 @@ public class CreateIngestPipelineStepTests extends OpenSearchTestCase {
     public void setUp() throws Exception {
         super.setUp();
 
-        inputData = new WorkflowData() {
-
-            @Override
-            public Map<String, Object> getContent() {
-                return Map.ofEntries(
-                    Map.entry("id", "pipelineId"),
-                    Map.entry("description", "some description"),
-                    Map.entry("type", "text_embedding"),
-                    Map.entry("model_id", "model_id"),
-                    Map.entry("input_field_name", "inputField"),
-                    Map.entry("output_field_name", "outputField")
-                );
-            }
-        };
+        inputData = new WorkflowData(
+            Map.ofEntries(
+                Map.entry("id", "pipelineId"),
+                Map.entry("description", "some description"),
+                Map.entry("type", "text_embedding"),
+                Map.entry("model_id", "model_id"),
+                Map.entry("input_field_name", "inputField"),
+                Map.entry("output_field_name", "outputField")
+            )
+        );
 
         // Set output data to returned pipelineId
-        outpuData = new WorkflowData() {
-
-            @Override
-            public Map<String, Object> getContent() {
-                return Map.ofEntries(Map.entry("pipelineId", "pipelineId"));
-            }
-        };
+        outpuData = new WorkflowData(Map.ofEntries(Map.entry("pipelineId", "pipelineId")));
 
         client = mock(Client.class);
         adminClient = mock(AdminClient.class);
@@ -116,18 +106,14 @@ public class CreateIngestPipelineStepTests extends OpenSearchTestCase {
         CreateIngestPipelineStep createIngestPipelineStep = new CreateIngestPipelineStep(client);
 
         // Data with missing input and output fields
-        WorkflowData incorrectData = new WorkflowData() {
-
-            @Override
-            public Map<String, Object> getContent() {
-                return Map.ofEntries(
-                    Map.entry("id", "pipelineId"),
-                    Map.entry("description", "some description"),
-                    Map.entry("type", "text_embedding"),
-                    Map.entry("model_id", "model_id")
-                );
-            }
-        };
+        WorkflowData incorrectData = new WorkflowData(
+            Map.ofEntries(
+                Map.entry("id", "pipelineId"),
+                Map.entry("description", "some description"),
+                Map.entry("type", "text_embedding"),
+                Map.entry("model_id", "model_id")
+            )
+        );
 
         CompletableFuture<WorkflowData> future = createIngestPipelineStep.execute(List.of(incorrectData));
         assertTrue(future.isDone() && future.isCompletedExceptionally());
