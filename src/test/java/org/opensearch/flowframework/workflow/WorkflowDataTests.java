@@ -10,7 +10,7 @@ package org.opensearch.flowframework.workflow;
 
 import org.opensearch.test.OpenSearchTestCase;
 
-import java.util.Collections;
+import java.util.Map;
 
 public class WorkflowDataTests extends OpenSearchTestCase {
 
@@ -20,9 +20,19 @@ public class WorkflowDataTests extends OpenSearchTestCase {
     }
 
     public void testWorkflowData() {
-        WorkflowData data = new WorkflowData() {
-        };
-        assertEquals(Collections.emptyMap(), data.getParams());
-        assertEquals(Collections.emptyMap(), data.getContent());
+
+        WorkflowData empty = WorkflowData.EMPTY;
+        assertTrue(empty.getParams().isEmpty());
+        assertTrue(empty.getContent().isEmpty());
+
+        Map<String, Object> expectedContent = Map.of("baz", new String[] { "qux", "quxx" });
+        WorkflowData contentOnly = new WorkflowData(expectedContent);
+        assertTrue(contentOnly.getParams().isEmpty());
+        assertEquals(expectedContent, contentOnly.getContent());
+
+        Map<String, String> expectedParams = Map.of("foo", "bar");
+        WorkflowData contentAndParams = new WorkflowData(expectedContent, expectedParams);
+        assertEquals(expectedParams, contentAndParams.getParams());
+        assertEquals(expectedContent, contentAndParams.getContent());
     }
 }
