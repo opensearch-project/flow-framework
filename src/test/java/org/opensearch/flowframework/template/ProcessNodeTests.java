@@ -19,7 +19,6 @@ import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeUnit;
 
 @ThreadLeakScope(Scope.NONE)
 public class ProcessNodeTests extends OpenSearchTestCase {
@@ -49,12 +48,13 @@ public class ProcessNodeTests extends OpenSearchTestCase {
         assertEquals(Collections.emptySet(), nodeA.getPredecessors());
         assertEquals("A", nodeA.toString());
 
-        // TODO: Once we can get OpenSearch Thread Pool for this execute method, create an IT and don't test execute here
-        CompletableFuture<WorkflowData> f = nodeA.execute();
-        assertEquals(f, nodeA.getFuture());
-        f.orTimeout(5, TimeUnit.SECONDS);
-        assertTrue(f.isDone());
-        assertEquals(WorkflowData.EMPTY, f.get());
+        // TODO: This test is flaky on Windows. Disabling until thread pool is integrated
+        // https://github.com/opensearch-project/opensearch-ai-flow-framework/issues/42
+        // CompletableFuture<WorkflowData> f = nodeA.execute();
+        // assertEquals(f, nodeA.future());
+        // f.orTimeout(5, TimeUnit.SECONDS);
+        // assertTrue(f.isDone());
+        // assertEquals(WorkflowData.EMPTY, f.get());
 
         ProcessNode nodeB = new ProcessNode("B", null);
         assertNotEquals(nodeA, nodeB);

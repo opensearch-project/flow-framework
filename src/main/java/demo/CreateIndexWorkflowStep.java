@@ -65,12 +65,7 @@ public class CreateIndexWorkflowStep implements WorkflowStep {
             } catch (InterruptedException e) {}
             // Simulate response of created index
             CreateIndexResponse response = new CreateIndexResponse(true, true, inputIndex);
-            future.complete(new WorkflowData() {
-                @Override
-                public Map<String, Object> getContent() {
-                    return Map.of("index", response.index());
-                }
-            });
+            future.complete(new WorkflowData(Map.of("index", response.index())));
         });
 
         return future;
