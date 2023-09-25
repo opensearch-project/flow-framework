@@ -45,15 +45,7 @@ public class CreateIndexStepTests extends OpenSearchTestCase {
     public void setUp() throws Exception {
         super.setUp();
 
-        inputData = new WorkflowData() {
-
-            @Override
-            public Map<String, Object> getContent() {
-                return Map.ofEntries(Map.entry("index-name", "demo"), Map.entry("type", "knn"));
-            }
-
-        };
-
+        inputData = new WorkflowData(Map.ofEntries(Map.entry("index-name", "demo"), Map.entry("type", "knn")));
         client = mock(Client.class);
         adminClient = mock(AdminClient.class);
         indicesAdminClient = mock(IndicesAdminClient.class);

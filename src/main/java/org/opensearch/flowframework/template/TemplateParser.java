@@ -76,21 +76,10 @@ public class TemplateParser {
             WorkflowData inputData = WorkflowData.EMPTY;
             if (List.of("create_index", "create_another_index").contains(nodeId)) {
                 CreateIndexRequest request = new CreateIndexRequest(nodeObject.get("index_name").getAsString());
-                inputData = new WorkflowData() {
-
-                    @Override
-                    public Map<String, Object> getContent() {
-                        // See CreateIndexRequest ParseFields for source of content keys needed
-                        return Map.of("mappings", request.mappings(), "settings", request.settings(), "aliases", request.aliases());
-                    }
-
-                    @Override
-                    public Map<String, String> getParams() {
-                        // See RestCreateIndexAction for source of param keys needed
-                        return Map.of("index", request.index());
-                    }
-
-                };
+                inputData = new WorkflowData(
+                    Map.of("mappings", request.mappings(), "settings", request.settings(), "aliases", request.aliases()),
+                    Map.of("index", request.index())
+                );
             }
             nodes.add(new ProcessNode(nodeId, workflowStep, inputData));
         }
