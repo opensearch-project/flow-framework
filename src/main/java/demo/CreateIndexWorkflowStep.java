@@ -43,20 +43,16 @@ public class CreateIndexWorkflowStep implements WorkflowStep {
         // https://github.com/opensearch-project/opensearch-ai-flow-framework/issues/42
         CompletableFuture.runAsync(() -> {
             String inputIndex = null;
-            boolean first = true;
             for (WorkflowData wfData : data) {
                 logger.debug(
                     "{} sent params: {}, content: {}",
-                    first ? "Initialization" : "Previous step",
+                    inputIndex == null ? "Initialization" : "Previous step",
                     wfData.getParams(),
                     wfData.getContent()
                 );
-                if (first) {
-                    Map<String, String> params = data.get(0).getParams();
-                    if (params.containsKey("index")) {
-                        inputIndex = params.get("index");
-                    }
-                    first = false;
+                if (inputIndex == null) {
+                    inputIndex = wfData.getParams()
+                        .getOrDefault("index_name", (String) wfData.getContent().getOrDefault("index_name", "NOT FOUND"));
                 }
             }
             // do some work, simulating a REST API call

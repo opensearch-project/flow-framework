@@ -129,9 +129,9 @@ public class ProcessNode {
             }
             CompletableFuture<WorkflowData> stepFuture = this.workflowStep.execute(input);
             try {
-                stepFuture.join();
+                stepFuture.orTimeout(15, TimeUnit.SECONDS).join();
+                logger.info(">>> Finished {}.", this.id);
                 future.complete(stepFuture.get());
-                logger.debug("<<< Completed {}", this.id);
             } catch (InterruptedException | ExecutionException e) {
                 handleException(e);
             }
@@ -142,7 +142,7 @@ public class ProcessNode {
     private void handleException(Exception e) {
         // TODO: better handling of getCause
         this.future.completeExceptionally(e);
-        logger.debug("<<< Completed Exceptionally {}", this.id);
+        logger.debug("<<< Completed Exceptionally {}", this.id, e.getCause());
     }
 
     @Override

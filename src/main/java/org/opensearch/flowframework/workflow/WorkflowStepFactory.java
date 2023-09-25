@@ -42,7 +42,6 @@ public class WorkflowStepFactory {
         // Replace with actual implementations such as
         // https://github.com/opensearch-project/opensearch-ai-flow-framework/pull/38
         // https://github.com/opensearch-project/opensearch-ai-flow-framework/pull/44
-        stepMap.put("create_index", new CreateIndexWorkflowStep());
         stepMap.put("fetch_model", new DemoWorkflowStep(3000));
         stepMap.put("create_ingest_pipeline", new DemoWorkflowStep(3000));
         stepMap.put("create_search_pipeline", new DemoWorkflowStep(5000));
@@ -70,8 +69,13 @@ public class WorkflowStepFactory {
      * @return an instance of the specified type
      */
     public WorkflowStep createStep(String type) {
-        if (stepMap.containsKey(type)) {
-            return stepMap.get(type);
+        switch (type) {
+            case "create_index":
+                return new CreateIndexWorkflowStep();
+            default:
+                if (stepMap.containsKey(type)) {
+                    return stepMap.get(type);
+                }
         }
         // TODO: replace this with a FlowFrameworkException
         // https://github.com/opensearch-project/opensearch-ai-flow-framework/pull/43
