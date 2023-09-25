@@ -1,0 +1,16 @@
+{
+  "properties": {
+    "desc_v": {
+      "type": "keyword"
+    },
+    "name_v": {
+      "type": "keyword"
+    },
+    "description": {
+      "type": "keyword"
+    },
+    "name": {
+      "type": "keyword"
+    }
+  }
+}
