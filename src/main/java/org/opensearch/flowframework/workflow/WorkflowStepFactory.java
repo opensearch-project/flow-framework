@@ -8,12 +8,14 @@
  */
 package org.opensearch.flowframework.workflow;
 
+import org.opensearch.client.Client;
+import org.opensearch.flowframework.workflow.CreateIndex.CreateIndexStep;
+
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
-import demo.CreateIndexWorkflowStep;
 import demo.DemoWorkflowStep;
 
 /**
@@ -21,23 +23,45 @@ import demo.DemoWorkflowStep;
  */
 public class WorkflowStepFactory {
 
-    private static final WorkflowStepFactory INSTANCE = new WorkflowStepFactory();
+    private static WorkflowStepFactory instance = null;
 
+    private Client client;
     private final Map<String, WorkflowStep> stepMap = new HashMap<>();
 
-    private WorkflowStepFactory() {
-        populateMap();
+    /**
+     * Create the singleton instance of this class. Throws an {@link IllegalStateException} if already created.
+     *
+     * @param client The OpenSearch client steps can use
+     * @return The created instance
+     */
+    public static synchronized WorkflowStepFactory create(Client client) {
+        if (instance != null) {
+            throw new IllegalStateException("This factory was already created.");
+        }
+        instance = new WorkflowStepFactory(client);
+        return instance;
     }
 
     /**
-     * Gets the singleton instance of this class
-     * @return The instance of this class
+     * Gets the singleton instance of this class. Throws an {@link IllegalStateException} if not yet created.
+     *
+     * @return The created instance
      */
-    public static WorkflowStepFactory get() {
-        return INSTANCE;
+    public static synchronized WorkflowStepFactory get() {
+        if (instance == null) {
+            throw new IllegalStateException("This factory has not yet been created.");
+        }
+        return instance;
+    }
+
+    private WorkflowStepFactory(Client client) {
+        this.client = client;
+        populateMap();
     }
 
     private void populateMap() {
+        stepMap.put(CreateIndexStep.NAME, new CreateIndexStep(client));
+
         // TODO: These are from the demo class as placeholders
         // Replace with actual implementations such as
         // https://github.com/opensearch-project/opensearch-ai-flow-framework/pull/38
@@ -69,13 +93,8 @@ public class WorkflowStepFactory {
      * @return an instance of the specified type
      */
     public WorkflowStep createStep(String type) {
-        switch (type) {
-            case "create_index":
-                return new CreateIndexWorkflowStep();
-            default:
-                if (stepMap.containsKey(type)) {
-                    return stepMap.get(type);
-                }
+        if (stepMap.containsKey(type)) {
+            return stepMap.get(type);
         }
         // TODO: replace this with a FlowFrameworkException
         // https://github.com/opensearch-project/opensearch-ai-flow-framework/pull/43

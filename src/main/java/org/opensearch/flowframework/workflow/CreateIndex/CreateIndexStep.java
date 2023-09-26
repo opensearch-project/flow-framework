@@ -20,6 +20,7 @@ import org.opensearch.common.xcontent.XContentType;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.flowframework.workflow.WorkflowData;
 import org.opensearch.flowframework.workflow.WorkflowStep;
+import org.opensearch.flowframework.workflow.WorkflowStepFactory;
 
 import java.io.IOException;
 import java.net.URL;
@@ -34,7 +35,9 @@ public class CreateIndexStep implements WorkflowStep {
 
     private static final Logger logger = LogManager.getLogger(CreateIndexStep.class);
     private Client client;
-    private final String NAME = "create_index_step";
+
+    /** The name of this step, used as a key in the template and the {@link WorkflowStepFactory} */
+    public static final String NAME = "create_index_step";
 
     /**
      * Instantiate this class
@@ -79,6 +82,7 @@ public class CreateIndexStep implements WorkflowStep {
         // 1. Create settings based on the index settings received from content
 
         try {
+            // TODO: mapping() is deprecated
             CreateIndexRequest request = new CreateIndexRequest(index).mapping(
                 getIndexMappings("mappings/" + type + ".json"),
                 XContentType.JSON

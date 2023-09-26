@@ -15,11 +15,13 @@ import org.opensearch.common.io.PathUtils;
 import org.opensearch.flowframework.template.Template;
 import org.opensearch.flowframework.template.WorkflowProcessSorter;
 import org.opensearch.flowframework.workflow.Workflow;
+import org.opensearch.flowframework.workflow.WorkflowStepFactory;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.util.Map.Entry;
+import java.util.concurrent.Executors;
 
 /**
  * Demo class exercising {@link WorkflowProcessSorter}. This will be moved to a unit test.
@@ -44,6 +46,8 @@ public class TemplateParseDemo {
             logger.error("Failed to read JSON at path {}", path);
             return;
         }
+        WorkflowStepFactory factory = WorkflowStepFactory.create(null);
+        WorkflowProcessSorter.create(factory, Executors.newFixedThreadPool(10));
 
         Template t = Template.parse(json);
 
@@ -52,7 +56,7 @@ public class TemplateParseDemo {
 
         for (Entry<String, Workflow> e : t.workflows().entrySet()) {
             logger.info("Parsing {} workflow.", e.getKey());
-            WorkflowProcessSorter.sortProcessNodes(e.getValue());
+            WorkflowProcessSorter.get().sortProcessNodes(e.getValue());
         }
     }
 }

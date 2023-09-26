@@ -10,11 +10,16 @@ package org.opensearch.flowframework.template;
 
 import org.opensearch.core.xcontent.XContentParser;
 import org.opensearch.flowframework.workflow.Workflow;
+import org.opensearch.flowframework.workflow.WorkflowStepFactory;
 import org.opensearch.test.OpenSearchTestCase;
+import org.junit.AfterClass;
+import org.junit.BeforeClass;
 
 import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.stream.Collectors;
 
 import static org.opensearch.flowframework.template.TemplateTestJsonUtil.edge;
@@ -31,12 +36,22 @@ public class WorkflowProcessSorterTests extends OpenSearchTestCase {
     private static List<String> parse(String json) throws IOException {
         XContentParser parser = TemplateTestJsonUtil.jsonToParser(json);
         Workflow w = Workflow.parse(parser);
-        return WorkflowProcessSorter.sortProcessNodes(w).stream().map(ProcessNode::id).collect(Collectors.toList());
+        return workflowProcessSorter.sortProcessNodes(w).stream().map(ProcessNode::id).collect(Collectors.toList());
     }
 
-    @Override
-    public void setUp() throws Exception {
-        super.setUp();
+    private static ExecutorService executor;
+    private static WorkflowProcessSorter workflowProcessSorter;
+
+    @BeforeClass
+    public static void setup() {
+        executor = Executors.newFixedThreadPool(10);
+        WorkflowStepFactory factory = WorkflowStepFactory.create(null);
+        workflowProcessSorter = WorkflowProcessSorter.create(factory, executor);
+    }
+
+    @AfterClass
+    public static void cleanup() {
+        executor.shutdown();
     }
 
     public void testOrdering() throws IOException {

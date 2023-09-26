@@ -24,6 +24,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Queue;
 import java.util.Set;
+import java.util.concurrent.Executor;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -34,23 +35,55 @@ public class WorkflowProcessSorter {
 
     private static final Logger logger = LogManager.getLogger(WorkflowProcessSorter.class);
 
+    private static WorkflowProcessSorter instance = null;
+
+    private WorkflowStepFactory workflowStepFactory;
+    private Executor executor;
+
     /**
-     * Prevent instantiating this class.
+     * Create the singleton instance of this class. Throws an {@link IllegalStateException} if already created.
+     *
+     * @param workflowStepFactory The singleton instance of {@link WorkflowStepFactory}
+     * @param executor A thread executor
+     * @return The created instance
      */
-    private WorkflowProcessSorter() {}
+    public static synchronized WorkflowProcessSorter create(WorkflowStepFactory workflowStepFactory, Executor executor) {
+        if (instance != null) {
+            throw new IllegalStateException("This class was already created.");
+        }
+        instance = new WorkflowProcessSorter(workflowStepFactory, executor);
+        return instance;
+    }
+
+    /**
+     * Gets the singleton instance of this class. Throws an {@link IllegalStateException} if not yet created.
+     *
+     * @return The created instance
+     */
+    public static synchronized WorkflowProcessSorter get() {
+        if (instance == null) {
+            throw new IllegalStateException("This factory has not yet been created.");
+        }
+        return instance;
+    }
+
+    private WorkflowProcessSorter(WorkflowStepFactory workflowStepFactory, Executor executor) {
+        this.workflowStepFactory = workflowStepFactory;
+        this.executor = executor;
+    }
 
     /**
      * Sort a workflow into a topologically sorted list of process nodes.
      * @param workflow A workflow with (unsorted) nodes and edges which define predecessors and successors
      * @return A list of Process Nodes sorted topologically.  All predecessors of any node will occur prior to it in the list.
      */
-    public static List<ProcessNode> sortProcessNodes(Workflow workflow) {
+    public List<ProcessNode> sortProcessNodes(Workflow workflow) {
         List<WorkflowNode> sortedNodes = topologicalSort(workflow.nodes(), workflow.edges());
 
         List<ProcessNode> nodes = new ArrayList<>();
         Map<String, ProcessNode> idToNodeMap = new HashMap<>();
         for (WorkflowNode node : sortedNodes) {
-            WorkflowStep step = WorkflowStepFactory.get().createStep(node.type());
+            WorkflowStep step = workflowStepFactory.createStep(node.type());
             WorkflowData data = new WorkflowData(node.inputs(), workflow.userParams());
             List<ProcessNode> predecessorNodes = workflow.edges()
                 .stream()
@@ -59,7 +92,7 @@ public class WorkflowProcessSorter {
                 .map(e -> idToNodeMap.get(e.source()))
                 .collect(Collectors.toList());
 
-            ProcessNode processNode = new ProcessNode(node.id(), step, data, predecessorNodes);
+            ProcessNode processNode = new ProcessNode(node.id(), step, data, predecessorNodes, executor);
             idToNodeMap.put(processNode.id(), processNode);
             nodes.add(processNode);
         }

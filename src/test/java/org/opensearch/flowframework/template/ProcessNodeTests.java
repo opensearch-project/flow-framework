@@ -14,18 +14,30 @@ import com.carrotsearch.randomizedtesting.annotations.ThreadLeakScope.Scope;
 import org.opensearch.flowframework.workflow.WorkflowData;
 import org.opensearch.flowframework.workflow.WorkflowStep;
 import org.opensearch.test.OpenSearchTestCase;
+import org.junit.AfterClass;
+import org.junit.BeforeClass;
 
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
 @ThreadLeakScope(Scope.NONE)
 public class ProcessNodeTests extends OpenSearchTestCase {
 
-    @Override
-    public void setUp() throws Exception {
-        super.setUp();
+    private static ExecutorService executor;
+
+    @BeforeClass
+    public static void setup() {
+        executor = Executors.newFixedThreadPool(10);
+    }
+
+    @AfterClass
+    public static void cleanup() {
+        executor.shutdown();
     }
 
     public void testNode() throws InterruptedException, ExecutionException {
@@ -41,7 +53,7 @@ public class ProcessNodeTests extends OpenSearchTestCase {
             public String getName() {
                 return "test";
             }
-        }, WorkflowData.EMPTY, Collections.emptyList());
+        }, WorkflowData.EMPTY, Collections.emptyList(), executor);
         assertEquals("A", nodeA.id());
         assertEquals("test", nodeA.workflowStep().getName());
         assertEquals(WorkflowData.EMPTY, nodeA.input());
@@ -50,10 +62,10 @@ public class ProcessNodeTests extends OpenSearchTestCase {
 
         // TODO: This test is flaky on Windows. Disabling until thread pool is integrated
         // https://github.com/opensearch-project/opensearch-ai-flow-framework/issues/42
-        // CompletableFuture<WorkflowData> f = nodeA.execute();
-        // assertEquals(f, nodeA.future());
-        // f.orTimeout(5, TimeUnit.SECONDS);
-        // assertTrue(f.isDone());
-        // assertEquals(WorkflowData.EMPTY, f.get());
+        CompletableFuture<WorkflowData> f = nodeA.execute();
+        assertEquals(f, nodeA.future());
+        f.orTimeout(15, TimeUnit.SECONDS);
+        assertTrue(f.isDone());
+        assertEquals(WorkflowData.EMPTY, f.get());
     }
 }

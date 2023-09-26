@@ -17,6 +17,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
@@ -31,6 +32,8 @@ public class ProcessNode {
     private final WorkflowStep workflowStep;
     private final WorkflowData input;
     private final List<ProcessNode> predecessors;
+    private Executor executor;
+
     private final CompletableFuture<WorkflowData> future = new CompletableFuture<>();
 
     /**
@@ -40,12 +43,14 @@ public class ProcessNode {
      * @param workflowStep A java class implementing {@link WorkflowStep} to be executed when it's this node's turn.
      * @param input Input required by the node encoded in a {@link WorkflowData} instance.
      * @param predecessors Nodes preceding this one in the workflow
+     * @param executor The OpenSearch thread pool
      */
-    public ProcessNode(String id, WorkflowStep workflowStep, WorkflowData input, List<ProcessNode> predecessors) {
+    public ProcessNode(String id, WorkflowStep workflowStep, WorkflowData input, List<ProcessNode> predecessors, Executor executor) {
         this.id = id;
         this.workflowStep = workflowStep;
         this.input = input;
         this.predecessors = predecessors;
+        this.executor = executor;
     }
 
     /**
@@ -135,7 +140,7 @@ public class ProcessNode {
             } catch (InterruptedException | ExecutionException e) {
                 handleException(e);
             }
-        });
+        }, executor);
         return this.future;
     }
 

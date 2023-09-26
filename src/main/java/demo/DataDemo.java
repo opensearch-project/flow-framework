@@ -15,6 +15,7 @@ import org.opensearch.common.io.PathUtils;
 import org.opensearch.flowframework.template.ProcessNode;
 import org.opensearch.flowframework.template.Template;
 import org.opensearch.flowframework.template.WorkflowProcessSorter;
+import org.opensearch.flowframework.workflow.WorkflowStepFactory;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -23,6 +24,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.stream.Collectors;
 
 /**
@@ -48,10 +51,13 @@ public class DataDemo {
             logger.error("Failed to read JSON at path {}", path);
             return;
         }
+        WorkflowStepFactory factory = WorkflowStepFactory.create(null);
+        ExecutorService executor = Executors.newFixedThreadPool(10);
+        WorkflowProcessSorter.create(factory, executor);
 
         logger.info("Parsing graph to sequence...");
         Template t = Template.parse(json);
-        List<ProcessNode> processSequence = WorkflowProcessSorter.sortProcessNodes(t.workflows().get("datademo"));
+        List<ProcessNode> processSequence = WorkflowProcessSorter.get().sortProcessNodes(t.workflows().get("datademo"));
         List<CompletableFuture<?>> futureList = new ArrayList<>();
 
         for (ProcessNode n : processSequence) {
@@ -71,6 +77,6 @@ public class DataDemo {
         }
         futureList.forEach(CompletableFuture::join);
         logger.info("All done!");
+        executor.shutdown();
     }
-
 }
