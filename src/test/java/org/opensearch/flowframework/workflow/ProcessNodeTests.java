@@ -6,10 +6,8 @@
  * this file be licensed under the Apache-2.0 license or a
  * compatible open source license.
  */
-package org.opensearch.flowframework.template;
+package org.opensearch.flowframework.workflow;
 
-import org.opensearch.flowframework.workflow.WorkflowData;
-import org.opensearch.flowframework.workflow.WorkflowStep;
 import org.opensearch.test.OpenSearchTestCase;
 import org.junit.After;
 import org.junit.Before;

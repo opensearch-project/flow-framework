@@ -6,12 +6,10 @@
  * this file be licensed under the Apache-2.0 license or a
  * compatible open source license.
  */
-package org.opensearch.flowframework.template;
+package org.opensearch.flowframework.workflow;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.opensearch.flowframework.workflow.WorkflowData;
-import org.opensearch.flowframework.workflow.WorkflowStep;
 
 import java.util.ArrayList;
 import java.util.List;

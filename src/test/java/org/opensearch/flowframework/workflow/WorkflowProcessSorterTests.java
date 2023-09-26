@@ -6,12 +6,13 @@
  * this file be licensed under the Apache-2.0 license or a
  * compatible open source license.
  */
-package org.opensearch.flowframework.template;
+package org.opensearch.flowframework.workflow;
 
 import org.opensearch.client.AdminClient;
 import org.opensearch.client.Client;
 import org.opensearch.core.xcontent.XContentParser;
-import org.opensearch.flowframework.workflow.WorkflowStepFactory;
+import org.opensearch.flowframework.template.TemplateTestJsonUtil;
+import org.opensearch.flowframework.template.Workflow;
 import org.opensearch.test.OpenSearchTestCase;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;

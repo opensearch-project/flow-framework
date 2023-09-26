@@ -16,7 +16,7 @@ import org.opensearch.common.SuppressForbidden;
 import org.opensearch.common.io.PathUtils;
 import org.opensearch.flowframework.template.Template;
 import org.opensearch.flowframework.template.Workflow;
-import org.opensearch.flowframework.template.WorkflowProcessSorter;
+import org.opensearch.flowframework.workflow.WorkflowProcessSorter;
 import org.opensearch.flowframework.workflow.WorkflowStepFactory;
 
 import java.io.IOException;
