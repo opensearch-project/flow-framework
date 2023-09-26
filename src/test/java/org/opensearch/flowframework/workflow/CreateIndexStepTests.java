@@ -58,7 +58,8 @@ public class CreateIndexStepTests extends OpenSearchTestCase {
 
         CreateIndexStep createIndexStep = new CreateIndexStep(client);
 
-        ArgumentCaptor<ActionListener> actionListenerCaptor = ArgumentCaptor.forClass(ActionListener.class);
+        @SuppressWarnings("unchecked")
+        ArgumentCaptor<ActionListener<CreateIndexResponse>> actionListenerCaptor = ArgumentCaptor.forClass(ActionListener.class);
         CompletableFuture<WorkflowData> future = createIndexStep.execute(List.of(inputData));
         assertFalse(future.isDone());
         verify(indicesAdminClient, times(1)).create(any(CreateIndexRequest.class), actionListenerCaptor.capture());
@@ -75,7 +76,8 @@ public class CreateIndexStepTests extends OpenSearchTestCase {
 
         CreateIndexStep createIndexStep = new CreateIndexStep(client);
 
-        ArgumentCaptor<ActionListener> actionListenerCaptor = ArgumentCaptor.forClass(ActionListener.class);
+        @SuppressWarnings("unchecked")
+        ArgumentCaptor<ActionListener<CreateIndexResponse>> actionListenerCaptor = ArgumentCaptor.forClass(ActionListener.class);
         CompletableFuture<WorkflowData> future = createIndexStep.execute(List.of(inputData));
         assertFalse(future.isDone());
         verify(indicesAdminClient, times(1)).create(any(CreateIndexRequest.class), actionListenerCaptor.capture());

@@ -29,6 +29,7 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+@SuppressWarnings("deprecation")
 public class CreateIngestPipelineStepTests extends OpenSearchTestCase {
 
     private WorkflowData inputData;
@@ -67,7 +68,8 @@ public class CreateIngestPipelineStepTests extends OpenSearchTestCase {
 
         CreateIngestPipelineStep createIngestPipelineStep = new CreateIngestPipelineStep(client);
 
-        ArgumentCaptor<ActionListener> actionListenerCaptor = ArgumentCaptor.forClass(ActionListener.class);
+        @SuppressWarnings("unchecked")
+        ArgumentCaptor<ActionListener<AcknowledgedResponse>> actionListenerCaptor = ArgumentCaptor.forClass(ActionListener.class);
         CompletableFuture<WorkflowData> future = createIngestPipelineStep.execute(List.of(inputData));
 
         assertFalse(future.isDone());
@@ -84,7 +86,8 @@ public class CreateIngestPipelineStepTests extends OpenSearchTestCase {
 
         CreateIngestPipelineStep createIngestPipelineStep = new CreateIngestPipelineStep(client);
 
-        ArgumentCaptor<ActionListener> actionListenerCaptor = ArgumentCaptor.forClass(ActionListener.class);
+        @SuppressWarnings("unchecked")
+        ArgumentCaptor<ActionListener<AcknowledgedResponse>> actionListenerCaptor = ArgumentCaptor.forClass(ActionListener.class);
         CompletableFuture<WorkflowData> future = createIngestPipelineStep.execute(List.of(inputData));
 
         assertFalse(future.isDone());
