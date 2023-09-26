@@ -11,7 +11,6 @@ package org.opensearch.flowframework.template;
 import org.opensearch.client.AdminClient;
 import org.opensearch.client.Client;
 import org.opensearch.core.xcontent.XContentParser;
-import org.opensearch.flowframework.workflow.Workflow;
 import org.opensearch.flowframework.workflow.WorkflowStepFactory;
 import org.opensearch.test.OpenSearchTestCase;
 import org.junit.AfterClass;

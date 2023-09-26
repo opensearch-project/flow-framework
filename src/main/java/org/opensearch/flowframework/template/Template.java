@@ -16,7 +16,6 @@ import org.opensearch.core.xcontent.NamedXContentRegistry;
 import org.opensearch.core.xcontent.ToXContentObject;
 import org.opensearch.core.xcontent.XContentBuilder;
 import org.opensearch.core.xcontent.XContentParser;
-import org.opensearch.flowframework.workflow.Workflow;
 
 import java.io.IOException;
 import java.util.ArrayList;

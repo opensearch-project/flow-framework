@@ -9,7 +9,6 @@
 package org.opensearch.flowframework.template;
 
 import org.opensearch.Version;
-import org.opensearch.flowframework.workflow.Workflow;
 import org.opensearch.test.OpenSearchTestCase;
 
 import java.io.IOException;
