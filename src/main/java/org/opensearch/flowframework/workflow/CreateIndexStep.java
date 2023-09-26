@@ -16,7 +16,7 @@ import org.opensearch.action.admin.indices.create.CreateIndexRequest;
 import org.opensearch.action.admin.indices.create.CreateIndexResponse;
 import org.opensearch.client.Client;
 import org.opensearch.common.settings.Settings;
-import org.opensearch.common.xcontent.XContentType;
+import org.opensearch.common.xcontent.json.JsonXContent;
 import org.opensearch.core.action.ActionListener;
 
 import java.io.IOException;
@@ -79,10 +79,9 @@ public class CreateIndexStep implements WorkflowStep {
         // 1. Create settings based on the index settings received from content
 
         try {
-            // TODO: mapping() is deprecated
             CreateIndexRequest request = new CreateIndexRequest(index).mapping(
                 getIndexMappings("mappings/" + type + ".json"),
-                XContentType.JSON
+                JsonXContent.jsonXContent.mediaType()
             );
             client.admin().indices().create(request, actionListener);
         } catch (Exception e) {
