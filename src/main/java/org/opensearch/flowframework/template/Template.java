@@ -137,7 +137,7 @@ public class Template implements ToXContentObject {
     }
 
     /**
-     * Parse raw json content into a workflow node instance.
+     * Parse raw json content into a Template instance.
      *
      * @param parser json based content parser
      * @return an instance of the template
