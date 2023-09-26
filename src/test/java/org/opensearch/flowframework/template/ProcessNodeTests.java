@@ -8,14 +8,11 @@
  */
 package org.opensearch.flowframework.template;
 
-import com.carrotsearch.randomizedtesting.annotations.ThreadLeakScope;
-import com.carrotsearch.randomizedtesting.annotations.ThreadLeakScope.Scope;
-
 import org.opensearch.flowframework.workflow.WorkflowData;
 import org.opensearch.flowframework.workflow.WorkflowStep;
 import org.opensearch.test.OpenSearchTestCase;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
+import org.junit.After;
+import org.junit.Before;
 
 import java.util.Collections;
 import java.util.List;
@@ -23,20 +20,18 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
 
-@ThreadLeakScope(Scope.NONE)
 public class ProcessNodeTests extends OpenSearchTestCase {
 
-    private static ExecutorService executor;
+    private ExecutorService executor;
 
-    @BeforeClass
-    public static void setup() {
+    @Before
+    public void setup() {
         executor = Executors.newFixedThreadPool(10);
     }
 
-    @AfterClass
-    public static void cleanup() {
+    @After
+    public void cleanup() {
         executor.shutdown();
     }
 
@@ -60,12 +55,8 @@ public class ProcessNodeTests extends OpenSearchTestCase {
         assertEquals(Collections.emptyList(), nodeA.predecessors());
         assertEquals("A", nodeA.toString());
 
-        // TODO: This test is flaky on Windows. Disabling until thread pool is integrated
-        // https://github.com/opensearch-project/opensearch-ai-flow-framework/issues/42
         CompletableFuture<WorkflowData> f = nodeA.execute();
         assertEquals(f, nodeA.future());
-        f.orTimeout(15, TimeUnit.SECONDS);
-        assertTrue(f.isDone());
         assertEquals(WorkflowData.EMPTY, f.get());
     }
 }
