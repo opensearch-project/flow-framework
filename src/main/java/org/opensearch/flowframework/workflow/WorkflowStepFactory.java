@@ -9,7 +9,6 @@
 package org.opensearch.flowframework.workflow;
 
 import org.opensearch.client.Client;
-import org.opensearch.flowframework.workflow.CreateIndex.CreateIndexStep;
 
 import java.util.HashMap;
 import java.util.List;
@@ -25,7 +24,6 @@ public class WorkflowStepFactory {
 
     private static WorkflowStepFactory instance = null;
 
-    private Client client;
     private final Map<String, WorkflowStep> stepMap = new HashMap<>();
 
     /**
@@ -55,23 +53,18 @@ public class WorkflowStepFactory {
     }
 
     private WorkflowStepFactory(Client client) {
-        this.client = client;
-        populateMap();
+        populateMap(client);
     }
 
-    private void populateMap() {
+    private void populateMap(Client client) {
         stepMap.put(CreateIndexStep.NAME, new CreateIndexStep(client));
+        stepMap.put(CreateIngestPipelineStep.NAME, new CreateIngestPipelineStep(client));
 
-        // TODO: These are from the demo class as placeholders
-        // Replace with actual implementations such as
-        // https://github.com/opensearch-project/opensearch-ai-flow-framework/pull/38
-        // https://github.com/opensearch-project/opensearch-ai-flow-framework/pull/44
-        stepMap.put("fetch_model", new DemoWorkflowStep(3000));
-        stepMap.put("create_ingest_pipeline", new DemoWorkflowStep(3000));
-        stepMap.put("create_search_pipeline", new DemoWorkflowStep(5000));
-        stepMap.put("create_neural_search_index", new DemoWorkflowStep(2000));
+        // TODO: These are from the demo class as placeholders, remove when demos are deleted
+        stepMap.put("demo_delay_3", new DemoWorkflowStep(3000));
+        stepMap.put("demo_delay_5", new DemoWorkflowStep(3000));
 
-        // Use until all the actual implementations are ready
+        // Use as a default until all the actual implementations are ready
         stepMap.put("placeholder", new WorkflowStep() {
             @Override
             public CompletableFuture<WorkflowData> execute(List<WorkflowData> data) {

@@ -8,6 +8,8 @@
  */
 package org.opensearch.flowframework.template;
 
+import org.opensearch.client.AdminClient;
+import org.opensearch.client.Client;
 import org.opensearch.core.xcontent.XContentParser;
 import org.opensearch.flowframework.workflow.Workflow;
 import org.opensearch.flowframework.workflow.WorkflowStepFactory;
@@ -25,6 +27,8 @@ import java.util.stream.Collectors;
 import static org.opensearch.flowframework.template.TemplateTestJsonUtil.edge;
 import static org.opensearch.flowframework.template.TemplateTestJsonUtil.node;
 import static org.opensearch.flowframework.template.TemplateTestJsonUtil.workflow;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 public class WorkflowProcessSorterTests extends OpenSearchTestCase {
 
@@ -44,8 +48,12 @@ public class WorkflowProcessSorterTests extends OpenSearchTestCase {
 
     @BeforeClass
     public static void setup() {
+        AdminClient adminClient = mock(AdminClient.class);
+        Client client = mock(Client.class);
+        when(client.admin()).thenReturn(adminClient);
+
         executor = Executors.newFixedThreadPool(10);
-        WorkflowStepFactory factory = WorkflowStepFactory.create(null);
+        WorkflowStepFactory factory = WorkflowStepFactory.create(client);
         workflowProcessSorter = WorkflowProcessSorter.create(factory, executor);
     }
 

@@ -6,7 +6,7 @@
  * this file be licensed under the Apache-2.0 license or a
  * compatible open source license.
  */
-package org.opensearch.flowframework.workflow.CreateIndex;
+package org.opensearch.flowframework.workflow;
 
 import org.opensearch.action.admin.indices.create.CreateIndexRequest;
 import org.opensearch.action.admin.indices.create.CreateIndexResponse;
@@ -14,7 +14,6 @@ import org.opensearch.client.AdminClient;
 import org.opensearch.client.Client;
 import org.opensearch.client.IndicesAdminClient;
 import org.opensearch.core.action.ActionListener;
-import org.opensearch.flowframework.workflow.WorkflowData;
 import org.opensearch.test.OpenSearchTestCase;
 
 import java.io.IOException;

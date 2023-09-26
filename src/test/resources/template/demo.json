@@ -9,19 +9,19 @@
             "nodes": [
                 {
                     "id": "fetch_model",
-                    "type": "fetch_model"
+                    "type": "demo_delay_3"
                 },
                 {
                     "id": "create_ingest_pipeline",
-                    "type": "create_ingest_pipeline"
+                    "type": "demo_delay_3"
                 },
                 {
                     "id": "create_search_pipeline",
-                    "type": "create_search_pipeline"
+                    "type": "demo_delay_5"
                 },
                 {
                     "id": "create_neural_search_index",
-                    "type": "create_neural_search_index"
+                    "type": "demo_delay_3"
                 }
             ],
             "edges": [
