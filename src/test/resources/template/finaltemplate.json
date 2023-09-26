@@ -20,7 +20,7 @@
     },
     "workflows": {
         "provision": {
-            "steps": [{
+            "nodes": [{
                     "id": "create_index",
                     "type": "create_index",
                     "inputs": {
@@ -52,7 +52,7 @@
             "user_params": {
                 "document": "doc"
             },
-            "steps": [{
+            "nodes": [{
                 "id": "ingest_index",
                 "type": "ingest_index",
                 "inputs": {

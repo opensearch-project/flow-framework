@@ -33,8 +33,6 @@ public class Workflow implements ToXContentObject {
     public static final String USER_PARAMS_FIELD = "user_params";
     /** The template field name for workflow nodes */
     public static final String NODES_FIELD = "nodes";
-    /** The template field name for workflow steps, an alternative name for nodes */
-    public static final String STEPS_FIELD = "steps";
     /** The template field name for workflow edges */
     public static final String EDGES_FIELD = "edges";
 
@@ -106,7 +104,6 @@ public class Workflow implements ToXContentObject {
                     }
                     break;
                 case NODES_FIELD:
-                case STEPS_FIELD:
                     ensureExpectedToken(XContentParser.Token.START_ARRAY, parser.currentToken(), parser);
                     while (parser.nextToken() != XContentParser.Token.END_ARRAY) {
                         nodes.add(WorkflowNode.parse(parser));
