@@ -42,33 +42,6 @@
                     "dest": "create_neural_search_index"
                 }
             ]
-        },
-        "datademo": {
-            "user_params": {
-                "workflow_id": "workflow_demo"
-            },
-            "nodes": [
-                {
-                    "id": "create_index",
-                    "type": "create_index",
-                    "inputs": {
-                        "index_name": "demo"
-                    }
-                },
-                {
-                    "id": "create_another_index",
-                    "type": "create_index",
-                    "inputs": {
-                        "index_name": "second_demo"
-                    }
-                }
-            ],
-            "edges": [
-                {
-                    "source": "create_index",
-                    "dest": "create_another_index"
-                }
-            ]
         }
     }
 }

@@ -10,6 +10,8 @@ package demo;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.opensearch.client.Client;
+import org.opensearch.client.node.NodeClient;
 import org.opensearch.common.SuppressForbidden;
 import org.opensearch.common.io.PathUtils;
 import org.opensearch.flowframework.template.Template;
@@ -46,7 +48,8 @@ public class TemplateParseDemo {
             logger.error("Failed to read JSON at path {}", path);
             return;
         }
-        WorkflowStepFactory factory = WorkflowStepFactory.create(null);
+        Client client = new NodeClient(null, null);
+        WorkflowStepFactory factory = WorkflowStepFactory.create(client);
         WorkflowProcessSorter.create(factory, Executors.newFixedThreadPool(10));
 
         Template t = Template.parse(json);
