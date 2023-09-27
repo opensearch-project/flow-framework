@@ -10,9 +10,9 @@ package org.opensearch.flowframework.workflow;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.opensearch.flowframework.template.Workflow;
-import org.opensearch.flowframework.template.WorkflowEdge;
-import org.opensearch.flowframework.template.WorkflowNode;
+import org.opensearch.flowframework.model.Workflow;
+import org.opensearch.flowframework.model.WorkflowEdge;
+import org.opensearch.flowframework.model.WorkflowNode;
 
 import java.util.ArrayDeque;
 import java.util.ArrayList;

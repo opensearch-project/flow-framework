@@ -36,9 +36,11 @@
                         "description": "some description",
                         "processors": [{
                             "type": "text_embedding",
-                            "model_id": "my-existing-model-id",
-                            "input_field": "text_passage",
-                            "output_field": "text_embedding"
+                            "params": {
+                                "model_id": "my-existing-model-id",
+                                "input_field": "text_passage",
+                                "output_field": "text_embedding"
+                            }
                         }]
                     }
                 }

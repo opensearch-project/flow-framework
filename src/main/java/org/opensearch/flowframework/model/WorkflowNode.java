@@ -6,7 +6,7 @@
  * this file be licensed under the Apache-2.0 license or a
  * compatible open source license.
  */
-package org.opensearch.flowframework.template;
+package org.opensearch.flowframework.model;
 
 import org.opensearch.core.xcontent.ToXContentObject;
 import org.opensearch.core.xcontent.XContentBuilder;
@@ -39,6 +39,8 @@ public class WorkflowNode implements ToXContentObject {
     public static final String TYPE_FIELD = "type";
     /** The template field name for node inputs */
     public static final String INPUTS_FIELD = "inputs";
+    /** The field defining processors in the inputs for search and ingest pipelines */
+    public static final String PROCESSORS_FIELD = "processors";
 
     private final String id; // unique id
     private final String type; // maps to a WorkflowStep
@@ -71,10 +73,15 @@ public class WorkflowNode implements ToXContentObject {
             } else if (e.getValue() instanceof Map<?, ?>) {
                 Template.buildStringToStringMap(xContentBuilder, (Map<?, ?>) e.getValue());
             } else if (e.getValue() instanceof Object[]) {
-                // This assumes an array of maps for "processor" key
                 xContentBuilder.startArray();
-                for (Map<?, ?> map : (Map<?, ?>[]) e.getValue()) {
-                    Template.buildStringToStringMap(xContentBuilder, map);
+                if (PROCESSORS_FIELD.equals(e.getKey())) {
+                    for (PipelineProcessor p : (PipelineProcessor[]) e.getValue()) {
+                        xContentBuilder.value(p);
+                    }
+                } else {
+                    for (Map<?, ?> map : (Map<?, ?>[]) e.getValue()) {
+                        Template.buildStringToStringMap(xContentBuilder, map);
+                    }
                 }
                 xContentBuilder.endArray();
             }
@@ -119,11 +126,19 @@ public class WorkflowNode implements ToXContentObject {
                                 inputs.put(inputFieldName, Template.parseStringToStringMap(parser));
                                 break;
                             case START_ARRAY:
-                                List<Map<String, String>> mapList = new ArrayList<>();
-                                while (parser.nextToken() != XContentParser.Token.END_ARRAY) {
-                                    mapList.add(Template.parseStringToStringMap(parser));
+                                if (PROCESSORS_FIELD.equals(inputFieldName)) {
+                                    List<PipelineProcessor> processorList = new ArrayList<>();
+                                    while (parser.nextToken() != XContentParser.Token.END_ARRAY) {
+                                        processorList.add(PipelineProcessor.parse(parser));
+                                    }
+                                    inputs.put(inputFieldName, processorList.toArray(new PipelineProcessor[0]));
+                                } else {
+                                    List<Map<String, String>> mapList = new ArrayList<>();
+                                    while (parser.nextToken() != XContentParser.Token.END_ARRAY) {
+                                        mapList.add(Template.parseStringToStringMap(parser));
+                                    }
+                                    inputs.put(inputFieldName, mapList.toArray(new Map[0]));
                                 }
-                                inputs.put(inputFieldName, mapList.toArray(new Map[0]));
                                 break;
                             default:
                                 throw new IOException("Unable to parse field [" + inputFieldName + "] in a node object.");

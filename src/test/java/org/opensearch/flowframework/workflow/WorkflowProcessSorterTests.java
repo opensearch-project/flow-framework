@@ -11,8 +11,8 @@ package org.opensearch.flowframework.workflow;
 import org.opensearch.client.AdminClient;
 import org.opensearch.client.Client;
 import org.opensearch.core.xcontent.XContentParser;
-import org.opensearch.flowframework.template.TemplateTestJsonUtil;
-import org.opensearch.flowframework.template.Workflow;
+import org.opensearch.flowframework.model.TemplateTestJsonUtil;
+import org.opensearch.flowframework.model.Workflow;
 import org.opensearch.test.OpenSearchTestCase;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -24,9 +24,9 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.stream.Collectors;
 
-import static org.opensearch.flowframework.template.TemplateTestJsonUtil.edge;
-import static org.opensearch.flowframework.template.TemplateTestJsonUtil.node;
-import static org.opensearch.flowframework.template.TemplateTestJsonUtil.workflow;
+import static org.opensearch.flowframework.model.TemplateTestJsonUtil.edge;
+import static org.opensearch.flowframework.model.TemplateTestJsonUtil.node;
+import static org.opensearch.flowframework.model.TemplateTestJsonUtil.workflow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
