@@ -16,8 +16,8 @@ import org.opensearch.core.common.io.stream.NamedWriteableRegistry;
 import org.opensearch.core.xcontent.NamedXContentRegistry;
 import org.opensearch.env.Environment;
 import org.opensearch.env.NodeEnvironment;
-import org.opensearch.flowframework.workflow.CreateIndex.CreateIndexStep;
-import org.opensearch.flowframework.workflow.CreateIngestPipelineStep;
+import org.opensearch.flowframework.workflow.WorkflowProcessSorter;
+import org.opensearch.flowframework.workflow.WorkflowStepFactory;
 import org.opensearch.plugins.Plugin;
 import org.opensearch.repositories.RepositoriesService;
 import org.opensearch.script.ScriptService;
@@ -31,8 +31,6 @@ import java.util.function.Supplier;
  * An OpenSearch plugin that enables builders to innovate AI apps on OpenSearch.
  */
 public class FlowFrameworkPlugin extends Plugin {
-
-    private Client client;
 
     @Override
     public Collection<Object> createComponents(
@@ -48,9 +46,9 @@ public class FlowFrameworkPlugin extends Plugin {
         IndexNameExpressionResolver indexNameExpressionResolver,
         Supplier<RepositoriesService> repositoriesServiceSupplier
     ) {
-        this.client = client;
-        CreateIngestPipelineStep createIngestPipelineStep = new CreateIngestPipelineStep(client);
-        CreateIndexStep createIndexStep = new CreateIndexStep(client);
-        return ImmutableList.of(createIngestPipelineStep, createIndexStep);
+        WorkflowStepFactory workflowStepFactory = WorkflowStepFactory.create(client);
+        WorkflowProcessSorter workflowProcessSorter = WorkflowProcessSorter.create(workflowStepFactory, threadPool.generic());
+
+        return ImmutableList.of(workflowStepFactory, workflowProcessSorter);
     }
 }

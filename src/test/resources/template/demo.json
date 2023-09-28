@@ -1,36 +1,47 @@
 {
-    "sequence": {
-        "nodes": [
-            {
-                "id": "fetch_model"
-            },
-            {
-                "id": "create_ingest_pipeline"
-            },
-            {
-                "id": "create_search_pipeline"
-            },
-            {
-                "id": "create_neural_search_index"
-            }
-        ],
-        "edges": [
-            {
-                "source": "fetch_model",
-                "dest": "create_ingest_pipeline"
-            },
-            {
-                "source": "fetch_model",
-                "dest": "create_search_pipeline"
-            },
-            {
-                "source": "create_ingest_pipeline",
-                "dest": "create_neural_search_index"
-            },
-            {
-                "source": "create_search_pipeline",
-                "dest": "create_neural_search_index"
-            }
-        ]
+    "name": "demo-template",
+    "description": "Demonstrates workflow steps and passing around of input/output",
+    "user_inputs": {
+        "knn_index_name": "my-knn-index"
+    },
+    "workflows": {
+        "demo": {
+            "nodes": [
+                {
+                    "id": "fetch_model",
+                    "type": "demo_delay_3"
+                },
+                {
+                    "id": "create_ingest_pipeline",
+                    "type": "demo_delay_3"
+                },
+                {
+                    "id": "create_search_pipeline",
+                    "type": "demo_delay_5"
+                },
+                {
+                    "id": "create_neural_search_index",
+                    "type": "demo_delay_3"
+                }
+            ],
+            "edges": [
+                {
+                    "source": "fetch_model",
+                    "dest": "create_ingest_pipeline"
+                },
+                {
+                    "source": "fetch_model",
+                    "dest": "create_search_pipeline"
+                },
+                {
+                    "source": "create_ingest_pipeline",
+                    "dest": "create_neural_search_index"
+                },
+                {
+                    "source": "create_search_pipeline",
+                    "dest": "create_neural_search_index"
+                }
+            ]
+        }
     }
 }

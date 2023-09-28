@@ -15,37 +15,32 @@ import org.opensearch.client.node.NodeClient;
 import org.opensearch.common.SuppressForbidden;
 import org.opensearch.common.io.PathUtils;
 import org.opensearch.flowframework.model.Template;
-import org.opensearch.flowframework.workflow.ProcessNode;
+import org.opensearch.flowframework.model.Workflow;
 import org.opensearch.flowframework.workflow.WorkflowProcessSorter;
 import org.opensearch.flowframework.workflow.WorkflowStepFactory;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Locale;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutorService;
+import java.util.Map.Entry;
 import java.util.concurrent.Executors;
-import java.util.stream.Collectors;
 
 /**
  * Demo class exercising {@link WorkflowProcessSorter}. This will be moved to a unit test.
  */
-public class Demo {
+public class TemplateParseDemo {
 
-    private static final Logger logger = LogManager.getLogger(Demo.class);
+    private static final Logger logger = LogManager.getLogger(TemplateParseDemo.class);
 
     /**
      * Demonstrate parsing a JSON graph.
      *
      * @param args unused
-     * @throws IOException on a failure
+     * @throws IOException on error.
      */
     @SuppressForbidden(reason = "just a demo class that will be deleted")
     public static void main(String[] args) throws IOException {
-        String path = "src/test/resources/template/demo.json";
+        String path = "src/test/resources/template/finaltemplate.json";
         String json;
         try {
             json = new String(Files.readAllBytes(PathUtils.get(path)), StandardCharsets.UTF_8);
@@ -55,31 +50,16 @@ public class Demo {
         }
         Client client = new NodeClient(null, null);
         WorkflowStepFactory factory = WorkflowStepFactory.create(client);
-        ExecutorService executor = Executors.newFixedThreadPool(10);
-        WorkflowProcessSorter.create(factory, executor);
+        WorkflowProcessSorter.create(factory, Executors.newFixedThreadPool(10));
 
-        logger.info("Parsing graph to sequence...");
         Template t = Template.parse(json);
-        List<ProcessNode> processSequence = WorkflowProcessSorter.get().sortProcessNodes(t.workflows().get("demo"));
-        List<CompletableFuture<?>> futureList = new ArrayList<>();
 
-        for (ProcessNode n : processSequence) {
-            List<ProcessNode> predecessors = n.predecessors();
-            logger.info(
-                "Queueing process [{}].{}",
-                n.id(),
-                predecessors.isEmpty()
-                    ? " Can start immediately!"
-                    : String.format(
-                        Locale.getDefault(),
-                        " Must wait for [%s] to complete first.",
-                        predecessors.stream().map(p -> p.id()).collect(Collectors.joining(", "))
-                    )
-            );
-            futureList.add(n.execute());
+        System.out.println(t.toJson());
+        System.out.println(t.toYaml());
+
+        for (Entry<String, Workflow> e : t.workflows().entrySet()) {
+            logger.info("Parsing {} workflow.", e.getKey());
+            WorkflowProcessSorter.get().sortProcessNodes(e.getValue());
         }
-        futureList.forEach(CompletableFuture::join);
-        logger.info("All done!");
-        executor.shutdown();
     }
 }
