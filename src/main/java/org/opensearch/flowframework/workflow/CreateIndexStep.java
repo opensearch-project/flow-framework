@@ -6,7 +6,7 @@
  * this file be licensed under the Apache-2.0 license or a
  * compatible open source license.
  */
-package org.opensearch.flowframework.workflow.CreateIndex;
+package org.opensearch.flowframework.workflow;
 
 import com.google.common.base.Charsets;
 import com.google.common.io.Resources;
@@ -16,10 +16,8 @@ import org.opensearch.action.admin.indices.create.CreateIndexRequest;
 import org.opensearch.action.admin.indices.create.CreateIndexResponse;
 import org.opensearch.client.Client;
 import org.opensearch.common.settings.Settings;
-import org.opensearch.common.xcontent.XContentType;
+import org.opensearch.common.xcontent.json.JsonXContent;
 import org.opensearch.core.action.ActionListener;
-import org.opensearch.flowframework.workflow.WorkflowData;
-import org.opensearch.flowframework.workflow.WorkflowStep;
 
 import java.io.IOException;
 import java.net.URL;
@@ -34,7 +32,9 @@ public class CreateIndexStep implements WorkflowStep {
 
     private static final Logger logger = LogManager.getLogger(CreateIndexStep.class);
     private Client client;
-    private final String NAME = "create_index_step";
+
+    /** The name of this step, used as a key in the template and the {@link WorkflowStepFactory} */
+    static final String NAME = "create_index";
 
     /**
      * Instantiate this class
@@ -81,7 +81,7 @@ public class CreateIndexStep implements WorkflowStep {
         try {
             CreateIndexRequest request = new CreateIndexRequest(index).mapping(
                 getIndexMappings("mappings/" + type + ".json"),
-                XContentType.JSON
+                JsonXContent.jsonXContent.mediaType()
             );
             client.admin().indices().create(request, actionListener);
         } catch (Exception e) {

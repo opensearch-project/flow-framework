@@ -32,7 +32,9 @@ import java.util.stream.Stream;
 public class CreateIngestPipelineStep implements WorkflowStep {
 
     private static final Logger logger = LogManager.getLogger(CreateIngestPipelineStep.class);
-    private static final String NAME = "create_ingest_pipeline_step";
+
+    /** The name of this step, used as a key in the template and the {@link WorkflowStepFactory} */
+    static final String NAME = "create_ingest_pipeline";
 
     // Common pipeline configuration fields
     private static final String PIPELINE_ID_FIELD = "id";
