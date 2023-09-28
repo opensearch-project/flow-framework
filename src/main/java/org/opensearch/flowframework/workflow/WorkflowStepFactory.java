@@ -16,6 +16,7 @@ import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
 import demo.DemoWorkflowStep;
+import org.opensearch.cluster.service.ClusterService;
 
 /**
  * Generates instances implementing {@link WorkflowStep}.
@@ -27,14 +28,15 @@ public class WorkflowStepFactory {
     /**
      * Instantiate this class.
      *
+     * @param clusterService The OpenSearch cluster service
      * @param client The OpenSearch client steps can use
      */
-    public WorkflowStepFactory(Client client) {
-        populateMap(client);
+    public WorkflowStepFactory(ClusterService clusterService, Client client) {
+        populateMap(clusterService, client);
     }
 
-    private void populateMap(Client client) {
-        stepMap.put(CreateIndexStep.NAME, new CreateIndexStep(client));
+    private void populateMap(ClusterService clusterService, Client client) {
+        stepMap.put(CreateIndexStep.NAME, new CreateIndexStep(clusterService, client));
         stepMap.put(CreateIngestPipelineStep.NAME, new CreateIngestPipelineStep(client));
 
         // TODO: These are from the demo class as placeholders, remove when demos are deleted

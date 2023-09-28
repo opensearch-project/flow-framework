@@ -12,6 +12,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.opensearch.client.Client;
 import org.opensearch.client.node.NodeClient;
+import org.opensearch.cluster.service.ClusterService;
 import org.opensearch.common.SuppressForbidden;
 import org.opensearch.common.io.PathUtils;
 import org.opensearch.common.settings.Settings;
@@ -56,8 +57,9 @@ public class Demo {
             logger.error("Failed to read JSON at path {}", path);
             return;
         }
+        ClusterService clusterService = new ClusterService(null, null, null);
         Client client = new NodeClient(null, null);
-        WorkflowStepFactory factory = new WorkflowStepFactory(client);
+        WorkflowStepFactory factory = new WorkflowStepFactory(clusterService, client);
 
         ThreadPool threadPool = new ThreadPool(Settings.EMPTY);
         WorkflowProcessSorter workflowProcessSorter = new WorkflowProcessSorter(factory, threadPool);
@@ -70,14 +72,14 @@ public class Demo {
         for (ProcessNode n : processSequence) {
             List<ProcessNode> predecessors = n.predecessors();
             logger.info(
-                "Queueing process [{}].{}",
-                n.id(),
-                predecessors.isEmpty()
-                    ? " Can start immediately!"
-                    : String.format(
-                        Locale.getDefault(),
-                        " Must wait for [%s] to complete first.",
-                        predecessors.stream().map(p -> p.id()).collect(Collectors.joining(", "))
+                    "Queueing process [{}].{}",
+                    n.id(),
+                    predecessors.isEmpty()
+                            ? " Can start immediately!"
+                            : String.format(
+                            Locale.getDefault(),
+                            " Must wait for [%s] to complete first.",
+                            predecessors.stream().map(p -> p.id()).collect(Collectors.joining(", "))
                     )
             );
             futureList.add(n.execute());

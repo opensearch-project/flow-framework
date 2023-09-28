@@ -8,23 +8,29 @@
  */
 package org.opensearch.flowframework.indices;
 
+import org.opensearch.flowframework.function.ThrowingSupplierWrapper;
+
+import java.util.function.Supplier;
+
 import static org.opensearch.flowframework.constant.CommonName.GLOBAL_CONTEXT_INDEX_NAME;
-import static org.opensearch.flowframework.constant.CommonValue.GLOBAL_CONTEXT_INDEX_MAPPING;
-import static org.opensearch.flowframework.constant.CommonValue.GLOBAL_CONTEXT_INDEX_SCHEMA_VERSION;
+import static org.opensearch.flowframework.constant.CommonValue.GLOBAL_CONTEXT_INDEX_VERSION;
 
 /**
  * An enumeration of Flow Framework indices
  */
 public enum FlowFrameworkIndex {
-    GLOBAL_CONTEXT(GLOBAL_CONTEXT_INDEX_NAME, GLOBAL_CONTEXT_INDEX_MAPPING, GLOBAL_CONTEXT_INDEX_SCHEMA_VERSION);
+    GLOBAL_CONTEXT(
+            GLOBAL_CONTEXT_INDEX_NAME,
+            ThrowingSupplierWrapper.throwingSupplierWrapper(GlobalContextHandler::getGlobalContextMappings),
+            GLOBAL_CONTEXT_INDEX_VERSION);
 
     private final String indexName;
     private final String mapping;
     private final Integer version;
 
-    FlowFrameworkIndex(String name, String mapping, Integer version) {
+    FlowFrameworkIndex(String name, Supplier<String> mappingSupplier, Integer version) {
         this.indexName = name;
-        this.mapping = mapping;
+        this.mapping = mappingSupplier.get();
         this.version = version;
     }
 
@@ -35,7 +41,6 @@ public enum FlowFrameworkIndex {
     public String getMapping() {
         return mapping;
     }
-
     public Integer getVersion() {
         return version;
     }
