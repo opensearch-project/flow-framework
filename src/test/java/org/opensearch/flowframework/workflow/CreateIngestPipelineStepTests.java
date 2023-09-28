@@ -6,7 +6,7 @@
  * this file be licensed under the Apache-2.0 license or a
  * compatible open source license.
  */
-package org.opensearch.flowframework.workflow.CreateIngestPipeline;
+package org.opensearch.flowframework.workflow;
 
 import org.opensearch.action.ingest.PutPipelineRequest;
 import org.opensearch.action.support.master.AcknowledgedResponse;
@@ -14,8 +14,6 @@ import org.opensearch.client.AdminClient;
 import org.opensearch.client.Client;
 import org.opensearch.client.ClusterAdminClient;
 import org.opensearch.core.action.ActionListener;
-import org.opensearch.flowframework.workflow.CreateIngestPipelineStep;
-import org.opensearch.flowframework.workflow.WorkflowData;
 import org.opensearch.test.OpenSearchTestCase;
 
 import java.util.List;
@@ -31,6 +29,7 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+@SuppressWarnings("deprecation")
 public class CreateIngestPipelineStepTests extends OpenSearchTestCase {
 
     private WorkflowData inputData;
@@ -69,7 +68,8 @@ public class CreateIngestPipelineStepTests extends OpenSearchTestCase {
 
         CreateIngestPipelineStep createIngestPipelineStep = new CreateIngestPipelineStep(client);
 
-        ArgumentCaptor<ActionListener> actionListenerCaptor = ArgumentCaptor.forClass(ActionListener.class);
+        @SuppressWarnings("unchecked")
+        ArgumentCaptor<ActionListener<AcknowledgedResponse>> actionListenerCaptor = ArgumentCaptor.forClass(ActionListener.class);
         CompletableFuture<WorkflowData> future = createIngestPipelineStep.execute(List.of(inputData));
 
         assertFalse(future.isDone());
@@ -86,7 +86,8 @@ public class CreateIngestPipelineStepTests extends OpenSearchTestCase {
 
         CreateIngestPipelineStep createIngestPipelineStep = new CreateIngestPipelineStep(client);
 
-        ArgumentCaptor<ActionListener> actionListenerCaptor = ArgumentCaptor.forClass(ActionListener.class);
+        @SuppressWarnings("unchecked")
+        ArgumentCaptor<ActionListener<AcknowledgedResponse>> actionListenerCaptor = ArgumentCaptor.forClass(ActionListener.class);
         CompletableFuture<WorkflowData> future = createIngestPipelineStep.execute(List.of(inputData));
 
         assertFalse(future.isDone());
