@@ -8,6 +8,7 @@
  */
 package org.opensearch.flowframework.workflow;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Charsets;
 import com.google.common.io.Resources;
 import org.apache.logging.log4j.LogManager;
@@ -20,10 +21,10 @@ import org.opensearch.client.Client;
 import org.opensearch.cluster.metadata.IndexMetadata;
 import org.opensearch.cluster.service.ClusterService;
 import org.opensearch.common.settings.Settings;
-import org.opensearch.common.xcontent.json.JsonXContent;
-import org.opensearch.core.action.ActionListener;
 import org.opensearch.common.util.concurrent.ThreadContext;
 import org.opensearch.common.xcontent.XContentType;
+import org.opensearch.common.xcontent.json.JsonXContent;
+import org.opensearch.core.action.ActionListener;
 import org.opensearch.flowframework.exception.FlowFrameworkException;
 import org.opensearch.flowframework.indices.FlowFrameworkIndex;
 
@@ -35,7 +36,9 @@ import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import static org.opensearch.flowframework.constant.CommonValue.*;
+import static org.opensearch.flowframework.constant.CommonValue.META;
+import static org.opensearch.flowframework.constant.CommonValue.NO_SCHEMA_VERSION;
+import static org.opensearch.flowframework.constant.CommonValue.SCHEMA_VERSION_FIELD;
 
 /**
  * Step to create an index
@@ -48,11 +51,13 @@ public class CreateIndexStep implements WorkflowStep {
 
     /** The name of this step, used as a key in the template and the {@link WorkflowStepFactory} */
     static final String NAME = "create_index";
-    private static final Map<String, AtomicBoolean> indexMappingUpdated = new HashMap<>();
+    static Map<String, AtomicBoolean> indexMappingUpdated = new HashMap<>();
     private static final Map<String, Object> indexSettings = Map.of("index.auto_expand_replicas", "0-1");
 
     /**
      * Instantiate this class
+     *
+     * @param clusterService The OpenSearch cluster service
      * @param client Client to create an index
      */
     public CreateIndexStep(ClusterService clusterService, Client client) {
@@ -94,15 +99,15 @@ public class CreateIndexStep implements WorkflowStep {
         // TODO:
         // 1. Create settings based on the index settings received from content
 
-//        try {
-//            CreateIndexRequest request = new CreateIndexRequest(index).mapping(
-//                    getIndexMappings("mappings/" + type + ".json"),
-//                    JsonXContent.jsonXContent.mediaType()
-//            );
-//            client.admin().indices().create(request, actionListener);
-//        } catch (Exception e) {
-//            logger.error("Failed to find the right mapping for the index", e);
-//        }
+        try {
+            CreateIndexRequest request = new CreateIndexRequest(index).mapping(
+                getIndexMappings("mappings/" + type + ".json"),
+                JsonXContent.jsonXContent.mediaType()
+            );
+            client.admin().indices().create(request, actionListener);
+        } catch (Exception e) {
+            logger.error("Failed to find the right mapping for the index", e);
+        }
 
         return future;
     }
@@ -113,10 +118,9 @@ public class CreateIndexStep implements WorkflowStep {
     }
 
     /**
-     *
-     * @param index
-     * @param listener
-     * @throws IOException
+     * Create Index if it's absent
+     * @param index The index that needs to be created
+     * @param listener The action listener
      */
     public void initIndexIfAbsent(FlowFrameworkIndex index, ActionListener<Boolean> listener) {
         String indexName = index.getIndexName();
@@ -145,36 +149,36 @@ public class CreateIndexStep implements WorkflowStep {
                         if (r) {
                             // return true if update index is needed
                             client.admin()
-                                    .indices()
-                                    .putMapping(
-                                            new PutMappingRequest().indices(indexName).source(mapping, XContentType.JSON),
-                                            ActionListener.wrap(response -> {
-                                                if (response.isAcknowledged()) {
-                                                    UpdateSettingsRequest updateSettingRequest = new UpdateSettingsRequest();
-                                                    updateSettingRequest.indices(indexName).settings(indexSettings);
-                                                    client.admin()
-                                                            .indices()
-                                                            .updateSettings(updateSettingRequest, ActionListener.wrap(updateResponse -> {
-                                                                if (response.isAcknowledged()) {
-                                                                    indexMappingUpdated.get(indexName).set(true);
-                                                                    internalListener.onResponse(true);
-                                                                } else {
-                                                                    internalListener.onFailure(
-                                                                            new FlowFrameworkException("Failed to update index setting for: " + indexName)
-                                                                    );
-                                                                }
-                                                            }, exception -> {
-                                                                logger.error("Failed to update index setting for: " + indexName, exception);
-                                                                internalListener.onFailure(exception);
-                                                            }));
-                                                } else {
-                                                    internalListener.onFailure(new FlowFrameworkException("Failed to update index: " + indexName));
-                                                }
-                                            }, exception -> {
-                                                logger.error("Failed to update index " + indexName, exception);
-                                                internalListener.onFailure(exception);
-                                            })
-                                    );
+                                .indices()
+                                .putMapping(
+                                    new PutMappingRequest().indices(indexName).source(mapping, XContentType.JSON),
+                                    ActionListener.wrap(response -> {
+                                        if (response.isAcknowledged()) {
+                                            UpdateSettingsRequest updateSettingRequest = new UpdateSettingsRequest();
+                                            updateSettingRequest.indices(indexName).settings(indexSettings);
+                                            client.admin()
+                                                .indices()
+                                                .updateSettings(updateSettingRequest, ActionListener.wrap(updateResponse -> {
+                                                    if (response.isAcknowledged()) {
+                                                        indexMappingUpdated.get(indexName).set(true);
+                                                        internalListener.onResponse(true);
+                                                    } else {
+                                                        internalListener.onFailure(
+                                                            new FlowFrameworkException("Failed to update index setting for: " + indexName)
+                                                        );
+                                                    }
+                                                }, exception -> {
+                                                    logger.error("Failed to update index setting for: " + indexName, exception);
+                                                    internalListener.onFailure(exception);
+                                                }));
+                                        } else {
+                                            internalListener.onFailure(new FlowFrameworkException("Failed to update index: " + indexName));
+                                        }
+                                    }, exception -> {
+                                        logger.error("Failed to update index " + indexName, exception);
+                                        internalListener.onFailure(exception);
+                                    })
+                                );
                         } else {
                             // no need to update index if it does not exist or the version is already up-to-date.
                             indexMappingUpdated.get(indexName).set(true);
@@ -213,7 +217,8 @@ public class CreateIndexStep implements WorkflowStep {
      * @param newVersion new index mapping version
      * @param listener action listener, if update index is needed, will pass true to its onResponse method
      */
-    private void shouldUpdateIndex(String indexName, Integer newVersion, ActionListener<Boolean> listener) {
+    @VisibleForTesting
+    protected void shouldUpdateIndex(String indexName, Integer newVersion, ActionListener<Boolean> listener) {
         IndexMetadata indexMetaData = clusterService.state().getMetadata().indices().get(indexName);
         if (indexMetaData == null) {
             listener.onResponse(Boolean.FALSE);

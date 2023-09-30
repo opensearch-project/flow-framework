@@ -10,6 +10,9 @@ package org.opensearch.flowframework.function;
 
 import java.util.function.Supplier;
 
+/**
+ * Wrapper for throwing checked exception inside places that does not allow to do so
+ */
 public class ThrowingSupplierWrapper {
     /*
      * Private constructor to avoid Jacoco complaining about public constructor
@@ -21,7 +24,7 @@ public class ThrowingSupplierWrapper {
      * Utility method to use a method throwing checked exception inside a place
      *  that does not allow throwing the corresponding checked exception (e.g.,
      *  enum initialization).
-     * Convert the checked exception thrown by by throwingConsumer to a RuntimeException
+     * Convert the checked exception thrown by throwingConsumer to a RuntimeException
      * so that the compiler won't complain.
      * @param <T> the method's return type
      * @param throwingSupplier the method reference that can throw checked exception

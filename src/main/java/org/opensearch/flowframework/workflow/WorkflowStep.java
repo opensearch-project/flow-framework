@@ -8,6 +8,7 @@
  */
 package org.opensearch.flowframework.workflow;
 
+import java.io.IOException;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
@@ -21,7 +22,7 @@ public interface WorkflowStep {
      * @param data representing input params and content, or output content of previous steps. The first element of the list is data (if any) provided from parsing the template, and may be {@link WorkflowData#EMPTY}.
      * @return A CompletableFuture of the building block. This block should return immediately, but not be completed until the step executes, containing either the step's output data or {@link WorkflowData#EMPTY} which may be passed to follow-on steps.
      */
-    CompletableFuture<WorkflowData> execute(List<WorkflowData> data);
+    CompletableFuture<WorkflowData> execute(List<WorkflowData> data) throws IOException;
 
     /**
      * Gets the name of the workflow step.

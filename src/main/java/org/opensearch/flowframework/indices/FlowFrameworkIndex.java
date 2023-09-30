@@ -13,6 +13,7 @@ import org.opensearch.flowframework.function.ThrowingSupplierWrapper;
 import java.util.function.Supplier;
 
 import static org.opensearch.flowframework.constant.CommonName.GLOBAL_CONTEXT_INDEX_NAME;
+import static org.opensearch.flowframework.constant.CommonValue.GLOBAL_CONTEXT_INDEX;
 import static org.opensearch.flowframework.constant.CommonValue.GLOBAL_CONTEXT_INDEX_VERSION;
 
 /**
@@ -20,9 +21,10 @@ import static org.opensearch.flowframework.constant.CommonValue.GLOBAL_CONTEXT_I
  */
 public enum FlowFrameworkIndex {
     GLOBAL_CONTEXT(
-            GLOBAL_CONTEXT_INDEX_NAME,
-            ThrowingSupplierWrapper.throwingSupplierWrapper(GlobalContextHandler::getGlobalContextMappings),
-            GLOBAL_CONTEXT_INDEX_VERSION);
+        GLOBAL_CONTEXT_INDEX,
+        ThrowingSupplierWrapper.throwingSupplierWrapper(GlobalContextHandler::getGlobalContextMappings),
+        GLOBAL_CONTEXT_INDEX_VERSION
+    );
 
     private final String indexName;
     private final String mapping;
@@ -41,6 +43,7 @@ public enum FlowFrameworkIndex {
     public String getMapping() {
         return mapping;
     }
+
     public Integer getVersion() {
         return version;
     }

@@ -48,12 +48,12 @@ public class ProcessNode {
      * @param nodeTimeout The timeout value for executing on this node
      */
     public ProcessNode(
-        String id,
-        WorkflowStep workflowStep,
-        WorkflowData input,
-        List<ProcessNode> predecessors,
-        ThreadPool threadPool,
-        TimeValue nodeTimeout
+            String id,
+            WorkflowStep workflowStep,
+            WorkflowData input,
+            List<ProcessNode> predecessors,
+            ThreadPool threadPool,
+            TimeValue nodeTimeout
     ) {
         this.id = id;
         this.workflowStep = workflowStep;

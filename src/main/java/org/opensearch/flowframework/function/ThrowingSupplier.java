@@ -16,5 +16,11 @@ package org.opensearch.flowframework.function;
  */
 @FunctionalInterface
 public interface ThrowingSupplier<T, E extends Exception> {
+    /**
+     * Gets a result or throws an exception if unable to produce a result.
+     *
+     * @return the result
+     * @throws E if unable to produce a result
+     */
     T get() throws E;
 }

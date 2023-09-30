@@ -9,6 +9,7 @@
 package org.opensearch.flowframework.workflow;
 
 import org.opensearch.client.Client;
+import org.opensearch.cluster.service.ClusterService;
 
 import java.util.HashMap;
 import java.util.List;
@@ -16,7 +17,6 @@ import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
 import demo.DemoWorkflowStep;
-import org.opensearch.cluster.service.ClusterService;
 
 /**
  * Generates instances implementing {@link WorkflowStep}.

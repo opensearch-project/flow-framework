@@ -49,6 +49,10 @@ public class Template implements ToXContentObject {
     public static final String USER_INPUTS_FIELD = "user_inputs";
     /** The template field name for template workflows */
     public static final String WORKFLOWS_FIELD = "workflows";
+    /** The template field name for template responses */
+    public static final String RESPONSES_FIELD = "responses";
+    /** The template field name for template resources created */
+    public static final String RESOURCES_CREATED_FIELD = "resources_created";
 
     private final String name;
     private final String description;
@@ -58,6 +62,8 @@ public class Template implements ToXContentObject {
     private final List<Version> compatibilityVersion;
     private final Map<String, Object> userInputs;
     private final Map<String, Workflow> workflows;
+    private Map<String, Object> responses;
+    private Map<String, Object> resourcesCreated;
 
     /**
      * Instantiate the object representing a use case template
@@ -70,6 +76,8 @@ public class Template implements ToXContentObject {
      * @param compatibilityVersion OpenSearch version compatibility of this template
      * @param userInputs Optional user inputs to apply globally
      * @param workflows Workflow graph definitions corresponding to the defined operations.
+     * @param responses A map of essential API responses for backend to use and lookup.
+     * @param resourcesCreated A map of all the resources created.
      */
     public Template(
         String name,
@@ -79,7 +87,9 @@ public class Template implements ToXContentObject {
         Version templateVersion,
         List<Version> compatibilityVersion,
         Map<String, Object> userInputs,
-        Map<String, Workflow> workflows
+        Map<String, Workflow> workflows,
+        Map<String, Object> responses,
+        Map<String, Object> resourcesCreated
     ) {
         this.name = name;
         this.description = description;
@@ -89,6 +99,8 @@ public class Template implements ToXContentObject {
         this.compatibilityVersion = List.copyOf(compatibilityVersion);
         this.userInputs = Map.copyOf(userInputs);
         this.workflows = Map.copyOf(workflows);
+        this.responses = Map.copyOf(responses);
+        this.resourcesCreated = Map.copyOf(resourcesCreated);
     }
 
     @Override
@@ -132,6 +144,18 @@ public class Template implements ToXContentObject {
         }
         xContentBuilder.endObject();
 
+        xContentBuilder.startObject(RESPONSES_FIELD);
+        for (Entry<String, Object> e : responses.entrySet()) {
+            xContentBuilder.field(e.getKey(), e.getValue());
+        }
+        xContentBuilder.endObject();
+
+        xContentBuilder.startObject(RESOURCES_CREATED_FIELD);
+        for (Entry<String, Object> e : resourcesCreated.entrySet()) {
+            xContentBuilder.field(e.getKey(), e.getValue());
+        }
+        xContentBuilder.endObject();
+
         return xContentBuilder.endObject();
     }
 
@@ -151,6 +175,8 @@ public class Template implements ToXContentObject {
         List<Version> compatibilityVersion = new ArrayList<>();
         Map<String, Object> userInputs = new HashMap<>();
         Map<String, Workflow> workflows = new HashMap<>();
+        Map<String, Object> responses = new HashMap<>();
+        Map<String, Object> resourcesCreated = new HashMap<>();
 
         ensureExpectedToken(XContentParser.Token.START_OBJECT, parser.currentToken(), parser);
         while (parser.nextToken() != XContentParser.Token.END_OBJECT) {
@@ -216,6 +242,39 @@ public class Template implements ToXContentObject {
                         workflows.put(workflowFieldName, Workflow.parse(parser));
                     }
                     break;
+                case RESPONSES_FIELD:
+                    ensureExpectedToken(XContentParser.Token.START_OBJECT, parser.currentToken(), parser);
+                    while (parser.nextToken() != XContentParser.Token.END_OBJECT) {
+                        String responsesFieldName = parser.currentName();
+                        switch (parser.nextToken()) {
+                            case VALUE_STRING:
+                                responses.put(responsesFieldName, parser.text());
+                                break;
+                            case START_OBJECT:
+                                responses.put(responsesFieldName, parseStringToStringMap(parser));
+                                break;
+                            default:
+                                throw new IOException("Unable to parse field [" + responsesFieldName + "] in a responses object.");
+                        }
+                    }
+                    break;
+
+                case RESOURCES_CREATED_FIELD:
+                    ensureExpectedToken(XContentParser.Token.START_OBJECT, parser.currentToken(), parser);
+                    while (parser.nextToken() != XContentParser.Token.END_OBJECT) {
+                        String resourcesCreatedField = parser.currentName();
+                        switch (parser.nextToken()) {
+                            case VALUE_STRING:
+                                resourcesCreated.put(resourcesCreatedField, parser.text());
+                                break;
+                            case START_OBJECT:
+                                resourcesCreated.put(resourcesCreatedField, parseStringToStringMap(parser));
+                                break;
+                            default:
+                                throw new IOException("Unable to parse field [" + resourcesCreatedField + "] in a responses object.");
+                        }
+                    }
+                    break;
 
                 default:
                     throw new IOException("Unable to parse field [" + fieldName + "] in a template object.");
@@ -225,7 +284,18 @@ public class Template implements ToXContentObject {
             throw new IOException("An template object requires a name.");
         }
 
-        return new Template(name, description, useCase, operations, templateVersion, compatibilityVersion, userInputs, workflows);
+        return new Template(
+            name,
+            description,
+            useCase,
+            operations,
+            templateVersion,
+            compatibilityVersion,
+            userInputs,
+            workflows,
+            responses,
+            resourcesCreated
+        );
     }
 
     /**
@@ -370,6 +440,22 @@ public class Template implements ToXContentObject {
         return workflows;
     }
 
+    /**
+     * A map of essential API responses
+     * @return the responses
+     */
+    public Map<String, Object> responses() {
+        return responses;
+    }
+
+    /**
+     * A map of all the resources created
+     * @return the resources created
+     */
+    public Map<String, Object> resourcesCreated() {
+        return responses;
+    }
+
     @Override
     public String toString() {
         return "Template [name="
@@ -388,6 +474,10 @@ public class Template implements ToXContentObject {
             + userInputs
             + ", workflows="
             + workflows
+            + ", responses="
+            + responses
+            + ", resourcesCreated="
+            + resourcesCreated
             + "]";
     }
 }
