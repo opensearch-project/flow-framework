@@ -17,7 +17,6 @@ import org.opensearch.threadpool.ThreadPool;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
 import java.util.stream.Collectors;
 
@@ -111,6 +110,14 @@ public class ProcessNode {
     }
 
     /**
+     * Returns the timeout value of this node in the workflow. A value of {@link TimeValue#ZERO} means no timeout.
+     * @return The node's timeout value.
+     */
+    public TimeValue nodeTimeout() {
+        return nodeTimeout;
+    }
+
+    /**
      * Execute this node in the sequence.
      * Initializes the node's {@link CompletableFuture} and completes it when the process completes.
      *
@@ -123,47 +130,43 @@ public class ProcessNode {
         }
         CompletableFuture.runAsync(() -> {
             List<CompletableFuture<WorkflowData>> predFutures = predecessors.stream().map(p -> p.future()).collect(Collectors.toList());
-            predFutures.stream().forEach(CompletableFuture::join);
-            logger.info(">>> Starting {}.", this.id);
-            // get the input data from predecessor(s)
-            List<WorkflowData> input = new ArrayList<WorkflowData>();
-            input.add(this.input);
-            for (CompletableFuture<WorkflowData> cf : predFutures) {
-                try {
-                    input.add(cf.get());
-                } catch (InterruptedException | ExecutionException e) {
-                    handleException(e);
-                    return;
-                }
-            }
             try {
+                if (!predecessors.isEmpty()) {
+                    CompletableFuture<Void> waitForPredecessors = CompletableFuture.allOf(predFutures.toArray(new CompletableFuture<?>[0]));
+                    waitForPredecessors.join();
+                }
+
+                logger.info("Starting {}.", this.id);
+                // get the input data from predecessor(s)
+                List<WorkflowData> input = new ArrayList<WorkflowData>();
+                input.add(this.input);
+                for (CompletableFuture<WorkflowData> cf : predFutures) {
+                    input.add(cf.get());
+                }
+
                 ScheduledCancellable delayExec = null;
                 if (this.nodeTimeout.compareTo(TimeValue.ZERO) > 0) {
                     delayExec = threadPool.schedule(() -> {
-                        future.completeExceptionally(new TimeoutException("Execute timed out for " + this.id));
-                        // If completed normally the above will be a no-op
-                        if (future.isCompletedExceptionally()) {
-                            logger.info(">>> Timed out {}.", this.id);
+                        if (!future.isDone()) {
+                            future.completeExceptionally(new TimeoutException("Execute timed out for " + this.id));
                         }
-                    }, this.nodeTimeout, ThreadPool.Names.GENERIC);
-                    // TODO: improve use of thread pool beyond generic
-                    // https://github.com/opensearch-project/opensearch-ai-flow-framework/issues/61
+                    }, this.nodeTimeout, ThreadPool.Names.SAME);
                 }
                 CompletableFuture<WorkflowData> stepFuture = this.workflowStep.execute(input);
-                future.complete(stepFuture.get()); // If completed exceptionally, this is a NOOP
-                delayExec.cancel();
-                logger.info(">>> Finished {}.", this.id);
-            } catch (InterruptedException | ExecutionException e) {
-                handleException(e);
+                // If completed exceptionally, this is a no-op
+                future.complete(stepFuture.get());
+                if (delayExec != null) {
+                    delayExec.cancel();
+                }
+                logger.info("Finished {}.", this.id);
+            } catch (Throwable e) {
+                // TODO: better handling of getCause
+                this.future.completeExceptionally(e);
             }
+            // TODO: improve use of thread pool beyond generic
+            // https://github.com/opensearch-project/opensearch-ai-flow-framework/issues/61
         }, threadPool.generic());
         return this.future;
-    }
-
-    private void handleException(Exception e) {
-        // TODO: better handling of getCause
-        this.future.completeExceptionally(e);
-        logger.debug("<<< Completed Exceptionally {}", this.id, e.getCause());
     }
 
     @Override

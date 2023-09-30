@@ -17,19 +17,34 @@ import org.junit.BeforeClass;
 
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
+
 public class ProcessNodeTests extends OpenSearchTestCase {
 
     private static TestThreadPool testThreadPool;
+    private static ProcessNode successfulNode;
+    private static ProcessNode failedNode;
 
     @BeforeClass
     public static void setup() {
         testThreadPool = new TestThreadPool(ProcessNodeTests.class.getName());
+
+        CompletableFuture<WorkflowData> successfulFuture = new CompletableFuture<>();
+        successfulFuture.complete(WorkflowData.EMPTY);
+        CompletableFuture<WorkflowData> failedFuture = new CompletableFuture<>();
+        failedFuture.completeExceptionally(new RuntimeException("Test exception"));
+        successfulNode = mock(ProcessNode.class);
+        when(successfulNode.future()).thenReturn(successfulFuture);
+        failedNode = mock(ProcessNode.class);
+        when(failedNode.future()).thenReturn(failedFuture);
     }
 
     @AfterClass
@@ -38,11 +53,12 @@ public class ProcessNodeTests extends OpenSearchTestCase {
     }
 
     public void testNode() throws InterruptedException, ExecutionException {
+        // Tests where execute nas no timeout
         ProcessNode nodeA = new ProcessNode("A", new WorkflowStep() {
             @Override
             public CompletableFuture<WorkflowData> execute(List<WorkflowData> data) {
                 CompletableFuture<WorkflowData> f = new CompletableFuture<>();
-                f.complete(WorkflowData.EMPTY);
+                f.complete(new WorkflowData(Map.of("test", "output")));
                 return f;
             }
 
@@ -50,28 +66,62 @@ public class ProcessNodeTests extends OpenSearchTestCase {
             public String getName() {
                 return "test";
             }
-        }, WorkflowData.EMPTY, Collections.emptyList(), testThreadPool, TimeValue.ZERO);
+        },
+            new WorkflowData(Map.of("test", "input"), Map.of("foo", "bar")),
+            List.of(successfulNode),
+            testThreadPool,
+            TimeValue.timeValueMillis(50)
+        );
         assertEquals("A", nodeA.id());
         assertEquals("test", nodeA.workflowStep().getName());
-        assertEquals(WorkflowData.EMPTY, nodeA.input());
-        assertEquals(Collections.emptyList(), nodeA.predecessors());
+        assertEquals("input", nodeA.input().getContent().get("test"));
+        assertEquals("bar", nodeA.input().getParams().get("foo"));
+        assertEquals(1, nodeA.predecessors().size());
+        assertEquals(50, nodeA.nodeTimeout().millis());
         assertEquals("A", nodeA.toString());
 
         CompletableFuture<WorkflowData> f = nodeA.execute();
         assertEquals(f, nodeA.future());
-        assertEquals(WorkflowData.EMPTY, f.get());
+        assertEquals("output", f.get().getContent().get("test"));
     }
 
-    public void testNodeTimeout() throws InterruptedException, ExecutionException {
-        ProcessNode nodeZ = new ProcessNode("Zzz", new WorkflowStep() {
+    public void testNodeNoTimeout() throws InterruptedException, ExecutionException {
+        // Tests where execute finishes before timeout
+        ProcessNode nodeB = new ProcessNode("B", new WorkflowStep() {
             @Override
             public CompletableFuture<WorkflowData> execute(List<WorkflowData> data) {
                 CompletableFuture<WorkflowData> future = new CompletableFuture<>();
                 testThreadPool.schedule(
                     () -> future.complete(WorkflowData.EMPTY),
-                    TimeValue.timeValueMillis(250),
+                    TimeValue.timeValueMillis(100),
                     ThreadPool.Names.GENERIC
                 );
+                return future;
+            }
+
+            @Override
+            public String getName() {
+                return "test";
+            }
+        }, WorkflowData.EMPTY, Collections.emptyList(), testThreadPool, TimeValue.timeValueMillis(250));
+        assertEquals("B", nodeB.id());
+        assertEquals("test", nodeB.workflowStep().getName());
+        assertEquals(WorkflowData.EMPTY, nodeB.input());
+        assertEquals(Collections.emptyList(), nodeB.predecessors());
+        assertEquals("B", nodeB.toString());
+
+        CompletableFuture<WorkflowData> f = nodeB.execute();
+        assertEquals(f, nodeB.future());
+        assertEquals(WorkflowData.EMPTY, f.get());
+    }
+
+    public void testNodeTimeout() throws InterruptedException, ExecutionException {
+        // Tests where execute finishes after timeout
+        ProcessNode nodeZ = new ProcessNode("Zzz", new WorkflowStep() {
+            @Override
+            public CompletableFuture<WorkflowData> execute(List<WorkflowData> data) {
+                CompletableFuture<WorkflowData> future = new CompletableFuture<>();
+                testThreadPool.schedule(() -> future.complete(WorkflowData.EMPTY), TimeValue.timeValueMinutes(1), ThreadPool.Names.GENERIC);
                 return future;
             }
 
@@ -90,7 +140,35 @@ public class ProcessNodeTests extends OpenSearchTestCase {
         CompletionException exception = assertThrows(CompletionException.class, () -> f.join());
         assertTrue(f.isCompletedExceptionally());
         assertEquals(TimeoutException.class, exception.getCause().getClass());
+    }
 
-        assertThrows(IllegalStateException.class, () -> nodeZ.execute());
+    public void testExceptions() {
+        // Tests where a predecessor future completed exceptionally
+        ProcessNode nodeE = new ProcessNode("E", new WorkflowStep() {
+            @Override
+            public CompletableFuture<WorkflowData> execute(List<WorkflowData> data) {
+                CompletableFuture<WorkflowData> f = new CompletableFuture<>();
+                f.complete(WorkflowData.EMPTY);
+                return f;
+            }
+
+            @Override
+            public String getName() {
+                return "test";
+            }
+        }, WorkflowData.EMPTY, List.of(successfulNode, failedNode), testThreadPool, TimeValue.timeValueSeconds(15));
+        assertEquals("E", nodeE.id());
+        assertEquals("test", nodeE.workflowStep().getName());
+        assertEquals(WorkflowData.EMPTY, nodeE.input());
+        assertEquals(2, nodeE.predecessors().size());
+        assertEquals("E", nodeE.toString());
+
+        CompletableFuture<WorkflowData> f = nodeE.execute();
+        CompletionException exception = assertThrows(CompletionException.class, () -> f.join());
+        assertTrue(f.isCompletedExceptionally());
+        assertEquals("Test exception", exception.getCause().getMessage());
+
+        // Tests where we already called execute
+        assertThrows(IllegalStateException.class, () -> nodeE.execute());
     }
 }
