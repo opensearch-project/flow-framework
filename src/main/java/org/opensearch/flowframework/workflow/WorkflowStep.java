@@ -25,7 +25,6 @@ public interface WorkflowStep {
 
     /**
      * Gets the name of the workflow step.
-     *
      * @return the name of this workflow step.
      */
     String getName();

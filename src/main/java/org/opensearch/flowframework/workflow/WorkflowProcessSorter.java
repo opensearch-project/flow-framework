@@ -49,7 +49,7 @@ public class WorkflowProcessSorter {
      * Create the singleton instance of this class. Throws an {@link IllegalStateException} if already created.
      *
      * @param workflowStepFactory The singleton instance of {@link WorkflowStepFactory}
-     * @param threadPool          A thread executor
+     * @param threadPool The Thread Pool to send to Process Nodes
      * @return The created instance
      */
     public static synchronized WorkflowProcessSorter create(WorkflowStepFactory workflowStepFactory, ThreadPool threadPool) {

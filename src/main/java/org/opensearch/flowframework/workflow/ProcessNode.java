@@ -22,8 +22,8 @@ import java.util.concurrent.TimeoutException;
 import java.util.stream.Collectors;
 
 /**
- * Representation of a process node in a workflow graph. Tracks predecessor nodes which must be completed before it can
- * start execution.
+ * Representation of a process node in a workflow graph.
+ * Tracks predecessor nodes which must be completed before it can start execution.
  */
 public class ProcessNode {
 
@@ -41,12 +41,12 @@ public class ProcessNode {
     /**
      * Create this node linked to its executing process, including input data and any predecessor nodes.
      *
-     * @param id           A string identifying the workflow step
+     * @param id A string identifying the workflow step
      * @param workflowStep A java class implementing {@link WorkflowStep} to be executed when it's this node's turn.
-     * @param input        Input required by the node encoded in a {@link WorkflowData} instance.
+     * @param input Input required by the node encoded in a {@link WorkflowData} instance.
      * @param predecessors Nodes preceding this one in the workflow
-     * @param threadPool   The OpenSearch thread pool
-     * @param nodeTimeout  The timeout value for executing on this node
+     * @param threadPool The OpenSearch thread pool
+     * @param nodeTimeout The timeout value for executing on this node
      */
     public ProcessNode(
         String id,
@@ -66,7 +66,6 @@ public class ProcessNode {
 
     /**
      * Returns the node's id.
-     *
      * @return the node id.
      */
     public String id() {
@@ -75,7 +74,6 @@ public class ProcessNode {
 
     /**
      * Returns the node's workflow implementation.
-     *
      * @return the workflow step
      */
     public WorkflowStep workflowStep() {
@@ -84,7 +82,6 @@ public class ProcessNode {
 
     /**
      * Returns the input data for this node.
-     *
      * @return the input data
      */
     public WorkflowData input() {
@@ -92,32 +89,33 @@ public class ProcessNode {
     }
 
     /**
-     * Returns a {@link CompletableFuture} if this process is executing. Relies on the node having been sorted and
-     * executed in an order such that all predecessor nodes have begun execution first (and thus populated this value).
+     * Returns a {@link CompletableFuture} if this process is executing.
+     * Relies on the node having been sorted and executed in an order such that all predecessor nodes have begun execution first (and thus populated this value).
      *
-     * @return A future indicating the processing state of this node. Returns {@code null} if it has not begun
-     *         executing, should not happen if a workflow is sorted and executed topologically.
+     * @return A future indicating the processing state of this node.
+     * Returns {@code null} if it has not begun executing, should not happen if a workflow is sorted and executed topologically.
      */
     public CompletableFuture<WorkflowData> future() {
         return future;
     }
 
     /**
-     * Returns the predecessors of this node in the workflow. The predecessor's {@link #future()} must complete before
-     * execution begins on this node.
+     * Returns the predecessors of this node in the workflow.
+     * The predecessor's {@link #future()} must complete before execution begins on this node.
      *
-     * @return a set of predecessor nodes, if any. At least one node in the graph must have no predecessors and serve as
-     *         a start node.
+     * @return a set of predecessor nodes, if any.
+     * At least one node in the graph must have no predecessors and serve as a start node.
      */
     public List<ProcessNode> predecessors() {
         return predecessors;
     }
 
     /**
-     * Execute this node in the sequence. Initializes the node's {@link CompletableFuture} and completes it when the
-     * process completes.
+     * Execute this node in the sequence.
+     * Initializes the node's {@link CompletableFuture} and completes it when the process completes.
      *
-     * @return this node's future. This is returned immediately, while process execution continues asynchronously.
+     * @return this node's future.
+     * This is returned immediately, while process execution continues asynchronously.
      */
     public CompletableFuture<WorkflowData> execute() {
         if (this.future.isDone()) {
