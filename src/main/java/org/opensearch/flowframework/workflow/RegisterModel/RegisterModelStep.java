@@ -17,6 +17,7 @@ import org.opensearch.flowframework.workflow.WorkflowData;
 import org.opensearch.flowframework.workflow.WorkflowStep;
 import org.opensearch.ml.client.MachineLearningNodeClient;
 import org.opensearch.ml.common.FunctionName;
+import org.opensearch.ml.common.model.MLModelConfig;
 import org.opensearch.ml.common.model.MLModelFormat;
 import org.opensearch.ml.common.transport.register.MLRegisterModelInput;
 import org.opensearch.ml.common.transport.register.MLRegisterModelResponse;
@@ -39,11 +40,10 @@ public class RegisterModelStep implements WorkflowStep {
     private static final String MODEL_NAME = "model_name";
     private static final String MODEL_VERSION = "model_version";
     private static final String MODEL_GROUP_ID = "model_group_id";
-    private static final String MODEL_URL = "url";
+    private static final String DESCRIPTION = "description";
+    private static final String CONNECTOR_ID = "connector_id";
     private static final String MODEL_FORMAT = "model_format";
     private static final String MODEL_CONFIG = "model_config";
-    private static final String DEPLOY_MODEL = "deploy_model";
-    private static final String MODEL_NODES_IDS = "model_nodes_ids";
 
     public RegisterModelStep(Client client) {
         this.client = client;
@@ -58,11 +58,10 @@ public class RegisterModelStep implements WorkflowStep {
         String modelName = null;
         String modelVersion = null;
         String modelGroupId = null;
-        String modelUrl = null;
+        String connectorId = null;
+        String description = null;
         MLModelFormat modelFormat = null;
-        String modelConfig = null;
-        Boolean deployModel = null;
-        String[] modelNodesId = null;
+        MLModelConfig modelConfig = null;
 
         for (WorkflowData workflowData : data) {
             Map<String, String> parameters = workflowData.getParams();
@@ -83,20 +82,18 @@ public class RegisterModelStep implements WorkflowStep {
                     case MODEL_GROUP_ID:
                         modelGroupId = (String) content.get(MODEL_GROUP_ID);
                         break;
-                    case MODEL_URL:
-                        modelUrl = (String) content.get(MODEL_URL);
-                        break;
                     case MODEL_FORMAT:
                         modelFormat = (MLModelFormat) content.get(MODEL_FORMAT);
                         break;
                     case MODEL_CONFIG:
-                        modelConfig = (String) content.get(MODEL_CONFIG);
+                        modelConfig = (MLModelConfig) content.get(MODEL_CONFIG);
                         break;
-                    case DEPLOY_MODEL:
-                        deployModel = (Boolean) content.get(DEPLOY_MODEL);
+                    case DESCRIPTION:
+                        description = (String) content.get(DESCRIPTION);
                         break;
-                    case MODEL_NODES_IDS:
-                        modelNodesId = (String[]) content.get(MODEL_NODES_IDS);
+                    case CONNECTOR_ID:
+                        connectorId = (String) content.get(CONNECTOR_ID);
+                        break;
                     default:
                         break;
 
@@ -104,8 +101,7 @@ public class RegisterModelStep implements WorkflowStep {
             }
         }
 
-        if (Stream.of(functionName, modelName, modelVersion, modelGroupId, modelConfig, modelFormat, deployModel, modelNodesId)
-            .allMatch(x -> x != null)) {
+        if (Stream.of(functionName, modelName, modelVersion, modelGroupId, description, connectorId).allMatch(x -> x != null)) {
             MachineLearningNodeClient machineLearningNodeClient = MLClient.createMLClient((NodeClient) client);
             // TODO: Add model Config and type cast correctly
             MLRegisterModelInput mlInput = MLRegisterModelInput.builder()
@@ -113,23 +109,17 @@ public class RegisterModelStep implements WorkflowStep {
                 .modelName(modelName)
                 .version(modelVersion)
                 .modelGroupId(modelGroupId)
-                .url(modelUrl)
                 .modelFormat(modelFormat)
-                .deployModel(deployModel)
-                .modelNodeIds(modelNodesId)
+                .modelConfig(modelConfig)
+                .description(description)
+                .connectorId(connectorId)
                 .build();
 
             MLRegisterModelResponse mlRegisterModelResponse = machineLearningNodeClient.register(mlInput).actionGet();
 
-            registerModelFuture.complete(new WorkflowData() {
-                @Override
-                public Map<String, Object> getContent() {
-                    return Map.ofEntries(
-                        Map.entry("taskId", mlRegisterModelResponse.getTaskId()),
-                        Map.entry("status", mlRegisterModelResponse.getStatus())
-                    );
-                }
-            });
+            registerModelFuture.complete(
+                new WorkflowData(Map.of("taskId", mlRegisterModelResponse.getTaskId(), "status", mlRegisterModelResponse.getStatus()))
+            );
 
         } else {
             logger.error("Failed to register model");

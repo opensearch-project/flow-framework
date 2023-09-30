@@ -41,21 +41,33 @@ public class RegisterModelTests extends OpenSearchTestCase {
     public void setUp() throws Exception {
         super.setUp();
 
-        inputData = new WorkflowData() {
-            @Override
-            public Map<String, Object> getContent() {
-                return Map.ofEntries(
-                    Map.entry("function_name", FunctionName.KMEANS),
-                    Map.entry("model_name", "bedrock"),
-                    Map.entry("model_version", "1.0.0"),
-                    Map.entry("model_group_id", "1.0"),
-                    Map.entry("url", "url"),
-                    Map.entry("model_format", MLModelFormat.TORCH_SCRIPT),
-                    Map.entry("deploy_model", true),
-                    Map.entry("model_nodes_ids", new String[] { "foo", "bar", "baz" })
-                );
-            }
-        };
+        MLModelConfig config = TextEmbeddingModelConfig.builder()
+            .modelType("testModelType")
+            .allConfig("{\"field1\":\"value1\",\"field2\":\"value2\"}")
+            .frameworkType(TextEmbeddingModelConfig.FrameworkType.SENTENCE_TRANSFORMERS)
+            .embeddingDimension(100)
+            .build();
+
+        inputData = new WorkflowData(
+            Map.of(
+                "function_name",
+                FunctionName.KMEANS,
+                "model_name",
+                "bedrock",
+                "model_version",
+                "1.0.0",
+                "model_group_id",
+                "1.0",
+                "model_format",
+                MLModelFormat.TORCH_SCRIPT,
+                "model_config",
+                config,
+                "description",
+                "description",
+                "connector_id",
+                "abcdefgh"
+            )
+        );
 
         machineLearningNodeClient = mock(MachineLearningNodeClient.class);
 
@@ -80,8 +92,8 @@ public class RegisterModelTests extends OpenSearchTestCase {
             .url("url")
             .modelFormat(MLModelFormat.ONNX)
             .modelConfig(config)
-            .deployModel(true)
-            .modelNodeIds(new String[] { "modelNodeIds" })
+            .description("description")
+            .connectorId("abcdefgh")
             .build();
 
         RegisterModelStep registerModelStep = new RegisterModelStep(client);
