@@ -10,6 +10,8 @@ package org.opensearch.flowframework.workflow;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.opensearch.common.settings.Setting;
+import org.opensearch.common.unit.TimeValue;
 import org.opensearch.flowframework.model.Workflow;
 import org.opensearch.flowframework.model.WorkflowEdge;
 import org.opensearch.flowframework.model.WorkflowNode;
@@ -26,6 +28,10 @@ import java.util.Set;
 import java.util.concurrent.Executor;
 import java.util.function.Function;
 import java.util.stream.Collectors;
+
+import static org.opensearch.flowframework.model.WorkflowNode.INPUTS_FIELD;
+import static org.opensearch.flowframework.model.WorkflowNode.NODE_TIMEOUT_DEFAULT_VALUE;
+import static org.opensearch.flowframework.model.WorkflowNode.NODE_TIMEOUT_FIELD;
 
 /**
  * Utility class converting a workflow of nodes and edges into a topologically sorted list of Process Nodes.
@@ -91,7 +97,12 @@ public class WorkflowProcessSorter {
                 .map(e -> idToNodeMap.get(e.source()))
                 .collect(Collectors.toList());
 
-            ProcessNode processNode = new ProcessNode(node.id(), step, data, predecessorNodes, executor);
+            TimeValue nodeTimeout = Setting.parseTimeValue(
+                (String) node.inputs().getOrDefault(NODE_TIMEOUT_FIELD, NODE_TIMEOUT_DEFAULT_VALUE),
+                TimeValue.ZERO,
+                String.join(".", node.id(), INPUTS_FIELD, NODE_TIMEOUT_FIELD)
+            );
+            ProcessNode processNode = new ProcessNode(node.id(), step, data, predecessorNodes, executor, nodeTimeout);
             idToNodeMap.put(processNode.id(), processNode);
             nodes.add(processNode);
         }

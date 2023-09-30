@@ -10,6 +10,8 @@ package org.opensearch.flowframework.workflow;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.opensearch.common.unit.TimeValue;
+import org.opensearch.common.util.concurrent.FutureUtils;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -17,6 +19,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.stream.Collectors;
 
 /**
@@ -30,7 +33,8 @@ public class ProcessNode {
     private final WorkflowStep workflowStep;
     private final WorkflowData input;
     private final List<ProcessNode> predecessors;
-    private Executor executor;
+    private final Executor executor;
+    private final TimeValue nodeTimeout;
 
     private final CompletableFuture<WorkflowData> future = new CompletableFuture<>();
 
@@ -42,13 +46,22 @@ public class ProcessNode {
      * @param input Input required by the node encoded in a {@link WorkflowData} instance.
      * @param predecessors Nodes preceding this one in the workflow
      * @param executor The OpenSearch thread pool
+     * @param nodeTimeout The timeout value for executing on this node
      */
-    public ProcessNode(String id, WorkflowStep workflowStep, WorkflowData input, List<ProcessNode> predecessors, Executor executor) {
+    public ProcessNode(
+        String id,
+        WorkflowStep workflowStep,
+        WorkflowData input,
+        List<ProcessNode> predecessors,
+        Executor executor,
+        TimeValue nodeTimeout
+    ) {
         this.id = id;
         this.workflowStep = workflowStep;
         this.input = input;
         this.predecessors = predecessors;
         this.executor = executor;
+        this.nodeTimeout = nodeTimeout;
     }
 
     /**
@@ -102,22 +115,12 @@ public class ProcessNode {
      * @return this node's future. This is returned immediately, while process execution continues asynchronously.
      */
     public CompletableFuture<WorkflowData> execute() {
-        // TODO this class will be instantiated with the OpenSearch thread pool (or one for tests!)
-        // the generic executor from that pool should be passed to this runAsync call
-        // https://github.com/opensearch-project/opensearch-ai-flow-framework/issues/42
+        if (this.future.isDone()) {
+            throw new IllegalStateException("Process Node [" + this.id + "] already executed.");
+        }
         CompletableFuture.runAsync(() -> {
             List<CompletableFuture<WorkflowData>> predFutures = predecessors.stream().map(p -> p.future()).collect(Collectors.toList());
-            if (!predecessors.isEmpty()) {
-                CompletableFuture<Void> waitForPredecessors = CompletableFuture.allOf(predFutures.toArray(new CompletableFuture<?>[0]));
-                try {
-                    // We need timeouts to be part of the user template or in settings
-                    // https://github.com/opensearch-project/opensearch-ai-flow-framework/issues/45
-                    waitForPredecessors.orTimeout(30, TimeUnit.SECONDS).get();
-                } catch (InterruptedException | ExecutionException e) {
-                    handleException(e);
-                    return;
-                }
-            }
+            predFutures.stream().forEach(CompletableFuture::join);
             logger.info(">>> Starting {}.", this.id);
             // get the input data from predecessor(s)
             List<WorkflowData> input = new ArrayList<WorkflowData>();
@@ -130,11 +133,22 @@ public class ProcessNode {
                     return;
                 }
             }
-            CompletableFuture<WorkflowData> stepFuture = this.workflowStep.execute(input);
             try {
-                stepFuture.orTimeout(15, TimeUnit.SECONDS).join();
+                CompletableFuture<Void> delayFuture = null;
+                if (this.nodeTimeout.compareTo(TimeValue.ZERO) > 0) {
+                    Executor timeoutExec = CompletableFuture.delayedExecutor(this.nodeTimeout.nanos(), TimeUnit.NANOSECONDS, executor);
+                    delayFuture = CompletableFuture.runAsync(() -> {
+                        future.completeExceptionally(new TimeoutException("Execute timed out for " + this.id));
+                        // If completed normally the above will be a no-op
+                        if (future.isCompletedExceptionally()) {
+                            logger.info(">>> Timed out {}.", this.id);
+                        }
+                    }, timeoutExec);
+                }
+                CompletableFuture<WorkflowData> stepFuture = this.workflowStep.execute(input);
+                future.complete(stepFuture.get()); // If completed exceptionally, this is a NOOP
                 logger.info(">>> Finished {}.", this.id);
-                future.complete(stepFuture.get());
+                FutureUtils.cancel(delayFuture);
             } catch (InterruptedException | ExecutionException e) {
                 handleException(e);
             }

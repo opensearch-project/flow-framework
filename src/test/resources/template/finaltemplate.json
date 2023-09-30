@@ -25,7 +25,8 @@
                     "type": "create_index",
                     "inputs": {
                         "name": "user_inputs.index_name",
-                        "settings": "user_inputs.index_settings"
+                        "settings": "user_inputs.index_settings",
+                        "node_timeout": "10s"
                     }
                 },
                 {
@@ -41,7 +42,8 @@
                                 "input_field": "text_passage",
                                 "output_field": "text_embedding"
                             }
-                        }]
+                        }],
+                        "node_timeout": "10s"
                     }
                 }
             ],
@@ -60,7 +62,8 @@
                 "inputs": {
                     "index": "user_inputs.index_name",
                     "ingest_pipeline": "my-ingest-pipeline",
-                    "document": "user_params.document"
+                    "document": "user_params.document",
+                    "node_timeout": "10s"
                 }
             }]
         },
@@ -73,7 +76,8 @@
                     "type": "transform_query",
                     "inputs": {
                         "template": "neural-search-template-1",
-                        "plaintext": "user_params.plaintext"
+                        "plaintext": "user_params.plaintext",
+                        "node_timeout": "10s"
                     }
                 },
                 {
@@ -83,7 +87,8 @@
                         "index": "user_inputs.index_name",
                         "query": "{{output-from-prev-step}}.query",
                         "search_request_processors": [],
-                        "search_response_processors": []
+                        "search_response_processors": [],
+                        "node_timeout": "10s"
                     }
                 }
             ],

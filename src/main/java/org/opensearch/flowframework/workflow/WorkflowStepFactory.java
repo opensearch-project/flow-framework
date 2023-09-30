@@ -62,7 +62,7 @@ public class WorkflowStepFactory {
 
         // TODO: These are from the demo class as placeholders, remove when demos are deleted
         stepMap.put("demo_delay_3", new DemoWorkflowStep(3000));
-        stepMap.put("demo_delay_5", new DemoWorkflowStep(3000));
+        stepMap.put("demo_delay_5", new DemoWorkflowStep(5000));
 
         // Use as a default until all the actual implementations are ready
         stepMap.put("placeholder", new WorkflowStep() {
