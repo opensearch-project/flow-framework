@@ -14,14 +14,15 @@ import org.opensearch.core.xcontent.XContentParser;
 import org.opensearch.flowframework.model.TemplateTestJsonUtil;
 import org.opensearch.flowframework.model.Workflow;
 import org.opensearch.test.OpenSearchTestCase;
+import org.opensearch.threadpool.TestThreadPool;
+import org.opensearch.threadpool.ThreadPool;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 
 import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 import static org.opensearch.flowframework.model.TemplateTestJsonUtil.edge;
@@ -43,7 +44,7 @@ public class WorkflowProcessSorterTests extends OpenSearchTestCase {
         return workflowProcessSorter.sortProcessNodes(w).stream().map(ProcessNode::id).collect(Collectors.toList());
     }
 
-    private static ExecutorService executor;
+    private static TestThreadPool testThreadPool;
     private static WorkflowProcessSorter workflowProcessSorter;
 
     @BeforeClass
@@ -52,14 +53,14 @@ public class WorkflowProcessSorterTests extends OpenSearchTestCase {
         Client client = mock(Client.class);
         when(client.admin()).thenReturn(adminClient);
 
-        executor = Executors.newFixedThreadPool(10);
+        testThreadPool = new TestThreadPool(WorkflowProcessSorterTests.class.getName());
         WorkflowStepFactory factory = WorkflowStepFactory.create(client);
-        workflowProcessSorter = WorkflowProcessSorter.create(factory, executor);
+        workflowProcessSorter = WorkflowProcessSorter.create(factory, testThreadPool);
     }
 
     @AfterClass
     public static void cleanup() {
-        executor.shutdown();
+        ThreadPool.terminate(testThreadPool, 500, TimeUnit.MILLISECONDS);
     }
 
     public void testOrdering() throws IOException {

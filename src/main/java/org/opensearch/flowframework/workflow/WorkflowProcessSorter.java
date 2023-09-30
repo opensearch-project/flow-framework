@@ -15,6 +15,7 @@ import org.opensearch.common.unit.TimeValue;
 import org.opensearch.flowframework.model.Workflow;
 import org.opensearch.flowframework.model.WorkflowEdge;
 import org.opensearch.flowframework.model.WorkflowNode;
+import org.opensearch.threadpool.ThreadPool;
 
 import java.util.ArrayDeque;
 import java.util.ArrayList;
@@ -25,7 +26,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Queue;
 import java.util.Set;
-import java.util.concurrent.Executor;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -43,20 +43,20 @@ public class WorkflowProcessSorter {
     private static WorkflowProcessSorter instance = null;
 
     private WorkflowStepFactory workflowStepFactory;
-    private Executor executor;
+    private ThreadPool threadPool;
 
     /**
      * Create the singleton instance of this class. Throws an {@link IllegalStateException} if already created.
      *
      * @param workflowStepFactory The singleton instance of {@link WorkflowStepFactory}
-     * @param executor A thread executor
+     * @param threadPool          A thread executor
      * @return The created instance
      */
-    public static synchronized WorkflowProcessSorter create(WorkflowStepFactory workflowStepFactory, Executor executor) {
+    public static synchronized WorkflowProcessSorter create(WorkflowStepFactory workflowStepFactory, ThreadPool threadPool) {
         if (instance != null) {
             throw new IllegalStateException("This class was already created.");
         }
-        instance = new WorkflowProcessSorter(workflowStepFactory, executor);
+        instance = new WorkflowProcessSorter(workflowStepFactory, threadPool);
         return instance;
     }
 
@@ -72,9 +72,9 @@ public class WorkflowProcessSorter {
         return instance;
     }
 
-    private WorkflowProcessSorter(WorkflowStepFactory workflowStepFactory, Executor executor) {
+    private WorkflowProcessSorter(WorkflowStepFactory workflowStepFactory, ThreadPool threadPool) {
         this.workflowStepFactory = workflowStepFactory;
-        this.executor = executor;
+        this.threadPool = threadPool;
     }
 
     /**
@@ -102,7 +102,7 @@ public class WorkflowProcessSorter {
                 TimeValue.ZERO,
                 String.join(".", node.id(), INPUTS_FIELD, NODE_TIMEOUT_FIELD)
             );
-            ProcessNode processNode = new ProcessNode(node.id(), step, data, predecessorNodes, executor, nodeTimeout);
+            ProcessNode processNode = new ProcessNode(node.id(), step, data, predecessorNodes, threadPool, nodeTimeout);
             idToNodeMap.put(processNode.id(), processNode);
             nodes.add(processNode);
         }

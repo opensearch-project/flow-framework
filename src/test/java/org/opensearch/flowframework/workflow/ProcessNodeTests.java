@@ -8,10 +8,10 @@
  */
 package org.opensearch.flowframework.workflow;
 
-import com.carrotsearch.randomizedtesting.annotations.ThreadLeakScope;
-
 import org.opensearch.common.unit.TimeValue;
 import org.opensearch.test.OpenSearchTestCase;
+import org.opensearch.threadpool.TestThreadPool;
+import org.opensearch.threadpool.ThreadPool;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 
@@ -20,33 +20,21 @@ import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
-@ThreadLeakScope(ThreadLeakScope.Scope.NONE)
 public class ProcessNodeTests extends OpenSearchTestCase {
 
-    private static ExecutorService executor;
+    private static TestThreadPool testThreadPool;
 
     @BeforeClass
     public static void setup() {
-        executor = Executors.newFixedThreadPool(10);
+        testThreadPool = new TestThreadPool(ProcessNodeTests.class.getName());
     }
 
     @AfterClass
     public static void cleanup() {
-        executor.shutdown();
-        try {
-            if (!executor.awaitTermination(5, TimeUnit.SECONDS)) {
-                executor.shutdownNow();
-                executor.awaitTermination(5, TimeUnit.SECONDS);
-            }
-        } catch (InterruptedException e) {
-            executor.shutdownNow();
-            Thread.currentThread().interrupt();
-        }
+        ThreadPool.terminate(testThreadPool, 500, TimeUnit.MILLISECONDS);
     }
 
     public void testNode() throws InterruptedException, ExecutionException {
@@ -62,7 +50,7 @@ public class ProcessNodeTests extends OpenSearchTestCase {
             public String getName() {
                 return "test";
             }
-        }, WorkflowData.EMPTY, Collections.emptyList(), executor, TimeValue.ZERO);
+        }, WorkflowData.EMPTY, Collections.emptyList(), testThreadPool, TimeValue.ZERO);
         assertEquals("A", nodeA.id());
         assertEquals("test", nodeA.workflowStep().getName());
         assertEquals(WorkflowData.EMPTY, nodeA.input());
@@ -79,7 +67,11 @@ public class ProcessNodeTests extends OpenSearchTestCase {
             @Override
             public CompletableFuture<WorkflowData> execute(List<WorkflowData> data) {
                 CompletableFuture<WorkflowData> future = new CompletableFuture<>();
-                CompletableFuture.delayedExecutor(250, TimeUnit.MILLISECONDS, executor).execute(() -> future.complete(WorkflowData.EMPTY));
+                testThreadPool.schedule(
+                    () -> future.complete(WorkflowData.EMPTY),
+                    TimeValue.timeValueMillis(250),
+                    ThreadPool.Names.GENERIC
+                );
                 return future;
             }
 
@@ -87,7 +79,7 @@ public class ProcessNodeTests extends OpenSearchTestCase {
             public String getName() {
                 return "sleepy";
             }
-        }, WorkflowData.EMPTY, Collections.emptyList(), executor, TimeValue.timeValueMillis(100));
+        }, WorkflowData.EMPTY, Collections.emptyList(), testThreadPool, TimeValue.timeValueMillis(100));
         assertEquals("Zzz", nodeZ.id());
         assertEquals("sleepy", nodeZ.workflowStep().getName());
         assertEquals(WorkflowData.EMPTY, nodeZ.input());

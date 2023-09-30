@@ -32,6 +32,11 @@ import java.util.function.Supplier;
  */
 public class FlowFrameworkPlugin extends Plugin {
 
+    /**
+     * Instantiate this plugin.
+     */
+    public FlowFrameworkPlugin() {}
+
     @Override
     public Collection<Object> createComponents(
         Client client,
@@ -47,7 +52,7 @@ public class FlowFrameworkPlugin extends Plugin {
         Supplier<RepositoriesService> repositoriesServiceSupplier
     ) {
         WorkflowStepFactory workflowStepFactory = WorkflowStepFactory.create(client);
-        WorkflowProcessSorter workflowProcessSorter = WorkflowProcessSorter.create(workflowStepFactory, threadPool.generic());
+        WorkflowProcessSorter workflowProcessSorter = WorkflowProcessSorter.create(workflowStepFactory, threadPool);
 
         return ImmutableList.of(workflowStepFactory, workflowProcessSorter);
     }
