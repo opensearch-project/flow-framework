@@ -54,8 +54,8 @@ public class WorkflowProcessSorterTests extends OpenSearchTestCase {
         when(client.admin()).thenReturn(adminClient);
 
         testThreadPool = new TestThreadPool(WorkflowProcessSorterTests.class.getName());
-        WorkflowStepFactory factory = WorkflowStepFactory.create(client);
-        workflowProcessSorter = WorkflowProcessSorter.create(factory, testThreadPool);
+        WorkflowStepFactory factory = new WorkflowStepFactory(client);
+        workflowProcessSorter = new WorkflowProcessSorter(factory, testThreadPool);
     }
 
     @AfterClass

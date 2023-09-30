@@ -34,45 +34,22 @@ import static org.opensearch.flowframework.model.WorkflowNode.NODE_TIMEOUT_DEFAU
 import static org.opensearch.flowframework.model.WorkflowNode.NODE_TIMEOUT_FIELD;
 
 /**
- * Utility class converting a workflow of nodes and edges into a topologically sorted list of Process Nodes.
+ * Converts a workflow of nodes and edges into a topologically sorted list of Process Nodes.
  */
 public class WorkflowProcessSorter {
 
     private static final Logger logger = LogManager.getLogger(WorkflowProcessSorter.class);
 
-    private static WorkflowProcessSorter instance = null;
-
     private WorkflowStepFactory workflowStepFactory;
     private ThreadPool threadPool;
 
     /**
-     * Create the singleton instance of this class. Throws an {@link IllegalStateException} if already created.
+     * Instantiate this class.
      *
-     * @param workflowStepFactory The singleton instance of {@link WorkflowStepFactory}
-     * @param threadPool The Thread Pool to send to Process Nodes
-     * @return The created instance
+     * @param workflowStepFactory The factory which matches template step types to instances.
+     * @param threadPool The OpenSearch Thread pool to pass to process nodes.
      */
-    public static synchronized WorkflowProcessSorter create(WorkflowStepFactory workflowStepFactory, ThreadPool threadPool) {
-        if (instance != null) {
-            throw new IllegalStateException("This class was already created.");
-        }
-        instance = new WorkflowProcessSorter(workflowStepFactory, threadPool);
-        return instance;
-    }
-
-    /**
-     * Gets the singleton instance of this class. Throws an {@link IllegalStateException} if not yet created.
-     *
-     * @return The created instance
-     */
-    public static synchronized WorkflowProcessSorter get() {
-        if (instance == null) {
-            throw new IllegalStateException("This factory has not yet been created.");
-        }
-        return instance;
-    }
-
-    private WorkflowProcessSorter(WorkflowStepFactory workflowStepFactory, ThreadPool threadPool) {
+    public WorkflowProcessSorter(WorkflowStepFactory workflowStepFactory, ThreadPool threadPool) {
         this.workflowStepFactory = workflowStepFactory;
         this.threadPool = threadPool;
     }

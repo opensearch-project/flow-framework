@@ -51,8 +51,8 @@ public class FlowFrameworkPlugin extends Plugin {
         IndexNameExpressionResolver indexNameExpressionResolver,
         Supplier<RepositoriesService> repositoriesServiceSupplier
     ) {
-        WorkflowStepFactory workflowStepFactory = WorkflowStepFactory.create(client);
-        WorkflowProcessSorter workflowProcessSorter = WorkflowProcessSorter.create(workflowStepFactory, threadPool);
+        WorkflowStepFactory workflowStepFactory = new WorkflowStepFactory(client);
+        WorkflowProcessSorter workflowProcessSorter = new WorkflowProcessSorter(workflowStepFactory, threadPool);
 
         return ImmutableList.of(workflowStepFactory, workflowProcessSorter);
     }

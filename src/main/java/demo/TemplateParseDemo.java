@@ -53,9 +53,9 @@ public class TemplateParseDemo {
             return;
         }
         Client client = new NodeClient(null, null);
-        WorkflowStepFactory factory = WorkflowStepFactory.create(client);
+        WorkflowStepFactory factory = new WorkflowStepFactory(client);
         ThreadPool threadPool = new ThreadPool(Settings.EMPTY);
-        WorkflowProcessSorter.create(factory, threadPool);
+        WorkflowProcessSorter workflowProcessSorter = new WorkflowProcessSorter(factory, threadPool);
 
         Template t = Template.parse(json);
 
@@ -64,7 +64,7 @@ public class TemplateParseDemo {
 
         for (Entry<String, Workflow> e : t.workflows().entrySet()) {
             logger.info("Parsing {} workflow.", e.getKey());
-            WorkflowProcessSorter.get().sortProcessNodes(e.getValue());
+            workflowProcessSorter.sortProcessNodes(e.getValue());
         }
         ThreadPool.terminate(threadPool, 500, TimeUnit.MILLISECONDS);
     }

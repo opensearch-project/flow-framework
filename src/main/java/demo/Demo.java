@@ -57,14 +57,14 @@ public class Demo {
             return;
         }
         Client client = new NodeClient(null, null);
-        WorkflowStepFactory factory = WorkflowStepFactory.create(client);
+        WorkflowStepFactory factory = new WorkflowStepFactory(client);
 
         ThreadPool threadPool = new ThreadPool(Settings.EMPTY);
-        WorkflowProcessSorter.create(factory, threadPool);
+        WorkflowProcessSorter workflowProcessSorter = new WorkflowProcessSorter(factory, threadPool);
 
         logger.info("Parsing graph to sequence...");
         Template t = Template.parse(json);
-        List<ProcessNode> processSequence = WorkflowProcessSorter.get().sortProcessNodes(t.workflows().get("demo"));
+        List<ProcessNode> processSequence = workflowProcessSorter.sortProcessNodes(t.workflows().get("demo"));
         List<CompletableFuture<?>> futureList = new ArrayList<>();
 
         for (ProcessNode n : processSequence) {
