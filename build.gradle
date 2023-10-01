@@ -28,6 +28,7 @@ publishing {
             pom {
                 name = pluginName
                 description = pluginDescription
+                groupId = "org.opensearch.plugin"
                 licenses {
                     license {
                         name = "The Apache License, Version 2.0"
@@ -40,6 +41,17 @@ publishing {
                         url = "https://github.com/opensearch-project/opensearch-ai-flow-framework"
                     }
                 }
+            }
+        }
+    }
+
+    repositories {
+        maven {
+            name = "Snapshots"
+            url = "https://aws.oss.sonatype.org/content/repositories/snapshots"
+            credentials {
+                username "$System.env.SONATYPE_USERNAME"
+                password "$System.env.SONATYPE_PASSWORD"
             }
         }
     }
@@ -95,6 +107,8 @@ buildscript {
         classpath "com.github.form-com.diff-coverage-gradle:diff-coverage:0.9.5"
     }
 }
+
+
 
 repositories {
     mavenLocal()
