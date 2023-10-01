@@ -45,12 +45,26 @@
                         }],
                         "node_timeout": "10s"
                     }
+                },
+                {
+                    "id": "register_and_deploy",
+                    "type": "register_and_deploy",
+                    "inputs": {
+                        "name": "openAI-gpt-3.5-turbo",
+                        "function_name": "remote",
+                        "description": "test model",
+                        "connector_id": "uDna54oB76l1MtYJF84U"
+                    }
                 }
             ],
             "edges": [{
                 "source": "create_index",
                 "dest": "create_ingest_pipeline"
-            }]
+            },
+                {
+                    "source": "create_ingest_pipeline",
+                    "dest": "register_and_deploy"
+                }]
         },
         "ingest": {
             "user_params": {

@@ -6,21 +6,22 @@
  * this file be licensed under the Apache-2.0 license or a
  * compatible open source license.
  */
-package org.opensearch.flowframework.workflow.RegisterModel;
+package org.opensearch.flowframework.workflow;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.opensearch.client.Client;
 import org.opensearch.client.node.NodeClient;
+import org.opensearch.core.action.ActionListener;
 import org.opensearch.flowframework.client.MLClient;
-import org.opensearch.flowframework.workflow.WorkflowData;
-import org.opensearch.flowframework.workflow.WorkflowStep;
 import org.opensearch.ml.client.MachineLearningNodeClient;
 import org.opensearch.ml.common.FunctionName;
 import org.opensearch.ml.common.model.MLModelConfig;
 import org.opensearch.ml.common.model.MLModelFormat;
 import org.opensearch.ml.common.transport.register.MLRegisterModelInput;
 import org.opensearch.ml.common.transport.register.MLRegisterModelResponse;
+import org.opensearch.threadpool.Scheduler;
+import org.opensearch.threadpool.ThreadPool;
 
 import java.io.IOException;
 import java.util.List;
@@ -29,12 +30,15 @@ import java.util.Map.Entry;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Stream;
 
-public class RegisterModelStep implements WorkflowStep {
+public class RegisterAndDeployModelStep implements WorkflowStep {
 
-    private static final Logger logger = LogManager.getLogger(RegisterModelStep.class);
+    private static final Logger logger = LogManager.getLogger(RegisterAndDeployModelStep.class);
 
     private Client client;
-    private final String NAME = "register_model_step";
+    private ThreadPool threadPool;
+    private volatile Scheduler.Cancellable scheduledFuture;
+
+    static final String NAME = "register_model_step";
 
     private static final String FUNCTION_NAME = "function_name";
     private static final String MODEL_NAME = "model_name";
@@ -45,7 +49,7 @@ public class RegisterModelStep implements WorkflowStep {
     private static final String MODEL_FORMAT = "model_format";
     private static final String MODEL_CONFIG = "model_config";
 
-    public RegisterModelStep(Client client) {
+    public RegisterAndDeployModelStep(Client client) {
         this.client = client;
     }
 
@@ -53,6 +57,45 @@ public class RegisterModelStep implements WorkflowStep {
     public CompletableFuture<WorkflowData> execute(List<WorkflowData> data) {
 
         CompletableFuture<WorkflowData> registerModelFuture = new CompletableFuture<>();
+
+        MachineLearningNodeClient machineLearningNodeClient = MLClient.createMLClient((NodeClient) client);
+
+        ActionListener<MLRegisterModelResponse> actionListener = new ActionListener<>() {
+            @Override
+            public void onResponse(MLRegisterModelResponse mlRegisterModelResponse) {
+
+                /*ActionListener<MLDeployModelResponse> deployActionListener = new ActionListener<>() {
+                    @Override
+                    public void onResponse(MLDeployModelResponse mlDeployModelResponse) {
+                        if (mlDeployModelResponse.getStatus() == MLTaskState.COMPLETED.name()) {
+                            logger.info("Model deployment successful");
+                            registerModelFuture.complete(
+                                new WorkflowData(Map.ofEntries(Map.entry("modelId", mlRegisterModelResponse.getModelId())))
+                            );
+                        }
+                    }
+
+                    @Override
+                    public void onFailure(Exception e) {
+                        logger.error("Model deployment failed");
+                        registerModelFuture.completeExceptionally(new IOException("Model deployment failed"));
+                    }
+                };
+                machineLearningNodeClient.deploy(mlRegisterModelResponse.getModelId(), deployActionListener);*/
+                // scheduledFuture = threadPool.scheduleWithFixedDelay(new GetTask(machineLearningNodeClient,
+                // mlRegisterModelResponse.getTaskId()), TimeValue.timeValueMillis(10L), ThreadPool.Names.GENERIC);
+
+                DeployModel deployModel = new DeployModel();
+                deployModel.deployModel(machineLearningNodeClient, mlRegisterModelResponse.getModelId());
+
+            }
+
+            @Override
+            public void onFailure(Exception e) {
+                logger.error("Failed to register model");
+                registerModelFuture.completeExceptionally(new IOException("Failed to register model "));
+            }
+        };
 
         FunctionName functionName = null;
         String modelName = null;
@@ -102,7 +145,7 @@ public class RegisterModelStep implements WorkflowStep {
         }
 
         if (Stream.of(functionName, modelName, modelVersion, modelGroupId, description, connectorId).allMatch(x -> x != null)) {
-            MachineLearningNodeClient machineLearningNodeClient = MLClient.createMLClient((NodeClient) client);
+
             // TODO: Add model Config and type cast correctly
             MLRegisterModelInput mlInput = MLRegisterModelInput.builder()
                 .functionName(functionName)
@@ -115,16 +158,9 @@ public class RegisterModelStep implements WorkflowStep {
                 .connectorId(connectorId)
                 .build();
 
-            MLRegisterModelResponse mlRegisterModelResponse = machineLearningNodeClient.register(mlInput).actionGet();
-
-            registerModelFuture.complete(
-                new WorkflowData(Map.of("taskId", mlRegisterModelResponse.getTaskId(), "status", mlRegisterModelResponse.getStatus()))
-            );
-
-        } else {
-            logger.error("Failed to register model");
-            registerModelFuture.completeExceptionally(new IOException("Failed to register model "));
+            machineLearningNodeClient.register(mlInput, actionListener);
         }
+
         return registerModelFuture;
     }
 

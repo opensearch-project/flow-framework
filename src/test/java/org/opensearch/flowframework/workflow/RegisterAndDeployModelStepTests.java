@@ -6,12 +6,14 @@
  * this file be licensed under the Apache-2.0 license or a
  * compatible open source license.
  */
-package org.opensearch.flowframework.workflow.RegisterModel;
+package org.opensearch.flowframework.workflow;
 
 import org.opensearch.client.node.NodeClient;
-import org.opensearch.flowframework.workflow.WorkflowData;
+import org.opensearch.core.action.ActionListener;
+import org.opensearch.flowframework.client.MLClient;
 import org.opensearch.ml.client.MachineLearningNodeClient;
 import org.opensearch.ml.common.FunctionName;
+import org.opensearch.ml.common.MLTaskState;
 import org.opensearch.ml.common.model.MLModelConfig;
 import org.opensearch.ml.common.model.MLModelFormat;
 import org.opensearch.ml.common.model.TextEmbeddingModelConfig;
@@ -22,20 +24,19 @@ import org.opensearch.test.OpenSearchTestCase;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
 
-import org.mockito.ArgumentCaptor;
-import org.mockito.Mock;
+import org.mockito.*;
 
-import static org.mockito.Answers.RETURNS_DEEP_STUBS;
 import static org.mockito.Mockito.*;
 
-public class RegisterModelTests extends OpenSearchTestCase {
+public class RegisterAndDeployModelStepTests extends OpenSearchTestCase {
     private WorkflowData inputData = WorkflowData.EMPTY;
 
-    @Mock(answer = RETURNS_DEEP_STUBS)
-    NodeClient client;
+    @Mock(answer = Answers.RETURNS_DEEP_STUBS)
+    private NodeClient nodeClient;
 
-    MachineLearningNodeClient machineLearningNodeClient;
+    private MachineLearningNodeClient machineLearningNodeClient;
 
     @Override
     public void setUp() throws Exception {
@@ -69,11 +70,11 @@ public class RegisterModelTests extends OpenSearchTestCase {
             )
         );
 
-        machineLearningNodeClient = mock(MachineLearningNodeClient.class);
+        nodeClient = mock(NodeClient.class);
 
     }
 
-    public void testRegisterModel() {
+    public void testRegisterModel() throws ExecutionException, InterruptedException {
 
         FunctionName functionName = FunctionName.KMEANS;
 
@@ -96,15 +97,31 @@ public class RegisterModelTests extends OpenSearchTestCase {
             .connectorId("abcdefgh")
             .build();
 
-        RegisterModelStep registerModelStep = new RegisterModelStep(client);
+        RegisterAndDeployModelStep registerModelStep = new RegisterAndDeployModelStep(nodeClient);
 
-        ArgumentCaptor<MLRegisterModelResponse> argumentCaptor = ArgumentCaptor.forClass(MLRegisterModelResponse.class);
+        ArgumentCaptor<ActionListener<MLRegisterModelResponse>> actionListenerCaptor = ArgumentCaptor.forClass(ActionListener.class);
         CompletableFuture<WorkflowData> future = registerModelStep.execute(List.of(inputData));
 
-        verify(machineLearningNodeClient, times(1)).register(mlInput);
-        assertEquals("1", (argumentCaptor.getValue()).getTaskId());
+        assertFalse(future.isDone());
 
-        assertTrue(future.isDone());
+        /*try (MockedStatic<MLClient> mlClientMockedStatic = Mockito.mockStatic(MLClient.class)) {
+            mlClientMockedStatic
+                    .when(() -> MLClient.createMLClient(any(NodeClient.class)))
+                    .thenReturn(machineLearningNodeClient);
+
+        }*/
+        when(spy(MLClient.createMLClient(nodeClient))).thenReturn(machineLearningNodeClient);
+        verify(machineLearningNodeClient, times(1)).register(any(MLRegisterModelInput.class), actionListenerCaptor.capture());
+        actionListenerCaptor.getValue().onResponse(new MLRegisterModelResponse("xyz", MLTaskState.COMPLETED.name(), "abc"));
+
+        assertTrue(future.isDone() && !future.isCompletedExceptionally());
+
+        Map<String, Object> outputData = Map.of("index-name", "demo");
+
+        assertTrue(future.isDone() && future.isCompletedExceptionally());
+
+        assertEquals(outputData, future.get().getContent());
+
     }
 
 }
