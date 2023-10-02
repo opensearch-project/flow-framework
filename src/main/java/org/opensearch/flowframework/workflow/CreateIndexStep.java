@@ -8,7 +8,6 @@
  */
 package org.opensearch.flowframework.workflow;
 
-import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Charsets;
 import com.google.common.io.Resources;
 import org.apache.logging.log4j.LogManager;
