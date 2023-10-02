@@ -6,27 +6,31 @@
  * this file be licensed under the Apache-2.0 license or a
  * compatible open source license.
  */
-package org.opensearch.flowframework.template;
+package org.opensearch.flowframework.workflow;
 
-import com.carrotsearch.randomizedtesting.annotations.ThreadLeakScope;
-import com.carrotsearch.randomizedtesting.annotations.ThreadLeakScope.Scope;
-
-import org.opensearch.flowframework.workflow.WorkflowData;
-import org.opensearch.flowframework.workflow.WorkflowStep;
 import org.opensearch.test.OpenSearchTestCase;
+import org.junit.After;
+import org.junit.Before;
 
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
-@ThreadLeakScope(Scope.NONE)
 public class ProcessNodeTests extends OpenSearchTestCase {
 
-    @Override
-    public void setUp() throws Exception {
-        super.setUp();
+    private ExecutorService executor;
+
+    @Before
+    public void setup() {
+        executor = Executors.newFixedThreadPool(10);
+    }
+
+    @After
+    public void cleanup() {
+        executor.shutdown();
     }
 
     public void testNode() throws InterruptedException, ExecutionException {
@@ -42,24 +46,15 @@ public class ProcessNodeTests extends OpenSearchTestCase {
             public String getName() {
                 return "test";
             }
-        });
+        }, WorkflowData.EMPTY, Collections.emptyList(), executor);
         assertEquals("A", nodeA.id());
         assertEquals("test", nodeA.workflowStep().getName());
         assertEquals(WorkflowData.EMPTY, nodeA.input());
-        assertEquals(Collections.emptySet(), nodeA.getPredecessors());
+        assertEquals(Collections.emptyList(), nodeA.predecessors());
         assertEquals("A", nodeA.toString());
 
-        // TODO: Once we can get OpenSearch Thread Pool for this execute method, create an IT and don't test execute here
         CompletableFuture<WorkflowData> f = nodeA.execute();
-        assertEquals(f, nodeA.getFuture());
-        f.orTimeout(5, TimeUnit.SECONDS);
-        assertTrue(f.isDone());
+        assertEquals(f, nodeA.future());
         assertEquals(WorkflowData.EMPTY, f.get());
-
-        ProcessNode nodeB = new ProcessNode("B", null);
-        assertNotEquals(nodeA, nodeB);
-
-        ProcessNode nodeA2 = new ProcessNode("A", null);
-        assertEquals(nodeA, nodeA2);
     }
 }

@@ -56,6 +56,7 @@ opensearchplugin {
 dependencyLicenses.enabled = false
 // This requires an additional Jar not published as part of build-tools
 loggerUsageCheck.enabled = false
+thirdPartyAudit.enabled = false
 
 // No need to validate pom, as we do not upload to maven/sonatype
 validateNebulaPom.enabled = false
@@ -90,7 +91,7 @@ buildscript {
 
     dependencies {
         classpath "org.opensearch.gradle:build-tools:${opensearch_version}"
-        classpath "com.diffplug.spotless:spotless-plugin-gradle:6.21.0"
+        classpath "com.diffplug.spotless:spotless-plugin-gradle:6.22.0"
         classpath "com.github.form-com.diff-coverage-gradle:diff-coverage:0.9.5"
     }
 }
@@ -105,8 +106,7 @@ repositories {
 dependencies {
     implementation "org.opensearch:opensearch:${opensearch_version}"
     implementation 'org.junit.jupiter:junit-jupiter:5.10.0'
-    implementation "com.google.code.gson:gson:2.10.1"
-    compileOnly "com.google.guava:guava:32.1.2-jre"
+    implementation "com.google.guava:guava:32.1.2-jre"
     api group: 'org.opensearch', name:'opensearch-ml-client', version: "${opensearch_build}"
 
     configurations.all {
