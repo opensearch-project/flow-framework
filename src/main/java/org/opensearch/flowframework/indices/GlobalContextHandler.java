@@ -25,12 +25,13 @@ import org.opensearch.flowframework.exception.FlowFrameworkException;
 import org.opensearch.flowframework.model.Template;
 import org.opensearch.flowframework.workflow.CreateIndexStep;
 
+import javax.ws.rs.core.Response;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 
-import static org.opensearch.flowframework.constant.CommonValue.GLOBAL_CONTEXT_INDEX;
-import static org.opensearch.flowframework.constant.CommonValue.GLOBAL_CONTEXT_INDEX_MAPPING;
+import static org.opensearch.flowframework.common.CommonValue.GLOBAL_CONTEXT_INDEX;
+import static org.opensearch.flowframework.common.CommonValue.GLOBAL_CONTEXT_INDEX_MAPPING;
 import static org.opensearch.flowframework.workflow.CreateIndexStep.getIndexMappings;
 
 /**
@@ -72,7 +73,7 @@ public class GlobalContextHandler {
     public void putTemplateToGlobalContext(Template template, ActionListener<IndexResponse> listener) {
         initGlobalContextIndexIfAbsent(ActionListener.wrap(indexCreated -> {
             if (!indexCreated) {
-                listener.onFailure(new FlowFrameworkException("No response to create global_context index"));
+                listener.onFailure(new FlowFrameworkException("No response to create global_context index", Response.Status.INTERNAL_SERVER_ERROR));
                 return;
             }
             IndexRequest request = new IndexRequest(GLOBAL_CONTEXT_INDEX);

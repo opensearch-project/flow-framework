@@ -28,6 +28,7 @@ import org.opensearch.core.action.ActionListener;
 import org.opensearch.flowframework.exception.FlowFrameworkException;
 import org.opensearch.flowframework.indices.FlowFrameworkIndex;
 
+import javax.ws.rs.core.Response;
 import java.io.IOException;
 import java.net.URL;
 import java.util.HashMap;
@@ -36,9 +37,9 @@ import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import static org.opensearch.flowframework.constant.CommonValue.META;
-import static org.opensearch.flowframework.constant.CommonValue.NO_SCHEMA_VERSION;
-import static org.opensearch.flowframework.constant.CommonValue.SCHEMA_VERSION_FIELD;
+import static org.opensearch.flowframework.common.CommonValue.META;
+import static org.opensearch.flowframework.common.CommonValue.NO_SCHEMA_VERSION;
+import static org.opensearch.flowframework.common.CommonValue.SCHEMA_VERSION_FIELD;
 
 /**
  * Step to create an index
@@ -164,7 +165,7 @@ public class CreateIndexStep implements WorkflowStep {
                                                         internalListener.onResponse(true);
                                                     } else {
                                                         internalListener.onFailure(
-                                                            new FlowFrameworkException("Failed to update index setting for: " + indexName)
+                                                            new FlowFrameworkException("Failed to update index setting for: " + indexName, Response.Status.INTERNAL_SERVER_ERROR)
                                                         );
                                                     }
                                                 }, exception -> {
@@ -172,7 +173,7 @@ public class CreateIndexStep implements WorkflowStep {
                                                     internalListener.onFailure(exception);
                                                 }));
                                         } else {
-                                            internalListener.onFailure(new FlowFrameworkException("Failed to update index: " + indexName));
+                                            internalListener.onFailure(new FlowFrameworkException("Failed to update index: " + indexName, Response.Status.INTERNAL_SERVER_ERROR));
                                         }
                                     }, exception -> {
                                         logger.error("Failed to update index " + indexName, exception);

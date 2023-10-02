@@ -8,21 +8,21 @@
  */
 package org.opensearch.flowframework.indices;
 
-import org.opensearch.flowframework.function.ThrowingSupplierWrapper;
+import org.opensearch.flowframework.common.ThrowingSupplierWrapper;
 
 import java.util.function.Supplier;
 
-import static org.opensearch.flowframework.constant.CommonValue.GLOBAL_CONTEXT_INDEX;
-import static org.opensearch.flowframework.constant.CommonValue.GLOBAL_CONTEXT_INDEX_VERSION;
+import static org.opensearch.flowframework.common.CommonValue.GLOBAL_CONTEXT_INDEX;
+import static org.opensearch.flowframework.common.CommonValue.GLOBAL_CONTEXT_INDEX_VERSION;
 
 /**
  * An enumeration of Flow Framework indices
  */
 public enum FlowFrameworkIndex {
     GLOBAL_CONTEXT(
-        GLOBAL_CONTEXT_INDEX,
-        ThrowingSupplierWrapper.throwingSupplierWrapper(GlobalContextHandler::getGlobalContextMappings),
-        GLOBAL_CONTEXT_INDEX_VERSION
+            GLOBAL_CONTEXT_INDEX,
+            ThrowingSupplierWrapper.throwingSupplierWrapper(GlobalContextHandler::getGlobalContextMappings),
+            GLOBAL_CONTEXT_INDEX_VERSION
     );
 
     private final String indexName;

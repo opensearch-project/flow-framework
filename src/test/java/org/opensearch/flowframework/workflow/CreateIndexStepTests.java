@@ -34,7 +34,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
-import static org.opensearch.flowframework.constant.CommonValue.*;
+import static org.opensearch.flowframework.common.CommonValue.*;
 import static org.mockito.Mockito.*;
 
 public class CreateIndexStepTests extends OpenSearchTestCase {

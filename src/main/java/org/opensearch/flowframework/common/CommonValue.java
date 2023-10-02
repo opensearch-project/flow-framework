@@ -6,7 +6,7 @@
  * this file be licensed under the Apache-2.0 license or a
  * compatible open source license.
  */
-package org.opensearch.flowframework.constant;
+package org.opensearch.flowframework.common;
 
 /**
  * Representation of common values that are used across project

@@ -34,7 +34,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
-import static org.opensearch.flowframework.constant.CommonValue.GLOBAL_CONTEXT_INDEX;
+import static org.opensearch.flowframework.common.CommonValue.GLOBAL_CONTEXT_INDEX;
 import static org.mockito.Mockito.*;
 
 public class GlobalContextHandlerTests extends OpenSearchTestCase {
@@ -66,7 +66,6 @@ public class GlobalContextHandlerTests extends OpenSearchTestCase {
         when(client.admin()).thenReturn(adminClient);
     }
 
-    @Test
     public void testPutTemplateToGlobalContext() throws IOException {
         Template template = mock(Template.class);
         when(template.toXContent(any(XContentBuilder.class), eq(ToXContent.EMPTY_PARAMS))).thenAnswer(invocation -> {
@@ -89,7 +88,6 @@ public class GlobalContextHandlerTests extends OpenSearchTestCase {
         assertEquals(GLOBAL_CONTEXT_INDEX, requestCaptor.getValue().index());
     }
 
-    @Test
     public void testStoreResponseToGlobalContext() {
         String documentId = "docId";
         Map<String, Object> updatedFields = new HashMap<>();
