@@ -107,6 +107,7 @@ dependencies {
     implementation "org.opensearch:opensearch:${opensearch_version}"
     implementation 'org.junit.jupiter:junit-jupiter:5.10.0'
     implementation "com.google.guava:guava:32.1.2-jre"
+    implementation 'javax.ws.rs:javax.ws.rs-api:2.1.1'
     api group: 'org.opensearch', name:'opensearch-ml-client', version: "${opensearch_build}"
 
     configurations.all {
