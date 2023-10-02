@@ -62,8 +62,8 @@ public class Template implements ToXContentObject {
     private final List<Version> compatibilityVersion;
     private final Map<String, Object> userInputs;
     private final Map<String, Workflow> workflows;
-    private Map<String, Object> responses;
-    private Map<String, Object> resourcesCreated;
+    private final Map<String, Object> responses;
+    private final Map<String, Object> resourcesCreated;
 
     /**
      * Instantiate the object representing a use case template
