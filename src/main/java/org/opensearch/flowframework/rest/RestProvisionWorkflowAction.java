@@ -33,7 +33,7 @@ public class RestProvisionWorkflowAction extends BaseRestHandler {
     /**
      * Field name for workflow Id, the document Id of the indexed use case template
      */
-    public static final String WORKFLOW_ID = "workflowId";
+    public static final String WORKFLOW_ID = "workflow_id";
 
     /**
      * Instantiates a new RestProvisionWorkflowAction
@@ -63,7 +63,7 @@ public class RestProvisionWorkflowAction extends BaseRestHandler {
     @Override
     protected RestChannelConsumer prepareRequest(RestRequest request, NodeClient client) throws IOException {
 
-        String workflowId = request.param(WORKFLOW_ID, null);
+        String workflowId = request.param(WORKFLOW_ID);
         Template template = null;
 
         if (request.hasContent()) {
@@ -72,7 +72,7 @@ public class RestProvisionWorkflowAction extends BaseRestHandler {
 
         // Validate workflow request inputs
         if (workflowId == null && template == null) {
-            throw new IOException("WorkflowId and template cannot be both null");
+            throw new IOException("workflow_id and template cannot be both null");
         }
 
         // Create request and provision

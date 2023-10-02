@@ -33,7 +33,7 @@ public class RestCreateWorkflowAction extends BaseRestHandler {
     /**
      * Field name for workflow Id, the document Id of the indexed use case template
      */
-    public static final String WORKFLOW_ID = "workflowId";
+    public static final String WORKFLOW_ID = "workflow_id";
 
     /**
      * Intantiates a new RestCreateWorkflowAction
@@ -60,7 +60,7 @@ public class RestCreateWorkflowAction extends BaseRestHandler {
     @Override
     protected RestChannelConsumer prepareRequest(RestRequest request, NodeClient client) throws IOException {
 
-        String workflowId = request.param(WORKFLOW_ID, null);
+        String workflowId = request.param(WORKFLOW_ID);
         Template template = Template.parse(request.content().utf8ToString());
         WorkflowRequest workflowRequest = new WorkflowRequest(workflowId, template);
         return channel -> client.execute(CreateWorkflowAction.INSTANCE, workflowRequest, new RestToXContentListener<>(channel));

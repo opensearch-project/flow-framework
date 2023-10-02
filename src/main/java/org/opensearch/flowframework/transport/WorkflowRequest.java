@@ -51,11 +51,8 @@ public class WorkflowRequest extends ActionRequest {
     public WorkflowRequest(StreamInput in) throws IOException {
         super(in);
         this.workflowId = in.readOptionalString();
-        if (in.readBoolean()) {
-            this.template = Template.parse(in.readString());
-        } else {
-            this.template = null;
-        }
+        String templateJson = in.readOptionalString();
+        this.template = templateJson == null ? null : Template.parse(templateJson);
     }
 
     /**
@@ -80,12 +77,7 @@ public class WorkflowRequest extends ActionRequest {
     public void writeTo(StreamOutput out) throws IOException {
         super.writeTo(out);
         out.writeOptionalString(workflowId);
-        if (template != null) {
-            out.writeBoolean(true);
-            out.writeString(template.toJson());
-        } else {
-            out.writeBoolean(false);
-        }
+        out.writeOptionalString(template == null ? null : template.toJson());
     }
 
     @Override
