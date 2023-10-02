@@ -24,7 +24,6 @@ import org.opensearch.flowframework.model.Template;
 import org.opensearch.flowframework.workflow.CreateIndexStep;
 import org.opensearch.test.OpenSearchTestCase;
 import org.opensearch.threadpool.ThreadPool;
-import org.junit.Test;
 
 import java.io.IOException;
 import java.util.HashMap;

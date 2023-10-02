@@ -16,6 +16,7 @@ import javax.ws.rs.core.Response;
 public class FlowFrameworkException extends RuntimeException {
 
     private final Response.Status restStatus;
+
     /**
      * Constructor with error message.
      *

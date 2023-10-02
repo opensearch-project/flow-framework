@@ -20,9 +20,9 @@ import static org.opensearch.flowframework.common.CommonValue.GLOBAL_CONTEXT_IND
  */
 public enum FlowFrameworkIndex {
     GLOBAL_CONTEXT(
-            GLOBAL_CONTEXT_INDEX,
-            ThrowingSupplierWrapper.throwingSupplierWrapper(GlobalContextHandler::getGlobalContextMappings),
-            GLOBAL_CONTEXT_INDEX_VERSION
+        GLOBAL_CONTEXT_INDEX,
+        ThrowingSupplierWrapper.throwingSupplierWrapper(GlobalContextHandler::getGlobalContextMappings),
+        GLOBAL_CONTEXT_INDEX_VERSION
     );
 
     private final String indexName;
