@@ -227,8 +227,7 @@ public class CreateIndexStep implements WorkflowStep {
      * @param newVersion new index mapping version
      * @param listener action listener, if update index is needed, will pass true to its onResponse method
      */
-    @VisibleForTesting
-    protected void shouldUpdateIndex(String indexName, Integer newVersion, ActionListener<Boolean> listener) {
+    private void shouldUpdateIndex(String indexName, Integer newVersion, ActionListener<Boolean> listener) {
         IndexMetadata indexMetaData = clusterService.state().getMetadata().indices().get(indexName);
         if (indexMetaData == null) {
             listener.onResponse(Boolean.FALSE);
