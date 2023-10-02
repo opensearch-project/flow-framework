@@ -118,11 +118,7 @@ dependencies {
 
 test {
     include '**/*Tests.class'
-    systemProperty 'tests.security.manager', 'false'
 }
-
-def opensearch_tmp_dir = rootProject.file('build/private/opensearch_tmp').absoluteFile
-opensearch_tmp_dir.mkdirs()
 
 jacocoTestReport {
     dependsOn test
@@ -140,8 +136,6 @@ task integTest(type: RestIntegTestTask) {
 tasks.named("check").configure { dependsOn(integTest) }
 
 integTest {
-    dependsOn "bundlePlugin"
-
     // The --debug-jvm command-line option makes the cluster debuggable; this makes the tests debuggable
     if (System.getProperty("test.debug") != null) {
         jvmArgs '-agentlib:jdwp=transport=dt_socket,server=y,suspend=y,address=*:5005'

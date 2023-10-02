@@ -69,7 +69,7 @@ public class GlobalContextHandler {
      * @param template the use-case template
      * @param listener action listener
      */
-    public void putTemplateToGlobalContext(Template template, ActionListener<IndexResponse> listener){
+    public void putTemplateToGlobalContext(Template template, ActionListener<IndexResponse> listener) {
         initGlobalContextIndexIfAbsent(ActionListener.wrap(indexCreated -> {
             if (!indexCreated) {
                 listener.onFailure(new FlowFrameworkException("No response to create global_context index"));

@@ -8,8 +8,6 @@
  */
 package org.opensearch.flowframework.workflow;
 
-import org.mockito.Mock;
-import org.mockito.MockitoAnnotations;
 import org.opensearch.action.admin.indices.create.CreateIndexRequest;
 import org.opensearch.action.admin.indices.create.CreateIndexResponse;
 import org.opensearch.client.AdminClient;
@@ -25,6 +23,7 @@ import org.opensearch.common.util.concurrent.ThreadContext;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.flowframework.indices.FlowFrameworkIndex;
 import org.opensearch.test.OpenSearchTestCase;
+import org.opensearch.threadpool.ThreadPool;
 
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
@@ -32,10 +31,11 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.mockito.ArgumentCaptor;
-import org.opensearch.threadpool.ThreadPool;
+import org.mockito.Mock;
+import org.mockito.MockitoAnnotations;
 
-import static org.mockito.Mockito.*;
 import static org.opensearch.flowframework.constant.CommonValue.*;
+import static org.mockito.Mockito.*;
 
 public class CreateIndexStepTests extends OpenSearchTestCase {
 
@@ -122,24 +122,24 @@ public class CreateIndexStepTests extends OpenSearchTestCase {
         verify(indicesAdminClient).create(any(), any());
     }
 
-//    public void testInitIndexIfAbsent_IndexExist() {
-//        FlowFrameworkIndex index = FlowFrameworkIndex.GLOBAL_CONTEXT;
-//        indexMappingUpdated.put(index.getIndexName(), new AtomicBoolean(false));
-//
-//        when(metadata.hasIndex(index.getIndexName())).thenReturn(true);
-//        when(metadata.indices()).thenReturn(Map.of(index.getIndexName(), indexMetadata));
-//
-//        // Mock that the mapping's version is outdated, old version < new version
-//        when(indexMetadata.mapping()).thenReturn(new MappingMetadata(META, Map.of(SCHEMA_VERSION_FIELD, 0)));
-//
-//        ActionListener<Boolean> listener = mock(ActionListener.class);
-//        createIndexStep.initIndexIfAbsent(index, listener);
-//
-//        ArgumentCaptor<PutMappingRequest> captor = ArgumentCaptor.forClass(PutMappingRequest.class);
-//        verify(indicesAdminClient).putMapping(captor.capture());
-//
-//        PutMappingRequest capturedRequest = captor.getValue();
-//        assertEquals(index.getIndexName(), capturedRequest.indices()[0]);
-//    }
+    // public void testInitIndexIfAbsent_IndexExist() {
+    // FlowFrameworkIndex index = FlowFrameworkIndex.GLOBAL_CONTEXT;
+    // indexMappingUpdated.put(index.getIndexName(), new AtomicBoolean(false));
+    //
+    // when(metadata.hasIndex(index.getIndexName())).thenReturn(true);
+    // when(metadata.indices()).thenReturn(Map.of(index.getIndexName(), indexMetadata));
+    //
+    // // Mock that the mapping's version is outdated, old version < new version
+    // when(indexMetadata.mapping()).thenReturn(new MappingMetadata(META, Map.of(SCHEMA_VERSION_FIELD, 0)));
+    //
+    // ActionListener<Boolean> listener = mock(ActionListener.class);
+    // createIndexStep.initIndexIfAbsent(index, listener);
+    //
+    // ArgumentCaptor<PutMappingRequest> captor = ArgumentCaptor.forClass(PutMappingRequest.class);
+    // verify(indicesAdminClient).putMapping(captor.capture());
+    //
+    // PutMappingRequest capturedRequest = captor.getValue();
+    // assertEquals(index.getIndexName(), capturedRequest.indices()[0]);
+    // }
 
 }

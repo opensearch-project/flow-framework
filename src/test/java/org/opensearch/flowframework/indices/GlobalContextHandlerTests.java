@@ -8,11 +8,6 @@
  */
 package org.opensearch.flowframework.indices;
 
-import org.junit.Test;
-import org.mockito.ArgumentCaptor;
-import org.mockito.Mock;
-import org.mockito.MockitoAnnotations;
-
 import org.opensearch.action.index.IndexRequest;
 import org.opensearch.action.index.IndexResponse;
 import org.opensearch.action.update.UpdateRequest;
@@ -29,14 +24,18 @@ import org.opensearch.flowframework.model.Template;
 import org.opensearch.flowframework.workflow.CreateIndexStep;
 import org.opensearch.test.OpenSearchTestCase;
 import org.opensearch.threadpool.ThreadPool;
-
-import static org.mockito.Mockito.*;
-import static org.opensearch.flowframework.constant.CommonValue.GLOBAL_CONTEXT_INDEX;
+import org.junit.Test;
 
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.mockito.ArgumentCaptor;
+import org.mockito.Mock;
+import org.mockito.MockitoAnnotations;
+
+import static org.opensearch.flowframework.constant.CommonValue.GLOBAL_CONTEXT_INDEX;
+import static org.mockito.Mockito.*;
 
 public class GlobalContextHandlerTests extends OpenSearchTestCase {
     @Mock

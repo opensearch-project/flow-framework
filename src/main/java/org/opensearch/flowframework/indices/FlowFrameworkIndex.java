@@ -12,7 +12,6 @@ import org.opensearch.flowframework.function.ThrowingSupplierWrapper;
 
 import java.util.function.Supplier;
 
-import static org.opensearch.flowframework.constant.CommonName.GLOBAL_CONTEXT_INDEX_NAME;
 import static org.opensearch.flowframework.constant.CommonValue.GLOBAL_CONTEXT_INDEX;
 import static org.opensearch.flowframework.constant.CommonValue.GLOBAL_CONTEXT_INDEX_VERSION;
 
