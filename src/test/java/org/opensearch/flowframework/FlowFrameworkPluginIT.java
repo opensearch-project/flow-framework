@@ -10,8 +10,7 @@ package org.opensearch.flowframework;
 
 import com.carrotsearch.randomizedtesting.annotations.ThreadLeakScope;
 
-import org.apache.hc.core5.http.ParseException;
-import org.apache.hc.core5.http.io.entity.EntityUtils;
+import org.apache.http.util.EntityUtils;
 import org.opensearch.client.Request;
 import org.opensearch.client.Response;
 import org.opensearch.plugins.Plugin;
@@ -31,7 +30,7 @@ public class FlowFrameworkPluginIT extends OpenSearchIntegTestCase {
         return Collections.singletonList(FlowFrameworkPlugin.class);
     }
 
-    public void testPluginInstalled() throws IOException, ParseException {
+    public void testPluginInstalled() throws IOException {
         Response response = createRestClient().performRequest(new Request("GET", "/_cat/plugins"));
         String body = EntityUtils.toString(response.getEntity(), StandardCharsets.UTF_8);
 
