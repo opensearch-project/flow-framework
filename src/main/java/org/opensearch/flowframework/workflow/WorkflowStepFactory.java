@@ -22,37 +22,14 @@ import demo.DemoWorkflowStep;
  */
 public class WorkflowStepFactory {
 
-    private static WorkflowStepFactory instance = null;
-
     private final Map<String, WorkflowStep> stepMap = new HashMap<>();
 
     /**
-     * Create the singleton instance of this class. Throws an {@link IllegalStateException} if already created.
+     * Instantiate this class.
      *
      * @param client The OpenSearch client steps can use
-     * @return The created instance
      */
-    public static synchronized WorkflowStepFactory create(Client client) {
-        if (instance != null) {
-            throw new IllegalStateException("This factory was already created.");
-        }
-        instance = new WorkflowStepFactory(client);
-        return instance;
-    }
-
-    /**
-     * Gets the singleton instance of this class. Throws an {@link IllegalStateException} if not yet created.
-     *
-     * @return The created instance
-     */
-    public static synchronized WorkflowStepFactory get() {
-        if (instance == null) {
-            throw new IllegalStateException("This factory has not yet been created.");
-        }
-        return instance;
-    }
-
-    private WorkflowStepFactory(Client client) {
+    public WorkflowStepFactory(Client client) {
         populateMap(client);
     }
 
@@ -62,7 +39,7 @@ public class WorkflowStepFactory {
 
         // TODO: These are from the demo class as placeholders, remove when demos are deleted
         stepMap.put("demo_delay_3", new DemoWorkflowStep(3000));
-        stepMap.put("demo_delay_5", new DemoWorkflowStep(3000));
+        stepMap.put("demo_delay_5", new DemoWorkflowStep(5000));
 
         // Use as a default until all the actual implementations are ready
         stepMap.put("placeholder", new WorkflowStep() {

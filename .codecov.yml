@@ -1,5 +1,5 @@
 codecov:
-  require_ci_to_pass: yes
+  require_ci_to_pass: true
 
 # ignore files in demo package
 ignore:
@@ -12,5 +12,8 @@ coverage:
   status:
     project:
       default:
-        target: 70%    # the required coverage value
-        threshold: 1%  # the leniency in hitting the target
+        target: auto
+        threshold: 2%  # project coverage can drop
+    patch:
+      default:
+        target: 70%    # required diff coverage value

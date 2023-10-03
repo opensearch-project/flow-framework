@@ -41,6 +41,10 @@ public class WorkflowNode implements ToXContentObject {
     public static final String INPUTS_FIELD = "inputs";
     /** The field defining processors in the inputs for search and ingest pipelines */
     public static final String PROCESSORS_FIELD = "processors";
+    /** The field defining the timeout value for this node */
+    public static final String NODE_TIMEOUT_FIELD = "node_timeout";
+    /** The default timeout value if the template doesn't override it */
+    public static final String NODE_TIMEOUT_DEFAULT_VALUE = "10s";
 
     private final String id; // unique id
     private final String type; // maps to a WorkflowStep
