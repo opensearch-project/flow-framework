@@ -27,7 +27,29 @@ import static org.opensearch.core.xcontent.XContentParserUtils.ensureExpectedTok
 public class TemplateTestJsonUtil {
 
     public static String node(String id) {
-        return "{\"" + WorkflowNode.ID_FIELD + "\": \"" + id + "\", \"" + WorkflowNode.TYPE_FIELD + "\": \"" + "placeholder" + "\"}";
+        return nodeWithType(id, "placeholder");
+    }
+
+    public static String nodeWithType(String id, String type) {
+        return "{\"" + WorkflowNode.ID_FIELD + "\": \"" + id + "\", \"" + WorkflowNode.TYPE_FIELD + "\": \"" + type + "\"}";
+    }
+
+    public static String nodeWithTypeAndTimeout(String id, String type, String timeout) {
+        return "{\""
+            + WorkflowNode.ID_FIELD
+            + "\": \""
+            + id
+            + "\", \""
+            + WorkflowNode.TYPE_FIELD
+            + "\": \""
+            + type
+            + "\", \""
+            + WorkflowNode.INPUTS_FIELD
+            + "\": {\""
+            + WorkflowNode.NODE_TIMEOUT_FIELD
+            + "\": \""
+            + timeout
+            + "\"}}";
     }
 
     public static String edge(String sourceId, String destId) {

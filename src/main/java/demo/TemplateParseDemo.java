@@ -14,16 +14,18 @@ import org.opensearch.client.Client;
 import org.opensearch.client.node.NodeClient;
 import org.opensearch.common.SuppressForbidden;
 import org.opensearch.common.io.PathUtils;
+import org.opensearch.common.settings.Settings;
 import org.opensearch.flowframework.model.Template;
 import org.opensearch.flowframework.model.Workflow;
 import org.opensearch.flowframework.workflow.WorkflowProcessSorter;
 import org.opensearch.flowframework.workflow.WorkflowStepFactory;
+import org.opensearch.threadpool.ThreadPool;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.util.Map.Entry;
-import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Demo class exercising {@link WorkflowProcessSorter}. This will be moved to a unit test.
@@ -31,6 +33,8 @@ import java.util.concurrent.Executors;
 public class TemplateParseDemo {
 
     private static final Logger logger = LogManager.getLogger(TemplateParseDemo.class);
+
+    private TemplateParseDemo() {}
 
     /**
      * Demonstrate parsing a JSON graph.
@@ -49,8 +53,9 @@ public class TemplateParseDemo {
             return;
         }
         Client client = new NodeClient(null, null);
-        WorkflowStepFactory factory = WorkflowStepFactory.create(client);
-        WorkflowProcessSorter.create(factory, Executors.newFixedThreadPool(10));
+        WorkflowStepFactory factory = new WorkflowStepFactory(client);
+        ThreadPool threadPool = new ThreadPool(Settings.EMPTY);
+        WorkflowProcessSorter workflowProcessSorter = new WorkflowProcessSorter(factory, threadPool);
 
         Template t = Template.parse(json);
 
@@ -59,7 +64,8 @@ public class TemplateParseDemo {
 
         for (Entry<String, Workflow> e : t.workflows().entrySet()) {
             logger.info("Parsing {} workflow.", e.getKey());
-            WorkflowProcessSorter.get().sortProcessNodes(e.getValue());
+            workflowProcessSorter.sortProcessNodes(e.getValue());
         }
+        ThreadPool.terminate(threadPool, 500, TimeUnit.MILLISECONDS);
     }
 }

@@ -10,9 +10,11 @@ package org.opensearch.flowframework.workflow;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.opensearch.common.unit.TimeValue;
 import org.opensearch.flowframework.model.Workflow;
 import org.opensearch.flowframework.model.WorkflowEdge;
 import org.opensearch.flowframework.model.WorkflowNode;
+import org.opensearch.threadpool.ThreadPool;
 
 import java.util.ArrayDeque;
 import java.util.ArrayList;
@@ -23,52 +25,32 @@ import java.util.List;
 import java.util.Map;
 import java.util.Queue;
 import java.util.Set;
-import java.util.concurrent.Executor;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
+import static org.opensearch.flowframework.model.WorkflowNode.INPUTS_FIELD;
+import static org.opensearch.flowframework.model.WorkflowNode.NODE_TIMEOUT_DEFAULT_VALUE;
+import static org.opensearch.flowframework.model.WorkflowNode.NODE_TIMEOUT_FIELD;
+
 /**
- * Utility class converting a workflow of nodes and edges into a topologically sorted list of Process Nodes.
+ * Converts a workflow of nodes and edges into a topologically sorted list of Process Nodes.
  */
 public class WorkflowProcessSorter {
 
     private static final Logger logger = LogManager.getLogger(WorkflowProcessSorter.class);
 
-    private static WorkflowProcessSorter instance = null;
-
     private WorkflowStepFactory workflowStepFactory;
-    private Executor executor;
+    private ThreadPool threadPool;
 
     /**
-     * Create the singleton instance of this class. Throws an {@link IllegalStateException} if already created.
+     * Instantiate this class.
      *
-     * @param workflowStepFactory The singleton instance of {@link WorkflowStepFactory}
-     * @param executor A thread executor
-     * @return The created instance
+     * @param workflowStepFactory The factory which matches template step types to instances.
+     * @param threadPool The OpenSearch Thread pool to pass to process nodes.
      */
-    public static synchronized WorkflowProcessSorter create(WorkflowStepFactory workflowStepFactory, Executor executor) {
-        if (instance != null) {
-            throw new IllegalStateException("This class was already created.");
-        }
-        instance = new WorkflowProcessSorter(workflowStepFactory, executor);
-        return instance;
-    }
-
-    /**
-     * Gets the singleton instance of this class. Throws an {@link IllegalStateException} if not yet created.
-     *
-     * @return The created instance
-     */
-    public static synchronized WorkflowProcessSorter get() {
-        if (instance == null) {
-            throw new IllegalStateException("This factory has not yet been created.");
-        }
-        return instance;
-    }
-
-    private WorkflowProcessSorter(WorkflowStepFactory workflowStepFactory, Executor executor) {
+    public WorkflowProcessSorter(WorkflowStepFactory workflowStepFactory, ThreadPool threadPool) {
         this.workflowStepFactory = workflowStepFactory;
-        this.executor = executor;
+        this.threadPool = threadPool;
     }
 
     /**
@@ -91,12 +73,25 @@ public class WorkflowProcessSorter {
                 .map(e -> idToNodeMap.get(e.source()))
                 .collect(Collectors.toList());
 
-            ProcessNode processNode = new ProcessNode(node.id(), step, data, predecessorNodes, executor);
+            TimeValue nodeTimeout = parseTimeout(node);
+            ProcessNode processNode = new ProcessNode(node.id(), step, data, predecessorNodes, threadPool, nodeTimeout);
             idToNodeMap.put(processNode.id(), processNode);
             nodes.add(processNode);
         }
 
         return nodes;
+    }
+
+    private TimeValue parseTimeout(WorkflowNode node) {
+        String timeoutValue = (String) node.inputs().getOrDefault(NODE_TIMEOUT_FIELD, NODE_TIMEOUT_DEFAULT_VALUE);
+        String fieldName = String.join(".", node.id(), INPUTS_FIELD, NODE_TIMEOUT_FIELD);
+        TimeValue timeValue = TimeValue.parseTimeValue(timeoutValue, fieldName);
+        if (timeValue.millis() < 0) {
+            throw new IllegalArgumentException(
+                "Failed to parse timeout value [" + timeoutValue + "] for field [" + fieldName + "]. Must be positive"
+            );
+        }
+        return timeValue;
     }
 
     private static List<WorkflowNode> topologicalSort(List<WorkflowNode> workflowNodes, List<WorkflowEdge> workflowEdges) {
