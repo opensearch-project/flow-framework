@@ -58,6 +58,11 @@ public class FlowFrameworkPlugin extends Plugin implements ActionPlugin {
      */
     public static final String WORKFLOWS_URI = AI_FLOW_FRAMEWORK_BASE_URI + "/workflows";
 
+    /**
+     * Instantiate this plugin.
+     */
+    public FlowFrameworkPlugin() {}
+
     @Override
     public Collection<Object> createComponents(
         Client client,
@@ -72,8 +77,8 @@ public class FlowFrameworkPlugin extends Plugin implements ActionPlugin {
         IndexNameExpressionResolver indexNameExpressionResolver,
         Supplier<RepositoriesService> repositoriesServiceSupplier
     ) {
-        WorkflowStepFactory workflowStepFactory = WorkflowStepFactory.create(client);
-        WorkflowProcessSorter workflowProcessSorter = WorkflowProcessSorter.create(workflowStepFactory, threadPool.generic());
+        WorkflowStepFactory workflowStepFactory = new WorkflowStepFactory(client);
+        WorkflowProcessSorter workflowProcessSorter = new WorkflowProcessSorter(workflowStepFactory, threadPool);
 
         return ImmutableList.of(workflowStepFactory, workflowProcessSorter);
     }

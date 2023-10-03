@@ -24,7 +24,7 @@ public interface WorkflowStep {
     CompletableFuture<WorkflowData> execute(List<WorkflowData> data);
 
     /**
-     *
+     * Gets the name of the workflow step.
      * @return the name of this workflow step.
      */
     String getName();
