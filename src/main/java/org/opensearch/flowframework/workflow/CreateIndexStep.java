@@ -8,6 +8,7 @@
  */
 package org.opensearch.flowframework.workflow;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Charsets;
 import com.google.common.io.Resources;
 import org.apache.logging.log4j.LogManager;
@@ -226,7 +227,8 @@ public class CreateIndexStep implements WorkflowStep {
      * @param newVersion new index mapping version
      * @param listener action listener, if update index is needed, will pass true to its onResponse method
      */
-    private void shouldUpdateIndex(String indexName, Integer newVersion, ActionListener<Boolean> listener) {
+    @VisibleForTesting
+    protected void shouldUpdateIndex(String indexName, Integer newVersion, ActionListener<Boolean> listener) {
         IndexMetadata indexMetaData = clusterService.state().getMetadata().indices().get(indexName);
         if (indexMetaData == null) {
             listener.onResponse(Boolean.FALSE);
