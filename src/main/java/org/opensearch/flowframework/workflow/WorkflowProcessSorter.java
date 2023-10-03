@@ -10,7 +10,6 @@ package org.opensearch.flowframework.workflow;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.opensearch.common.settings.Setting;
 import org.opensearch.common.unit.TimeValue;
 import org.opensearch.flowframework.model.Workflow;
 import org.opensearch.flowframework.model.WorkflowEdge;
@@ -74,17 +73,25 @@ public class WorkflowProcessSorter {
                 .map(e -> idToNodeMap.get(e.source()))
                 .collect(Collectors.toList());
 
-            TimeValue nodeTimeout = Setting.parseTimeValue(
-                (String) node.inputs().getOrDefault(NODE_TIMEOUT_FIELD, NODE_TIMEOUT_DEFAULT_VALUE),
-                TimeValue.ZERO,
-                String.join(".", node.id(), INPUTS_FIELD, NODE_TIMEOUT_FIELD)
-            );
+            TimeValue nodeTimeout = parseTimeout(node);
             ProcessNode processNode = new ProcessNode(node.id(), step, data, predecessorNodes, threadPool, nodeTimeout);
             idToNodeMap.put(processNode.id(), processNode);
             nodes.add(processNode);
         }
 
         return nodes;
+    }
+
+    private TimeValue parseTimeout(WorkflowNode node) {
+        String timeoutValue = (String) node.inputs().getOrDefault(NODE_TIMEOUT_FIELD, NODE_TIMEOUT_DEFAULT_VALUE);
+        String fieldName = String.join(".", node.id(), INPUTS_FIELD, NODE_TIMEOUT_FIELD);
+        TimeValue timeValue = TimeValue.parseTimeValue(timeoutValue, fieldName);
+        if (timeValue.millis() < 0) {
+            throw new IllegalArgumentException(
+                "Failed to parse timeout value [" + timeoutValue + "] for field [" + fieldName + "]. Must be positive"
+            );
+        }
+        return timeValue;
     }
 
     private static List<WorkflowNode> topologicalSort(List<WorkflowNode> workflowNodes, List<WorkflowEdge> workflowEdges) {
