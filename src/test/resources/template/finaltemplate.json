@@ -16,7 +16,8 @@
     },
     "user_inputs": {
         "index_name": "my-knn-index",
-        "index_settings": {}
+        "index_settings": {},
+
     },
     "workflows": {
         "provision": {

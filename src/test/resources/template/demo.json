@@ -9,37 +9,33 @@
             "nodes": [
                 {
                     "id": "fetch_model",
-                    "type": "demo_delay_3"
+                    "type": "demo_delay_3",
+                    "inputs": {
+                        "ingest_key": "ingest_value"
+                    }
                 },
                 {
-                    "id": "create_ingest_pipeline",
-                    "type": "demo_delay_3"
+                    "id": "register_model",
+                    "type": "register_model",
+                    "inputs": {
+                        "name": "openAI-gpt-3.5-turbo",
+                        "function_name": "remote",
+                        "description": "test model",
+                        "connector_id": "uDna54oB76l1MtYJF84U"
+                    }
                 },
                 {
-                    "id": "create_search_pipeline",
-                    "type": "demo_delay_5"
-                },
-                {
-                    "id": "create_neural_search_index",
-                    "type": "demo_delay_3"
+                    "id": "deploy_model",
+                    "type": "deploy_model",
+                    "inputs": {
+                        "model_id": "abc"
+                    }
                 }
             ],
             "edges": [
                 {
                     "source": "fetch_model",
-                    "dest": "create_ingest_pipeline"
-                },
-                {
-                    "source": "fetch_model",
-                    "dest": "create_search_pipeline"
-                },
-                {
-                    "source": "create_ingest_pipeline",
-                    "dest": "create_neural_search_index"
-                },
-                {
-                    "source": "create_search_pipeline",
-                    "dest": "create_neural_search_index"
+                    "dest": "deploy_model"
                 }
             ]
         }

@@ -10,30 +10,74 @@ package org.opensearch.flowframework.workflow;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.opensearch.client.Client;
+import org.opensearch.client.node.NodeClient;
 import org.opensearch.core.action.ActionListener;
+import org.opensearch.flowframework.client.MLClient;
 import org.opensearch.ml.client.MachineLearningNodeClient;
 import org.opensearch.ml.common.MLTaskState;
 import org.opensearch.ml.common.transport.deploy.MLDeployModelResponse;
 
-public class DeployModel {
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.CompletableFuture;
+
+public class DeployModel implements WorkflowStep {
     private static final Logger logger = LogManager.getLogger(DeployModel.class);
 
-    public void deployModel(MachineLearningNodeClient machineLearningNodeClient, String modelId) {
+    private NodeClient nodeClient;
+    private static final String MODEL_ID = "model_id";
+    static final String NAME = "deploy_model";
+
+    public DeployModel(Client client) {
+        this.nodeClient = (NodeClient) client;
+    }
+
+    @Override
+    public CompletableFuture<WorkflowData> execute(List<WorkflowData> data) {
+
+        CompletableFuture<WorkflowData> deployModelFuture = new CompletableFuture<>();
+
+        MachineLearningNodeClient machineLearningNodeClient = MLClient.createMLClient(nodeClient);
 
         ActionListener<MLDeployModelResponse> actionListener = new ActionListener<>() {
             @Override
             public void onResponse(MLDeployModelResponse mlDeployModelResponse) {
                 if (mlDeployModelResponse.getStatus() == MLTaskState.COMPLETED.name()) {
                     logger.info("Model deployed successfully");
+                    deployModelFuture.complete(
+                        new WorkflowData(Map.ofEntries(Map.entry("deploy-model-status", mlDeployModelResponse.getStatus())))
+                    );
                 }
             }
 
             @Override
             public void onFailure(Exception e) {
                 logger.error("Model deployment failed");
+                deployModelFuture.completeExceptionally(e);
             }
         };
-        machineLearningNodeClient.deploy(modelId, actionListener);
 
+        String modelId = null;
+
+        for (WorkflowData workflowData : data) {
+            if (workflowData != null) {
+                Map<String, Object> content = workflowData.getContent();
+
+                for (Map.Entry<String, Object> entry : content.entrySet()) {
+                    if (entry.getKey() == MODEL_ID) {
+                        modelId = (String) content.get(MODEL_ID);
+                    }
+
+                }
+            }
+        }
+        machineLearningNodeClient.deploy(modelId, actionListener);
+        return deployModelFuture;
+    }
+
+    @Override
+    public String getName() {
+        return NAME;
     }
 }

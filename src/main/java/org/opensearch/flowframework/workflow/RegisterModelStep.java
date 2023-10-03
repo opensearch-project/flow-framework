@@ -21,27 +21,26 @@ import org.opensearch.ml.common.model.MLModelFormat;
 import org.opensearch.ml.common.transport.register.MLRegisterModelInput;
 import org.opensearch.ml.common.transport.register.MLRegisterModelResponse;
 import org.opensearch.threadpool.Scheduler;
-import org.opensearch.threadpool.ThreadPool;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Stream;
 
-public class RegisterAndDeployModelStep implements WorkflowStep {
+public class RegisterModelStep implements WorkflowStep {
 
-    private static final Logger logger = LogManager.getLogger(RegisterAndDeployModelStep.class);
+    private static final Logger logger = LogManager.getLogger(RegisterModelStep.class);
 
-    private Client client;
-    private ThreadPool threadPool;
+    private NodeClient nodeClient;
     private volatile Scheduler.Cancellable scheduledFuture;
 
-    static final String NAME = "register_model_step";
+    static final String NAME = "register_model";
 
     private static final String FUNCTION_NAME = "function_name";
-    private static final String MODEL_NAME = "model_name";
+    private static final String MODEL_NAME = "name";
     private static final String MODEL_VERSION = "model_version";
     private static final String MODEL_GROUP_ID = "model_group_id";
     private static final String DESCRIPTION = "description";
@@ -49,8 +48,8 @@ public class RegisterAndDeployModelStep implements WorkflowStep {
     private static final String MODEL_FORMAT = "model_format";
     private static final String MODEL_CONFIG = "model_config";
 
-    public RegisterAndDeployModelStep(Client client) {
-        this.client = client;
+    public RegisterModelStep(Client client) {
+        this.nodeClient = (NodeClient) client;
     }
 
     @Override
@@ -58,7 +57,7 @@ public class RegisterAndDeployModelStep implements WorkflowStep {
 
         CompletableFuture<WorkflowData> registerModelFuture = new CompletableFuture<>();
 
-        MachineLearningNodeClient machineLearningNodeClient = MLClient.createMLClient((NodeClient) client);
+        MachineLearningNodeClient machineLearningNodeClient = MLClient.createMLClient(nodeClient);
 
         ActionListener<MLRegisterModelResponse> actionListener = new ActionListener<>() {
             @Override
@@ -85,9 +84,17 @@ public class RegisterAndDeployModelStep implements WorkflowStep {
                 // scheduledFuture = threadPool.scheduleWithFixedDelay(new GetTask(machineLearningNodeClient,
                 // mlRegisterModelResponse.getTaskId()), TimeValue.timeValueMillis(10L), ThreadPool.Names.GENERIC);
 
-                DeployModel deployModel = new DeployModel();
-                deployModel.deployModel(machineLearningNodeClient, mlRegisterModelResponse.getModelId());
-
+                /*DeployModel deployModel = new DeployModel();
+                deployModel.deployModel(machineLearningNodeClient, mlRegisterModelResponse.getModelId());*/
+                logger.info("Model registration successful");
+                registerModelFuture.complete(
+                    new WorkflowData(
+                        Map.ofEntries(
+                            Map.entry("modelId", mlRegisterModelResponse.getModelId()),
+                            Map.entry("model-register-status", mlRegisterModelResponse.getStatus())
+                        )
+                    )
+                );
             }
 
             @Override
@@ -107,53 +114,50 @@ public class RegisterAndDeployModelStep implements WorkflowStep {
         MLModelConfig modelConfig = null;
 
         for (WorkflowData workflowData : data) {
-            Map<String, String> parameters = workflowData.getParams();
-            Map<String, Object> content = workflowData.getContent();
-            logger.info("Previous step sent params: {}, content: {}", parameters, content);
+            if (workflowData != null) {
+                Map<String, Object> content = workflowData.getContent();
+                logger.info("Previous step sent content: {}", content);
 
-            for (Entry<String, Object> entry : content.entrySet()) {
-                switch (entry.getKey()) {
-                    case FUNCTION_NAME:
-                        functionName = (FunctionName) content.get(FUNCTION_NAME);
-                        break;
-                    case MODEL_NAME:
-                        modelName = (String) content.get(MODEL_NAME);
-                        break;
-                    case MODEL_VERSION:
-                        modelVersion = (String) content.get(MODEL_VERSION);
-                        break;
-                    case MODEL_GROUP_ID:
-                        modelGroupId = (String) content.get(MODEL_GROUP_ID);
-                        break;
-                    case MODEL_FORMAT:
-                        modelFormat = (MLModelFormat) content.get(MODEL_FORMAT);
-                        break;
-                    case MODEL_CONFIG:
-                        modelConfig = (MLModelConfig) content.get(MODEL_CONFIG);
-                        break;
-                    case DESCRIPTION:
-                        description = (String) content.get(DESCRIPTION);
-                        break;
-                    case CONNECTOR_ID:
-                        connectorId = (String) content.get(CONNECTOR_ID);
-                        break;
-                    default:
-                        break;
+                for (Entry<String, Object> entry : content.entrySet()) {
+                    switch (entry.getKey()) {
+                        case FUNCTION_NAME:
+                            functionName = FunctionName.from(((String) content.get(FUNCTION_NAME)).toUpperCase(Locale.ROOT));
+                            break;
+                        case MODEL_NAME:
+                            modelName = (String) content.get(MODEL_NAME);
+                            break;
+                        case MODEL_VERSION:
+                            modelVersion = (String) content.get(MODEL_VERSION);
+                            break;
+                        case MODEL_GROUP_ID:
+                            modelGroupId = (String) content.get(MODEL_GROUP_ID);
+                            break;
+                        case MODEL_FORMAT:
+                            modelFormat = MLModelFormat.from((String) content.get(MODEL_FORMAT));
+                            break;
+                        case MODEL_CONFIG:
+                            modelConfig = (MLModelConfig) content.get(MODEL_CONFIG);
+                            break;
+                        case DESCRIPTION:
+                            description = (String) content.get(DESCRIPTION);
+                            break;
+                        case CONNECTOR_ID:
+                            connectorId = (String) content.get(CONNECTOR_ID);
+                            break;
+                        default:
+                            break;
 
+                    }
                 }
             }
         }
 
-        if (Stream.of(functionName, modelName, modelVersion, modelGroupId, description, connectorId).allMatch(x -> x != null)) {
+        if (Stream.of(functionName, modelName, description, connectorId).allMatch(x -> x != null)) {
 
             // TODO: Add model Config and type cast correctly
             MLRegisterModelInput mlInput = MLRegisterModelInput.builder()
                 .functionName(functionName)
                 .modelName(modelName)
-                .version(modelVersion)
-                .modelGroupId(modelGroupId)
-                .modelFormat(modelFormat)
-                .modelConfig(modelConfig)
                 .description(description)
                 .connectorId(connectorId)
                 .build();
