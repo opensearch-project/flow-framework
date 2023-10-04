@@ -37,6 +37,8 @@ import org.opensearch.repositories.RepositoriesService;
 import org.opensearch.rest.RestController;
 import org.opensearch.rest.RestHandler;
 import org.opensearch.script.ScriptService;
+import org.opensearch.threadpool.ExecutorBuilder;
+import org.opensearch.threadpool.FixedExecutorBuilder;
 import org.opensearch.threadpool.ThreadPool;
 import org.opensearch.watcher.ResourceWatcherService;
 
@@ -49,14 +51,23 @@ import java.util.function.Supplier;
  */
 public class FlowFrameworkPlugin extends Plugin implements ActionPlugin {
 
+    // TODO : Move names to common values class
     /**
      * The base URI for this plugin's rest actions
      */
-    public static final String AI_FLOW_FRAMEWORK_BASE_URI = "/_plugins/_ai_flow";
+    public static final String AI_FLOW_FRAMEWORK_BASE_URI = "/_plugins/_flow_framework";
     /**
      * The URI for this plugin's workflow rest actions
      */
     public static final String WORKFLOWS_URI = AI_FLOW_FRAMEWORK_BASE_URI + "/workflows";
+    /**
+     * Flow Framework plugin thread pool name prefix
+     */
+    public static final String FLOW_FRAMEWORK_THREAD_POOL_PREFIX = "thread_pool.flow_framework.";
+    /**
+     * The provision workflow thread pool name
+     */
+    public static final String PROVISION_THREAD_POOL = "opensearch_workflow_provision";
 
     /**
      * Instantiate this plugin.
@@ -102,6 +113,20 @@ public class FlowFrameworkPlugin extends Plugin implements ActionPlugin {
             new ActionHandler<>(CreateWorkflowAction.INSTANCE, CreateWorkflowTransportAction.class),
             new ActionHandler<>(ProvisionWorkflowAction.INSTANCE, ProvisionWorkflowTransportAction.class)
         );
+    }
+
+    @Override
+    public List<ExecutorBuilder<?>> getExecutorBuilders(Settings settings) {
+        // TODO : Determine final size/queueSize values for the provision thread pool
+        FixedExecutorBuilder provisionThreadPool = new FixedExecutorBuilder(
+            settings,
+            PROVISION_THREAD_POOL,
+            1,
+            10,
+            FLOW_FRAMEWORK_THREAD_POOL_PREFIX + PROVISION_THREAD_POOL,
+            false
+        );
+        return ImmutableList.of(provisionThreadPool);
     }
 
 }
