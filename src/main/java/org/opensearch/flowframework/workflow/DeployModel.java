@@ -15,7 +15,6 @@ import org.opensearch.client.node.NodeClient;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.flowframework.client.MLClient;
 import org.opensearch.ml.client.MachineLearningNodeClient;
-import org.opensearch.ml.common.MLTaskState;
 import org.opensearch.ml.common.transport.deploy.MLDeployModelResponse;
 
 import java.util.List;
@@ -43,12 +42,10 @@ public class DeployModel implements WorkflowStep {
         ActionListener<MLDeployModelResponse> actionListener = new ActionListener<>() {
             @Override
             public void onResponse(MLDeployModelResponse mlDeployModelResponse) {
-                if (mlDeployModelResponse.getStatus() == MLTaskState.COMPLETED.name()) {
-                    logger.info("Model deployed successfully");
-                    deployModelFuture.complete(
-                        new WorkflowData(Map.ofEntries(Map.entry("deploy-model-status", mlDeployModelResponse.getStatus())))
-                    );
-                }
+                logger.info("Model deployment state {}", mlDeployModelResponse.getStatus());
+                deployModelFuture.complete(
+                    new WorkflowData(Map.ofEntries(Map.entry("deploy-model-status", mlDeployModelResponse.getStatus())))
+                );
             }
 
             @Override

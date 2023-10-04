@@ -62,30 +62,6 @@ public class RegisterModelStep implements WorkflowStep {
         ActionListener<MLRegisterModelResponse> actionListener = new ActionListener<>() {
             @Override
             public void onResponse(MLRegisterModelResponse mlRegisterModelResponse) {
-
-                /*ActionListener<MLDeployModelResponse> deployActionListener = new ActionListener<>() {
-                    @Override
-                    public void onResponse(MLDeployModelResponse mlDeployModelResponse) {
-                        if (mlDeployModelResponse.getStatus() == MLTaskState.COMPLETED.name()) {
-                            logger.info("Model deployment successful");
-                            registerModelFuture.complete(
-                                new WorkflowData(Map.ofEntries(Map.entry("modelId", mlRegisterModelResponse.getModelId())))
-                            );
-                        }
-                    }
-
-                    @Override
-                    public void onFailure(Exception e) {
-                        logger.error("Model deployment failed");
-                        registerModelFuture.completeExceptionally(new IOException("Model deployment failed"));
-                    }
-                };
-                machineLearningNodeClient.deploy(mlRegisterModelResponse.getModelId(), deployActionListener);*/
-                // scheduledFuture = threadPool.scheduleWithFixedDelay(new GetTask(machineLearningNodeClient,
-                // mlRegisterModelResponse.getTaskId()), TimeValue.timeValueMillis(10L), ThreadPool.Names.GENERIC);
-
-                /*DeployModel deployModel = new DeployModel();
-                deployModel.deployModel(machineLearningNodeClient, mlRegisterModelResponse.getModelId());*/
                 logger.info("Model registration successful");
                 registerModelFuture.complete(
                     new WorkflowData(
@@ -116,7 +92,6 @@ public class RegisterModelStep implements WorkflowStep {
         for (WorkflowData workflowData : data) {
             if (workflowData != null) {
                 Map<String, Object> content = workflowData.getContent();
-                logger.info("Previous step sent content: {}", content);
 
                 for (Entry<String, Object> entry : content.entrySet()) {
                     switch (entry.getKey()) {
