@@ -14,10 +14,12 @@ import org.opensearch.client.Client;
 import org.opensearch.client.node.NodeClient;
 import org.opensearch.common.SuppressForbidden;
 import org.opensearch.common.io.PathUtils;
+import org.opensearch.common.settings.Settings;
 import org.opensearch.flowframework.model.Template;
 import org.opensearch.flowframework.workflow.ProcessNode;
 import org.opensearch.flowframework.workflow.WorkflowProcessSorter;
 import org.opensearch.flowframework.workflow.WorkflowStepFactory;
+import org.opensearch.threadpool.ThreadPool;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -26,8 +28,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 /**
@@ -36,6 +37,8 @@ import java.util.stream.Collectors;
 public class Demo {
 
     private static final Logger logger = LogManager.getLogger(Demo.class);
+
+    private Demo() {}
 
     /**
      * Demonstrate parsing a JSON graph.
@@ -54,13 +57,14 @@ public class Demo {
             return;
         }
         Client client = new NodeClient(null, null);
-        WorkflowStepFactory factory = WorkflowStepFactory.create(client);
-        ExecutorService executor = Executors.newFixedThreadPool(10);
-        WorkflowProcessSorter.create(factory, executor);
+        WorkflowStepFactory factory = new WorkflowStepFactory(client);
+
+        ThreadPool threadPool = new ThreadPool(Settings.EMPTY);
+        WorkflowProcessSorter workflowProcessSorter = new WorkflowProcessSorter(factory, threadPool);
 
         logger.info("Parsing graph to sequence...");
         Template t = Template.parse(json);
-        List<ProcessNode> processSequence = WorkflowProcessSorter.get().sortProcessNodes(t.workflows().get("demo"));
+        List<ProcessNode> processSequence = workflowProcessSorter.sortProcessNodes(t.workflows().get("demo"));
         List<CompletableFuture<?>> futureList = new ArrayList<>();
 
         for (ProcessNode n : processSequence) {
@@ -80,6 +84,6 @@ public class Demo {
         }
         futureList.forEach(CompletableFuture::join);
         logger.info("All done!");
-        executor.shutdown();
+        ThreadPool.terminate(threadPool, 500, TimeUnit.MILLISECONDS);
     }
 }

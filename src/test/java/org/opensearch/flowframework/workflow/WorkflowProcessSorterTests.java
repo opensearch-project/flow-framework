@@ -14,18 +14,21 @@ import org.opensearch.core.xcontent.XContentParser;
 import org.opensearch.flowframework.model.TemplateTestJsonUtil;
 import org.opensearch.flowframework.model.Workflow;
 import org.opensearch.test.OpenSearchTestCase;
+import org.opensearch.threadpool.TestThreadPool;
+import org.opensearch.threadpool.ThreadPool;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 
 import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 import static org.opensearch.flowframework.model.TemplateTestJsonUtil.edge;
 import static org.opensearch.flowframework.model.TemplateTestJsonUtil.node;
+import static org.opensearch.flowframework.model.TemplateTestJsonUtil.nodeWithType;
+import static org.opensearch.flowframework.model.TemplateTestJsonUtil.nodeWithTypeAndTimeout;
 import static org.opensearch.flowframework.model.TemplateTestJsonUtil.workflow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -36,14 +39,19 @@ public class WorkflowProcessSorterTests extends OpenSearchTestCase {
     private static final String NO_START_NODE_DETECTED = "No start node detected: all nodes have a predecessor.";
     private static final String CYCLE_DETECTED = "Cycle detected:";
 
-    // Wrap parser into string list
-    private static List<String> parse(String json) throws IOException {
+    // Wrap parser into node list
+    private static List<ProcessNode> parseToNodes(String json) throws IOException {
         XContentParser parser = TemplateTestJsonUtil.jsonToParser(json);
         Workflow w = Workflow.parse(parser);
-        return workflowProcessSorter.sortProcessNodes(w).stream().map(ProcessNode::id).collect(Collectors.toList());
+        return workflowProcessSorter.sortProcessNodes(w);
     }
 
-    private static ExecutorService executor;
+    // Wrap parser into string list
+    private static List<String> parse(String json) throws IOException {
+        return parseToNodes(json).stream().map(ProcessNode::id).collect(Collectors.toList());
+    }
+
+    private static TestThreadPool testThreadPool;
     private static WorkflowProcessSorter workflowProcessSorter;
 
     @BeforeClass
@@ -52,14 +60,35 @@ public class WorkflowProcessSorterTests extends OpenSearchTestCase {
         Client client = mock(Client.class);
         when(client.admin()).thenReturn(adminClient);
 
-        executor = Executors.newFixedThreadPool(10);
-        WorkflowStepFactory factory = WorkflowStepFactory.create(client);
-        workflowProcessSorter = WorkflowProcessSorter.create(factory, executor);
+        testThreadPool = new TestThreadPool(WorkflowProcessSorterTests.class.getName());
+        WorkflowStepFactory factory = new WorkflowStepFactory(client);
+        workflowProcessSorter = new WorkflowProcessSorter(factory, testThreadPool);
     }
 
     @AfterClass
     public static void cleanup() {
-        executor.shutdown();
+        ThreadPool.terminate(testThreadPool, 500, TimeUnit.MILLISECONDS);
+    }
+
+    public void testNodeDetails() throws IOException {
+        List<ProcessNode> workflow = null;
+        workflow = parseToNodes(
+            workflow(
+                List.of(
+                    nodeWithType("default_timeout", "create_ingest_pipeline"),
+                    nodeWithTypeAndTimeout("custom_timeout", "create_index", "100ms")
+                ),
+                Collections.emptyList()
+            )
+        );
+        ProcessNode node = workflow.get(0);
+        assertEquals("default_timeout", node.id());
+        assertEquals(CreateIngestPipelineStep.class, node.workflowStep().getClass());
+        assertEquals(10, node.nodeTimeout().seconds());
+        node = workflow.get(1);
+        assertEquals("custom_timeout", node.id());
+        assertEquals(CreateIndexStep.class, node.workflowStep().getClass());
+        assertEquals(100, node.nodeTimeout().millis());
     }
 
     public void testOrdering() throws IOException {
