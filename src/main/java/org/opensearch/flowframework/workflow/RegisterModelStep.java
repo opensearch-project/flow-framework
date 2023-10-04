@@ -10,7 +10,6 @@ package org.opensearch.flowframework.workflow;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.opensearch.client.Client;
 import org.opensearch.client.node.NodeClient;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.flowframework.client.MLClient;
@@ -20,7 +19,6 @@ import org.opensearch.ml.common.model.MLModelConfig;
 import org.opensearch.ml.common.model.MLModelFormat;
 import org.opensearch.ml.common.transport.register.MLRegisterModelInput;
 import org.opensearch.ml.common.transport.register.MLRegisterModelResponse;
-import org.opensearch.threadpool.Scheduler;
 
 import java.io.IOException;
 import java.util.List;
@@ -35,7 +33,6 @@ public class RegisterModelStep implements WorkflowStep {
     private static final Logger logger = LogManager.getLogger(RegisterModelStep.class);
 
     private NodeClient nodeClient;
-    private volatile Scheduler.Cancellable scheduledFuture;
 
     static final String NAME = "register_model";
 
@@ -48,8 +45,8 @@ public class RegisterModelStep implements WorkflowStep {
     private static final String MODEL_FORMAT = "model_format";
     private static final String MODEL_CONFIG = "model_config";
 
-    public RegisterModelStep(Client client) {
-        this.nodeClient = (NodeClient) client;
+    public RegisterModelStep(NodeClient nodeClient) {
+        this.nodeClient = nodeClient;
     }
 
     @Override

@@ -28,10 +28,11 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
-import static org.mockito.Mockito.*;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doAnswer;
 
 @ThreadLeakScope(ThreadLeakScope.Scope.NONE)
-public class DeployModelTests extends OpenSearchTestCase {
+public class DeployModelStepTests extends OpenSearchTestCase {
 
     private WorkflowData inputData = WorkflowData.EMPTY;
 
@@ -59,7 +60,7 @@ public class DeployModelTests extends OpenSearchTestCase {
         String status = MLTaskState.CREATED.name();
         MLTaskType mlTaskType = MLTaskType.DEPLOY_MODEL;
 
-        DeployModel deployModel = new DeployModel(nodeClient);
+        DeployModelStep deployModel = new DeployModelStep(nodeClient);
 
         ArgumentCaptor<ActionListener<MLDeployModelResponse>> actionListenerCaptor = ArgumentCaptor.forClass(ActionListener.class);
 

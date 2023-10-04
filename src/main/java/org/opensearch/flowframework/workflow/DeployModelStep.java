@@ -10,7 +10,6 @@ package org.opensearch.flowframework.workflow;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.opensearch.client.Client;
 import org.opensearch.client.node.NodeClient;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.flowframework.client.MLClient;
@@ -21,15 +20,15 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
-public class DeployModel implements WorkflowStep {
-    private static final Logger logger = LogManager.getLogger(DeployModel.class);
+public class DeployModelStep implements WorkflowStep {
+    private static final Logger logger = LogManager.getLogger(DeployModelStep.class);
 
     private NodeClient nodeClient;
     private static final String MODEL_ID = "model_id";
     static final String NAME = "deploy_model";
 
-    public DeployModel(Client client) {
-        this.nodeClient = (NodeClient) client;
+    public DeployModelStep(NodeClient nodeClient) {
+        this.nodeClient = nodeClient;
     }
 
     @Override

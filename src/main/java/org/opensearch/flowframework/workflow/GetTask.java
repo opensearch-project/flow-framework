@@ -10,12 +10,14 @@ package org.opensearch.flowframework.workflow;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.opensearch.common.SuppressForbidden;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.ml.client.MachineLearningNodeClient;
 import org.opensearch.ml.common.MLTask;
 import org.opensearch.ml.common.MLTaskState;
 import org.opensearch.ml.common.transport.task.MLTaskGetResponse;
 
+@SuppressForbidden(reason = "This class is for the future work of registering local model")
 public class GetTask {
 
     private static final Logger logger = LogManager.getLogger(GetTask.class);

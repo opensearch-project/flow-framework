@@ -10,8 +10,10 @@ package org.opensearch.flowframework;
 
 import com.google.common.collect.ImmutableList;
 import org.opensearch.client.Client;
+import org.opensearch.client.node.NodeClient;
 import org.opensearch.cluster.metadata.IndexNameExpressionResolver;
 import org.opensearch.cluster.service.ClusterService;
+import org.opensearch.common.settings.Settings;
 import org.opensearch.core.common.io.stream.NamedWriteableRegistry;
 import org.opensearch.core.xcontent.NamedXContentRegistry;
 import org.opensearch.env.Environment;
@@ -51,7 +53,10 @@ public class FlowFrameworkPlugin extends Plugin {
         IndexNameExpressionResolver indexNameExpressionResolver,
         Supplier<RepositoriesService> repositoriesServiceSupplier
     ) {
-        WorkflowStepFactory workflowStepFactory = new WorkflowStepFactory(clusterService, client);
+        Settings settings = environment.settings();
+        // TODO: Creating NodeClient is a temporary fix until we get the NodeClient from the provision API
+        NodeClient nodeClient = new NodeClient(settings, threadPool);
+        WorkflowStepFactory workflowStepFactory = new WorkflowStepFactory(clusterService, client, nodeClient);
         WorkflowProcessSorter workflowProcessSorter = new WorkflowProcessSorter(workflowStepFactory, threadPool);
 
         return ImmutableList.of(workflowStepFactory, workflowProcessSorter);

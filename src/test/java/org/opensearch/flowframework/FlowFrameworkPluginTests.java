@@ -10,6 +10,8 @@ package org.opensearch.flowframework;
 
 import org.opensearch.client.AdminClient;
 import org.opensearch.client.Client;
+import org.opensearch.common.settings.Settings;
+import org.opensearch.env.Environment;
 import org.opensearch.test.OpenSearchTestCase;
 import org.opensearch.threadpool.TestThreadPool;
 import org.opensearch.threadpool.ThreadPool;
@@ -41,7 +43,8 @@ public class FlowFrameworkPluginTests extends OpenSearchTestCase {
 
     public void testPlugin() throws IOException {
         try (FlowFrameworkPlugin ffp = new FlowFrameworkPlugin()) {
-            assertEquals(2, ffp.createComponents(client, null, threadPool, null, null, null, null, null, null, null, null).size());
+            Environment env = new Environment(Settings.builder().put("path.home", "dummy").build(), null);
+            assertEquals(2, ffp.createComponents(client, null, threadPool, null, null, null, env, null, null, null, null).size());
         }
     }
 }
