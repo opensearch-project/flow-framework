@@ -28,6 +28,9 @@ import java.util.Map.Entry;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Stream;
 
+/**
+ * Step to register a remote model
+ */
 public class RegisterModelStep implements WorkflowStep {
 
     private static final Logger logger = LogManager.getLogger(RegisterModelStep.class);
@@ -45,6 +48,10 @@ public class RegisterModelStep implements WorkflowStep {
     private static final String MODEL_FORMAT = "model_format";
     private static final String MODEL_CONFIG = "model_config";
 
+    /**
+     * Instantiate this class
+     * @param nodeClient client to instantiate MLClient
+     */
     public RegisterModelStep(NodeClient nodeClient) {
         this.nodeClient = nodeClient;
     }

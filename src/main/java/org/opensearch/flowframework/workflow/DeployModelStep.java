@@ -20,6 +20,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
+/**
+ * Step to deploy a model
+ */
 public class DeployModelStep implements WorkflowStep {
     private static final Logger logger = LogManager.getLogger(DeployModelStep.class);
 
@@ -27,6 +30,10 @@ public class DeployModelStep implements WorkflowStep {
     private static final String MODEL_ID = "model_id";
     static final String NAME = "deploy_model";
 
+    /**
+     * Instantiate this class
+     * @param nodeClient client to instantiate MLClient
+     */
     public DeployModelStep(NodeClient nodeClient) {
         this.nodeClient = nodeClient;
     }

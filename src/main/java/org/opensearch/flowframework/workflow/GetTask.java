@@ -17,6 +17,9 @@ import org.opensearch.ml.common.MLTask;
 import org.opensearch.ml.common.MLTaskState;
 import org.opensearch.ml.common.transport.task.MLTaskGetResponse;
 
+/**
+ * Step to get modelID of a registered local model
+ */
 @SuppressForbidden(reason = "This class is for the future work of registering local model")
 public class GetTask {
 
@@ -24,11 +27,19 @@ public class GetTask {
     private MachineLearningNodeClient machineLearningNodeClient;
     private String taskId;
 
+    /**
+     * Instantiate this class
+     * @param machineLearningNodeClient client to instantiate ml-commons APIs
+     * @param taskId taskID of the model
+     */
     public GetTask(MachineLearningNodeClient machineLearningNodeClient, String taskId) {
         this.machineLearningNodeClient = machineLearningNodeClient;
         this.taskId = taskId;
     }
 
+    /**
+     * Invokes get task API of ml-commons
+     */
     public void getTask() {
 
         ActionListener<MLTask> actionListener = new ActionListener<>() {
@@ -51,8 +62,4 @@ public class GetTask {
 
     }
 
-    /*@Override
-    public void run() {
-        getTask();
-    }*/
 }

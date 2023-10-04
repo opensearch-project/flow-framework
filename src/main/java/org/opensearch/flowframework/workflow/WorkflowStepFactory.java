@@ -31,6 +31,7 @@ public class WorkflowStepFactory {
      *
      * @param clusterService The OpenSearch cluster service
      * @param client The OpenSearch client steps can use
+     * @param nodeClient NodeClient to execute transport calls
      */
 
     public WorkflowStepFactory(ClusterService clusterService, Client client, NodeClient nodeClient) {
