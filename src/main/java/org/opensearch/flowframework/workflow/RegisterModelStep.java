@@ -70,8 +70,8 @@ public class RegisterModelStep implements WorkflowStep {
                 registerModelFuture.complete(
                     new WorkflowData(
                         Map.ofEntries(
-                            Map.entry("modelId", mlRegisterModelResponse.getModelId()),
-                            Map.entry("model-register-status", mlRegisterModelResponse.getStatus())
+                            Map.entry("model_id", mlRegisterModelResponse.getModelId()),
+                            Map.entry("register_model_status", mlRegisterModelResponse.getStatus())
                         )
                     )
                 );
