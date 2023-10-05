@@ -21,6 +21,7 @@ public interface WorkflowStep {
      * Triggers the actual processing of the building block.
      * @param data representing input params and content, or output content of previous steps. The first element of the list is data (if any) provided from parsing the template, and may be {@link WorkflowData#EMPTY}.
      * @return A CompletableFuture of the building block. This block should return immediately, but not be completed until the step executes, containing either the step's output data or {@link WorkflowData#EMPTY} which may be passed to follow-on steps.
+     * @throws IOException on a failure.
      */
     CompletableFuture<WorkflowData> execute(List<WorkflowData> data) throws IOException;
 
