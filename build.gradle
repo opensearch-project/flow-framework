@@ -15,47 +15,12 @@ apply plugin: 'checkstyle'
 apply plugin: 'jacoco'
 apply plugin: 'com.form.diff-coverage'
 
-def pluginName = 'flow-framework'
+def pluginName = 'opensearch-flow-framework'
 def pluginDescription = 'OpenSearch plugin that enables builders to innovate AI apps on OpenSearch'
 def projectPath = 'org.opensearch'
 def pathToPlugin = 'flowframework'
 def pluginClassName = 'FlowFrameworkPlugin'
 group = "org.opensearch.flowframework"
-
-publishing {
-    publications {
-        pluginZip(MavenPublication) { publication ->
-            pom {
-                name = pluginName
-                description = pluginDescription
-                groupId = "org.opensearch.plugin"
-                licenses {
-                    license {
-                        name = "The Apache License, Version 2.0"
-                        url = "http://www.apache.org/licenses/LICENSE-2.0.txt"
-                    }
-                }
-                developers {
-                    developer {
-                        name = "OpenSearch AI Flow Framework Plugin"
-                        url = "https://github.com/opensearch-project/opensearch-ai-flow-framework"
-                    }
-                }
-            }
-        }
-    }
-
-    repositories {
-        maven {
-            name = "Snapshots"
-            url = "https://aws.oss.sonatype.org/content/repositories/snapshots"
-            credentials {
-                username "$System.env.SONATYPE_USERNAME"
-                password "$System.env.SONATYPE_PASSWORD"
-            }
-        }
-    }
-}
 
 opensearchplugin {
     name pluginName
@@ -109,12 +74,57 @@ buildscript {
 }
 
 
+publishing {
+    publications {
+        pluginZip(MavenPublication) { publication ->
+            pom {
+                name = pluginName
+                description = pluginDescription
+                groupId = "org.opensearch.plugin"
+                licenses {
+                    license {
+                        name = "The Apache License, Version 2.0"
+                        url = "http://www.apache.org/licenses/LICENSE-2.0.txt"
+                    }
+                }
+                developers {
+                    developer {
+                        name = "OpenSearch AI Flow Framework Plugin"
+                        url = "https://github.com/opensearch-project/opensearch-ai-flow-framework"
+                    }
+                }
+            }
+        }
+    }
+
+    repositories {
+        maven {
+            name = "Snapshots"
+            url = "https://aws.oss.sonatype.org/content/repositories/snapshots"
+            credentials {
+                username "$System.env.SONATYPE_USERNAME"
+                password "$System.env.SONATYPE_PASSWORD"
+            }
+        }
+    }
+}
+
+allprojects {
+    group = opensearch_group
+    version = "${opensearch_build}"
+    targetCompatibility = JavaVersion.VERSION_11
+    sourceCompatibility = JavaVersion.VERSION_11
+}
 
 repositories {
     mavenLocal()
     maven { url "https://aws.oss.sonatype.org/content/repositories/snapshots" }
     mavenCentral()
     maven { url "https://plugins.gradle.org/m2/" }
+}
+
+configurations {
+    zipArchive
 }
 
 dependencies {
