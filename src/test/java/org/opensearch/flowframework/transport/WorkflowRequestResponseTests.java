@@ -10,8 +10,12 @@ package org.opensearch.flowframework.transport;
 
 import org.opensearch.Version;
 import org.opensearch.common.io.stream.BytesStreamOutput;
+import org.opensearch.common.xcontent.XContentType;
 import org.opensearch.core.common.bytes.BytesReference;
 import org.opensearch.core.common.io.stream.BytesStreamInput;
+import org.opensearch.core.xcontent.MediaTypeRegistry;
+import org.opensearch.core.xcontent.ToXContent;
+import org.opensearch.core.xcontent.XContentBuilder;
 import org.opensearch.flowframework.model.Template;
 import org.opensearch.flowframework.model.Workflow;
 import org.opensearch.flowframework.model.WorkflowEdge;
@@ -55,6 +59,7 @@ public class WorkflowRequestResponseTests extends OpenSearchTestCase {
         WorkflowRequest nullIdRequest = new WorkflowRequest(null, template);
         assertNull(nullIdRequest.getWorkflowId());
         assertEquals(template, nullIdRequest.getTemplate());
+        assertNull(nullIdRequest.validate());
 
         BytesStreamOutput out = new BytesStreamOutput();
         nullIdRequest.writeTo(out);
@@ -70,6 +75,7 @@ public class WorkflowRequestResponseTests extends OpenSearchTestCase {
         WorkflowRequest nullTemplateRequest = new WorkflowRequest("123", null);
         assertNotNull(nullTemplateRequest.getWorkflowId());
         assertNull(nullTemplateRequest.getTemplate());
+        assertNull(nullTemplateRequest.validate());
 
         BytesStreamOutput out = new BytesStreamOutput();
         nullTemplateRequest.writeTo(out);
@@ -85,6 +91,7 @@ public class WorkflowRequestResponseTests extends OpenSearchTestCase {
         WorkflowRequest workflowRequest = new WorkflowRequest("123", template);
         assertNotNull(workflowRequest.getWorkflowId());
         assertEquals(template, workflowRequest.getTemplate());
+        assertNull(workflowRequest.validate());
 
         BytesStreamOutput out = new BytesStreamOutput();
         workflowRequest.writeTo(out);
@@ -106,8 +113,12 @@ public class WorkflowRequestResponseTests extends OpenSearchTestCase {
         BytesStreamInput in = new BytesStreamInput(BytesReference.toBytes(out.bytes()));
 
         WorkflowResponse streamInputResponse = new WorkflowResponse(in);
-
         assertEquals(response.getWorkflowId(), streamInputResponse.getWorkflowId());
+
+        XContentBuilder builder = MediaTypeRegistry.contentBuilder(XContentType.JSON);
+        response.toXContent(builder, ToXContent.EMPTY_PARAMS);
+        assertNotNull(builder);
+        assertEquals("{\"workflow_id\":\"123\"}", builder.toString());
     }
 
 }
