@@ -49,8 +49,8 @@ public class Template implements ToXContentObject {
     public static final String USER_INPUTS_FIELD = "user_inputs";
     /** The template field name for template workflows */
     public static final String WORKFLOWS_FIELD = "workflows";
-    /** The template field name for template responses */
-    public static final String RESPONSES_FIELD = "responses";
+    /** The template field name for template user outputs */
+    public static final String USER_OUTPUTS_FIELD = "user_outputs";
     /** The template field name for template resources created */
     public static final String RESOURCES_CREATED_FIELD = "resources_created";
 
@@ -62,7 +62,7 @@ public class Template implements ToXContentObject {
     private final List<Version> compatibilityVersion;
     private final Map<String, Object> userInputs;
     private final Map<String, Workflow> workflows;
-    private final Map<String, Object> responses;
+    private final Map<String, Object> userOutputs;
     private final Map<String, Object> resourcesCreated;
 
     /**
@@ -76,7 +76,7 @@ public class Template implements ToXContentObject {
      * @param compatibilityVersion OpenSearch version compatibility of this template
      * @param userInputs Optional user inputs to apply globally
      * @param workflows Workflow graph definitions corresponding to the defined operations.
-     * @param responses A map of essential API responses for backend to use and lookup.
+     * @param userOutputs A map of essential API responses for backend to use and lookup.
      * @param resourcesCreated A map of all the resources created.
      */
     public Template(
@@ -88,7 +88,7 @@ public class Template implements ToXContentObject {
         List<Version> compatibilityVersion,
         Map<String, Object> userInputs,
         Map<String, Workflow> workflows,
-        Map<String, Object> responses,
+        Map<String, Object> userOutputs,
         Map<String, Object> resourcesCreated
     ) {
         this.name = name;
@@ -99,7 +99,7 @@ public class Template implements ToXContentObject {
         this.compatibilityVersion = List.copyOf(compatibilityVersion);
         this.userInputs = Map.copyOf(userInputs);
         this.workflows = Map.copyOf(workflows);
-        this.responses = Map.copyOf(responses);
+        this.userOutputs = Map.copyOf(userOutputs);
         this.resourcesCreated = Map.copyOf(resourcesCreated);
     }
 
@@ -144,8 +144,8 @@ public class Template implements ToXContentObject {
         }
         xContentBuilder.endObject();
 
-        xContentBuilder.startObject(RESPONSES_FIELD);
-        for (Entry<String, Object> e : responses.entrySet()) {
+        xContentBuilder.startObject(USER_OUTPUTS_FIELD);
+        for (Entry<String, Object> e : userOutputs.entrySet()) {
             xContentBuilder.field(e.getKey(), e.getValue());
         }
         xContentBuilder.endObject();
@@ -242,7 +242,7 @@ public class Template implements ToXContentObject {
                         workflows.put(workflowFieldName, Workflow.parse(parser));
                     }
                     break;
-                case RESPONSES_FIELD:
+                case USER_OUTPUTS_FIELD:
                     ensureExpectedToken(XContentParser.Token.START_OBJECT, parser.currentToken(), parser);
                     while (parser.nextToken() != XContentParser.Token.END_OBJECT) {
                         String responsesFieldName = parser.currentName();
@@ -444,8 +444,8 @@ public class Template implements ToXContentObject {
      * A map of essential API responses
      * @return the responses
      */
-    public Map<String, Object> responses() {
-        return responses;
+    public Map<String, Object> userOutputs() {
+        return userOutputs;
     }
 
     /**
@@ -453,7 +453,7 @@ public class Template implements ToXContentObject {
      * @return the resources created
      */
     public Map<String, Object> resourcesCreated() {
-        return responses;
+        return resourcesCreated;
     }
 
     @Override
@@ -474,8 +474,8 @@ public class Template implements ToXContentObject {
             + userInputs
             + ", workflows="
             + workflows
-            + ", responses="
-            + responses
+            + ", userOutputs="
+            + userOutputs
             + ", resourcesCreated="
             + resourcesCreated
             + "]";

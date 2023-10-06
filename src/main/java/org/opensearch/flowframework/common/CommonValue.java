@@ -16,7 +16,6 @@ public class CommonValue {
     public static Integer NO_SCHEMA_VERSION = 0;
     public static final String META = "_meta";
     public static final String SCHEMA_VERSION_FIELD = "schema_version";
-
     public static final String GLOBAL_CONTEXT_INDEX = ".plugins-ai-global-context";
     public static final String GLOBAL_CONTEXT_INDEX_MAPPING = "mappings/global-context.json";
     public static final Integer GLOBAL_CONTEXT_INDEX_VERSION = 1;

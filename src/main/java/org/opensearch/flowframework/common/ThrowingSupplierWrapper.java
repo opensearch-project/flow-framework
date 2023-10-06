@@ -14,10 +14,7 @@ import java.util.function.Supplier;
  * Wrapper for throwing checked exception inside places that does not allow to do so
  */
 public class ThrowingSupplierWrapper {
-    /*
-     * Private constructor to avoid Jacoco complaining about public constructor
-     * not covered: https://tinyurl.com/yetc7tra
-     */
+
     private ThrowingSupplierWrapper() {}
 
     /**

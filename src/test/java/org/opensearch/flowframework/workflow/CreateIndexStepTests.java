@@ -92,7 +92,7 @@ public class CreateIndexStepTests extends OpenSearchTestCase {
     }
 
     public void testCreateIndexStep() throws ExecutionException, InterruptedException {
-        @SuppressWarnings("unchecked")
+        @SuppressWarnings({ "unchecked", "deprecation" })
         ArgumentCaptor<ActionListener<CreateIndexResponse>> actionListenerCaptor = ArgumentCaptor.forClass(ActionListener.class);
         CompletableFuture<WorkflowData> future = createIndexStep.execute(List.of(inputData));
         assertFalse(future.isDone());
@@ -107,7 +107,7 @@ public class CreateIndexStepTests extends OpenSearchTestCase {
     }
 
     public void testCreateIndexStepFailure() throws ExecutionException, InterruptedException {
-        @SuppressWarnings("unchecked")
+        @SuppressWarnings({ "unchecked", "deprecation" })
         ArgumentCaptor<ActionListener<CreateIndexResponse>> actionListenerCaptor = ArgumentCaptor.forClass(ActionListener.class);
         CompletableFuture<WorkflowData> future = createIndexStep.execute(List.of(inputData));
         assertFalse(future.isDone());
@@ -124,10 +124,11 @@ public class CreateIndexStepTests extends OpenSearchTestCase {
     public void testInitIndexIfAbsent_IndexNotPresent() {
         when(metadata.hasIndex(FlowFrameworkIndex.GLOBAL_CONTEXT.getIndexName())).thenReturn(false);
 
+        @SuppressWarnings("unchecked")
         ActionListener<Boolean> listener = mock(ActionListener.class);
         createIndexStep.initIndexIfAbsent(FlowFrameworkIndex.GLOBAL_CONTEXT, listener);
 
-        verify(indicesAdminClient).create(any(), any());
+        verify(indicesAdminClient, times(1)).create(any(), any());
     }
 
     public void testInitIndexIfAbsent_IndexExist() {
@@ -139,6 +140,7 @@ public class CreateIndexStepTests extends OpenSearchTestCase {
         when(clusterService.state()).thenReturn(mockClusterState);
         when(mockClusterState.metadata()).thenReturn(mockMetadata);
         when(mockMetadata.hasIndex(index.getIndexName())).thenReturn(true);
+        @SuppressWarnings("unchecked")
         ActionListener<Boolean> listener = mock(ActionListener.class);
 
         IndexMetadata mockIndexMetadata = mock(IndexMetadata.class);
@@ -157,9 +159,10 @@ public class CreateIndexStepTests extends OpenSearchTestCase {
 
         createIndexStep.initIndexIfAbsent(index, listener);
 
+        @SuppressWarnings({ "unchecked", "deprecation" })
         ArgumentCaptor<PutMappingRequest> putMappingRequestArgumentCaptor = ArgumentCaptor.forClass(PutMappingRequest.class);
         ArgumentCaptor<ActionListener> listenerCaptor = ArgumentCaptor.forClass(ActionListener.class);
-        verify(indicesAdminClient).putMapping(putMappingRequestArgumentCaptor.capture(), listenerCaptor.capture());
+        verify(indicesAdminClient, times(1)).putMapping(putMappingRequestArgumentCaptor.capture(), listenerCaptor.capture());
         PutMappingRequest capturedRequest = putMappingRequestArgumentCaptor.getValue();
         assertEquals(index.getIndexName(), capturedRequest.indices()[0]);
     }
@@ -174,6 +177,7 @@ public class CreateIndexStepTests extends OpenSearchTestCase {
         when(mockClusterState.metadata()).thenReturn(mockMetadata);
         when(mockMetadata.hasIndex(index.getIndexName())).thenReturn(true);
 
+        @SuppressWarnings("unchecked")
         ActionListener<Boolean> listener = mock(ActionListener.class);
         Map<String, IndexMetadata> mockIndices = mock(Map.class);
         when(mockClusterState.getMetadata()).thenReturn(mockMetadata);

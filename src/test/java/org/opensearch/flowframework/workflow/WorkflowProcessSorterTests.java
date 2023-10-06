@@ -75,13 +75,13 @@ public class WorkflowProcessSorterTests extends OpenSearchTestCase {
     public void testNodeDetails() throws IOException {
         List<ProcessNode> workflow = null;
         workflow = parseToNodes(
-                workflow(
-                        List.of(
-                                nodeWithType("default_timeout", "create_ingest_pipeline"),
-                                nodeWithTypeAndTimeout("custom_timeout", "create_index", "100ms")
-                        ),
-                        Collections.emptyList()
-                )
+            workflow(
+                List.of(
+                    nodeWithType("default_timeout", "create_ingest_pipeline"),
+                    nodeWithTypeAndTimeout("custom_timeout", "create_index", "100ms")
+                ),
+                Collections.emptyList()
+            )
         );
         ProcessNode node = workflow.get(0);
         assertEquals("default_timeout", node.id());
@@ -102,10 +102,10 @@ public class WorkflowProcessSorterTests extends OpenSearchTestCase {
         assertEquals(2, workflow.indexOf("A"));
 
         workflow = parse(
-                workflow(
-                        List.of(node("A"), node("B"), node("C"), node("D")),
-                        List.of(edge("A", "B"), edge("A", "C"), edge("B", "D"), edge("C", "D"))
-                )
+            workflow(
+                List.of(node("A"), node("B"), node("C"), node("D")),
+                List.of(edge("A", "B"), edge("A", "C"), edge("B", "D"), edge("C", "D"))
+            )
         );
         assertEquals(0, workflow.indexOf("A"));
         int b = workflow.indexOf("B");
@@ -115,10 +115,10 @@ public class WorkflowProcessSorterTests extends OpenSearchTestCase {
         assertEquals(3, workflow.indexOf("D"));
 
         workflow = parse(
-                workflow(
-                        List.of(node("A"), node("B"), node("C"), node("D"), node("E")),
-                        List.of(edge("A", "B"), edge("A", "C"), edge("B", "D"), edge("D", "E"), edge("C", "E"))
-                )
+            workflow(
+                List.of(node("A"), node("B"), node("C"), node("D"), node("E")),
+                List.of(edge("A", "B"), edge("A", "C"), edge("B", "D"), edge("D", "E"), edge("C", "E"))
+            )
         );
         assertEquals(0, workflow.indexOf("A"));
         b = workflow.indexOf("B");
@@ -137,33 +137,33 @@ public class WorkflowProcessSorterTests extends OpenSearchTestCase {
         assertEquals("Edge connects node A to itself.", ex.getMessage());
 
         ex = assertThrows(
-                IllegalArgumentException.class,
-                () -> parse(workflow(List.of(node("A"), node("B")), List.of(edge("A", "B"), edge("B", "B"))))
+            IllegalArgumentException.class,
+            () -> parse(workflow(List.of(node("A"), node("B")), List.of(edge("A", "B"), edge("B", "B"))))
         );
         assertEquals("Edge connects node B to itself.", ex.getMessage());
 
         ex = assertThrows(
-                IllegalArgumentException.class,
-                () -> parse(workflow(List.of(node("A"), node("B")), List.of(edge("A", "B"), edge("B", "A"))))
+            IllegalArgumentException.class,
+            () -> parse(workflow(List.of(node("A"), node("B")), List.of(edge("A", "B"), edge("B", "A"))))
         );
         assertEquals(NO_START_NODE_DETECTED, ex.getMessage());
 
         ex = assertThrows(
-                IllegalArgumentException.class,
-                () -> parse(workflow(List.of(node("A"), node("B"), node("C")), List.of(edge("A", "B"), edge("B", "C"), edge("C", "B"))))
+            IllegalArgumentException.class,
+            () -> parse(workflow(List.of(node("A"), node("B"), node("C")), List.of(edge("A", "B"), edge("B", "C"), edge("C", "B"))))
         );
         assertTrue(ex.getMessage().startsWith(CYCLE_DETECTED));
         assertTrue(ex.getMessage().contains("B->C"));
         assertTrue(ex.getMessage().contains("C->B"));
 
         ex = assertThrows(
-                IllegalArgumentException.class,
-                () -> parse(
-                        workflow(
-                                List.of(node("A"), node("B"), node("C"), node("D")),
-                                List.of(edge("A", "B"), edge("B", "C"), edge("C", "D"), edge("D", "B"))
-                        )
+            IllegalArgumentException.class,
+            () -> parse(
+                workflow(
+                    List.of(node("A"), node("B"), node("C"), node("D")),
+                    List.of(edge("A", "B"), edge("B", "C"), edge("C", "D"), edge("D", "B"))
                 )
+            )
         );
         assertTrue(ex.getMessage().startsWith(CYCLE_DETECTED));
         assertTrue(ex.getMessage().contains("B->C"));
@@ -188,8 +188,8 @@ public class WorkflowProcessSorterTests extends OpenSearchTestCase {
 
     public void testExceptions() throws IOException {
         Exception ex = assertThrows(
-                IllegalArgumentException.class,
-                () -> parse(workflow(List.of(node("A"), node("B")), List.of(edge("C", "B"))))
+            IllegalArgumentException.class,
+            () -> parse(workflow(List.of(node("A"), node("B")), List.of(edge("C", "B"))))
         );
         assertEquals("Edge source C does not correspond to a node.", ex.getMessage());
 

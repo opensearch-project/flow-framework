@@ -111,6 +111,12 @@ public class GlobalContextHandler {
         updateRequest.doc(updatedResponsesContext);
         updateRequest.setRefreshPolicy(WriteRequest.RefreshPolicy.IMMEDIATE);
         // TODO: decide what condition can be considered as an update conflict and add retry strategy
-        client.update(updateRequest, listener);
+
+        try {
+            client.update(updateRequest, listener);
+        } catch (Exception e) {
+            logger.error("Failed to update global_context index");
+            listener.onFailure(e);
+        }
     }
 }

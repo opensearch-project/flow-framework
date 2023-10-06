@@ -15,6 +15,8 @@ import org.opensearch.core.rest.RestStatus;
  */
 public class FlowFrameworkException extends RuntimeException {
 
+    private static final long serialVersionUID = 1L;
+
     private final RestStatus restStatus;
 
     /**
@@ -47,5 +49,14 @@ public class FlowFrameworkException extends RuntimeException {
     public FlowFrameworkException(String message, Throwable cause, RestStatus restStatus) {
         super(message, cause);
         this.restStatus = restStatus;
+    }
+
+    /**
+     * Getter for restStatus.
+     *
+     * @return the HTTP status code associated with the exception
+     */
+    public RestStatus getRestStatus() {
+        return restStatus;
     }
 }

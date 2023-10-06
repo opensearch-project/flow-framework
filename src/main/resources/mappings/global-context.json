@@ -39,19 +39,10 @@
     "user_inputs": {
       "type": "nested",
       "properties": {
-        "model_id": {
-          "type": "keyword"
-        },
-        "input_field": {
-          "type": "keyword"
-        },
-        "output_field": {
-          "type": "keyword"
-        },
-        "ingest_pipeline_name": {
-          "type": "keyword"
-        },
         "index_name": {
+          "type": "keyword"
+        },
+        "index_setting": {
           "type": "keyword"
         }
       }
@@ -59,7 +50,7 @@
     "workflows": {
       "type": "text"
     },
-    "responses": {
+    "user_outputs": {
       "type": "text"
     },
     "resources_created": {

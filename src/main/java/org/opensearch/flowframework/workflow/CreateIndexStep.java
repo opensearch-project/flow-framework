@@ -129,6 +129,7 @@ public class CreateIndexStep implements WorkflowStep {
         try (ThreadContext.StoredContext threadContext = client.threadPool().getThreadContext().stashContext()) {
             ActionListener<Boolean> internalListener = ActionListener.runBefore(listener, () -> threadContext.restore());
             if (!clusterService.state().metadata().hasIndex(indexName)) {
+                @SuppressWarnings("deprecation")
                 ActionListener<CreateIndexResponse> actionListener = ActionListener.wrap(r -> {
                     if (r.isAcknowledged()) {
                         logger.info("create index:{}", indexName);

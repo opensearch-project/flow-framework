@@ -72,14 +72,14 @@ public class Demo {
         for (ProcessNode n : processSequence) {
             List<ProcessNode> predecessors = n.predecessors();
             logger.info(
-                    "Queueing process [{}].{}",
-                    n.id(),
-                    predecessors.isEmpty()
-                            ? " Can start immediately!"
-                            : String.format(
-                            Locale.getDefault(),
-                            " Must wait for [%s] to complete first.",
-                            predecessors.stream().map(p -> p.id()).collect(Collectors.joining(", "))
+                "Queueing process [{}].{}",
+                n.id(),
+                predecessors.isEmpty()
+                    ? " Can start immediately!"
+                    : String.format(
+                        Locale.getDefault(),
+                        " Must wait for [%s] to complete first.",
+                        predecessors.stream().map(p -> p.id()).collect(Collectors.joining(", "))
                     )
             );
             futureList.add(n.execute());

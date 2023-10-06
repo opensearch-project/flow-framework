@@ -38,6 +38,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -76,6 +77,7 @@ public class GlobalContextHandlerTests extends OpenSearchTestCase {
             XContentBuilder builder = invocation.getArgument(0);
             return builder;
         });
+        @SuppressWarnings("unchecked")
         ActionListener<IndexResponse> listener = mock(ActionListener.class);
 
         doAnswer(invocation -> {
@@ -87,7 +89,7 @@ public class GlobalContextHandlerTests extends OpenSearchTestCase {
         globalContextHandler.putTemplateToGlobalContext(template, listener);
 
         ArgumentCaptor<IndexRequest> requestCaptor = ArgumentCaptor.forClass(IndexRequest.class);
-        verify(client).index(requestCaptor.capture(), any());
+        verify(client, times(1)).index(requestCaptor.capture(), any());
 
         assertEquals(GLOBAL_CONTEXT_INDEX, requestCaptor.getValue().index());
     }
@@ -96,12 +98,13 @@ public class GlobalContextHandlerTests extends OpenSearchTestCase {
         String documentId = "docId";
         Map<String, Object> updatedFields = new HashMap<>();
         updatedFields.put("field1", "value1");
+        @SuppressWarnings("unchecked")
         ActionListener<UpdateResponse> listener = mock(ActionListener.class);
 
         globalContextHandler.storeResponseToGlobalContext(documentId, updatedFields, listener);
 
         ArgumentCaptor<UpdateRequest> requestCaptor = ArgumentCaptor.forClass(UpdateRequest.class);
-        verify(client).update(requestCaptor.capture(), any());
+        verify(client, times(1)).update(requestCaptor.capture(), any());
 
         assertEquals(GLOBAL_CONTEXT_INDEX, requestCaptor.getValue().index());
         assertEquals(documentId, requestCaptor.getValue().id());
