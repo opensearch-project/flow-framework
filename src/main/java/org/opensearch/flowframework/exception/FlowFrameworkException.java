@@ -8,14 +8,14 @@
  */
 package org.opensearch.flowframework.exception;
 
-import javax.ws.rs.core.Response;
+import org.opensearch.core.rest.RestStatus;
 
 /**
  * Representation of Flow Framework Exceptions
  */
 public class FlowFrameworkException extends RuntimeException {
 
-    private final Response.Status restStatus;
+    private final RestStatus restStatus;
 
     /**
      * Constructor with error message.
@@ -23,7 +23,7 @@ public class FlowFrameworkException extends RuntimeException {
      * @param message message of the exception
      * @param restStatus HTTP status code of the response
      */
-    public FlowFrameworkException(String message, Response.Status restStatus) {
+    public FlowFrameworkException(String message, RestStatus restStatus) {
         super(message);
         this.restStatus = restStatus;
     }
@@ -33,7 +33,7 @@ public class FlowFrameworkException extends RuntimeException {
      * @param cause exception cause
      * @param restStatus HTTP status code of the response
      */
-    public FlowFrameworkException(Throwable cause, Response.Status restStatus) {
+    public FlowFrameworkException(Throwable cause, RestStatus restStatus) {
         super(cause);
         this.restStatus = restStatus;
     }
@@ -44,7 +44,7 @@ public class FlowFrameworkException extends RuntimeException {
      * @param cause exception cause
      * @param restStatus HTTP status code of the response
      */
-    public FlowFrameworkException(String message, Throwable cause, Response.Status restStatus) {
+    public FlowFrameworkException(String message, Throwable cause, RestStatus restStatus) {
         super(message, cause);
         this.restStatus = restStatus;
     }

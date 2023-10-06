@@ -8,7 +8,6 @@
  */
 package org.opensearch.flowframework.workflow;
 
-import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Charsets;
 import com.google.common.io.Resources;
 import org.apache.logging.log4j.LogManager;
@@ -28,8 +27,6 @@ import org.opensearch.core.action.ActionListener;
 import org.opensearch.flowframework.exception.FlowFrameworkException;
 import org.opensearch.flowframework.indices.FlowFrameworkIndex;
 
-import javax.ws.rs.core.Response;
-
 import java.io.IOException;
 import java.net.URL;
 import java.util.HashMap;
@@ -38,6 +35,7 @@ import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import static org.opensearch.core.rest.RestStatus.INTERNAL_SERVER_ERROR;
 import static org.opensearch.flowframework.common.CommonValue.META;
 import static org.opensearch.flowframework.common.CommonValue.NO_SCHEMA_VERSION;
 import static org.opensearch.flowframework.common.CommonValue.SCHEMA_VERSION_FIELD;
@@ -168,7 +166,7 @@ public class CreateIndexStep implements WorkflowStep {
                                                         internalListener.onFailure(
                                                             new FlowFrameworkException(
                                                                 "Failed to update index setting for: " + indexName,
-                                                                Response.Status.INTERNAL_SERVER_ERROR
+                                                                INTERNAL_SERVER_ERROR
                                                             )
                                                         );
                                                     }
@@ -178,10 +176,7 @@ public class CreateIndexStep implements WorkflowStep {
                                                 }));
                                         } else {
                                             internalListener.onFailure(
-                                                new FlowFrameworkException(
-                                                    "Failed to update index: " + indexName,
-                                                    Response.Status.INTERNAL_SERVER_ERROR
-                                                )
+                                                new FlowFrameworkException("Failed to update index: " + indexName, INTERNAL_SERVER_ERROR)
                                             );
                                         }
                                     }, exception -> {
@@ -227,8 +222,7 @@ public class CreateIndexStep implements WorkflowStep {
      * @param newVersion new index mapping version
      * @param listener action listener, if update index is needed, will pass true to its onResponse method
      */
-    @VisibleForTesting
-    protected void shouldUpdateIndex(String indexName, Integer newVersion, ActionListener<Boolean> listener) {
+    private void shouldUpdateIndex(String indexName, Integer newVersion, ActionListener<Boolean> listener) {
         IndexMetadata indexMetaData = clusterService.state().getMetadata().indices().get(indexName);
         if (indexMetaData == null) {
             listener.onResponse(Boolean.FALSE);
