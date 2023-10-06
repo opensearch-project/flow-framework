@@ -271,7 +271,9 @@ public class Template implements ToXContentObject {
                                 resourcesCreated.put(resourcesCreatedField, parseStringToStringMap(parser));
                                 break;
                             default:
-                                throw new IOException("Unable to parse field [" + resourcesCreatedField + "] in a resources_created object.");
+                                throw new IOException(
+                                    "Unable to parse field [" + resourcesCreatedField + "] in a resources_created object."
+                                );
                         }
                     }
                     break;
