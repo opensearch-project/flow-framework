@@ -126,6 +126,7 @@ public class CreateIndexStep implements WorkflowStep {
         String indexName = index.getIndexName();
         String mapping = index.getMapping();
 
+
         try (ThreadContext.StoredContext threadContext = client.threadPool().getThreadContext().stashContext()) {
             ActionListener<Boolean> internalListener = ActionListener.runBefore(listener, () -> threadContext.restore());
             if (!clusterService.state().metadata().hasIndex(indexName)) {
@@ -177,7 +178,7 @@ public class CreateIndexStep implements WorkflowStep {
                                                 }));
                                         } else {
                                             internalListener.onFailure(
-                                                new FlowFrameworkException("Failed to update index: " + indexName, INTERNAL_SERVER_ERROR)
+                                                    new FlowFrameworkException("Failed to update index: " + indexName, INTERNAL_SERVER_ERROR)
                                             );
                                         }
                                     }, exception -> {

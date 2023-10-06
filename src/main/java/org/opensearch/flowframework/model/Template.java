@@ -175,7 +175,7 @@ public class Template implements ToXContentObject {
         List<Version> compatibilityVersion = new ArrayList<>();
         Map<String, Object> userInputs = new HashMap<>();
         Map<String, Workflow> workflows = new HashMap<>();
-        Map<String, Object> responses = new HashMap<>();
+        Map<String, Object> userOutputs = new HashMap<>();
         Map<String, Object> resourcesCreated = new HashMap<>();
 
         ensureExpectedToken(XContentParser.Token.START_OBJECT, parser.currentToken(), parser);
@@ -245,16 +245,16 @@ public class Template implements ToXContentObject {
                 case USER_OUTPUTS_FIELD:
                     ensureExpectedToken(XContentParser.Token.START_OBJECT, parser.currentToken(), parser);
                     while (parser.nextToken() != XContentParser.Token.END_OBJECT) {
-                        String responsesFieldName = parser.currentName();
+                        String userOutputsFieldName = parser.currentName();
                         switch (parser.nextToken()) {
                             case VALUE_STRING:
-                                responses.put(responsesFieldName, parser.text());
+                                userOutputs.put(userOutputsFieldName, parser.text());
                                 break;
                             case START_OBJECT:
-                                responses.put(responsesFieldName, parseStringToStringMap(parser));
+                                userOutputs.put(userOutputsFieldName, parseStringToStringMap(parser));
                                 break;
                             default:
-                                throw new IOException("Unable to parse field [" + responsesFieldName + "] in a responses object.");
+                                throw new IOException("Unable to parse field [" + userOutputsFieldName + "] in a user_outputs object.");
                         }
                     }
                     break;
@@ -271,7 +271,7 @@ public class Template implements ToXContentObject {
                                 resourcesCreated.put(resourcesCreatedField, parseStringToStringMap(parser));
                                 break;
                             default:
-                                throw new IOException("Unable to parse field [" + resourcesCreatedField + "] in a responses object.");
+                                throw new IOException("Unable to parse field [" + resourcesCreatedField + "] in a resources_created object.");
                         }
                     }
                     break;
@@ -293,7 +293,7 @@ public class Template implements ToXContentObject {
             compatibilityVersion,
             userInputs,
             workflows,
-            responses,
+            userOutputs,
             resourcesCreated
         );
     }
@@ -442,7 +442,7 @@ public class Template implements ToXContentObject {
 
     /**
      * A map of essential API responses
-     * @return the responses
+     * @return the userOutputs
      */
     public Map<String, Object> userOutputs() {
         return userOutputs;

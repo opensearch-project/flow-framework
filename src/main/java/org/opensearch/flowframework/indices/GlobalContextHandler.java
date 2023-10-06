@@ -106,9 +106,9 @@ public class GlobalContextHandler {
         ActionListener<UpdateResponse> listener
     ) {
         UpdateRequest updateRequest = new UpdateRequest(GLOBAL_CONTEXT_INDEX, documentId);
-        Map<String, Object> updatedResponsesContext = new HashMap<>();
-        updatedResponsesContext.putAll(updatedFields);
-        updateRequest.doc(updatedResponsesContext);
+        Map<String, Object> updatedUserOutputsContext = new HashMap<>();
+        updatedUserOutputsContext.putAll(updatedFields);
+        updateRequest.doc(updatedUserOutputsContext);
         updateRequest.setRefreshPolicy(WriteRequest.RefreshPolicy.IMMEDIATE);
         // TODO: decide what condition can be considered as an update conflict and add retry strategy
 
