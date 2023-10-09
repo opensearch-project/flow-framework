@@ -48,6 +48,7 @@ public class WorkflowData {
 
     /**
      * Returns a map which represents the content associated with a Rest API request or response.
+     *
      * @return the content of this data.
      */
     public Map<String, Object> getContent() {
