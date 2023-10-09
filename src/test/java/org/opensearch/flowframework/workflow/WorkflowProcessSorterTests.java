@@ -10,6 +10,7 @@ package org.opensearch.flowframework.workflow;
 
 import org.opensearch.client.AdminClient;
 import org.opensearch.client.Client;
+import org.opensearch.cluster.service.ClusterService;
 import org.opensearch.core.xcontent.XContentParser;
 import org.opensearch.flowframework.model.TemplateTestJsonUtil;
 import org.opensearch.flowframework.model.Workflow;
@@ -57,11 +58,12 @@ public class WorkflowProcessSorterTests extends OpenSearchTestCase {
     @BeforeClass
     public static void setup() {
         AdminClient adminClient = mock(AdminClient.class);
+        ClusterService clusterService = mock(ClusterService.class);
         Client client = mock(Client.class);
         when(client.admin()).thenReturn(adminClient);
 
         testThreadPool = new TestThreadPool(WorkflowProcessSorterTests.class.getName());
-        WorkflowStepFactory factory = new WorkflowStepFactory(client);
+        WorkflowStepFactory factory = new WorkflowStepFactory(clusterService, client);
         workflowProcessSorter = new WorkflowProcessSorter(factory, testThreadPool);
     }
 

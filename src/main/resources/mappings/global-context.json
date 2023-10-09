@@ -1,0 +1,60 @@
+{
+  "dynamic": false,
+  "_meta": {
+    "schema_version": 1
+  },
+  "properties": {
+    "workflow_id": {
+      "type": "keyword"
+    },
+    "name": {
+      "type": "text",
+      "fields": {
+        "keyword": {
+          "type": "keyword",
+          "ignore_above": 256
+        }
+      }
+    },
+    "description": {
+      "type": "text"
+    },
+    "use_case": {
+      "type": "keyword"
+    },
+    "operations": {
+      "type": "keyword"
+    },
+    "version": {
+      "type": "nested",
+      "properties": {
+        "template": {
+          "type": "integer"
+        },
+        "compatibility": {
+          "type": "integer"
+        }
+      }
+    },
+    "user_inputs": {
+      "type": "nested",
+      "properties": {
+        "index_name": {
+          "type": "keyword"
+        },
+        "index_setting": {
+          "type": "keyword"
+        }
+      }
+    },
+    "workflows": {
+      "type": "text"
+    },
+    "user_outputs": {
+      "type": "text"
+    },
+    "resources_created": {
+      "type": "text"
+    }
+  }
+}
