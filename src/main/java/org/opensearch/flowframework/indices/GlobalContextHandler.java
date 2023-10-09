@@ -27,7 +27,6 @@ import org.opensearch.flowframework.workflow.CreateIndexStep;
 
 import java.io.IOException;
 import java.util.HashMap;
-import java.util.Locale;
 import java.util.Map;
 
 import static org.opensearch.core.rest.RestStatus.INTERNAL_SERVER_ERROR;
@@ -103,11 +102,9 @@ public class GlobalContextHandler {
      */
     public void updateTemplate(String documentId, Template template, ActionListener<IndexResponse> listener) {
         if (!createIndexStep.doesIndexExist(GLOBAL_CONTEXT_INDEX)) {
-            String exceptionMessage = String.format(
-                Locale.ROOT,
-                "Failed to update template {}, global_context index does not exist.",
-                documentId
-            );
+            String exceptionMessage = "Failed to update template for workflow_id : "
+                + documentId
+                + ", global_context index does not exist.";
             logger.error(exceptionMessage);
             listener.onFailure(new Exception(exceptionMessage));
         } else {

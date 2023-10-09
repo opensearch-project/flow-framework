@@ -33,9 +33,7 @@ public class RestProvisionWorkflowAction extends BaseRestHandler {
     /**
      * Instantiates a new RestProvisionWorkflowAction
      */
-    public RestProvisionWorkflowAction() {
-        // TODO : Pass settings and cluster service to constructor and add settings update consumer for request timeout value
-    }
+    public RestProvisionWorkflowAction() {}
 
     @Override
     public String getName() {
