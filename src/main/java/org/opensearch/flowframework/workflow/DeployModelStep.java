@@ -64,15 +64,12 @@ public class DeployModelStep implements WorkflowStep {
         String modelId = null;
 
         for (WorkflowData workflowData : data) {
-            if (workflowData != null) {
-                Map<String, Object> content = workflowData.getContent();
-
-                for (Map.Entry<String, Object> entry : content.entrySet()) {
-                    if (entry.getKey() == MODEL_ID) {
-                        modelId = (String) content.get(MODEL_ID);
-                    }
-
+            Map<String, Object> content = workflowData.getContent();
+            for (Map.Entry<String, Object> entry : content.entrySet()) {
+                if (entry.getKey() == MODEL_ID) {
+                    modelId = (String) content.get(MODEL_ID);
                 }
+
             }
         }
         machineLearningNodeClient.deploy(modelId, actionListener);

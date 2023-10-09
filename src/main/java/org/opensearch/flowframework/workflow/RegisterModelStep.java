@@ -94,39 +94,37 @@ public class RegisterModelStep implements WorkflowStep {
         MLModelConfig modelConfig = null;
 
         for (WorkflowData workflowData : data) {
-            if (workflowData != null) {
-                Map<String, Object> content = workflowData.getContent();
+            Map<String, Object> content = workflowData.getContent();
 
-                for (Entry<String, Object> entry : content.entrySet()) {
-                    switch (entry.getKey()) {
-                        case FUNCTION_NAME:
-                            functionName = FunctionName.from(((String) content.get(FUNCTION_NAME)).toUpperCase(Locale.ROOT));
-                            break;
-                        case MODEL_NAME:
-                            modelName = (String) content.get(MODEL_NAME);
-                            break;
-                        case MODEL_VERSION:
-                            modelVersion = (String) content.get(MODEL_VERSION);
-                            break;
-                        case MODEL_GROUP_ID:
-                            modelGroupId = (String) content.get(MODEL_GROUP_ID);
-                            break;
-                        case MODEL_FORMAT:
-                            modelFormat = MLModelFormat.from((String) content.get(MODEL_FORMAT));
-                            break;
-                        case MODEL_CONFIG:
-                            modelConfig = (MLModelConfig) content.get(MODEL_CONFIG);
-                            break;
-                        case DESCRIPTION:
-                            description = (String) content.get(DESCRIPTION);
-                            break;
-                        case CONNECTOR_ID:
-                            connectorId = (String) content.get(CONNECTOR_ID);
-                            break;
-                        default:
-                            break;
+            for (Entry<String, Object> entry : content.entrySet()) {
+                switch (entry.getKey()) {
+                    case FUNCTION_NAME:
+                        functionName = FunctionName.from(((String) content.get(FUNCTION_NAME)).toUpperCase(Locale.ROOT));
+                        break;
+                    case MODEL_NAME:
+                        modelName = (String) content.get(MODEL_NAME);
+                        break;
+                    case MODEL_VERSION:
+                        modelVersion = (String) content.get(MODEL_VERSION);
+                        break;
+                    case MODEL_GROUP_ID:
+                        modelGroupId = (String) content.get(MODEL_GROUP_ID);
+                        break;
+                    case MODEL_FORMAT:
+                        modelFormat = MLModelFormat.from((String) content.get(MODEL_FORMAT));
+                        break;
+                    case MODEL_CONFIG:
+                        modelConfig = (MLModelConfig) content.get(MODEL_CONFIG);
+                        break;
+                    case DESCRIPTION:
+                        description = (String) content.get(DESCRIPTION);
+                        break;
+                    case CONNECTOR_ID:
+                        connectorId = (String) content.get(CONNECTOR_ID);
+                        break;
+                    default:
+                        break;
 
-                    }
                 }
             }
         }
