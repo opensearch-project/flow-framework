@@ -59,7 +59,7 @@ public class CreateWorkflowTransportAction extends HandledTransportAction<Workfl
             // Update existing entry, full document replacement
             globalContextHandler.updateTemplate(request.getWorkflowId(), request.getTemplate(), ActionListener.wrap(response -> {
                 // TODO : Create StateIndexRequest for workflowId to reset entry to NOT_STARTED
-                listener.onResponse(new WorkflowResponse(request.getWorkflowId()));
+                listener.onResponse(new WorkflowResponse(response.getId()));
             }, exception -> {
                 logger.error("Failed to updated use case template {} : {}", request.getWorkflowId(), exception.getMessage());
                 listener.onFailure(exception);
