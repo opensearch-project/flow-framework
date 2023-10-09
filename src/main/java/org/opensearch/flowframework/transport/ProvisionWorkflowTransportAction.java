@@ -31,7 +31,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.stream.Collectors;
 
-import static org.opensearch.flowframework.FlowFrameworkPlugin.PROVISION_THREAD_POOL;
+import static org.opensearch.flowframework.common.CommonValue.PROVISION_THREAD_POOL;
 
 /**
  * Transport Action to provision a workflow from a stored use case template

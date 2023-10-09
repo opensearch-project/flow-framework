@@ -46,28 +46,13 @@ import java.util.Collection;
 import java.util.List;
 import java.util.function.Supplier;
 
+import static org.opensearch.flowframework.common.CommonValue.FLOW_FRAMEWORK_THREAD_POOL_PREFIX;
+import static org.opensearch.flowframework.common.CommonValue.PROVISION_THREAD_POOL;
+
 /**
  * An OpenSearch plugin that enables builders to innovate AI apps on OpenSearch.
  */
 public class FlowFrameworkPlugin extends Plugin implements ActionPlugin {
-
-    // TODO : Move names to common values class
-    /**
-     * The base URI for this plugin's rest actions
-     */
-    public static final String AI_FLOW_FRAMEWORK_BASE_URI = "/_plugins/_flow_framework";
-    /**
-     * The URI for this plugin's workflow rest actions
-     */
-    public static final String WORKFLOWS_URI = AI_FLOW_FRAMEWORK_BASE_URI + "/workflows";
-    /**
-     * Flow Framework plugin thread pool name prefix
-     */
-    public static final String FLOW_FRAMEWORK_THREAD_POOL_PREFIX = "thread_pool.flow_framework.";
-    /**
-     * The provision workflow thread pool name
-     */
-    public static final String PROVISION_THREAD_POOL = "opensearch_workflow_provision";
 
     /**
      * Instantiate this plugin.

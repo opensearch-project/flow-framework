@@ -10,7 +10,6 @@ package org.opensearch.flowframework.rest;
 
 import com.google.common.collect.ImmutableList;
 import org.opensearch.client.node.NodeClient;
-import org.opensearch.flowframework.FlowFrameworkPlugin;
 import org.opensearch.flowframework.model.Template;
 import org.opensearch.flowframework.transport.ProvisionWorkflowAction;
 import org.opensearch.flowframework.transport.WorkflowRequest;
@@ -21,6 +20,9 @@ import org.opensearch.rest.action.RestToXContentListener;
 import java.io.IOException;
 import java.util.List;
 import java.util.Locale;
+
+import static org.opensearch.flowframework.common.CommonValue.WORKFLOWS_URI;
+import static org.opensearch.flowframework.common.CommonValue.WORKFLOW_ID;
 
 /**
  * Rest action to facilitate requests to provision a workflow from an inline defined or stored use case template
@@ -51,12 +53,9 @@ public class RestProvisionWorkflowAction extends BaseRestHandler {
     public List<Route> routes() {
         return ImmutableList.of(
             // Provision workflow from inline use case template
-            new Route(RestRequest.Method.POST, String.format(Locale.ROOT, "%s/%s", FlowFrameworkPlugin.WORKFLOWS_URI, "_provision")),
+            new Route(RestRequest.Method.POST, String.format(Locale.ROOT, "%s/%s", WORKFLOWS_URI, "_provision")),
             // Provision workflow from indexed use case template
-            new Route(
-                RestRequest.Method.POST,
-                String.format(Locale.ROOT, "%s/{%s}/%s", FlowFrameworkPlugin.WORKFLOWS_URI, WORKFLOW_ID, "_provision")
-            )
+            new Route(RestRequest.Method.POST, String.format(Locale.ROOT, "%s/{%s}/%s", WORKFLOWS_URI, WORKFLOW_ID, "_provision"))
         );
     }
 

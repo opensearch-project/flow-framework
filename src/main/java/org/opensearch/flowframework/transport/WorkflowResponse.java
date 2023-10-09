@@ -13,9 +13,10 @@ import org.opensearch.core.common.io.stream.StreamInput;
 import org.opensearch.core.common.io.stream.StreamOutput;
 import org.opensearch.core.xcontent.ToXContentObject;
 import org.opensearch.core.xcontent.XContentBuilder;
-import org.opensearch.flowframework.rest.RestCreateWorkflowAction;
 
 import java.io.IOException;
+
+import static org.opensearch.flowframework.common.CommonValue.WORKFLOW_ID;
 
 /**
  * Transport Response from creating or provisioning a workflow
@@ -61,7 +62,7 @@ public class WorkflowResponse extends ActionResponse implements ToXContentObject
     // TODO : Replace WORKFLOW_ID after string is moved to common values class
     @Override
     public XContentBuilder toXContent(XContentBuilder builder, Params params) throws IOException {
-        return builder.startObject().field(RestCreateWorkflowAction.WORKFLOW_ID, this.workflowId).endObject();
+        return builder.startObject().field(WORKFLOW_ID, this.workflowId).endObject();
     }
 
 }

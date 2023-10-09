@@ -11,7 +11,6 @@ package org.opensearch.flowframework.rest;
 import org.opensearch.client.node.NodeClient;
 import org.opensearch.core.common.bytes.BytesArray;
 import org.opensearch.core.xcontent.MediaTypeRegistry;
-import org.opensearch.flowframework.FlowFrameworkPlugin;
 import org.opensearch.rest.RestHandler.Route;
 import org.opensearch.rest.RestRequest;
 import org.opensearch.test.OpenSearchTestCase;
@@ -21,6 +20,7 @@ import java.io.IOException;
 import java.util.List;
 import java.util.Locale;
 
+import static org.opensearch.flowframework.common.CommonValue.WORKFLOWS_URI;
 import static org.mockito.Mockito.mock;
 
 public class RestProvisionWorkflowActionTests extends OpenSearchTestCase {
@@ -42,14 +42,8 @@ public class RestProvisionWorkflowActionTests extends OpenSearchTestCase {
             + "\"user_inputs\":{\"userKey\":\"userValue\",\"userMapKey\":{\"nestedKey\":\"nestedValue\"}},"
             + "\"workflows\":{\"workflow\":{\"user_params\":{\"key\":\"value\"},\"nodes\":[{\"id\":\"A\",\"type\":\"a-type\",\"inputs\":{\"foo\":\"bar\"}},{\"id\":\"B\",\"type\":\"b-type\",\"inputs\":{\"baz\":\"qux\"}}],\"edges\":[{\"source\":\"A\",\"dest\":\"B\"}]}}}";
         this.provisionWorkflowRestAction = new RestProvisionWorkflowAction();
-        this.provisionInlineWorkflowPath = String.format(Locale.ROOT, "%s/%s", FlowFrameworkPlugin.WORKFLOWS_URI, "_provision");
-        this.provisionSavedWorkflowPath = String.format(
-            Locale.ROOT,
-            "%s/{%s}/%s",
-            FlowFrameworkPlugin.WORKFLOWS_URI,
-            "workflow_id",
-            "_provision"
-        );
+        this.provisionInlineWorkflowPath = String.format(Locale.ROOT, "%s/%s", WORKFLOWS_URI, "_provision");
+        this.provisionSavedWorkflowPath = String.format(Locale.ROOT, "%s/{%s}/%s", WORKFLOWS_URI, "workflow_id", "_provision");
         this.nodeClient = mock(NodeClient.class);
     }
 

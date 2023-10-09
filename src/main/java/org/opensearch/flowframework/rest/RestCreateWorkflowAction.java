@@ -10,7 +10,6 @@ package org.opensearch.flowframework.rest;
 
 import com.google.common.collect.ImmutableList;
 import org.opensearch.client.node.NodeClient;
-import org.opensearch.flowframework.FlowFrameworkPlugin;
 import org.opensearch.flowframework.model.Template;
 import org.opensearch.flowframework.transport.CreateWorkflowAction;
 import org.opensearch.flowframework.transport.WorkflowRequest;
@@ -22,18 +21,15 @@ import java.io.IOException;
 import java.util.List;
 import java.util.Locale;
 
+import static org.opensearch.flowframework.common.CommonValue.WORKFLOWS_URI;
+import static org.opensearch.flowframework.common.CommonValue.WORKFLOW_ID;
+
 /**
  * Rest Action to facilitate requests to create and update a use case template
  */
 public class RestCreateWorkflowAction extends BaseRestHandler {
 
     private static final String CREATE_WORKFLOW_ACTION = "create_workflow_action";
-
-    // TODO : move to common values class, pending implementation
-    /**
-     * Field name for workflow Id, the document Id of the indexed use case template
-     */
-    public static final String WORKFLOW_ID = "workflow_id";
 
     /**
      * Intantiates a new RestCreateWorkflowAction
@@ -51,9 +47,9 @@ public class RestCreateWorkflowAction extends BaseRestHandler {
     public List<Route> routes() {
         return ImmutableList.of(
             // Create new workflow
-            new Route(RestRequest.Method.POST, String.format(Locale.ROOT, "%s", FlowFrameworkPlugin.WORKFLOWS_URI)),
-            // Update workflow
-            new Route(RestRequest.Method.PUT, String.format(Locale.ROOT, "%s/{%s}", FlowFrameworkPlugin.WORKFLOWS_URI, WORKFLOW_ID))
+            new Route(RestRequest.Method.POST, String.format(Locale.ROOT, "%s", WORKFLOWS_URI)),
+            // Update use case template
+            new Route(RestRequest.Method.PUT, String.format(Locale.ROOT, "%s/{%s}", WORKFLOWS_URI, WORKFLOW_ID))
         );
     }
 
