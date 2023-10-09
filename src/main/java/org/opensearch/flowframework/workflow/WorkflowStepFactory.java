@@ -31,18 +31,17 @@ public class WorkflowStepFactory {
      *
      * @param clusterService The OpenSearch cluster service
      * @param client The OpenSearch client steps can use
-     * @param nodeClient NodeClient to execute transport calls
      */
 
-    public WorkflowStepFactory(ClusterService clusterService, Client client, NodeClient nodeClient) {
-        populateMap(clusterService, client, nodeClient);
+    public WorkflowStepFactory(ClusterService clusterService, Client client) {
+        populateMap(clusterService, client);
     }
 
-    private void populateMap(ClusterService clusterService, Client client, NodeClient nodeClient) {
+    private void populateMap(ClusterService clusterService, Client client) {
         stepMap.put(CreateIndexStep.NAME, new CreateIndexStep(clusterService, client));
         stepMap.put(CreateIngestPipelineStep.NAME, new CreateIngestPipelineStep(client));
-        stepMap.put(RegisterModelStep.NAME, new RegisterModelStep(nodeClient));
-        stepMap.put(DeployModelStep.NAME, new DeployModelStep(nodeClient));
+        stepMap.put(RegisterModelStep.NAME, new RegisterModelStep((NodeClient) client));
+        stepMap.put(DeployModelStep.NAME, new DeployModelStep((NodeClient) client));
 
         // TODO: These are from the demo class as placeholders, remove when demos are deleted
         stepMap.put("demo_delay_3", new DemoWorkflowStep(3000));

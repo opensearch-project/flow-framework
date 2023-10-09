@@ -59,8 +59,7 @@ public class Demo {
         }
         ClusterService clusterService = new ClusterService(null, null, null);
         Client client = new NodeClient(null, null);
-        NodeClient nodeClient = new NodeClient(null, null);
-        WorkflowStepFactory factory = new WorkflowStepFactory(clusterService, client, nodeClient);
+        WorkflowStepFactory factory = new WorkflowStepFactory(clusterService, client);
 
         ThreadPool threadPool = new ThreadPool(Settings.EMPTY);
         WorkflowProcessSorter workflowProcessSorter = new WorkflowProcessSorter(factory, threadPool);
