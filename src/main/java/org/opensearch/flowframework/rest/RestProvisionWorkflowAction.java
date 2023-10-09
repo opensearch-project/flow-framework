@@ -10,7 +10,6 @@ package org.opensearch.flowframework.rest;
 
 import com.google.common.collect.ImmutableList;
 import org.opensearch.client.node.NodeClient;
-import org.opensearch.flowframework.model.Template;
 import org.opensearch.flowframework.transport.ProvisionWorkflowAction;
 import org.opensearch.flowframework.transport.WorkflowRequest;
 import org.opensearch.rest.BaseRestHandler;
@@ -31,12 +30,6 @@ public class RestProvisionWorkflowAction extends BaseRestHandler {
 
     private static final String PROVISION_WORKFLOW_ACTION = "provision_workflow_action";
 
-    // TODO : move to common values class, pending implementation
-    /**
-     * Field name for workflow Id, the document Id of the indexed use case template
-     */
-    public static final String WORKFLOW_ID = "workflow_id";
-
     /**
      * Instantiates a new RestProvisionWorkflowAction
      */
@@ -52,8 +45,6 @@ public class RestProvisionWorkflowAction extends BaseRestHandler {
     @Override
     public List<Route> routes() {
         return ImmutableList.of(
-            // Provision workflow from inline use case template
-            new Route(RestRequest.Method.POST, String.format(Locale.ROOT, "%s/%s", WORKFLOWS_URI, "_provision")),
             // Provision workflow from indexed use case template
             new Route(RestRequest.Method.POST, String.format(Locale.ROOT, "%s/{%s}/%s", WORKFLOWS_URI, WORKFLOW_ID, "_provision"))
         );
@@ -62,20 +53,19 @@ public class RestProvisionWorkflowAction extends BaseRestHandler {
     @Override
     protected RestChannelConsumer prepareRequest(RestRequest request, NodeClient client) throws IOException {
 
-        String workflowId = request.param(WORKFLOW_ID);
-        Template template = null;
-
+        // Validate content
         if (request.hasContent()) {
-            template = Template.parse(request.content().utf8ToString());
+            throw new IOException("Invalid request format");
         }
 
-        // Validate workflow request inputs
-        if (workflowId == null && template == null) {
-            throw new IOException("workflow_id and template cannot be both null");
+        // Validate params
+        String workflowId = request.param(WORKFLOW_ID);
+        if (workflowId == null) {
+            throw new IOException("workflow_id cannot be null");
         }
 
         // Create request and provision
-        WorkflowRequest workflowRequest = new WorkflowRequest(workflowId, template);
+        WorkflowRequest workflowRequest = new WorkflowRequest(workflowId, null);
         return channel -> client.execute(ProvisionWorkflowAction.INSTANCE, workflowRequest, new RestToXContentListener<>(channel));
     }
 

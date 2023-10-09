@@ -25,25 +25,15 @@ import static org.mockito.Mockito.mock;
 
 public class RestProvisionWorkflowActionTests extends OpenSearchTestCase {
 
-    private String invalidTemplate;
     private RestProvisionWorkflowAction provisionWorkflowRestAction;
-    private String provisionInlineWorkflowPath;
-    private String provisionSavedWorkflowPath;
+    private String provisionWorkflowPath;
     private NodeClient nodeClient;
 
     @Override
     public void setUp() throws Exception {
         super.setUp();
-        // Invalid template configuration, missing name field
-        this.invalidTemplate = "{\"description\":\"description\","
-            + "\"use_case\":\"use case\","
-            + "\"operations\":[\"operation\"],"
-            + "\"version\":{\"template\":\"1.0.0\",\"compatibility\":[\"2.0.0\",\"3.0.0\"]},"
-            + "\"user_inputs\":{\"userKey\":\"userValue\",\"userMapKey\":{\"nestedKey\":\"nestedValue\"}},"
-            + "\"workflows\":{\"workflow\":{\"user_params\":{\"key\":\"value\"},\"nodes\":[{\"id\":\"A\",\"type\":\"a-type\",\"inputs\":{\"foo\":\"bar\"}},{\"id\":\"B\",\"type\":\"b-type\",\"inputs\":{\"baz\":\"qux\"}}],\"edges\":[{\"source\":\"A\",\"dest\":\"B\"}]}}}";
         this.provisionWorkflowRestAction = new RestProvisionWorkflowAction();
-        this.provisionInlineWorkflowPath = String.format(Locale.ROOT, "%s/%s", WORKFLOWS_URI, "_provision");
-        this.provisionSavedWorkflowPath = String.format(Locale.ROOT, "%s/{%s}/%s", WORKFLOWS_URI, "workflow_id", "_provision");
+        this.provisionWorkflowPath = String.format(Locale.ROOT, "%s/{%s}/%s", WORKFLOWS_URI, "workflow_id", "_provision");
         this.nodeClient = mock(NodeClient.class);
     }
 
@@ -54,32 +44,30 @@ public class RestProvisionWorkflowActionTests extends OpenSearchTestCase {
 
     public void testRestProvisiionWorkflowActionRoutes() {
         List<Route> routes = provisionWorkflowRestAction.routes();
-        assertEquals(2, routes.size());
+        assertEquals(1, routes.size());
         assertEquals(RestRequest.Method.POST, routes.get(0).getMethod());
-        assertEquals(RestRequest.Method.POST, routes.get(1).getMethod());
-        assertEquals(this.provisionInlineWorkflowPath, routes.get(0).getPath());
-        assertEquals(this.provisionSavedWorkflowPath, routes.get(1).getPath());
+        assertEquals(this.provisionWorkflowPath, routes.get(0).getPath());
     }
 
     public void testNullWorkflowIdAndTemplate() throws IOException {
 
         // Request with no content or params
         RestRequest request = new FakeRestRequest.Builder(xContentRegistry()).withMethod(RestRequest.Method.POST)
-            .withPath(this.provisionInlineWorkflowPath)
+            .withPath(this.provisionWorkflowPath)
             .build();
 
         IOException ex = expectThrows(IOException.class, () -> { provisionWorkflowRestAction.prepareRequest(request, nodeClient); });
-        assertEquals("workflow_id and template cannot be both null", ex.getMessage());
+        assertEquals("workflow_id cannot be null", ex.getMessage());
     }
 
-    public void testInvalidProvisionInlineWorkflowRequest() throws IOException {
+    public void testInvalidRequestWithContent() throws IOException {
         RestRequest request = new FakeRestRequest.Builder(xContentRegistry()).withMethod(RestRequest.Method.POST)
-            .withPath(this.provisionInlineWorkflowPath)
-            .withContent(new BytesArray(invalidTemplate), MediaTypeRegistry.JSON)
+            .withPath(this.provisionWorkflowPath)
+            .withContent(new BytesArray("request body"), MediaTypeRegistry.JSON)
             .build();
 
         IOException ex = expectThrows(IOException.class, () -> { provisionWorkflowRestAction.prepareRequest(request, nodeClient); });
-        assertEquals("An template object requires a name.", ex.getMessage());
+        assertEquals("Invalid request format", ex.getMessage());
     }
 
 }

@@ -10,10 +10,12 @@ package org.opensearch.flowframework.transport;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.opensearch.action.get.GetRequest;
 import org.opensearch.action.support.ActionFilters;
 import org.opensearch.action.support.HandledTransportAction;
 import org.opensearch.client.Client;
 import org.opensearch.common.inject.Inject;
+import org.opensearch.common.util.concurrent.ThreadContext;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.flowframework.model.Template;
 import org.opensearch.flowframework.model.Workflow;
@@ -31,7 +33,9 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.stream.Collectors;
 
+import static org.opensearch.flowframework.common.CommonValue.GLOBAL_CONTEXT_INDEX;
 import static org.opensearch.flowframework.common.CommonValue.PROVISION_THREAD_POOL;
+import static org.opensearch.flowframework.common.CommonValue.PROVISION_WORKFLOW;
 
 /**
  * Transport Action to provision a workflow from a stored use case template
@@ -39,12 +43,6 @@ import static org.opensearch.flowframework.common.CommonValue.PROVISION_THREAD_P
 public class ProvisionWorkflowTransportAction extends HandledTransportAction<WorkflowRequest, WorkflowResponse> {
 
     private final Logger logger = LogManager.getLogger(ProvisionWorkflowTransportAction.class);
-
-    // TODO : Move to common values class, pending implementation
-    /**
-     * The name of the provision workflow within the use case template
-     */
-    private static final String PROVISION_WORKFLOW = "provision";
 
     private final ThreadPool threadPool;
     private final Client client;
@@ -75,31 +73,30 @@ public class ProvisionWorkflowTransportAction extends HandledTransportAction<Wor
     @Override
     protected void doExecute(Task task, WorkflowRequest request, ActionListener<WorkflowResponse> listener) {
 
-        if (request.getWorkflowId() == null) {
-            // Workflow provisioning from inline template, first parse and then index the given use case template
-            client.execute(CreateWorkflowAction.INSTANCE, request, ActionListener.wrap(workflowResponse -> {
-                String workflowId = workflowResponse.getWorkflowId();
-                Template template = request.getTemplate();
+        // Retrieve use case template from global context
+        String workflowId = request.getWorkflowId();
+        GetRequest getRequest = new GetRequest(GLOBAL_CONTEXT_INDEX, workflowId);
 
-                // TODO : Use node client to update state index to PROVISIONING, given workflowId
+        // Stash thread context to interact with system index
+        try (ThreadContext.StoredContext context = client.threadPool().getThreadContext().stashContext()) {
+            client.get(getRequest, ActionListener.wrap(response -> {
+                context.restore();
 
+                // Parse template from document source
+                Template template = Template.parse(response.getSourceAsString());
+
+                // TODO : Update state index entry to PROVISIONING, given workflowId
+
+                // Respond to rest action then execute provisioning workflow async
                 listener.onResponse(new WorkflowResponse(workflowId));
-
-                // Asychronously begin provision workflow excecution
                 executeWorkflowAsync(workflowId, template.workflows().get(PROVISION_WORKFLOW));
-
-            }, exception -> { listener.onFailure(exception); }));
-        } else {
-            // Use case template has been previously saved, retrieve entry and execute
-            String workflowId = request.getWorkflowId();
-
-            // TODO : Retrieve template from global context index using node client
-            Template template = null; // temporary, remove later
-
-            // TODO : use node client to update state index entry to PROVISIONING, given workflowId
-
-            listener.onResponse(new WorkflowResponse(workflowId));
-            executeWorkflowAsync(workflowId, template.workflows().get(PROVISION_WORKFLOW));
+            }, exception -> {
+                logger.error("Failed to retrieve template from global context.", exception);
+                listener.onFailure(exception);
+            }));
+        } catch (Exception e) {
+            logger.error("Failed to retrieve template from global context.", e);
+            listener.onFailure(e);
         }
     }
 

@@ -24,10 +24,14 @@ public class CommonValue {
     public static final String AI_FLOW_FRAMEWORK_BASE_URI = "/_plugins/_flow_framework";
     /** The URI for this plugin's workflow rest actions */
     public static final String WORKFLOWS_URI = AI_FLOW_FRAMEWORK_BASE_URI + "/workflows";
+    /** Field name for workflow Id, the document Id of the indexed use case template */
+    public static final String WORKFLOW_ID = "workflow_id";
+    /** The field name for provision workflow within a use case template*/
+    public static final String PROVISION_WORKFLOW = "provision";
+
     /** Flow Framework plugin thread pool name prefix */
     public static final String FLOW_FRAMEWORK_THREAD_POOL_PREFIX = "thread_pool.flow_framework.";
     /** The provision workflow thread pool name */
     public static final String PROVISION_THREAD_POOL = "opensearch_workflow_provision";
-    /** Field name for workflow Id, the document Id of the indexed use case template */
-    public static final String WORKFLOW_ID = "workflow_id";
+
 }

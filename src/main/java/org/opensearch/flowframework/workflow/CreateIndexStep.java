@@ -117,6 +117,16 @@ public class CreateIndexStep implements WorkflowStep {
         return NAME;
     }
 
+    // TODO : Move to index management class, pending implementation
+    /**
+     * Checks if the given index exists
+     * @param indexName the name of the index
+     * @return boolean indicating the existence of an index
+     */
+    public boolean doesIndexExist(String indexName) {
+        return clusterService.state().metadata().hasIndex(indexName);
+    }
+
     /**
      * Create Index if it's absent
      * @param index The index that needs to be created

@@ -27,6 +27,7 @@ import org.opensearch.flowframework.workflow.CreateIndexStep;
 
 import java.io.IOException;
 import java.util.HashMap;
+import java.util.Locale;
 import java.util.Map;
 
 import static org.opensearch.core.rest.RestStatus.INTERNAL_SERVER_ERROR;
@@ -92,6 +93,37 @@ public class GlobalContextHandler {
             logger.error("Failed to create global_context index", e);
             listener.onFailure(e);
         }));
+    }
+
+    /**
+     * Replaces a document in the global context index
+     * @param documentId the document Id
+     * @param template the use-case template
+     * @param listener action listener
+     */
+    public void updateTemplate(String documentId, Template template, ActionListener<IndexResponse> listener) {
+        if (!createIndexStep.doesIndexExist(GLOBAL_CONTEXT_INDEX)) {
+            String exceptionMessage = String.format(
+                Locale.ROOT,
+                "Failed to update template {}, global_context index does not exist.",
+                documentId
+            );
+            logger.error(exceptionMessage);
+            listener.onFailure(new Exception(exceptionMessage));
+        } else {
+            IndexRequest request = new IndexRequest(GLOBAL_CONTEXT_INDEX).id(documentId);
+            try (
+                XContentBuilder builder = XContentFactory.jsonBuilder();
+                ThreadContext.StoredContext context = client.threadPool().getThreadContext().stashContext()
+            ) {
+                request.source(template.toXContent(builder, ToXContent.EMPTY_PARAMS))
+                    .setRefreshPolicy(WriteRequest.RefreshPolicy.IMMEDIATE);
+                client.index(request, ActionListener.runBefore(listener, () -> context.restore()));
+            } catch (Exception e) {
+                logger.error("Failed to update global_context entry : {}. {}", documentId, e.getMessage());
+                listener.onFailure(e);
+            }
+        }
     }
 
     /**

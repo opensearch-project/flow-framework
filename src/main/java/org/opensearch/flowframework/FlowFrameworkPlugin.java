@@ -18,17 +18,20 @@ import org.opensearch.common.settings.ClusterSettings;
 import org.opensearch.common.settings.IndexScopedSettings;
 import org.opensearch.common.settings.Settings;
 import org.opensearch.common.settings.SettingsFilter;
+import org.opensearch.common.util.concurrent.OpenSearchExecutors;
 import org.opensearch.core.action.ActionResponse;
 import org.opensearch.core.common.io.stream.NamedWriteableRegistry;
 import org.opensearch.core.xcontent.NamedXContentRegistry;
 import org.opensearch.env.Environment;
 import org.opensearch.env.NodeEnvironment;
+import org.opensearch.flowframework.indices.GlobalContextHandler;
 import org.opensearch.flowframework.rest.RestCreateWorkflowAction;
 import org.opensearch.flowframework.rest.RestProvisionWorkflowAction;
 import org.opensearch.flowframework.transport.CreateWorkflowAction;
 import org.opensearch.flowframework.transport.CreateWorkflowTransportAction;
 import org.opensearch.flowframework.transport.ProvisionWorkflowAction;
 import org.opensearch.flowframework.transport.ProvisionWorkflowTransportAction;
+import org.opensearch.flowframework.workflow.CreateIndexStep;
 import org.opensearch.flowframework.workflow.WorkflowProcessSorter;
 import org.opensearch.flowframework.workflow.WorkflowStepFactory;
 import org.opensearch.plugins.ActionPlugin;
@@ -76,7 +79,10 @@ public class FlowFrameworkPlugin extends Plugin implements ActionPlugin {
         WorkflowStepFactory workflowStepFactory = new WorkflowStepFactory(clusterService, client);
         WorkflowProcessSorter workflowProcessSorter = new WorkflowProcessSorter(workflowStepFactory, threadPool);
 
-        return ImmutableList.of(workflowStepFactory, workflowProcessSorter);
+        // TODO : Refactor, move system index creation/associated methods outside of the CreateIndexStep
+        GlobalContextHandler globalContextHandler = new GlobalContextHandler(client, new CreateIndexStep(clusterService, client));
+
+        return ImmutableList.of(workflowStepFactory, workflowProcessSorter, globalContextHandler);
     }
 
     @Override
@@ -106,10 +112,9 @@ public class FlowFrameworkPlugin extends Plugin implements ActionPlugin {
         FixedExecutorBuilder provisionThreadPool = new FixedExecutorBuilder(
             settings,
             PROVISION_THREAD_POOL,
-            1,
+            OpenSearchExecutors.allocatedProcessors(settings),
             10,
-            FLOW_FRAMEWORK_THREAD_POOL_PREFIX + PROVISION_THREAD_POOL,
-            false
+            FLOW_FRAMEWORK_THREAD_POOL_PREFIX + PROVISION_THREAD_POOL
         );
         return ImmutableList.of(provisionThreadPool);
     }

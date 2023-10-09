@@ -10,6 +10,7 @@ package org.opensearch.flowframework;
 
 import org.opensearch.client.AdminClient;
 import org.opensearch.client.Client;
+import org.opensearch.common.settings.Settings;
 import org.opensearch.test.OpenSearchTestCase;
 import org.opensearch.threadpool.TestThreadPool;
 import org.opensearch.threadpool.ThreadPool;
@@ -24,6 +25,7 @@ public class FlowFrameworkPluginTests extends OpenSearchTestCase {
 
     private Client client;
     private ThreadPool threadPool;
+    private Settings settings;
 
     @Override
     public void setUp() throws Exception {
@@ -31,6 +33,7 @@ public class FlowFrameworkPluginTests extends OpenSearchTestCase {
         client = mock(Client.class);
         when(client.admin()).thenReturn(mock(AdminClient.class));
         threadPool = new TestThreadPool(FlowFrameworkPluginTests.class.getName());
+        settings = Settings.EMPTY;
     }
 
     @Override
@@ -41,10 +44,10 @@ public class FlowFrameworkPluginTests extends OpenSearchTestCase {
 
     public void testPlugin() throws IOException {
         try (FlowFrameworkPlugin ffp = new FlowFrameworkPlugin()) {
-            assertEquals(2, ffp.createComponents(client, null, threadPool, null, null, null, null, null, null, null, null).size());
+            assertEquals(3, ffp.createComponents(client, null, threadPool, null, null, null, null, null, null, null, null).size());
             assertEquals(2, ffp.getRestHandlers(null, null, null, null, null, null, null).size());
             assertEquals(2, ffp.getActions().size());
-            assertEquals(1, ffp.getExecutorBuilders(null).size());
+            assertEquals(1, ffp.getExecutorBuilders(settings).size());
         }
     }
 }
