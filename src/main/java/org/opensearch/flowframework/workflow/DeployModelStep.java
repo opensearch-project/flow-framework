@@ -10,7 +10,7 @@ package org.opensearch.flowframework.workflow;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.opensearch.client.node.NodeClient;
+import org.opensearch.client.Client;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.flowframework.client.MLClient;
 import org.opensearch.ml.client.MachineLearningNodeClient;
@@ -26,16 +26,16 @@ import java.util.concurrent.CompletableFuture;
 public class DeployModelStep implements WorkflowStep {
     private static final Logger logger = LogManager.getLogger(DeployModelStep.class);
 
-    private NodeClient nodeClient;
+    private Client client;
     private static final String MODEL_ID = "model_id";
     static final String NAME = "deploy_model";
 
     /**
      * Instantiate this class
-     * @param nodeClient client to instantiate MLClient
+     * @param client client to instantiate MLClient
      */
-    public DeployModelStep(NodeClient nodeClient) {
-        this.nodeClient = nodeClient;
+    public DeployModelStep(Client client) {
+        this.client = client;
     }
 
     @Override
@@ -43,7 +43,7 @@ public class DeployModelStep implements WorkflowStep {
 
         CompletableFuture<WorkflowData> deployModelFuture = new CompletableFuture<>();
 
-        MachineLearningNodeClient machineLearningNodeClient = MLClient.createMLClient(nodeClient);
+        MachineLearningNodeClient machineLearningNodeClient = MLClient.createMLClient(client);
 
         ActionListener<MLDeployModelResponse> actionListener = new ActionListener<>() {
             @Override

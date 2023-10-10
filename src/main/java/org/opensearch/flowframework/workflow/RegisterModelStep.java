@@ -10,7 +10,7 @@ package org.opensearch.flowframework.workflow;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.opensearch.client.node.NodeClient;
+import org.opensearch.client.Client;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.flowframework.client.MLClient;
 import org.opensearch.ml.client.MachineLearningNodeClient;
@@ -35,7 +35,7 @@ public class RegisterModelStep implements WorkflowStep {
 
     private static final Logger logger = LogManager.getLogger(RegisterModelStep.class);
 
-    private NodeClient nodeClient;
+    private Client client;
 
     static final String NAME = "register_model";
 
@@ -50,10 +50,10 @@ public class RegisterModelStep implements WorkflowStep {
 
     /**
      * Instantiate this class
-     * @param nodeClient client to instantiate MLClient
+     * @param client client to instantiate MLClient
      */
-    public RegisterModelStep(NodeClient nodeClient) {
-        this.nodeClient = nodeClient;
+    public RegisterModelStep(Client client) {
+        this.client = client;
     }
 
     @Override
@@ -61,7 +61,7 @@ public class RegisterModelStep implements WorkflowStep {
 
         CompletableFuture<WorkflowData> registerModelFuture = new CompletableFuture<>();
 
-        MachineLearningNodeClient machineLearningNodeClient = MLClient.createMLClient(nodeClient);
+        MachineLearningNodeClient machineLearningNodeClient = MLClient.createMLClient(client);
 
         ActionListener<MLRegisterModelResponse> actionListener = new ActionListener<>() {
             @Override

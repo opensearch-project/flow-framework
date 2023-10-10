@@ -9,7 +9,6 @@
 package org.opensearch.flowframework.workflow;
 
 import org.opensearch.client.Client;
-import org.opensearch.client.node.NodeClient;
 import org.opensearch.cluster.service.ClusterService;
 
 import java.util.HashMap;
@@ -40,8 +39,8 @@ public class WorkflowStepFactory {
     private void populateMap(ClusterService clusterService, Client client) {
         stepMap.put(CreateIndexStep.NAME, new CreateIndexStep(clusterService, client));
         stepMap.put(CreateIngestPipelineStep.NAME, new CreateIngestPipelineStep(client));
-        stepMap.put(RegisterModelStep.NAME, new RegisterModelStep((NodeClient) client));
-        stepMap.put(DeployModelStep.NAME, new DeployModelStep((NodeClient) client));
+        stepMap.put(RegisterModelStep.NAME, new RegisterModelStep(client));
+        stepMap.put(DeployModelStep.NAME, new DeployModelStep(client));
 
         // TODO: These are from the demo class as placeholders, remove when demos are deleted
         stepMap.put("demo_delay_3", new DemoWorkflowStep(3000));

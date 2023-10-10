@@ -74,7 +74,7 @@ public class DeployModelStepTests extends OpenSearchTestCase {
         CompletableFuture<WorkflowData> future = deployModel.execute(List.of(inputData));
 
         // TODO: Find a way to verify the below
-        // verify(machineLearningNodeClient).deploy(eq(MLRegisterModelInput.class), actionListenerCaptor.capture());
+        // verify(machineLearningNodeClient).deploy(eq("modelId"), actionListenerCaptor.capture());
 
         assertTrue(future.isCompletedExceptionally());
 

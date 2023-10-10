@@ -10,7 +10,6 @@ package org.opensearch.flowframework;
 
 import com.google.common.collect.ImmutableList;
 import org.opensearch.client.Client;
-import org.opensearch.client.node.NodeClient;
 import org.opensearch.cluster.metadata.IndexNameExpressionResolver;
 import org.opensearch.cluster.service.ClusterService;
 import org.opensearch.core.common.io.stream.NamedWriteableRegistry;
@@ -33,8 +32,6 @@ import java.util.function.Supplier;
  */
 public class FlowFrameworkPlugin extends Plugin {
 
-    private NodeClient client;
-
     /**
      * Instantiate this plugin.
      */
@@ -54,7 +51,6 @@ public class FlowFrameworkPlugin extends Plugin {
         IndexNameExpressionResolver indexNameExpressionResolver,
         Supplier<RepositoriesService> repositoriesServiceSupplier
     ) {
-        // TODO: Creating NodeClient is a temporary fix until we get the NodeClient from the provision API
         WorkflowStepFactory workflowStepFactory = new WorkflowStepFactory(clusterService, client);
         WorkflowProcessSorter workflowProcessSorter = new WorkflowProcessSorter(workflowStepFactory, threadPool);
 
