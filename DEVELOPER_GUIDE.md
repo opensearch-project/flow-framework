@@ -36,7 +36,7 @@ This package uses the [Gradle](https://docs.gradle.org/current/userguide/usergui
 #### Building from the command line
 
 1. `./gradlew check` builds and tests.
-2. `./gradlew :run` launches a single node cluster with anomaly-detection (and job-scheduler) plugin installed.
+2. `./gradlew :run` runs the plugin.
 3. `./gradlew spotlessApply` formats code. And/or import formatting rules in [formatterConfig.xml](formatter/formatterConfig.xml) with IDE.
 4. `./gradlew test` to run the complete test suite.
 
