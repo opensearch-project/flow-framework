@@ -5,4 +5,4 @@
         h: component
 
   - match:
-      $body: /^flow-framework\n$/
+      $body: /^opensearch-flow-framework\n$/
