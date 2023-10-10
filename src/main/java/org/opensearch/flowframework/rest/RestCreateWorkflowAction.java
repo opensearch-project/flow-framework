@@ -21,8 +21,8 @@ import java.io.IOException;
 import java.util.List;
 import java.util.Locale;
 
-import static org.opensearch.flowframework.common.CommonValue.WORKFLOWS_URI;
 import static org.opensearch.flowframework.common.CommonValue.WORKFLOW_ID;
+import static org.opensearch.flowframework.common.CommonValue.WORKFLOW_URI;
 
 /**
  * Rest Action to facilitate requests to create and update a use case template
@@ -45,9 +45,9 @@ public class RestCreateWorkflowAction extends BaseRestHandler {
     public List<Route> routes() {
         return ImmutableList.of(
             // Create new workflow
-            new Route(RestRequest.Method.POST, String.format(Locale.ROOT, "%s", WORKFLOWS_URI)),
+            new Route(RestRequest.Method.POST, String.format(Locale.ROOT, "%s", WORKFLOW_URI)),
             // Update use case template
-            new Route(RestRequest.Method.PUT, String.format(Locale.ROOT, "%s/{%s}", WORKFLOWS_URI, WORKFLOW_ID))
+            new Route(RestRequest.Method.PUT, String.format(Locale.ROOT, "%s/{%s}", WORKFLOW_URI, WORKFLOW_ID))
         );
     }
 

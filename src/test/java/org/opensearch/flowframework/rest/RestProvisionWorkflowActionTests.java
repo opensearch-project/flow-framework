@@ -20,7 +20,7 @@ import java.io.IOException;
 import java.util.List;
 import java.util.Locale;
 
-import static org.opensearch.flowframework.common.CommonValue.WORKFLOWS_URI;
+import static org.opensearch.flowframework.common.CommonValue.WORKFLOW_URI;
 import static org.mockito.Mockito.mock;
 
 public class RestProvisionWorkflowActionTests extends OpenSearchTestCase {
@@ -33,7 +33,7 @@ public class RestProvisionWorkflowActionTests extends OpenSearchTestCase {
     public void setUp() throws Exception {
         super.setUp();
         this.provisionWorkflowRestAction = new RestProvisionWorkflowAction();
-        this.provisionWorkflowPath = String.format(Locale.ROOT, "%s/{%s}/%s", WORKFLOWS_URI, "workflow_id", "_provision");
+        this.provisionWorkflowPath = String.format(Locale.ROOT, "%s/{%s}/%s", WORKFLOW_URI, "workflow_id", "_provision");
         this.nodeClient = mock(NodeClient.class);
     }
 

@@ -20,8 +20,8 @@ import java.io.IOException;
 import java.util.List;
 import java.util.Locale;
 
-import static org.opensearch.flowframework.common.CommonValue.WORKFLOWS_URI;
 import static org.opensearch.flowframework.common.CommonValue.WORKFLOW_ID;
+import static org.opensearch.flowframework.common.CommonValue.WORKFLOW_URI;
 
 /**
  * Rest action to facilitate requests to provision a workflow from an inline defined or stored use case template
@@ -44,7 +44,7 @@ public class RestProvisionWorkflowAction extends BaseRestHandler {
     public List<Route> routes() {
         return ImmutableList.of(
             // Provision workflow from indexed use case template
-            new Route(RestRequest.Method.POST, String.format(Locale.ROOT, "%s/{%s}/%s", WORKFLOWS_URI, WORKFLOW_ID, "_provision"))
+            new Route(RestRequest.Method.POST, String.format(Locale.ROOT, "%s/{%s}/%s", WORKFLOW_URI, WORKFLOW_ID, "_provision"))
         );
     }
 
