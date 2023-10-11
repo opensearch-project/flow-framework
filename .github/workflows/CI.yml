@@ -1,4 +1,4 @@
-name: Build and Test Plugin
+name: Build Plugin
 
 on:
   push:
@@ -34,7 +34,7 @@ jobs:
           - windows-latest
         java:
           - 17
-    name: Build and Test Plugin Template
+    name: Build
     if: github.repository == 'opensearch-project/opensearch-ai-flow-framework'
     runs-on: ${{ matrix.os }}
 
@@ -45,9 +45,9 @@ jobs:
       with:
         java-version: ${{ matrix.java }}
         distribution: temurin
-    - name: Build and Run Tests
+    - name: Build
       run: |
-          ./gradlew check
+          ./gradlew check -x test -x integTest -x yamlRestTest
     - name: Upload Coverage Report
       if: matrix.os == 'ubuntu-latest'
       uses: codecov/codecov-action@v3

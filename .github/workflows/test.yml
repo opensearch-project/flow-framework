@@ -1,0 +1,39 @@
+name: Test Plugin
+
+on:
+  push:
+    branches-ignore:
+      - 'whitesource-remediate/**'
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+jobs:
+  strategy:
+    matrix:
+      os:
+        - ubuntu-latest
+        - macOS-latest
+        - windows-latest
+      java:
+        - 17
+  test:
+    if: github.repository == 'opensearch-project/opensearch-ai-flow-framework'
+      runs-on: ${{ matrix.os }}
+      steps:
+        - uses: actions/checkout@v4
+        - name: Test
+          run: ./gradlew test
+  yamlRestTest:
+    if: github.repository == 'opensearch-project/opensearch-ai-flow-framework'
+      runs-on: ${{ matrix.os }}
+      steps:
+        - uses: actions/checkout@v4
+        - name: Test
+          run: ./gradlew yamlRestTest
+  integTest:
+    if: github.repository == 'opensearch-project/opensearch-ai-flow-framework'
+      runs-on: ${{ matrix.os }}
+      steps:
+        - uses: actions/checkout@v4
+        - name: Test
+          run: ./gradlew integTest
