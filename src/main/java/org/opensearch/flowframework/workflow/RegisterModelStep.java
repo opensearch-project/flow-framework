@@ -28,6 +28,15 @@ import java.util.Map.Entry;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Stream;
 
+import static org.opensearch.flowframework.common.CommonValue.CONNECTOR_ID;
+import static org.opensearch.flowframework.common.CommonValue.DESCRIPTION;
+import static org.opensearch.flowframework.common.CommonValue.FUNCTION_NAME;
+import static org.opensearch.flowframework.common.CommonValue.MODEL_CONFIG;
+import static org.opensearch.flowframework.common.CommonValue.MODEL_FORMAT;
+import static org.opensearch.flowframework.common.CommonValue.MODEL_GROUP_ID;
+import static org.opensearch.flowframework.common.CommonValue.MODEL_NAME;
+import static org.opensearch.flowframework.common.CommonValue.MODEL_VERSION;
+
 /**
  * Step to register a remote model
  */
@@ -38,15 +47,6 @@ public class RegisterModelStep implements WorkflowStep {
     private Client client;
 
     static final String NAME = "register_model";
-
-    private static final String FUNCTION_NAME = "function_name";
-    private static final String MODEL_NAME = "name";
-    private static final String MODEL_VERSION = "model_version";
-    private static final String MODEL_GROUP_ID = "model_group_id";
-    private static final String DESCRIPTION = "description";
-    private static final String CONNECTOR_ID = "connector_id";
-    private static final String MODEL_FORMAT = "model_format";
-    private static final String MODEL_CONFIG = "model_config";
 
     /**
      * Instantiate this class

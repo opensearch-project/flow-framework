@@ -20,6 +20,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
+import static org.opensearch.flowframework.common.CommonValue.MODEL_ID;
+
 /**
  * Step to deploy a model
  */
@@ -27,7 +29,6 @@ public class DeployModelStep implements WorkflowStep {
     private static final Logger logger = LogManager.getLogger(DeployModelStep.class);
 
     private Client client;
-    private static final String MODEL_ID = "model_id";
     static final String NAME = "deploy_model";
 
     /**
@@ -64,12 +65,9 @@ public class DeployModelStep implements WorkflowStep {
         String modelId = null;
 
         for (WorkflowData workflowData : data) {
-            Map<String, Object> content = workflowData.getContent();
-            for (Map.Entry<String, Object> entry : content.entrySet()) {
-                if (entry.getKey() == MODEL_ID) {
-                    modelId = (String) content.get(MODEL_ID);
-                }
-
+            if (workflowData.getContent().containsKey(MODEL_ID)) {
+                modelId = (String) workflowData.getContent().get(MODEL_ID);
+                break;
             }
         }
         machineLearningNodeClient.deploy(modelId, actionListener);
