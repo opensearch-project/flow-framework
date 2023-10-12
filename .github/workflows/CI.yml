@@ -48,8 +48,3 @@ jobs:
     - name: Build
       run: |
           ./gradlew check -x test -x integTest -x yamlRestTest
-    - name: Upload Coverage Report
-      if: matrix.os == 'ubuntu-latest'
-      uses: codecov/codecov-action@v3
-      with:
-        file: ./build/reports/jacoco/test/jacocoTestReport.xml

@@ -8,32 +8,32 @@ on:
     types: [opened, synchronize, reopened]
 
 jobs:
-  strategy:
-    matrix:
-      os:
-        - ubuntu-latest
-        - macOS-latest
-        - windows-latest
-      java:
-        - 17
   test:
+    strategy:
+      matrix:
+        os:
+          - ubuntu-latest
+          - macOS-latest
+          - windows-latest
+        java:
+          - 17
     if: github.repository == 'opensearch-project/opensearch-ai-flow-framework'
-      runs-on: ${{ matrix.os }}
-      steps:
-        - uses: actions/checkout@v4
-        - name: Test
-          run: ./gradlew test
-  yamlRestTest:
-    if: github.repository == 'opensearch-project/opensearch-ai-flow-framework'
-      runs-on: ${{ matrix.os }}
-      steps:
-        - uses: actions/checkout@v4
-        - name: Test
-          run: ./gradlew yamlRestTest
-  integTest:
-    if: github.repository == 'opensearch-project/opensearch-ai-flow-framework'
-      runs-on: ${{ matrix.os }}
-      steps:
-        - uses: actions/checkout@v4
-        - name: Test
-          run: ./gradlew integTest
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Test
+        run: ./gradlew test
+
+      - name: YamlRestTest
+        run:
+          ./gradlew yamlRestTest
+
+      - name: integTest
+        run:
+          ./gradlew integTest
+
+      - name: Upload Coverage Report
+        if: matrix.os == 'ubuntu-latest'
+        uses: codecov/codecov-action@v3
+        with:
+          file: ./build/reports/jacoco/test/jacocoTestReport.xml
