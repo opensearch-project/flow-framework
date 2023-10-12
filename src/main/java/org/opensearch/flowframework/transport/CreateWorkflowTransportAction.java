@@ -14,6 +14,8 @@ import org.opensearch.action.support.ActionFilters;
 import org.opensearch.action.support.HandledTransportAction;
 import org.opensearch.common.inject.Inject;
 import org.opensearch.core.action.ActionListener;
+import org.opensearch.core.rest.RestStatus;
+import org.opensearch.flowframework.exception.FlowFrameworkException;
 import org.opensearch.flowframework.indices.GlobalContextHandler;
 import org.opensearch.tasks.Task;
 import org.opensearch.transport.TransportService;
@@ -53,7 +55,7 @@ public class CreateWorkflowTransportAction extends HandledTransportAction<Workfl
                 listener.onResponse(new WorkflowResponse(response.getId()));
             }, exception -> {
                 logger.error("Failed to save use case template : {}", exception.getMessage());
-                listener.onFailure(exception);
+                listener.onFailure(new FlowFrameworkException(exception.getMessage(), RestStatus.INTERNAL_SERVER_ERROR));
             }));
         } else {
             // Update existing entry, full document replacement
@@ -62,7 +64,7 @@ public class CreateWorkflowTransportAction extends HandledTransportAction<Workfl
                 listener.onResponse(new WorkflowResponse(response.getId()));
             }, exception -> {
                 logger.error("Failed to updated use case template {} : {}", request.getWorkflowId(), exception.getMessage());
-                listener.onFailure(exception);
+                listener.onFailure(new FlowFrameworkException(exception.getMessage(), RestStatus.INTERNAL_SERVER_ERROR));
             }));
         }
     }

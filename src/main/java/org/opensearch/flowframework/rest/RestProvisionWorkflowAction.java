@@ -10,6 +10,8 @@ package org.opensearch.flowframework.rest;
 
 import com.google.common.collect.ImmutableList;
 import org.opensearch.client.node.NodeClient;
+import org.opensearch.core.rest.RestStatus;
+import org.opensearch.flowframework.exception.FlowFrameworkException;
 import org.opensearch.flowframework.transport.ProvisionWorkflowAction;
 import org.opensearch.flowframework.transport.WorkflowRequest;
 import org.opensearch.rest.BaseRestHandler;
@@ -53,13 +55,13 @@ public class RestProvisionWorkflowAction extends BaseRestHandler {
 
         // Validate content
         if (request.hasContent()) {
-            throw new IOException("Invalid request format");
+            throw new FlowFrameworkException("Invalid request format", RestStatus.BAD_REQUEST);
         }
 
         // Validate params
         String workflowId = request.param(WORKFLOW_ID);
         if (workflowId == null) {
-            throw new IOException("workflow_id cannot be null");
+            throw new FlowFrameworkException("workflow_id cannot be null", RestStatus.BAD_REQUEST);
         }
 
         // Create request and provision

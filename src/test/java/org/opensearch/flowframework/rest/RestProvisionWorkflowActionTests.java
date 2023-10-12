@@ -10,7 +10,9 @@ package org.opensearch.flowframework.rest;
 
 import org.opensearch.client.node.NodeClient;
 import org.opensearch.core.common.bytes.BytesArray;
+import org.opensearch.core.rest.RestStatus;
 import org.opensearch.core.xcontent.MediaTypeRegistry;
+import org.opensearch.flowframework.exception.FlowFrameworkException;
 import org.opensearch.rest.RestHandler.Route;
 import org.opensearch.rest.RestRequest;
 import org.opensearch.test.OpenSearchTestCase;
@@ -56,8 +58,11 @@ public class RestProvisionWorkflowActionTests extends OpenSearchTestCase {
             .withPath(this.provisionWorkflowPath)
             .build();
 
-        IOException ex = expectThrows(IOException.class, () -> { provisionWorkflowRestAction.prepareRequest(request, nodeClient); });
+        FlowFrameworkException ex = expectThrows(FlowFrameworkException.class, () -> {
+            provisionWorkflowRestAction.prepareRequest(request, nodeClient);
+        });
         assertEquals("workflow_id cannot be null", ex.getMessage());
+        assertEquals(RestStatus.BAD_REQUEST, ex.getRestStatus());
     }
 
     public void testInvalidRequestWithContent() throws IOException {
@@ -66,8 +71,11 @@ public class RestProvisionWorkflowActionTests extends OpenSearchTestCase {
             .withContent(new BytesArray("request body"), MediaTypeRegistry.JSON)
             .build();
 
-        IOException ex = expectThrows(IOException.class, () -> { provisionWorkflowRestAction.prepareRequest(request, nodeClient); });
+        FlowFrameworkException ex = expectThrows(FlowFrameworkException.class, () -> {
+            provisionWorkflowRestAction.prepareRequest(request, nodeClient);
+        });
         assertEquals("Invalid request format", ex.getMessage());
+        assertEquals(RestStatus.BAD_REQUEST, ex.getRestStatus());
     }
 
 }

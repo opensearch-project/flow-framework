@@ -17,6 +17,8 @@ import org.opensearch.client.Client;
 import org.opensearch.common.inject.Inject;
 import org.opensearch.common.util.concurrent.ThreadContext;
 import org.opensearch.core.action.ActionListener;
+import org.opensearch.core.rest.RestStatus;
+import org.opensearch.flowframework.exception.FlowFrameworkException;
 import org.opensearch.flowframework.model.Template;
 import org.opensearch.flowframework.model.Workflow;
 import org.opensearch.flowframework.workflow.ProcessNode;
@@ -92,11 +94,11 @@ public class ProvisionWorkflowTransportAction extends HandledTransportAction<Wor
                 executeWorkflowAsync(workflowId, template.workflows().get(PROVISION_WORKFLOW));
             }, exception -> {
                 logger.error("Failed to retrieve template from global context.", exception);
-                listener.onFailure(exception);
+                listener.onFailure(new FlowFrameworkException(exception.getMessage(), RestStatus.INTERNAL_SERVER_ERROR));
             }));
         } catch (Exception e) {
             logger.error("Failed to retrieve template from global context.", e);
-            listener.onFailure(e);
+            listener.onFailure(new FlowFrameworkException(e.getMessage(), RestStatus.INTERNAL_SERVER_ERROR));
         }
     }
 
@@ -119,7 +121,7 @@ public class ProvisionWorkflowTransportAction extends HandledTransportAction<Wor
         try {
             threadPool.executor(PROVISION_THREAD_POOL).execute(() -> { executeWorkflow(workflow, provisionWorkflowListener); });
         } catch (Exception exception) {
-            provisionWorkflowListener.onFailure(exception);
+            provisionWorkflowListener.onFailure(new FlowFrameworkException(exception.getMessage(), RestStatus.INTERNAL_SERVER_ERROR));
         }
     }
 
@@ -157,7 +159,7 @@ public class ProvisionWorkflowTransportAction extends HandledTransportAction<Wor
             // TODO : Create State Index request with provisioning state, start time, end time, etc, pending implementation. String for now
             workflowListener.onResponse("READY");
         } catch (CancellationException | CompletionException ex) {
-            workflowListener.onFailure(ex);
+            workflowListener.onFailure(new FlowFrameworkException(ex.getMessage(), RestStatus.INTERNAL_SERVER_ERROR));
         }
     }
 
