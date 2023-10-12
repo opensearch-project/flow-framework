@@ -17,6 +17,8 @@ import java.util.HashMap;
 import java.util.Map;
 
 import static org.opensearch.core.xcontent.XContentParserUtils.ensureExpectedToken;
+import static org.opensearch.flowframework.common.TemplateUtil.buildStringToStringMap;
+import static org.opensearch.flowframework.common.TemplateUtil.parseStringToStringMap;
 
 /**
  * This represents a processor associated with search and ingest pipelines in the {@link Template}.
@@ -46,7 +48,7 @@ public class PipelineProcessor implements ToXContentObject {
         XContentBuilder xContentBuilder = builder.startObject();
         xContentBuilder.field(TYPE_FIELD, this.type);
         xContentBuilder.field(PARAMS_FIELD);
-        Template.buildStringToStringMap(xContentBuilder, this.params);
+        buildStringToStringMap(xContentBuilder, this.params);
         return xContentBuilder.endObject();
     }
 
@@ -70,7 +72,7 @@ public class PipelineProcessor implements ToXContentObject {
                     type = parser.text();
                     break;
                 case PARAMS_FIELD:
-                    params = Template.parseStringToStringMap(parser);
+                    params = parseStringToStringMap(parser);
                     break;
                 default:
                     throw new IOException("Unable to parse field [" + fieldName + "] in a pipeline processor object.");
