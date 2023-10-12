@@ -100,7 +100,7 @@ public class GlobalContextHandler {
      * @param template the use-case template
      * @param listener action listener
      */
-    public void updateTemplate(String documentId, Template template, ActionListener<IndexResponse> listener) {
+    public void updateTemplateInGlobalContext(String documentId, Template template, ActionListener<IndexResponse> listener) {
         if (!createIndexStep.doesIndexExist(GLOBAL_CONTEXT_INDEX)) {
             String exceptionMessage = "Failed to update template for workflow_id : "
                 + documentId

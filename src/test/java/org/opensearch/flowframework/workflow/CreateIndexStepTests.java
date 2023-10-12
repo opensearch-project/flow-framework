@@ -128,7 +128,7 @@ public class CreateIndexStepTests extends OpenSearchTestCase {
         ActionListener<Boolean> listener = mock(ActionListener.class);
         createIndexStep.initIndexIfAbsent(FlowFrameworkIndex.GLOBAL_CONTEXT, listener);
 
-        verify(indicesAdminClient, times(1)).create(any(), any());
+        verify(indicesAdminClient, times(1)).create(any(CreateIndexRequest.class), any());
     }
 
     public void testInitIndexIfAbsent_IndexExist() {

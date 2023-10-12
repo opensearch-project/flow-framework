@@ -9,6 +9,7 @@
 package org.opensearch.flowframework.transport;
 
 import org.opensearch.Version;
+import org.opensearch.action.get.GetRequest;
 import org.opensearch.action.get.GetResponse;
 import org.opensearch.action.support.ActionFilters;
 import org.opensearch.client.Client;
@@ -111,7 +112,7 @@ public class ProvisionWorkflowTransportActionTests extends OpenSearchTestCase {
             GetResult getResult = new GetResult(GLOBAL_CONTEXT_INDEX, workflowId, 1, 1, 1, true, templateBytesRef, null, null);
             responseListener.onResponse(new GetResponse(getResult));
             return null;
-        }).when(client).get(any(), any());
+        }).when(client).get(any(GetRequest.class), any());
 
         provisionWorkflowTransportAction.doExecute(mock(Task.class), workflowRequest, listener);
         ArgumentCaptor<WorkflowResponse> responseCaptor = ArgumentCaptor.forClass(WorkflowResponse.class);
@@ -126,7 +127,7 @@ public class ProvisionWorkflowTransportActionTests extends OpenSearchTestCase {
             ActionListener<GetResponse> responseListener = invocation.getArgument(1);
             responseListener.onFailure(new Exception("Failed to retrieve template from global context."));
             return null;
-        }).when(client).get(any(), any());
+        }).when(client).get(any(GetRequest.class), any());
 
         provisionWorkflowTransportAction.doExecute(mock(Task.class), request, listener);
         ArgumentCaptor<Exception> exceptionCaptor = ArgumentCaptor.forClass(Exception.class);

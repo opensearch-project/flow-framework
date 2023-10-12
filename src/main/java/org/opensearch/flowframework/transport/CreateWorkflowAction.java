@@ -10,14 +10,15 @@ package org.opensearch.flowframework.transport;
 
 import org.opensearch.action.ActionType;
 
+import static org.opensearch.flowframework.common.CommonValue.TRANSPORT_ACION_NAME_PREFIX;
+
 /**
  * External Action for public facing RestCreateWorkflowActiom
  */
 public class CreateWorkflowAction extends ActionType<WorkflowResponse> {
 
-    // TODO : Determine external action prefix for plugin
     /** The name of this action */
-    public static final String NAME = "workflows/create";
+    public static final String NAME = TRANSPORT_ACION_NAME_PREFIX + "workflow/create";
     /** An instance of this action */
     public static final CreateWorkflowAction INSTANCE = new CreateWorkflowAction();
 

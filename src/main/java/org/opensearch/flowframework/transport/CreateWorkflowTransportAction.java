@@ -59,13 +59,17 @@ public class CreateWorkflowTransportAction extends HandledTransportAction<Workfl
             }));
         } else {
             // Update existing entry, full document replacement
-            globalContextHandler.updateTemplate(request.getWorkflowId(), request.getTemplate(), ActionListener.wrap(response -> {
-                // TODO : Create StateIndexRequest for workflowId to reset entry to NOT_STARTED
-                listener.onResponse(new WorkflowResponse(response.getId()));
-            }, exception -> {
-                logger.error("Failed to updated use case template {} : {}", request.getWorkflowId(), exception.getMessage());
-                listener.onFailure(new FlowFrameworkException(exception.getMessage(), RestStatus.INTERNAL_SERVER_ERROR));
-            }));
+            globalContextHandler.updateTemplateInGlobalContext(
+                request.getWorkflowId(),
+                request.getTemplate(),
+                ActionListener.wrap(response -> {
+                    // TODO : Create StateIndexRequest for workflowId to reset entry to NOT_STARTED
+                    listener.onResponse(new WorkflowResponse(response.getId()));
+                }, exception -> {
+                    logger.error("Failed to updated use case template {} : {}", request.getWorkflowId(), exception.getMessage());
+                    listener.onFailure(new FlowFrameworkException(exception.getMessage(), RestStatus.INTERNAL_SERVER_ERROR));
+                })
+            );
         }
     }
 

@@ -84,7 +84,7 @@ public class GlobalContextHandlerTests extends OpenSearchTestCase {
             ActionListener<Boolean> callback = invocation.getArgument(1);
             callback.onResponse(true);
             return null;
-        }).when(createIndexStep).initIndexIfAbsent(any(), any());
+        }).when(createIndexStep).initIndexIfAbsent(any(FlowFrameworkIndex.class), any());
 
         globalContextHandler.putTemplateToGlobalContext(template, listener);
 
@@ -110,7 +110,7 @@ public class GlobalContextHandlerTests extends OpenSearchTestCase {
         assertEquals(documentId, requestCaptor.getValue().id());
     }
 
-    public void testUpdateTemplate() throws IOException {
+    public void testUpdateTemplateInGlobalContext() throws IOException {
         Template template = mock(Template.class);
         ActionListener<IndexResponse> listener = mock(ActionListener.class);
         when(template.toDocumentSource(any(XContentBuilder.class), eq(ToXContent.EMPTY_PARAMS))).thenAnswer(invocation -> {
@@ -119,7 +119,7 @@ public class GlobalContextHandlerTests extends OpenSearchTestCase {
         });
         when(createIndexStep.doesIndexExist(any())).thenReturn(true);
 
-        globalContextHandler.updateTemplate("1", template, null);
+        globalContextHandler.updateTemplateInGlobalContext("1", template, null);
 
         ArgumentCaptor<IndexRequest> requestCaptor = ArgumentCaptor.forClass(IndexRequest.class);
         verify(client, times(1)).index(requestCaptor.capture(), any());
@@ -127,12 +127,12 @@ public class GlobalContextHandlerTests extends OpenSearchTestCase {
         assertEquals("1", requestCaptor.getValue().id());
     }
 
-    public void testFailedUpdateTemplate() throws IOException {
+    public void testFailedUpdateTemplateInGlobalContext() throws IOException {
         Template template = mock(Template.class);
         ActionListener<IndexResponse> listener = mock(ActionListener.class);
         when(createIndexStep.doesIndexExist(any())).thenReturn(false);
 
-        globalContextHandler.updateTemplate("1", template, listener);
+        globalContextHandler.updateTemplateInGlobalContext("1", template, listener);
         ArgumentCaptor<Exception> exceptionCaptor = ArgumentCaptor.forClass(Exception.class);
 
         verify(listener, times(1)).onFailure(exceptionCaptor.capture());

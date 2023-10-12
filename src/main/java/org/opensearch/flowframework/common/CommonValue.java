@@ -26,10 +26,12 @@ public class CommonValue {
     /** Global Context index mapping version */
     public static final Integer GLOBAL_CONTEXT_INDEX_VERSION = 1;
 
+    /** The transport action name prefix */
+    public static final String TRANSPORT_ACION_NAME_PREFIX = "cluster:admin/opensearch/flow_framework/";
     /** The base URI for this plugin's rest actions */
-    public static final String AI_FLOW_FRAMEWORK_BASE_URI = "/_plugins/_flow_framework";
+    public static final String FLOW_FRAMEWORK_BASE_URI = "/_plugins/_flow_framework";
     /** The URI for this plugin's workflow rest actions */
-    public static final String WORKFLOW_URI = AI_FLOW_FRAMEWORK_BASE_URI + "/workflow";
+    public static final String WORKFLOW_URI = FLOW_FRAMEWORK_BASE_URI + "/workflow";
     /** Field name for workflow Id, the document Id of the indexed use case template */
     public static final String WORKFLOW_ID = "workflow_id";
     /** The field name for provision workflow within a use case template*/

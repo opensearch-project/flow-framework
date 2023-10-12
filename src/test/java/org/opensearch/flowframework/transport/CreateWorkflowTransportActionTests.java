@@ -83,7 +83,7 @@ public class CreateWorkflowTransportActionTests extends OpenSearchTestCase {
             ActionListener<IndexResponse> responseListener = invocation.getArgument(1);
             responseListener.onResponse(new IndexResponse(new ShardId(GLOBAL_CONTEXT_INDEX, "", 1), "1", 1L, 1L, 1L, true));
             return null;
-        }).when(globalContextHandler).putTemplateToGlobalContext(any(), any());
+        }).when(globalContextHandler).putTemplateToGlobalContext(any(Template.class), any());
 
         createWorkflowTransportAction.doExecute(mock(Task.class), createNewWorkflow, listener);
         ArgumentCaptor<WorkflowResponse> responseCaptor = ArgumentCaptor.forClass(WorkflowResponse.class);
@@ -101,7 +101,7 @@ public class CreateWorkflowTransportActionTests extends OpenSearchTestCase {
             ActionListener<IndexResponse> responseListener = invocation.getArgument(1);
             responseListener.onFailure(new Exception("Failed to create global_context index"));
             return null;
-        }).when(globalContextHandler).putTemplateToGlobalContext(any(), any());
+        }).when(globalContextHandler).putTemplateToGlobalContext(any(Template.class), any());
 
         createWorkflowTransportAction.doExecute(mock(Task.class), createNewWorkflow, listener);
         ArgumentCaptor<Exception> exceptionCaptor = ArgumentCaptor.forClass(Exception.class);
@@ -118,7 +118,7 @@ public class CreateWorkflowTransportActionTests extends OpenSearchTestCase {
             ActionListener<IndexResponse> responseListener = invocation.getArgument(2);
             responseListener.onResponse(new IndexResponse(new ShardId(GLOBAL_CONTEXT_INDEX, "", 1), "1", 1L, 1L, 1L, true));
             return null;
-        }).when(globalContextHandler).updateTemplate(any(), any(), any());
+        }).when(globalContextHandler).updateTemplateInGlobalContext(any(), any(Template.class), any());
 
         createWorkflowTransportAction.doExecute(mock(Task.class), updateWorkflow, listener);
         ArgumentCaptor<WorkflowResponse> responseCaptor = ArgumentCaptor.forClass(WorkflowResponse.class);
@@ -135,7 +135,7 @@ public class CreateWorkflowTransportActionTests extends OpenSearchTestCase {
             ActionListener<IndexResponse> responseListener = invocation.getArgument(2);
             responseListener.onFailure(new Exception("Failed to update use case template"));
             return null;
-        }).when(globalContextHandler).updateTemplate(any(), any(), any());
+        }).when(globalContextHandler).updateTemplateInGlobalContext(any(), any(Template.class), any());
 
         createWorkflowTransportAction.doExecute(mock(Task.class), updateWorkflow, listener);
         ArgumentCaptor<Exception> exceptionCaptor = ArgumentCaptor.forClass(Exception.class);
