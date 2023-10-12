@@ -39,6 +39,10 @@ jobs:
         run:
           ./gradlew integTest
 
+      - name: Run Tests with Coverage
+        run:
+          ./gradlew test jacocoTestReport --info
+
       - name: Upload Coverage Report
         if: matrix.os == 'ubuntu-latest'
         uses: codecov/codecov-action@v3
