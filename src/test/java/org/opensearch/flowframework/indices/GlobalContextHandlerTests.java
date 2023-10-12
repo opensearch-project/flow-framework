@@ -73,7 +73,7 @@ public class GlobalContextHandlerTests extends OpenSearchTestCase {
 
     public void testPutTemplateToGlobalContext() throws IOException {
         Template template = mock(Template.class);
-        when(template.toXContent(any(XContentBuilder.class), eq(ToXContent.EMPTY_PARAMS))).thenAnswer(invocation -> {
+        when(template.toDocumentSource(any(XContentBuilder.class), eq(ToXContent.EMPTY_PARAMS))).thenAnswer(invocation -> {
             XContentBuilder builder = invocation.getArgument(0);
             return builder;
         });
@@ -84,7 +84,7 @@ public class GlobalContextHandlerTests extends OpenSearchTestCase {
             ActionListener<Boolean> callback = invocation.getArgument(1);
             callback.onResponse(true);
             return null;
-        }).when(createIndexStep).initIndexIfAbsent(any(), any());
+        }).when(createIndexStep).initIndexIfAbsent(any(FlowFrameworkIndex.class), any());
 
         globalContextHandler.putTemplateToGlobalContext(template, listener);
 
@@ -108,5 +108,39 @@ public class GlobalContextHandlerTests extends OpenSearchTestCase {
 
         assertEquals(GLOBAL_CONTEXT_INDEX, requestCaptor.getValue().index());
         assertEquals(documentId, requestCaptor.getValue().id());
+    }
+
+    public void testUpdateTemplateInGlobalContext() throws IOException {
+        Template template = mock(Template.class);
+        ActionListener<IndexResponse> listener = mock(ActionListener.class);
+        when(template.toDocumentSource(any(XContentBuilder.class), eq(ToXContent.EMPTY_PARAMS))).thenAnswer(invocation -> {
+            XContentBuilder builder = invocation.getArgument(0);
+            return builder;
+        });
+        when(createIndexStep.doesIndexExist(any())).thenReturn(true);
+
+        globalContextHandler.updateTemplateInGlobalContext("1", template, null);
+
+        ArgumentCaptor<IndexRequest> requestCaptor = ArgumentCaptor.forClass(IndexRequest.class);
+        verify(client, times(1)).index(requestCaptor.capture(), any());
+
+        assertEquals("1", requestCaptor.getValue().id());
+    }
+
+    public void testFailedUpdateTemplateInGlobalContext() throws IOException {
+        Template template = mock(Template.class);
+        ActionListener<IndexResponse> listener = mock(ActionListener.class);
+        when(createIndexStep.doesIndexExist(any())).thenReturn(false);
+
+        globalContextHandler.updateTemplateInGlobalContext("1", template, listener);
+        ArgumentCaptor<Exception> exceptionCaptor = ArgumentCaptor.forClass(Exception.class);
+
+        verify(listener, times(1)).onFailure(exceptionCaptor.capture());
+
+        assertEquals(
+            "Failed to update template for workflow_id : 1, global_context index does not exist.",
+            exceptionCaptor.getValue().getMessage()
+        );
+
     }
 }

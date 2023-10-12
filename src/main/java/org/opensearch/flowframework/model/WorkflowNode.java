@@ -24,6 +24,8 @@ import java.util.Map.Entry;
 import java.util.Objects;
 
 import static org.opensearch.core.xcontent.XContentParserUtils.ensureExpectedToken;
+import static org.opensearch.flowframework.common.TemplateUtil.buildStringToStringMap;
+import static org.opensearch.flowframework.common.TemplateUtil.parseStringToStringMap;
 
 /**
  * This represents a process node (step) in a workflow graph in the {@link Template}.
@@ -75,7 +77,7 @@ public class WorkflowNode implements ToXContentObject {
             if (e.getValue() instanceof String) {
                 xContentBuilder.value(e.getValue());
             } else if (e.getValue() instanceof Map<?, ?>) {
-                Template.buildStringToStringMap(xContentBuilder, (Map<?, ?>) e.getValue());
+                buildStringToStringMap(xContentBuilder, (Map<?, ?>) e.getValue());
             } else if (e.getValue() instanceof Object[]) {
                 xContentBuilder.startArray();
                 if (PROCESSORS_FIELD.equals(e.getKey())) {
@@ -84,7 +86,7 @@ public class WorkflowNode implements ToXContentObject {
                     }
                 } else {
                     for (Map<?, ?> map : (Map<?, ?>[]) e.getValue()) {
-                        Template.buildStringToStringMap(xContentBuilder, map);
+                        buildStringToStringMap(xContentBuilder, map);
                     }
                 }
                 xContentBuilder.endArray();
@@ -127,7 +129,7 @@ public class WorkflowNode implements ToXContentObject {
                                 inputs.put(inputFieldName, parser.text());
                                 break;
                             case START_OBJECT:
-                                inputs.put(inputFieldName, Template.parseStringToStringMap(parser));
+                                inputs.put(inputFieldName, parseStringToStringMap(parser));
                                 break;
                             case START_ARRAY:
                                 if (PROCESSORS_FIELD.equals(inputFieldName)) {
@@ -139,7 +141,7 @@ public class WorkflowNode implements ToXContentObject {
                                 } else {
                                     List<Map<String, String>> mapList = new ArrayList<>();
                                     while (parser.nextToken() != XContentParser.Token.END_ARRAY) {
-                                        mapList.add(Template.parseStringToStringMap(parser));
+                                        mapList.add(parseStringToStringMap(parser));
                                     }
                                     inputs.put(inputFieldName, mapList.toArray(new Map[0]));
                                 }
