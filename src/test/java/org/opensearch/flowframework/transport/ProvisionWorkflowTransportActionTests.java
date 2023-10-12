@@ -106,7 +106,7 @@ public class ProvisionWorkflowTransportActionTests extends OpenSearchTestCase {
             ActionListener<GetResponse> responseListener = invocation.getArgument(1);
 
             XContentBuilder builder = XContentFactory.jsonBuilder();
-            this.template.toXContent(builder, ToXContent.EMPTY_PARAMS);
+            this.template.toDocumentSource(builder, ToXContent.EMPTY_PARAMS);
             BytesReference templateBytesRef = BytesReference.bytes(builder);
             GetResult getResult = new GetResult(GLOBAL_CONTEXT_INDEX, workflowId, 1, 1, 1, true, templateBytesRef, null, null);
             responseListener.onResponse(new GetResponse(getResult));

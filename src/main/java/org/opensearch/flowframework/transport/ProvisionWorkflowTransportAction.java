@@ -83,7 +83,7 @@ public class ProvisionWorkflowTransportAction extends HandledTransportAction<Wor
                 context.restore();
 
                 // Parse template from document source
-                Template template = Template.parse(response.getSourceAsString());
+                Template template = Template.parseFromDocumentSource(response.getSourceAsString());
 
                 // TODO : Update state index entry to PROVISIONING, given workflowId
 

@@ -73,7 +73,7 @@ public class GlobalContextHandlerTests extends OpenSearchTestCase {
 
     public void testPutTemplateToGlobalContext() throws IOException {
         Template template = mock(Template.class);
-        when(template.toXContent(any(XContentBuilder.class), eq(ToXContent.EMPTY_PARAMS))).thenAnswer(invocation -> {
+        when(template.toDocumentSource(any(XContentBuilder.class), eq(ToXContent.EMPTY_PARAMS))).thenAnswer(invocation -> {
             XContentBuilder builder = invocation.getArgument(0);
             return builder;
         });
