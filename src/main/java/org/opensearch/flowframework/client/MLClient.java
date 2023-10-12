@@ -8,7 +8,7 @@
  */
 package org.opensearch.flowframework.client;
 
-import org.opensearch.client.node.NodeClient;
+import org.opensearch.client.Client;
 import org.opensearch.ml.client.MachineLearningNodeClient;
 
 /**
@@ -22,12 +22,12 @@ public class MLClient {
     /**
      * Creates machine learning client.
      *
-     * @param nodeClient node client of OpenSearch.
+     * @param client client of OpenSearch.
      * @return machine learning client from ml-commons.
      */
-    public static MachineLearningNodeClient createMLClient(NodeClient nodeClient) {
+    public static MachineLearningNodeClient createMLClient(Client client) {
         if (INSTANCE == null) {
-            INSTANCE = new MachineLearningNodeClient(nodeClient);
+            INSTANCE = new MachineLearningNodeClient(client);
         }
         return INSTANCE;
     }

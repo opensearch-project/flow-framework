@@ -34,4 +34,13 @@ public class CommonValue {
     /** The provision workflow thread pool name */
     public static final String PROVISION_THREAD_POOL = "opensearch_workflow_provision";
 
+    public static final String MODEL_ID = "model_id";
+    public static final String FUNCTION_NAME = "function_name";
+    public static final String MODEL_NAME = "name";
+    public static final String MODEL_VERSION = "model_version";
+    public static final String MODEL_GROUP_ID = "model_group_id";
+    public static final String DESCRIPTION = "description";
+    public static final String CONNECTOR_ID = "connector_id";
+    public static final String MODEL_FORMAT = "model_format";
+    public static final String MODEL_CONFIG = "model_config";
 }

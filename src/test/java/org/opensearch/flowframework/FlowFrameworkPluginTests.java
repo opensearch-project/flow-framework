@@ -10,6 +10,8 @@ package org.opensearch.flowframework;
 
 import org.opensearch.client.AdminClient;
 import org.opensearch.client.Client;
+import org.opensearch.client.ClusterAdminClient;
+import org.opensearch.client.node.NodeClient;
 import org.opensearch.common.settings.Settings;
 import org.opensearch.test.OpenSearchTestCase;
 import org.opensearch.threadpool.TestThreadPool;
@@ -24,6 +26,11 @@ import static org.mockito.Mockito.when;
 public class FlowFrameworkPluginTests extends OpenSearchTestCase {
 
     private Client client;
+    private NodeClient nodeClient;
+
+    private AdminClient adminClient;
+
+    private ClusterAdminClient clusterAdminClient;
     private ThreadPool threadPool;
     private Settings settings;
 
@@ -31,7 +38,10 @@ public class FlowFrameworkPluginTests extends OpenSearchTestCase {
     public void setUp() throws Exception {
         super.setUp();
         client = mock(Client.class);
-        when(client.admin()).thenReturn(mock(AdminClient.class));
+        adminClient = mock(AdminClient.class);
+        clusterAdminClient = mock(ClusterAdminClient.class);
+        when(client.admin()).thenReturn(adminClient);
+        when(adminClient.cluster()).thenReturn(clusterAdminClient);
         threadPool = new TestThreadPool(FlowFrameworkPluginTests.class.getName());
         settings = Settings.EMPTY;
     }
