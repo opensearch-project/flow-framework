@@ -1,101 +1,101 @@
 {
-    "name": "semantic-search",
-    "description": "My semantic search use case",
-    "use_case": "SEMANTIC_SEARCH",
-    "operations": [
-        "PROVISION",
-        "INGEST",
-        "QUERY"
-    ],
-    "version": {
-        "template": "1.0.0",
-        "compatibility": [
-            "2.9.0",
-            "3.0.0"
-        ]
-    },
-    "user_inputs": {
-        "index_name": "my-knn-index",
-        "index_settings": {}
-    },
-    "workflows": {
-        "provision": {
-            "nodes": [{
-                    "id": "create_index",
-                    "type": "create_index",
-                    "inputs": {
-                        "name": "user_inputs.index_name",
-                        "settings": "user_inputs.index_settings",
-                        "node_timeout": "10s"
-                    }
-                },
-                {
-                    "id": "create_ingest_pipeline",
-                    "type": "create_ingest_pipeline",
-                    "inputs": {
-                        "name": "my-ingest-pipeline",
-                        "description": "some description",
-                        "processors": [{
-                            "type": "text_embedding",
-                            "params": {
-                                "model_id": "my-existing-model-id",
-                                "input_field": "text_passage",
-                                "output_field": "text_embedding"
-                            }
-                        }],
-                        "node_timeout": "10s"
-                    }
-                }
-            ],
-            "edges": [{
-                "source": "create_index",
-                "dest": "create_ingest_pipeline"
-            }]
-        },
-        "ingest": {
-            "user_params": {
-                "document": "doc"
-            },
-            "nodes": [{
-                "id": "ingest_index",
-                "type": "ingest_index",
-                "inputs": {
-                    "index": "user_inputs.index_name",
-                    "ingest_pipeline": "my-ingest-pipeline",
-                    "document": "user_params.document",
-                    "node_timeout": "10s"
-                }
-            }]
-        },
-        "query": {
-            "user_params": {
-                "plaintext": "string"
-            },
-            "nodes": [{
-                    "id": "transform_query",
-                    "type": "transform_query",
-                    "inputs": {
-                        "template": "neural-search-template-1",
-                        "plaintext": "user_params.plaintext",
-                        "node_timeout": "10s"
-                    }
-                },
-                {
-                    "id": "query_index",
-                    "type": "query_index",
-                    "inputs": {
-                        "index": "user_inputs.index_name",
-                        "query": "{{output-from-prev-step}}.query",
-                        "search_request_processors": [],
-                        "search_response_processors": [],
-                        "node_timeout": "10s"
-                    }
-                }
-            ],
-            "edges": [{
-                "source": "transform_query",
-                "dest": "query_index"
-            }]
+  "name": "semantic-search",
+  "description": "My semantic search use case",
+  "use_case": "SEMANTIC_SEARCH",
+  "operations": [
+    "PROVISION",
+    "INGEST",
+    "QUERY"
+  ],
+  "version": {
+    "template": "1.0.0",
+    "compatibility": [
+      "2.9.0",
+      "3.0.0"
+    ]
+  },
+  "user_inputs": {
+    "index_name": "my-knn-index",
+    "index_settings": {}
+  },
+  "workflows": {
+    "provision": {
+      "nodes": [{
+        "id": "create_index",
+        "type": "create_index",
+        "inputs": {
+          "name": "user_inputs.index_name",
+          "settings": "user_inputs.index_settings",
+          "node_timeout": "10s"
         }
+      },
+        {
+          "id": "create_ingest_pipeline",
+          "type": "create_ingest_pipeline",
+          "inputs": {
+            "name": "my-ingest-pipeline",
+            "description": "some description",
+            "processors": [{
+              "type": "text_embedding",
+              "params": {
+                "model_id": "my-existing-model-id",
+                "input_field": "text_passage",
+                "output_field": "text_embedding"
+              }
+            }],
+            "node_timeout": "10s"
+          }
+        }
+      ],
+      "edges": [{
+        "source": "create_index",
+        "dest": "create_ingest_pipeline"
+      }]
+    },
+    "ingest": {
+      "user_params": {
+        "document": "doc"
+      },
+      "nodes": [{
+        "id": "ingest_index",
+        "type": "ingest_index",
+        "inputs": {
+          "index": "user_inputs.index_name",
+          "ingest_pipeline": "my-ingest-pipeline",
+          "document": "user_params.document",
+          "node_timeout": "10s"
+        }
+      }]
+    },
+    "query": {
+      "user_params": {
+        "plaintext": "string"
+      },
+      "nodes": [{
+        "id": "transform_query",
+        "type": "transform_query",
+        "inputs": {
+          "template": "neural-search-template-1",
+          "plaintext": "user_params.plaintext",
+          "node_timeout": "10s"
+        }
+      },
+        {
+          "id": "query_index",
+          "type": "query_index",
+          "inputs": {
+            "index": "user_inputs.index_name",
+            "query": "{{output-from-prev-step}}.query",
+            "search_request_processors": [],
+            "search_response_processors": [],
+            "node_timeout": "10s"
+          }
+        }
+      ],
+      "edges": [{
+        "source": "transform_query",
+        "dest": "query_index"
+      }]
     }
+  }
 }

@@ -60,6 +60,7 @@ public class WorkflowProcessSorterTests extends OpenSearchTestCase {
         AdminClient adminClient = mock(AdminClient.class);
         ClusterService clusterService = mock(ClusterService.class);
         Client client = mock(Client.class);
+
         when(client.admin()).thenReturn(adminClient);
 
         testThreadPool = new TestThreadPool(WorkflowProcessSorterTests.class.getName());
