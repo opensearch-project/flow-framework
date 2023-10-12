@@ -29,10 +29,10 @@
       "type": "nested",
       "properties": {
         "template": {
-          "type": "integer"
+          "type": "text"
         },
         "compatibility": {
-          "type": "integer"
+          "type": "text"
         }
       }
     },
