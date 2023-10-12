@@ -112,6 +112,9 @@ publishing {
 allprojects {
     group = opensearch_group
     version = "${opensearch_build}"
+}
+
+java {
     targetCompatibility = JavaVersion.VERSION_11
     sourceCompatibility = JavaVersion.VERSION_11
 }
