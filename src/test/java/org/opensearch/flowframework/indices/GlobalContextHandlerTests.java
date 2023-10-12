@@ -113,7 +113,7 @@ public class GlobalContextHandlerTests extends OpenSearchTestCase {
     public void testUpdateTemplate() throws IOException {
         Template template = mock(Template.class);
         ActionListener<IndexResponse> listener = mock(ActionListener.class);
-        when(template.toXContent(any(XContentBuilder.class), eq(ToXContent.EMPTY_PARAMS))).thenAnswer(invocation -> {
+        when(template.toDocumentSource(any(XContentBuilder.class), eq(ToXContent.EMPTY_PARAMS))).thenAnswer(invocation -> {
             XContentBuilder builder = invocation.getArgument(0);
             return builder;
         });
