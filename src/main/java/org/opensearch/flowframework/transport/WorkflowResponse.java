@@ -59,7 +59,6 @@ public class WorkflowResponse extends ActionResponse implements ToXContentObject
         out.writeString(workflowId);
     }
 
-    // TODO : Replace WORKFLOW_ID after string is moved to common values class
     @Override
     public XContentBuilder toXContent(XContentBuilder builder, Params params) throws IOException {
         return builder.startObject().field(WORKFLOW_ID, this.workflowId).endObject();
