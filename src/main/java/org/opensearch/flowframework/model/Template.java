@@ -164,7 +164,7 @@ public class Template implements ToXContentObject {
      * @param builder the XContentBuilder
      * @param params the params
      * @return the XContentBuilder
-     * @throws IOException
+     * @throws IOException if the document source fails to be generated
      */
     public XContentBuilder toDocumentSource(XContentBuilder builder, Params params) throws IOException {
         XContentBuilder xContentBuilder = builder.startObject();

@@ -13,11 +13,17 @@ package org.opensearch.flowframework.common;
  */
 public class CommonValue {
 
+    /** Default value for no schema version */
     public static Integer NO_SCHEMA_VERSION = 0;
+    /** Index mapping meta field name*/
     public static final String META = "_meta";
+    /** Schema Version field name */
     public static final String SCHEMA_VERSION_FIELD = "schema_version";
+    /** Global Context Index Name */
     public static final String GLOBAL_CONTEXT_INDEX = ".plugins-ai-global-context";
+    /** Global Context index mapping file path */
     public static final String GLOBAL_CONTEXT_INDEX_MAPPING = "mappings/global-context.json";
+    /** Global Context index mapping version */
     public static final Integer GLOBAL_CONTEXT_INDEX_VERSION = 1;
 
     /** The base URI for this plugin's rest actions */
@@ -34,13 +40,22 @@ public class CommonValue {
     /** The provision workflow thread pool name */
     public static final String PROVISION_THREAD_POOL = "opensearch_workflow_provision";
 
+    /** Model Id field */
     public static final String MODEL_ID = "model_id";
+    /** Function Name field */
     public static final String FUNCTION_NAME = "function_name";
+    /** Model Name field */
     public static final String MODEL_NAME = "name";
+    /** Model Version field */
     public static final String MODEL_VERSION = "model_version";
+    /** Model Group Id field */
     public static final String MODEL_GROUP_ID = "model_group_id";
+    /** Description field */
     public static final String DESCRIPTION = "description";
+    /** Connector Id field */
     public static final String CONNECTOR_ID = "connector_id";
+    /** Model format field */
     public static final String MODEL_FORMAT = "model_format";
+    /** Model config field */
     public static final String MODEL_CONFIG = "model_config";
 }

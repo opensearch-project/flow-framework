@@ -17,6 +17,7 @@ public class FlowFrameworkException extends RuntimeException {
 
     private static final long serialVersionUID = 1L;
 
+    /** The rest status code of this exception */
     private final RestStatus restStatus;
 
     /**
