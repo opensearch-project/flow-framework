@@ -20,7 +20,9 @@ jobs:
           - macOS-latest
           - windows-latest
         java:
+          - 11
           - 17
+          - 20
     if: github.repository == 'opensearch-project/opensearch-ai-flow-framework'
     runs-on: ${{ matrix.os }}
     steps:

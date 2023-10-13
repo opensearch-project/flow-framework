@@ -33,7 +33,9 @@ jobs:
           - macOS-latest
           - windows-latest
         java:
+          - 11
           - 17
+          - 20
     name: Build
     if: github.repository == 'opensearch-project/opensearch-ai-flow-framework'
     runs-on: ${{ matrix.os }}
@@ -47,4 +49,4 @@ jobs:
         distribution: temurin
     - name: Build
       run: |
-          ./gradlew check -x test -x integTest -x yamlRestTest
+          ./gradlew build -x test -x integTest -x yamlRestTest
