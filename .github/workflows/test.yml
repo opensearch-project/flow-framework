@@ -11,6 +11,10 @@ jobs:
   test:
     strategy:
       matrix:
+        test:
+          - test jacocoTestReport
+          - integTest
+          - yamlRestTest
         os:
           - ubuntu-latest
           - macOS-latest
@@ -29,19 +33,7 @@ jobs:
           distribution: temurin
 
       - name: Test
-        run: ./gradlew test
-
-      - name: YamlRestTest
-        run:
-          ./gradlew yamlRestTest
-
-      - name: integTest
-        run:
-          ./gradlew integTest
-
-      - name: Run Tests with Coverage
-        run:
-          ./gradlew test jacocoTestReport --info
+        run: ./gradlew ${{ matrix.test }}
 
       - name: Upload Coverage Report
         if: matrix.os == 'ubuntu-latest'
