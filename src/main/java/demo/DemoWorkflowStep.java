@@ -37,7 +37,7 @@ public class DemoWorkflowStep implements WorkflowStep {
         CompletableFuture.runAsync(() -> {
             try {
                 Thread.sleep(this.delay);
-                future.complete(null);
+                future.complete(WorkflowData.EMPTY);
             } catch (InterruptedException e) {
                 future.completeExceptionally(e);
             }
