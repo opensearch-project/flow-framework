@@ -19,6 +19,9 @@ import static org.opensearch.flowframework.common.CommonValue.GLOBAL_CONTEXT_IND
  * An enumeration of Flow Framework indices
  */
 public enum FlowFrameworkIndex {
+    /**
+     * Global Context Index
+    */
     GLOBAL_CONTEXT(
         GLOBAL_CONTEXT_INDEX,
         ThrowingSupplierWrapper.throwingSupplierWrapper(GlobalContextHandler::getGlobalContextMappings),
@@ -35,14 +38,26 @@ public enum FlowFrameworkIndex {
         this.version = version;
     }
 
+    /**
+     * Retrieves the index name
+     * @return the index name
+     */
     public String getIndexName() {
         return indexName;
     }
 
+    /**
+     * Retrieves the index mapping
+     * @return the index mapping
+     */
     public String getMapping() {
         return mapping;
     }
 
+    /**
+     * Retrieves the index version
+     * @return the index version
+     */
     public Integer getVersion() {
         return version;
     }

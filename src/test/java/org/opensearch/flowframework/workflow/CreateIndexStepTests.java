@@ -128,7 +128,7 @@ public class CreateIndexStepTests extends OpenSearchTestCase {
         ActionListener<Boolean> listener = mock(ActionListener.class);
         createIndexStep.initIndexIfAbsent(FlowFrameworkIndex.GLOBAL_CONTEXT, listener);
 
-        verify(indicesAdminClient, times(1)).create(any(), any());
+        verify(indicesAdminClient, times(1)).create(any(CreateIndexRequest.class), any());
     }
 
     public void testInitIndexIfAbsent_IndexExist() {
@@ -186,5 +186,19 @@ public class CreateIndexStepTests extends OpenSearchTestCase {
 
         createIndexStep.initIndexIfAbsent(index, listener);
         assertTrue(indexMappingUpdated.get(index.getIndexName()).get());
+    }
+
+    public void testDoesIndexExist() {
+        ClusterState mockClusterState = mock(ClusterState.class);
+        Metadata mockMetaData = mock(Metadata.class);
+        when(clusterService.state()).thenReturn(mockClusterState);
+        when(mockClusterState.metadata()).thenReturn(mockMetaData);
+
+        createIndexStep.doesIndexExist(GLOBAL_CONTEXT_INDEX);
+
+        ArgumentCaptor<String> indexExistsCaptor = ArgumentCaptor.forClass(String.class);
+        verify(mockMetaData, times(1)).hasIndex(indexExistsCaptor.capture());
+
+        assertEquals(GLOBAL_CONTEXT_INDEX, indexExistsCaptor.getValue());
     }
 }
