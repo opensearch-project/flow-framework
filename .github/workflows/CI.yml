@@ -1,4 +1,4 @@
-name: Build and Test Plugin
+name: CI
 
 on:
   push:
@@ -9,14 +9,12 @@ on:
 
 jobs:
   spotless:
-    if: github.repository == 'opensearch-project/opensearch-ai-flow-framework'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - name: Spotless Check
         run: ./gradlew spotlessCheck
   javadoc:
-    if: github.repository == 'opensearch-project/opensearch-ai-flow-framework'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -25,19 +23,14 @@ jobs:
       - name: Javadoc Check
         run: ./gradlew javadoc
   build:
+    if: github.repository == 'opensearch-project/opensearch-ai-flow-framework'
     needs: [spotless, javadoc]
     strategy:
       matrix:
-        os:
-          - ubuntu-latest
-          - macOS-latest
-          - windows-latest
-        java:
-          - 17
-    name: Build and Test Plugin Template
-    if: github.repository == 'opensearch-project/opensearch-ai-flow-framework'
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        java: [11, 17, 20]
+    name: Test JDK${{ matrix.java }}, ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
-
     steps:
     - uses: actions/checkout@v4
     - name: Set up JDK ${{ matrix.java }}
@@ -47,9 +40,28 @@ jobs:
         distribution: temurin
     - name: Build and Run Tests
       run: |
-          ./gradlew check
+          ./gradlew check -x integTest -x yamlRestTest
     - name: Upload Coverage Report
-      if: matrix.os == 'ubuntu-latest'
+      if: matrix.os == 'ubuntu-latest' && ${{ matrix.java }} == 17
       uses: codecov/codecov-action@v3
       with:
         file: ./build/reports/jacoco/test/jacocoTestReport.xml
+  integTest:
+    if: github.repository == 'opensearch-project/opensearch-ai-flow-framework'
+    needs: [spotless, javadoc]
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        java: [11, 17, 20]
+    name: Integ Test JDK${{ matrix.java }}, ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    steps:
+    - uses: actions/checkout@v4
+    - name: Set up JDK ${{ matrix.java }}
+      uses: actions/setup-java@v3
+      with:
+        java-version: ${{ matrix.java }}
+        distribution: temurin
+    - name: Build and Run Tests
+      run: |
+          ./gradlew integTest yamlRestTest
