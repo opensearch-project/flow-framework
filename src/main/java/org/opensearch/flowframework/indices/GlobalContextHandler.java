@@ -81,7 +81,7 @@ public class GlobalContextHandler {
                 XContentBuilder builder = XContentFactory.jsonBuilder();
                 ThreadContext.StoredContext context = client.threadPool().getThreadContext().stashContext()
             ) {
-                request.source(template.toXContent(builder, ToXContent.EMPTY_PARAMS))
+                request.source(template.toDocumentSource(builder, ToXContent.EMPTY_PARAMS))
                     .setRefreshPolicy(WriteRequest.RefreshPolicy.IMMEDIATE);
                 client.index(request, ActionListener.runBefore(listener, () -> context.restore()));
             } catch (Exception e) {
@@ -92,6 +92,35 @@ public class GlobalContextHandler {
             logger.error("Failed to create global_context index", e);
             listener.onFailure(e);
         }));
+    }
+
+    /**
+     * Replaces a document in the global context index
+     * @param documentId the document Id
+     * @param template the use-case template
+     * @param listener action listener
+     */
+    public void updateTemplateInGlobalContext(String documentId, Template template, ActionListener<IndexResponse> listener) {
+        if (!createIndexStep.doesIndexExist(GLOBAL_CONTEXT_INDEX)) {
+            String exceptionMessage = "Failed to update template for workflow_id : "
+                + documentId
+                + ", global_context index does not exist.";
+            logger.error(exceptionMessage);
+            listener.onFailure(new Exception(exceptionMessage));
+        } else {
+            IndexRequest request = new IndexRequest(GLOBAL_CONTEXT_INDEX).id(documentId);
+            try (
+                XContentBuilder builder = XContentFactory.jsonBuilder();
+                ThreadContext.StoredContext context = client.threadPool().getThreadContext().stashContext()
+            ) {
+                request.source(template.toDocumentSource(builder, ToXContent.EMPTY_PARAMS))
+                    .setRefreshPolicy(WriteRequest.RefreshPolicy.IMMEDIATE);
+                client.index(request, ActionListener.runBefore(listener, () -> context.restore()));
+            } catch (Exception e) {
+                logger.error("Failed to update global_context entry : {}. {}", documentId, e.getMessage());
+                listener.onFailure(e);
+            }
+        }
     }
 
     /**
