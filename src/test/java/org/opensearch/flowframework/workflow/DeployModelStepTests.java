@@ -62,6 +62,7 @@ public class DeployModelStepTests extends OpenSearchTestCase {
 
         DeployModelStep deployModel = new DeployModelStep(nodeClient);
 
+        @SuppressWarnings("unchecked")
         ArgumentCaptor<ActionListener<MLDeployModelResponse>> actionListenerCaptor = ArgumentCaptor.forClass(ActionListener.class);
 
         doAnswer(invocation -> {

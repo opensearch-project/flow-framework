@@ -11,7 +11,6 @@ package org.opensearch.flowframework;
 import org.opensearch.client.AdminClient;
 import org.opensearch.client.Client;
 import org.opensearch.client.ClusterAdminClient;
-import org.opensearch.client.node.NodeClient;
 import org.opensearch.common.settings.Settings;
 import org.opensearch.test.OpenSearchTestCase;
 import org.opensearch.threadpool.TestThreadPool;
@@ -26,7 +25,6 @@ import static org.mockito.Mockito.when;
 public class FlowFrameworkPluginTests extends OpenSearchTestCase {
 
     private Client client;
-    private NodeClient nodeClient;
 
     private AdminClient adminClient;
 

@@ -112,7 +112,6 @@ public class GlobalContextHandlerTests extends OpenSearchTestCase {
 
     public void testUpdateTemplateInGlobalContext() throws IOException {
         Template template = mock(Template.class);
-        ActionListener<IndexResponse> listener = mock(ActionListener.class);
         when(template.toDocumentSource(any(XContentBuilder.class), eq(ToXContent.EMPTY_PARAMS))).thenAnswer(invocation -> {
             XContentBuilder builder = invocation.getArgument(0);
             return builder;
@@ -129,6 +128,7 @@ public class GlobalContextHandlerTests extends OpenSearchTestCase {
 
     public void testFailedUpdateTemplateInGlobalContext() throws IOException {
         Template template = mock(Template.class);
+        @SuppressWarnings("unchecked")
         ActionListener<IndexResponse> listener = mock(ActionListener.class);
         when(createIndexStep.doesIndexExist(any())).thenReturn(false);
 

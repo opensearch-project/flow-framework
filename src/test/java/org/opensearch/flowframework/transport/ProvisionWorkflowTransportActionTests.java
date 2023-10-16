@@ -100,6 +100,7 @@ public class ProvisionWorkflowTransportActionTests extends OpenSearchTestCase {
     public void testProvisionWorkflow() {
 
         String workflowId = "1";
+        @SuppressWarnings("unchecked")
         ActionListener<WorkflowResponse> listener = mock(ActionListener.class);
         WorkflowRequest workflowRequest = new WorkflowRequest(workflowId, null);
 
@@ -121,6 +122,7 @@ public class ProvisionWorkflowTransportActionTests extends OpenSearchTestCase {
     }
 
     public void testFailedToRetrieveTemplateFromGlobalContext() {
+        @SuppressWarnings("unchecked")
         ActionListener<WorkflowResponse> listener = mock(ActionListener.class);
         WorkflowRequest request = new WorkflowRequest("1", null);
         doAnswer(invocation -> {
