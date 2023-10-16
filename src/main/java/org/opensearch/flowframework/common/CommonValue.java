@@ -13,6 +13,8 @@ package org.opensearch.flowframework.common;
  */
 public class CommonValue {
 
+    private CommonValue() {}
+
     /** Default value for no schema version */
     public static Integer NO_SCHEMA_VERSION = 0;
     /** Index mapping meta field name*/
