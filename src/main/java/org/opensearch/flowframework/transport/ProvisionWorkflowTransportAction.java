@@ -84,6 +84,16 @@ public class ProvisionWorkflowTransportAction extends HandledTransportAction<Wor
             client.get(getRequest, ActionListener.wrap(response -> {
                 context.restore();
 
+                if (!response.isExists()) {
+                    listener.onFailure(
+                        new FlowFrameworkException(
+                            "Failed to retrieve template (" + workflowId + ") from global context.",
+                            RestStatus.NOT_FOUND
+                        )
+                    );
+                    return;
+                }
+
                 // Parse template from document source
                 Template template = Template.parseFromDocumentSource(response.getSourceAsString());
 
