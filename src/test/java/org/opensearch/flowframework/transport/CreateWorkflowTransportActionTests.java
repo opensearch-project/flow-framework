@@ -76,6 +76,7 @@ public class CreateWorkflowTransportActionTests extends OpenSearchTestCase {
 
     public void testCreateNewWorkflow() {
 
+        @SuppressWarnings("unchecked")
         ActionListener<WorkflowResponse> listener = mock(ActionListener.class);
         WorkflowRequest createNewWorkflow = new WorkflowRequest(null, template);
 
@@ -94,6 +95,7 @@ public class CreateWorkflowTransportActionTests extends OpenSearchTestCase {
     }
 
     public void testFailedToCreateNewWorkflow() {
+        @SuppressWarnings("unchecked")
         ActionListener<WorkflowResponse> listener = mock(ActionListener.class);
         WorkflowRequest createNewWorkflow = new WorkflowRequest(null, template);
 
@@ -111,6 +113,7 @@ public class CreateWorkflowTransportActionTests extends OpenSearchTestCase {
 
     public void testUpdateWorkflow() {
 
+        @SuppressWarnings("unchecked")
         ActionListener<WorkflowResponse> listener = mock(ActionListener.class);
         WorkflowRequest updateWorkflow = new WorkflowRequest("1", template);
 
@@ -128,6 +131,7 @@ public class CreateWorkflowTransportActionTests extends OpenSearchTestCase {
     }
 
     public void testFailedToUpdateWorkflow() {
+        @SuppressWarnings("unchecked")
         ActionListener<WorkflowResponse> listener = mock(ActionListener.class);
         WorkflowRequest updateWorkflow = new WorkflowRequest("1", template);
 

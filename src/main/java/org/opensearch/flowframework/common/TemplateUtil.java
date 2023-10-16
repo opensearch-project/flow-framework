@@ -26,6 +26,8 @@ import static org.opensearch.core.xcontent.XContentParserUtils.ensureExpectedTok
  */
 public class TemplateUtil {
 
+    private TemplateUtil() {}
+
     /**
      * Converts a JSON string into an XContentParser
      *
