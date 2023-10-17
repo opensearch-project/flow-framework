@@ -141,33 +141,38 @@ public class ProvisionWorkflowTransportAction extends HandledTransportAction<Wor
      * @param workflowListener The listener that updates the status of a workflow execution
      */
     private void executeWorkflow(Workflow workflow, ActionListener<String> workflowListener) {
-
-        List<ProcessNode> processSequence = workflowProcessSorter.sortProcessNodes(workflow);
-        List<CompletableFuture<?>> workflowFutureList = new ArrayList<>();
-
-        for (ProcessNode processNode : processSequence) {
-            List<ProcessNode> predecessors = processNode.predecessors();
-
-            logger.info(
-                "Queueing process [{}].{}",
-                processNode.id(),
-                predecessors.isEmpty()
-                    ? " Can start immediately!"
-                    : String.format(
-                        Locale.getDefault(),
-                        " Must wait for [%s] to complete first.",
-                        predecessors.stream().map(p -> p.id()).collect(Collectors.joining(", "))
-                    )
-            );
-
-            workflowFutureList.add(processNode.execute());
-        }
         try {
+
+            // Attempt to topologically sort the workflow graph
+            List<ProcessNode> processSequence = workflowProcessSorter.sortProcessNodes(workflow);
+            List<CompletableFuture<?>> workflowFutureList = new ArrayList<>();
+
+            for (ProcessNode processNode : processSequence) {
+                List<ProcessNode> predecessors = processNode.predecessors();
+
+                logger.info(
+                    "Queueing process [{}].{}",
+                    processNode.id(),
+                    predecessors.isEmpty()
+                        ? " Can start immediately!"
+                        : String.format(
+                            Locale.getDefault(),
+                            " Must wait for [%s] to complete first.",
+                            predecessors.stream().map(p -> p.id()).collect(Collectors.joining(", "))
+                        )
+                );
+
+                workflowFutureList.add(processNode.execute());
+            }
+
             // Attempt to join each workflow step future, may throw a CompletionException if any step completes exceptionally
             workflowFutureList.forEach(CompletableFuture::join);
 
             // TODO : Create State Index request with provisioning state, start time, end time, etc, pending implementation. String for now
             workflowListener.onResponse("READY");
+
+        } catch (IllegalArgumentException e) {
+            workflowListener.onFailure(new FlowFrameworkException(e.getMessage(), RestStatus.BAD_REQUEST));
         } catch (CancellationException | CompletionException ex) {
             workflowListener.onFailure(new FlowFrameworkException(ex.getMessage(), RestStatus.INTERNAL_SERVER_ERROR));
         }
