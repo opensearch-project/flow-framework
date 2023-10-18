@@ -9,6 +9,7 @@
 package org.opensearch.flowframework.workflow;
 
 import org.opensearch.common.unit.TimeValue;
+import org.opensearch.flowframework.exception.FlowFrameworkException;
 import org.opensearch.test.OpenSearchTestCase;
 import org.opensearch.threadpool.TestThreadPool;
 import org.opensearch.threadpool.ThreadPool;
@@ -22,7 +23,6 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
 
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -139,7 +139,7 @@ public class ProcessNodeTests extends OpenSearchTestCase {
         CompletableFuture<WorkflowData> f = nodeZ.execute();
         CompletionException exception = assertThrows(CompletionException.class, () -> f.join());
         assertTrue(f.isCompletedExceptionally());
-        assertEquals(TimeoutException.class, exception.getCause().getClass());
+        assertEquals(FlowFrameworkException.class, exception.getCause().getClass());
     }
 
     public void testExceptions() {
@@ -169,6 +169,6 @@ public class ProcessNodeTests extends OpenSearchTestCase {
         assertEquals("Test exception", exception.getCause().getMessage());
 
         // Tests where we already called execute
-        assertThrows(IllegalStateException.class, () -> nodeE.execute());
+        assertThrows(FlowFrameworkException.class, () -> nodeE.execute());
     }
 }

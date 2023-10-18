@@ -11,6 +11,8 @@ package org.opensearch.flowframework.workflow;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.opensearch.common.unit.TimeValue;
+import org.opensearch.core.rest.RestStatus;
+import org.opensearch.flowframework.exception.FlowFrameworkException;
 import org.opensearch.flowframework.model.Workflow;
 import org.opensearch.flowframework.model.WorkflowEdge;
 import org.opensearch.flowframework.model.WorkflowNode;
@@ -87,8 +89,9 @@ public class WorkflowProcessSorter {
         String fieldName = String.join(".", node.id(), INPUTS_FIELD, NODE_TIMEOUT_FIELD);
         TimeValue timeValue = TimeValue.parseTimeValue(timeoutValue, fieldName);
         if (timeValue.millis() < 0) {
-            throw new IllegalArgumentException(
-                "Failed to parse timeout value [" + timeoutValue + "] for field [" + fieldName + "]. Must be positive"
+            throw new FlowFrameworkException(
+                "Failed to parse timeout value [" + timeoutValue + "] for field [" + fieldName + "]. Must be positive",
+                RestStatus.BAD_REQUEST
             );
         }
         return timeValue;
@@ -100,14 +103,14 @@ public class WorkflowProcessSorter {
         for (WorkflowEdge edge : workflowEdges) {
             String source = edge.source();
             if (!nodeIds.contains(source)) {
-                throw new IllegalArgumentException("Edge source " + source + " does not correspond to a node.");
+                throw new FlowFrameworkException("Edge source " + source + " does not correspond to a node.", RestStatus.BAD_REQUEST);
             }
             String dest = edge.destination();
             if (!nodeIds.contains(dest)) {
-                throw new IllegalArgumentException("Edge destination " + dest + " does not correspond to a node.");
+                throw new FlowFrameworkException("Edge destination " + dest + " does not correspond to a node.", RestStatus.BAD_REQUEST);
             }
             if (source.equals(dest)) {
-                throw new IllegalArgumentException("Edge connects node " + source + " to itself.");
+                throw new FlowFrameworkException("Edge connects node " + source + " to itself.", RestStatus.BAD_REQUEST);
             }
         }
 
@@ -130,7 +133,7 @@ public class WorkflowProcessSorter {
         Queue<WorkflowNode> sourceNodes = new ArrayDeque<>();
         workflowNodes.stream().filter(n -> !predecessorEdges.containsKey(n)).forEach(n -> sourceNodes.add(n));
         if (sourceNodes.isEmpty()) {
-            throw new IllegalArgumentException("No start node detected: all nodes have a predecessor.");
+            throw new FlowFrameworkException("No start node detected: all nodes have a predecessor.", RestStatus.BAD_REQUEST);
         }
         logger.debug("Start node(s): {}", sourceNodes);
 
@@ -153,7 +156,7 @@ public class WorkflowProcessSorter {
             }
         }
         if (!graph.isEmpty()) {
-            throw new IllegalArgumentException("Cycle detected: " + graph);
+            throw new FlowFrameworkException("Cycle detected: " + graph, RestStatus.BAD_REQUEST);
         }
         logger.debug("Execution sequence: {}", sortedNodes);
         return sortedNodes;

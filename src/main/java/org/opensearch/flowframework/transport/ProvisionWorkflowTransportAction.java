@@ -171,8 +171,8 @@ public class ProvisionWorkflowTransportAction extends HandledTransportAction<Wor
             // TODO : Create State Index request with provisioning state, start time, end time, etc, pending implementation. String for now
             workflowListener.onResponse("READY");
 
-        } catch (IllegalArgumentException e) {
-            workflowListener.onFailure(new FlowFrameworkException(e.getMessage(), RestStatus.BAD_REQUEST));
+        } catch (FlowFrameworkException e) {
+            workflowListener.onFailure(e);
         } catch (CancellationException | CompletionException ex) {
             workflowListener.onFailure(new FlowFrameworkException(ex.getMessage(), RestStatus.INTERNAL_SERVER_ERROR));
         }

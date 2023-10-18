@@ -19,6 +19,7 @@ import org.opensearch.client.Client;
 import org.opensearch.common.util.concurrent.ThreadContext;
 import org.opensearch.common.xcontent.XContentFactory;
 import org.opensearch.core.action.ActionListener;
+import org.opensearch.core.rest.RestStatus;
 import org.opensearch.core.xcontent.ToXContent;
 import org.opensearch.core.xcontent.XContentBuilder;
 import org.opensearch.flowframework.exception.FlowFrameworkException;
@@ -29,7 +30,6 @@ import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 
-import static org.opensearch.core.rest.RestStatus.INTERNAL_SERVER_ERROR;
 import static org.opensearch.flowframework.common.CommonValue.GLOBAL_CONTEXT_INDEX;
 import static org.opensearch.flowframework.common.CommonValue.GLOBAL_CONTEXT_INDEX_MAPPING;
 import static org.opensearch.flowframework.workflow.CreateIndexStep.getIndexMappings;
@@ -73,7 +73,9 @@ public class GlobalContextHandler {
     public void putTemplateToGlobalContext(Template template, ActionListener<IndexResponse> listener) {
         initGlobalContextIndexIfAbsent(ActionListener.wrap(indexCreated -> {
             if (!indexCreated) {
-                listener.onFailure(new FlowFrameworkException("No response to create global_context index", INTERNAL_SERVER_ERROR));
+                listener.onFailure(
+                    new FlowFrameworkException("No response to create global_context index", RestStatus.INTERNAL_SERVER_ERROR)
+                );
                 return;
             }
             IndexRequest request = new IndexRequest(GLOBAL_CONTEXT_INDEX);
@@ -86,7 +88,7 @@ public class GlobalContextHandler {
                 client.index(request, ActionListener.runBefore(listener, () -> context.restore()));
             } catch (Exception e) {
                 logger.error("Failed to index global_context index");
-                listener.onFailure(e);
+                listener.onFailure(new FlowFrameworkException("Failed to index global_context index", e, RestStatus.INTERNAL_SERVER_ERROR));
             }
         }, e -> {
             logger.error("Failed to create global_context index", e);

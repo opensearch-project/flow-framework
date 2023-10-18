@@ -24,6 +24,7 @@ import org.opensearch.common.util.concurrent.ThreadContext;
 import org.opensearch.common.xcontent.XContentType;
 import org.opensearch.common.xcontent.json.JsonXContent;
 import org.opensearch.core.action.ActionListener;
+import org.opensearch.core.rest.RestStatus;
 import org.opensearch.flowframework.exception.FlowFrameworkException;
 import org.opensearch.flowframework.indices.FlowFrameworkIndex;
 
@@ -35,7 +36,6 @@ import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import static org.opensearch.core.rest.RestStatus.INTERNAL_SERVER_ERROR;
 import static org.opensearch.flowframework.common.CommonValue.META;
 import static org.opensearch.flowframework.common.CommonValue.NO_SCHEMA_VERSION;
 import static org.opensearch.flowframework.common.CommonValue.SCHEMA_VERSION_FIELD;
@@ -79,7 +79,7 @@ public class CreateIndexStep implements WorkflowStep {
             @Override
             public void onFailure(Exception e) {
                 logger.error("Failed to create an index", e);
-                future.completeExceptionally(e);
+                future.completeExceptionally(new FlowFrameworkException(e.getMessage(), RestStatus.INTERNAL_SERVER_ERROR));
             }
         };
 
@@ -149,7 +149,9 @@ public class CreateIndexStep implements WorkflowStep {
                     }
                 }, e -> {
                     logger.error("Failed to create index " + indexName, e);
-                    internalListener.onFailure(e);
+                    internalListener.onFailure(
+                        new FlowFrameworkException("Failed to create index " + indexName, e, RestStatus.INTERNAL_SERVER_ERROR)
+                    );
                 });
                 CreateIndexRequest request = new CreateIndexRequest(indexName).mapping(mapping).settings(indexSettings);
                 client.admin().indices().create(request, actionListener);
@@ -177,22 +179,37 @@ public class CreateIndexStep implements WorkflowStep {
                                                         internalListener.onFailure(
                                                             new FlowFrameworkException(
                                                                 "Failed to update index setting for: " + indexName,
-                                                                INTERNAL_SERVER_ERROR
+                                                                RestStatus.INTERNAL_SERVER_ERROR
                                                             )
                                                         );
                                                     }
                                                 }, exception -> {
                                                     logger.error("Failed to update index setting for: " + indexName, exception);
-                                                    internalListener.onFailure(exception);
+                                                    internalListener.onFailure(
+                                                        new FlowFrameworkException(
+                                                            "Failed to udpate index setting for: " + indexName,
+                                                            exception,
+                                                            RestStatus.INTERNAL_SERVER_ERROR
+                                                        )
+                                                    );
                                                 }));
                                         } else {
                                             internalListener.onFailure(
-                                                new FlowFrameworkException("Failed to update index: " + indexName, INTERNAL_SERVER_ERROR)
+                                                new FlowFrameworkException(
+                                                    "Failed to update index: " + indexName,
+                                                    RestStatus.INTERNAL_SERVER_ERROR
+                                                )
                                             );
                                         }
                                     }, exception -> {
-                                        logger.error("Failed to update index " + indexName, exception);
-                                        internalListener.onFailure(exception);
+                                        logger.error("Failed to update index: " + indexName, exception);
+                                        internalListener.onFailure(
+                                            new FlowFrameworkException(
+                                                "Failed to update index: " + indexName,
+                                                exception,
+                                                RestStatus.INTERNAL_SERVER_ERROR
+                                            )
+                                        );
                                     })
                                 );
                         } else {
@@ -202,7 +219,9 @@ public class CreateIndexStep implements WorkflowStep {
                         }
                     }, e -> {
                         logger.error("Failed to update index mapping", e);
-                        internalListener.onFailure(e);
+                        internalListener.onFailure(
+                            new FlowFrameworkException("Failed to update index mapping", e, RestStatus.INTERNAL_SERVER_ERROR)
+                        );
                     }));
                 } else {
                     // No need to update index if it's already updated.
@@ -210,8 +229,8 @@ public class CreateIndexStep implements WorkflowStep {
                 }
             }
         } catch (Exception e) {
-            logger.error("Failed to init index " + indexName, e);
-            listener.onFailure(e);
+            logger.error("Failed to init index: " + indexName, e);
+            listener.onFailure(new FlowFrameworkException("Failed to init index: " + indexName, e, RestStatus.INTERNAL_SERVER_ERROR));
         }
     }
 

@@ -11,13 +11,14 @@ package org.opensearch.flowframework.workflow;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.opensearch.common.unit.TimeValue;
+import org.opensearch.core.rest.RestStatus;
+import org.opensearch.flowframework.exception.FlowFrameworkException;
 import org.opensearch.threadpool.Scheduler.ScheduledCancellable;
 import org.opensearch.threadpool.ThreadPool;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.TimeoutException;
 import java.util.stream.Collectors;
 
 /**
@@ -126,7 +127,7 @@ public class ProcessNode {
      */
     public CompletableFuture<WorkflowData> execute() {
         if (this.future.isDone()) {
-            throw new IllegalStateException("Process Node [" + this.id + "] already executed.");
+            throw new FlowFrameworkException("Process Node [" + this.id + "] already executed.", RestStatus.BAD_REQUEST);
         }
         CompletableFuture.runAsync(() -> {
             List<CompletableFuture<WorkflowData>> predFutures = predecessors.stream().map(p -> p.future()).collect(Collectors.toList());
@@ -148,7 +149,9 @@ public class ProcessNode {
                 if (this.nodeTimeout.compareTo(TimeValue.ZERO) > 0) {
                     delayExec = threadPool.schedule(() -> {
                         if (!future.isDone()) {
-                            future.completeExceptionally(new TimeoutException("Execute timed out for " + this.id));
+                            future.completeExceptionally(
+                                new FlowFrameworkException("Execute timed out for " + this.id, RestStatus.REQUEST_TIMEOUT)
+                            );
                         }
                     }, this.nodeTimeout, ThreadPool.Names.SAME);
                 }

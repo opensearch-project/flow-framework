@@ -12,6 +12,7 @@ import org.opensearch.client.AdminClient;
 import org.opensearch.client.Client;
 import org.opensearch.cluster.service.ClusterService;
 import org.opensearch.core.xcontent.XContentParser;
+import org.opensearch.flowframework.exception.FlowFrameworkException;
 import org.opensearch.flowframework.model.TemplateTestJsonUtil;
 import org.opensearch.flowframework.model.Workflow;
 import org.opensearch.test.OpenSearchTestCase;
@@ -134,23 +135,23 @@ public class WorkflowProcessSorterTests extends OpenSearchTestCase {
     public void testCycles() {
         Exception ex;
 
-        ex = assertThrows(IllegalArgumentException.class, () -> parse(workflow(List.of(node("A")), List.of(edge("A", "A")))));
+        ex = assertThrows(FlowFrameworkException.class, () -> parse(workflow(List.of(node("A")), List.of(edge("A", "A")))));
         assertEquals("Edge connects node A to itself.", ex.getMessage());
 
         ex = assertThrows(
-            IllegalArgumentException.class,
+            FlowFrameworkException.class,
             () -> parse(workflow(List.of(node("A"), node("B")), List.of(edge("A", "B"), edge("B", "B"))))
         );
         assertEquals("Edge connects node B to itself.", ex.getMessage());
 
         ex = assertThrows(
-            IllegalArgumentException.class,
+            FlowFrameworkException.class,
             () -> parse(workflow(List.of(node("A"), node("B")), List.of(edge("A", "B"), edge("B", "A"))))
         );
         assertEquals(NO_START_NODE_DETECTED, ex.getMessage());
 
         ex = assertThrows(
-            IllegalArgumentException.class,
+            FlowFrameworkException.class,
             () -> parse(workflow(List.of(node("A"), node("B"), node("C")), List.of(edge("A", "B"), edge("B", "C"), edge("C", "B"))))
         );
         assertTrue(ex.getMessage().startsWith(CYCLE_DETECTED));
@@ -158,7 +159,7 @@ public class WorkflowProcessSorterTests extends OpenSearchTestCase {
         assertTrue(ex.getMessage().contains("C->B"));
 
         ex = assertThrows(
-            IllegalArgumentException.class,
+            FlowFrameworkException.class,
             () -> parse(
                 workflow(
                     List.of(node("A"), node("B"), node("C"), node("D")),
@@ -188,13 +189,13 @@ public class WorkflowProcessSorterTests extends OpenSearchTestCase {
     }
 
     public void testExceptions() throws IOException {
-        Exception ex = assertThrows(
-            IllegalArgumentException.class,
+        FlowFrameworkException ex = assertThrows(
+            FlowFrameworkException.class,
             () -> parse(workflow(List.of(node("A"), node("B")), List.of(edge("C", "B"))))
         );
         assertEquals("Edge source C does not correspond to a node.", ex.getMessage());
 
-        ex = assertThrows(IllegalArgumentException.class, () -> parse(workflow(List.of(node("A"), node("B")), List.of(edge("A", "C")))));
+        ex = assertThrows(FlowFrameworkException.class, () -> parse(workflow(List.of(node("A"), node("B")), List.of(edge("A", "C")))));
         assertEquals("Edge destination C does not correspond to a node.", ex.getMessage());
     }
 }
