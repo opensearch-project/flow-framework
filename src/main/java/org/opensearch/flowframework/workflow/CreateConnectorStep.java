@@ -29,8 +29,17 @@ import java.util.Map.Entry;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Stream;
 
-import static org.opensearch.flowframework.common.CommonValue.*;
+import static org.opensearch.flowframework.common.CommonValue.ACTIONS_FIELD;
+import static org.opensearch.flowframework.common.CommonValue.CREDENTIALS_FIELD;
+import static org.opensearch.flowframework.common.CommonValue.DESCRIPTION;
+import static org.opensearch.flowframework.common.CommonValue.NAME_FIELD;
+import static org.opensearch.flowframework.common.CommonValue.PARAMETERS_FIELD;
+import static org.opensearch.flowframework.common.CommonValue.PROTOCOL_FIELD;
+import static org.opensearch.flowframework.common.CommonValue.VERSION_FIELD;
 
+/**
+ * Step to create a connector for a remote model
+ */
 public class CreateConnectorStep implements WorkflowStep {
 
     private static final Logger logger = LogManager.getLogger(CreateConnectorStep.class);

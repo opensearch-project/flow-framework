@@ -31,6 +31,7 @@ public class WorkflowStepFactory {
      *
      * @param clusterService The OpenSearch cluster service
      * @param client The OpenSearch client steps can use
+     * @param mlClient Machine Learning client to perform ml operations
      */
 
     public WorkflowStepFactory(ClusterService clusterService, Client client, MachineLearningNodeClient mlClient) {

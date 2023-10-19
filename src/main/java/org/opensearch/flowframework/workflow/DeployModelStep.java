@@ -11,6 +11,8 @@ package org.opensearch.flowframework.workflow;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.opensearch.core.action.ActionListener;
+import org.opensearch.core.rest.RestStatus;
+import org.opensearch.flowframework.exception.FlowFrameworkException;
 import org.opensearch.ml.client.MachineLearningNodeClient;
 import org.opensearch.ml.common.transport.deploy.MLDeployModelResponse;
 
@@ -53,8 +55,8 @@ public class DeployModelStep implements WorkflowStep {
 
             @Override
             public void onFailure(Exception e) {
-                logger.error("Model deployment failed");
-                deployModelFuture.completeExceptionally(e);
+                logger.error("Failed to deploy model");
+                deployModelFuture.completeExceptionally(new FlowFrameworkException(e.getMessage(), RestStatus.INTERNAL_SERVER_ERROR));
             }
         };
 
