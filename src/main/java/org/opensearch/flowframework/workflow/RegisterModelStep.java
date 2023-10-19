@@ -34,8 +34,8 @@ import static org.opensearch.flowframework.common.CommonValue.FUNCTION_NAME;
 import static org.opensearch.flowframework.common.CommonValue.MODEL_CONFIG;
 import static org.opensearch.flowframework.common.CommonValue.MODEL_FORMAT;
 import static org.opensearch.flowframework.common.CommonValue.MODEL_GROUP_ID;
-import static org.opensearch.flowframework.common.CommonValue.MODEL_NAME;
 import static org.opensearch.flowframework.common.CommonValue.MODEL_VERSION;
+import static org.opensearch.flowframework.common.CommonValue.NAME_FIELD;
 
 /**
  * Step to register a remote model
@@ -80,7 +80,7 @@ public class RegisterModelStep implements WorkflowStep {
             @Override
             public void onFailure(Exception e) {
                 logger.error("Failed to register model");
-                registerModelFuture.completeExceptionally(new IOException("Failed to register model "));
+                registerModelFuture.completeExceptionally(new IOException("Failed to register model"));
             }
         };
 
@@ -101,8 +101,8 @@ public class RegisterModelStep implements WorkflowStep {
                     case FUNCTION_NAME:
                         functionName = FunctionName.from(((String) content.get(FUNCTION_NAME)).toUpperCase(Locale.ROOT));
                         break;
-                    case MODEL_NAME:
-                        modelName = (String) content.get(MODEL_NAME);
+                    case NAME_FIELD:
+                        modelName = (String) content.get(NAME_FIELD);
                         break;
                     case MODEL_VERSION:
                         modelVersion = (String) content.get(MODEL_VERSION);
