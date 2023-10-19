@@ -20,6 +20,7 @@ import org.opensearch.flowframework.model.Template;
 import org.opensearch.flowframework.model.Workflow;
 import org.opensearch.flowframework.workflow.WorkflowProcessSorter;
 import org.opensearch.flowframework.workflow.WorkflowStepFactory;
+import org.opensearch.ml.client.MachineLearningNodeClient;
 import org.opensearch.threadpool.ThreadPool;
 
 import java.io.IOException;
@@ -55,7 +56,8 @@ public class TemplateParseDemo {
         }
         ClusterService clusterService = new ClusterService(null, null, null);
         Client client = new NodeClient(null, null);
-        WorkflowStepFactory factory = new WorkflowStepFactory(clusterService, client);
+        MachineLearningNodeClient mlClient = new MachineLearningNodeClient(client);
+        WorkflowStepFactory factory = new WorkflowStepFactory(clusterService, client, mlClient);
         ThreadPool threadPool = new ThreadPool(Settings.EMPTY);
         WorkflowProcessSorter workflowProcessSorter = new WorkflowProcessSorter(factory, threadPool);
 

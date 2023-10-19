@@ -10,9 +10,7 @@ package org.opensearch.flowframework.workflow;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.opensearch.client.Client;
 import org.opensearch.core.action.ActionListener;
-import org.opensearch.flowframework.client.MLClient;
 import org.opensearch.ml.client.MachineLearningNodeClient;
 import org.opensearch.ml.common.transport.deploy.MLDeployModelResponse;
 
@@ -28,23 +26,21 @@ import static org.opensearch.flowframework.common.CommonValue.MODEL_ID;
 public class DeployModelStep implements WorkflowStep {
     private static final Logger logger = LogManager.getLogger(DeployModelStep.class);
 
-    private Client client;
+    private MachineLearningNodeClient mlClient;
     static final String NAME = "deploy_model";
 
     /**
      * Instantiate this class
-     * @param client client to instantiate MLClient
+     * @param mlClient client to instantiate MLClient
      */
-    public DeployModelStep(Client client) {
-        this.client = client;
+    public DeployModelStep(MachineLearningNodeClient mlClient) {
+        this.mlClient = mlClient;
     }
 
     @Override
     public CompletableFuture<WorkflowData> execute(List<WorkflowData> data) {
 
         CompletableFuture<WorkflowData> deployModelFuture = new CompletableFuture<>();
-
-        MachineLearningNodeClient machineLearningNodeClient = MLClient.createMLClient(client);
 
         ActionListener<MLDeployModelResponse> actionListener = new ActionListener<>() {
             @Override
@@ -70,7 +66,7 @@ public class DeployModelStep implements WorkflowStep {
                 break;
             }
         }
-        machineLearningNodeClient.deploy(modelId, actionListener);
+        mlClient.deploy(modelId, actionListener);
         return deployModelFuture;
     }
 

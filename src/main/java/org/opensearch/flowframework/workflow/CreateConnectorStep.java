@@ -10,10 +10,8 @@ package org.opensearch.flowframework.workflow;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.opensearch.client.Client;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.core.rest.RestStatus;
-import org.opensearch.flowframework.client.MLClient;
 import org.opensearch.flowframework.exception.FlowFrameworkException;
 import org.opensearch.ml.client.MachineLearningNodeClient;
 import org.opensearch.ml.common.connector.ConnectorAction;
@@ -37,23 +35,21 @@ public class CreateConnectorStep implements WorkflowStep {
 
     private static final Logger logger = LogManager.getLogger(CreateConnectorStep.class);
 
-    private Client client;
+    private MachineLearningNodeClient mlClient;
 
     static final String NAME = "create_connector";
 
     /**
      * Instantiate this class
-     * @param client client to instantiate MLClient
+     * @param mlClient client to instantiate MLClient
      */
-    public CreateConnectorStep(Client client) {
-        this.client = client;
+    public CreateConnectorStep(MachineLearningNodeClient mlClient) {
+        this.mlClient = mlClient;
     }
 
     @Override
     public CompletableFuture<WorkflowData> execute(List<WorkflowData> data) throws IOException {
         CompletableFuture<WorkflowData> createConnectorFuture = new CompletableFuture<>();
-
-        MachineLearningNodeClient machineLearningNodeClient = MLClient.createMLClient(client);
 
         ActionListener<MLCreateConnectorResponse> actionListener = new ActionListener<>() {
 
@@ -96,12 +92,16 @@ public class CreateConnectorStep implements WorkflowStep {
                         break;
                     case PROTOCOL_FIELD:
                         protocol = (String) content.get(PROTOCOL_FIELD);
+                        break;
                     case PARAMETERS_FIELD:
                         parameters = getParameterMap((Map<String, String>) content.get(PARAMETERS_FIELD));
+                        break;
                     case CREDENTIALS_FIELD:
                         credentials = (Map<String, String>) content.get(CREDENTIALS_FIELD);
+                        break;
                     case ACTIONS_FIELD:
                         actions = (List<ConnectorAction>) content.get(ACTIONS_FIELD);
+                        break;
                 }
 
             }
@@ -118,7 +118,7 @@ public class CreateConnectorStep implements WorkflowStep {
                 .actions(actions)
                 .build();
 
-            machineLearningNodeClient.createConnector(mlInput, actionListener);
+            mlClient.createConnector(mlInput, actionListener);
         }
 
         return createConnectorFuture;

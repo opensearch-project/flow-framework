@@ -10,7 +10,6 @@ package org.opensearch.flowframework.workflow;
 
 import com.carrotsearch.randomizedtesting.annotations.ThreadLeakScope;
 
-import org.opensearch.client.node.NodeClient;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.ml.client.MachineLearningNodeClient;
 import org.opensearch.ml.common.FunctionName;
@@ -20,27 +19,23 @@ import org.opensearch.ml.common.model.TextEmbeddingModelConfig;
 import org.opensearch.ml.common.transport.register.MLRegisterModelInput;
 import org.opensearch.ml.common.transport.register.MLRegisterModelResponse;
 import org.opensearch.test.OpenSearchTestCase;
-import org.opensearch.test.client.NoOpNodeClient;
 
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 
-import org.mockito.Answers;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.verify;
 
 @ThreadLeakScope(ThreadLeakScope.Scope.NONE)
 public class RegisterModelStepTests extends OpenSearchTestCase {
     private WorkflowData inputData = WorkflowData.EMPTY;
-
-    @Mock(answer = Answers.RETURNS_DEEP_STUBS)
-    private NodeClient nodeClient;
 
     @Mock
     ActionListener<MLRegisterModelResponse> registerModelActionListener;
@@ -70,7 +65,6 @@ public class RegisterModelStepTests extends OpenSearchTestCase {
             )
         );
 
-        nodeClient = new NoOpNodeClient("xyz");
     }
 
     public void testRegisterModel() throws ExecutionException, InterruptedException {
@@ -85,12 +79,12 @@ public class RegisterModelStepTests extends OpenSearchTestCase {
             .connectorId("abcdefgh")
             .build();
 
-        RegisterModelStep registerModelStep = new RegisterModelStep(nodeClient);
+        RegisterModelStep registerModelStep = new RegisterModelStep(machineLearningNodeClient);
 
         ArgumentCaptor<ActionListener<MLRegisterModelResponse>> actionListenerCaptor = ArgumentCaptor.forClass(ActionListener.class);
 
         doAnswer(invocation -> {
-            ActionListener<MLRegisterModelResponse> actionListener = invocation.getArgument(2);
+            ActionListener<MLRegisterModelResponse> actionListener = invocation.getArgument(1);
             MLRegisterModelResponse output = new MLRegisterModelResponse(taskId, status, modelId);
             actionListener.onResponse(output);
             return null;
@@ -98,10 +92,9 @@ public class RegisterModelStepTests extends OpenSearchTestCase {
 
         CompletableFuture<WorkflowData> future = registerModelStep.execute(List.of(inputData));
 
-        // TODO: Find a way to verify the below
-        // verify(machineLearningNodeClient).register(any(MLRegisterModelInput.class), actionListenerCaptor.capture());
+        verify(machineLearningNodeClient).register(any(MLRegisterModelInput.class), actionListenerCaptor.capture());
 
-        assertTrue(future.isCompletedExceptionally());
+        assertTrue(future.isDone());
 
     }
 

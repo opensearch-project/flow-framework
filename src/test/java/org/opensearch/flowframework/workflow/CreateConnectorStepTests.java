@@ -8,7 +8,6 @@
  */
 package org.opensearch.flowframework.workflow;
 
-import org.opensearch.client.Client;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.ml.client.MachineLearningNodeClient;
 import org.opensearch.ml.common.transport.connector.MLCreateConnectorInput;
@@ -20,7 +19,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
-import org.mockito.Answers;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
@@ -31,9 +29,6 @@ import static org.mockito.Mockito.verify;
 
 public class CreateConnectorStepTests extends OpenSearchTestCase {
     private WorkflowData inputData = WorkflowData.EMPTY;
-
-    @Mock(answer = Answers.RETURNS_DEEP_STUBS)
-    private Client client;
 
     @Mock
     ActionListener<MLCreateConnectorResponse> registerModelActionListener;
@@ -67,12 +62,12 @@ public class CreateConnectorStepTests extends OpenSearchTestCase {
     public void testCreateConnector() throws IOException {
 
         String connectorId = "connect";
-        CreateConnectorStep createConnectorStep = new CreateConnectorStep(client);
+        CreateConnectorStep createConnectorStep = new CreateConnectorStep(machineLearningNodeClient);
 
         ArgumentCaptor<ActionListener<MLCreateConnectorResponse>> actionListenerCaptor = ArgumentCaptor.forClass(ActionListener.class);
 
         doAnswer(invocation -> {
-            ActionListener<MLCreateConnectorResponse> actionListener = invocation.getArgument(2);
+            ActionListener<MLCreateConnectorResponse> actionListener = invocation.getArgument(1);
             MLCreateConnectorResponse output = new MLCreateConnectorResponse(connectorId);
             actionListener.onResponse(output);
             return null;
@@ -81,6 +76,8 @@ public class CreateConnectorStepTests extends OpenSearchTestCase {
         CompletableFuture<WorkflowData> future = createConnectorStep.execute(List.of(inputData));
 
         verify(machineLearningNodeClient).createConnector(any(MLCreateConnectorInput.class), actionListenerCaptor.capture());
+
+        assertTrue(future.isDone());
 
     }
 
