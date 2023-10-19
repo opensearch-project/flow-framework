@@ -11,6 +11,7 @@ package org.opensearch.flowframework.rest;
 import org.opensearch.Version;
 import org.opensearch.client.node.NodeClient;
 import org.opensearch.core.common.bytes.BytesArray;
+import org.opensearch.core.rest.RestStatus;
 import org.opensearch.core.xcontent.MediaTypeRegistry;
 import org.opensearch.flowframework.model.Template;
 import org.opensearch.flowframework.model.Workflow;
@@ -19,9 +20,9 @@ import org.opensearch.flowframework.model.WorkflowNode;
 import org.opensearch.rest.RestHandler.Route;
 import org.opensearch.rest.RestRequest;
 import org.opensearch.test.OpenSearchTestCase;
+import org.opensearch.test.rest.FakeRestChannel;
 import org.opensearch.test.rest.FakeRestRequest;
 
-import java.io.IOException;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -87,13 +88,15 @@ public class RestCreateWorkflowActionTests extends OpenSearchTestCase {
 
     }
 
-    public void testInvalidCreateWorkflowRequest() throws IOException {
+    public void testInvalidCreateWorkflowRequest() throws Exception {
         RestRequest request = new FakeRestRequest.Builder(xContentRegistry()).withMethod(RestRequest.Method.POST)
             .withPath(this.createWorkflowPath)
             .withContent(new BytesArray(invalidTemplate), MediaTypeRegistry.JSON)
             .build();
 
-        IOException ex = expectThrows(IOException.class, () -> { createWorkflowRestAction.prepareRequest(request, nodeClient); });
-        assertEquals("Unable to parse field [invalid] in a template object.", ex.getMessage());
+        FakeRestChannel channel = new FakeRestChannel(request, false, 1);
+        createWorkflowRestAction.handleRequest(request, channel, nodeClient);
+        assertEquals(RestStatus.BAD_REQUEST, channel.capturedResponse().status());
+        assertTrue(channel.capturedResponse().content().utf8ToString().contains("Unable to parse field [invalid] in a template object."));
     }
 }

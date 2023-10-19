@@ -62,22 +62,28 @@ public class RestCreateWorkflowAction extends BaseRestHandler {
 
     @Override
     protected RestChannelConsumer prepareRequest(RestRequest request, NodeClient client) throws IOException {
-
-        String workflowId = request.param(WORKFLOW_ID);
-        Template template = Template.parse(request.content().utf8ToString());
-        WorkflowRequest workflowRequest = new WorkflowRequest(workflowId, template);
-        return channel -> client.execute(CreateWorkflowAction.INSTANCE, workflowRequest, ActionListener.wrap(response -> {
-            XContentBuilder builder = response.toXContent(channel.newBuilder(), ToXContent.EMPTY_PARAMS);
-            channel.sendResponse(new BytesRestResponse(RestStatus.CREATED, builder));
-        }, exception -> {
-            try {
-                FlowFrameworkException ex = (FlowFrameworkException) exception;
-                XContentBuilder exceptionBuilder = ex.toXContent(channel.newErrorBuilder(), ToXContent.EMPTY_PARAMS);
-                channel.sendResponse(new BytesRestResponse(ex.getRestStatus(), exceptionBuilder));
-            } catch (IOException e) {
-                logger.error("Failed to send back create workflow exception", e);
-            }
-        }));
+        try {
+            String workflowId = request.param(WORKFLOW_ID);
+            Template template = Template.parse(request.content().utf8ToString());
+            WorkflowRequest workflowRequest = new WorkflowRequest(workflowId, template);
+            return channel -> client.execute(CreateWorkflowAction.INSTANCE, workflowRequest, ActionListener.wrap(response -> {
+                XContentBuilder builder = response.toXContent(channel.newBuilder(), ToXContent.EMPTY_PARAMS);
+                channel.sendResponse(new BytesRestResponse(RestStatus.CREATED, builder));
+            }, exception -> {
+                try {
+                    FlowFrameworkException ex = (FlowFrameworkException) exception;
+                    XContentBuilder exceptionBuilder = ex.toXContent(channel.newErrorBuilder(), ToXContent.EMPTY_PARAMS);
+                    channel.sendResponse(new BytesRestResponse(ex.getRestStatus(), exceptionBuilder));
+                } catch (IOException e) {
+                    logger.error("Failed to send back create workflow exception", e);
+                }
+            }));
+        } catch (Exception e) {
+            FlowFrameworkException ex = new FlowFrameworkException(e.getMessage(), RestStatus.BAD_REQUEST);
+            return channel -> channel.sendResponse(
+                new BytesRestResponse(ex.getRestStatus(), ex.toXContent(channel.newErrorBuilder(), ToXContent.EMPTY_PARAMS))
+            );
+        }
 
     }
 
