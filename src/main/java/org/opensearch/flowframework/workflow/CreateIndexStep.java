@@ -12,6 +12,7 @@ import com.google.common.base.Charsets;
 import com.google.common.io.Resources;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.opensearch.ExceptionsHelper;
 import org.opensearch.action.admin.indices.create.CreateIndexRequest;
 import org.opensearch.action.admin.indices.create.CreateIndexResponse;
 import org.opensearch.action.admin.indices.mapping.put.PutMappingRequest;
@@ -79,7 +80,7 @@ public class CreateIndexStep implements WorkflowStep {
             @Override
             public void onFailure(Exception e) {
                 logger.error("Failed to create an index", e);
-                future.completeExceptionally(new FlowFrameworkException(e.getMessage(), RestStatus.INTERNAL_SERVER_ERROR));
+                future.completeExceptionally(new FlowFrameworkException(e.getMessage(), ExceptionsHelper.status(e)));
             }
         };
 
@@ -150,7 +151,7 @@ public class CreateIndexStep implements WorkflowStep {
                 }, e -> {
                     logger.error("Failed to create index " + indexName, e);
                     internalListener.onFailure(
-                        new FlowFrameworkException("Failed to create index " + indexName, e, RestStatus.INTERNAL_SERVER_ERROR)
+                        new FlowFrameworkException("Failed to create index " + indexName, e, ExceptionsHelper.status(e))
                     );
                 });
                 CreateIndexRequest request = new CreateIndexRequest(indexName).mapping(mapping).settings(indexSettings);
@@ -189,7 +190,7 @@ public class CreateIndexStep implements WorkflowStep {
                                                         new FlowFrameworkException(
                                                             "Failed to udpate index setting for: " + indexName,
                                                             exception,
-                                                            RestStatus.INTERNAL_SERVER_ERROR
+                                                            ExceptionsHelper.status(exception)
                                                         )
                                                     );
                                                 }));
@@ -207,7 +208,7 @@ public class CreateIndexStep implements WorkflowStep {
                                             new FlowFrameworkException(
                                                 "Failed to update index: " + indexName,
                                                 exception,
-                                                RestStatus.INTERNAL_SERVER_ERROR
+                                                ExceptionsHelper.status(exception)
                                             )
                                         );
                                     })
@@ -220,7 +221,7 @@ public class CreateIndexStep implements WorkflowStep {
                     }, e -> {
                         logger.error("Failed to update index mapping", e);
                         internalListener.onFailure(
-                            new FlowFrameworkException("Failed to update index mapping", e, RestStatus.INTERNAL_SERVER_ERROR)
+                            new FlowFrameworkException("Failed to update index mapping", e, ExceptionsHelper.status(e))
                         );
                     }));
                 } else {
@@ -230,7 +231,7 @@ public class CreateIndexStep implements WorkflowStep {
             }
         } catch (Exception e) {
             logger.error("Failed to init index: " + indexName, e);
-            listener.onFailure(new FlowFrameworkException("Failed to init index: " + indexName, e, RestStatus.INTERNAL_SERVER_ERROR));
+            listener.onFailure(new FlowFrameworkException("Failed to init index: " + indexName, e, ExceptionsHelper.status(e)));
         }
     }
 

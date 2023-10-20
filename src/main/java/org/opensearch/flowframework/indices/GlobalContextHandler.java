@@ -10,6 +10,7 @@ package org.opensearch.flowframework.indices;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.opensearch.ExceptionsHelper;
 import org.opensearch.action.index.IndexRequest;
 import org.opensearch.action.index.IndexResponse;
 import org.opensearch.action.support.WriteRequest;
@@ -88,7 +89,7 @@ public class GlobalContextHandler {
                 client.index(request, ActionListener.runBefore(listener, () -> context.restore()));
             } catch (Exception e) {
                 logger.error("Failed to index global_context index");
-                listener.onFailure(new FlowFrameworkException("Failed to index global_context index", e, RestStatus.INTERNAL_SERVER_ERROR));
+                listener.onFailure(new FlowFrameworkException("Failed to index global_context index", e, ExceptionsHelper.status(e)));
             }
         }, e -> {
             logger.error("Failed to create global_context index", e);
