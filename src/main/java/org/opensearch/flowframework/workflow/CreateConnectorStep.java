@@ -10,8 +10,8 @@ package org.opensearch.flowframework.workflow;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.opensearch.ExceptionsHelper;
 import org.opensearch.core.action.ActionListener;
-import org.opensearch.core.rest.RestStatus;
 import org.opensearch.flowframework.exception.FlowFrameworkException;
 import org.opensearch.ml.client.MachineLearningNodeClient;
 import org.opensearch.ml.common.connector.ConnectorAction;
@@ -65,15 +65,16 @@ public class CreateConnectorStep implements WorkflowStep {
             @Override
             public void onResponse(MLCreateConnectorResponse mlCreateConnectorResponse) {
                 logger.info("Created connector successfully");
+                // TODO Add the response to Global Context
                 createConnectorFuture.complete(
-                    new WorkflowData(Map.ofEntries(Map.entry("connector-id", mlCreateConnectorResponse.getConnectorId())))
+                    new WorkflowData(Map.ofEntries(Map.entry("connector_id", mlCreateConnectorResponse.getConnectorId())))
                 );
             }
 
             @Override
             public void onFailure(Exception e) {
                 logger.error("Failed to create connector");
-                createConnectorFuture.completeExceptionally(new FlowFrameworkException(e.getMessage(), RestStatus.INTERNAL_SERVER_ERROR));
+                createConnectorFuture.completeExceptionally(new FlowFrameworkException(e.getMessage(), ExceptionsHelper.status(e)));
             }
         };
 

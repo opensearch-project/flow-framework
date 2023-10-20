@@ -82,7 +82,7 @@ public class CreateConnectorStepTests extends OpenSearchTestCase {
         verify(machineLearningNodeClient).createConnector(any(MLCreateConnectorInput.class), actionListenerCaptor.capture());
 
         assertTrue(future.isDone());
-        assertEquals(connectorId, future.get().getContent().get("connector-id"));
+        assertEquals(connectorId, future.get().getContent().get("connector_id"));
 
     }
 
