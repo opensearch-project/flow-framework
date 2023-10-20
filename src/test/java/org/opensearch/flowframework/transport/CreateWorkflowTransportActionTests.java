@@ -11,9 +11,10 @@ package org.opensearch.flowframework.transport;
 import org.opensearch.Version;
 import org.opensearch.action.index.IndexResponse;
 import org.opensearch.action.support.ActionFilters;
+import org.opensearch.client.Client;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.core.index.shard.ShardId;
-import org.opensearch.flowframework.indices.GlobalContextHandler;
+import org.opensearch.flowframework.indices.FlowFrameworkIndicesHandler;
 import org.opensearch.flowframework.model.Template;
 import org.opensearch.flowframework.model.Workflow;
 import org.opensearch.flowframework.model.WorkflowEdge;
@@ -37,17 +38,19 @@ import static org.mockito.Mockito.verify;
 public class CreateWorkflowTransportActionTests extends OpenSearchTestCase {
 
     private CreateWorkflowTransportAction createWorkflowTransportAction;
-    private GlobalContextHandler globalContextHandler;
+    private FlowFrameworkIndicesHandler flowFrameworkIndicesHandler;
     private Template template;
+    private Client client = mock(Client.class);
 
     @Override
     public void setUp() throws Exception {
         super.setUp();
-        this.globalContextHandler = mock(GlobalContextHandler.class);
+        this.flowFrameworkIndicesHandler = mock(FlowFrameworkIndicesHandler.class);
         this.createWorkflowTransportAction = new CreateWorkflowTransportAction(
             mock(TransportService.class),
             mock(ActionFilters.class),
-            globalContextHandler
+            flowFrameworkIndicesHandler,
+            client
         );
 
         Version templateVersion = Version.fromString("1.0.0");
@@ -79,7 +82,7 @@ public class CreateWorkflowTransportActionTests extends OpenSearchTestCase {
             ActionListener<IndexResponse> responseListener = invocation.getArgument(1);
             responseListener.onResponse(new IndexResponse(new ShardId(GLOBAL_CONTEXT_INDEX, "", 1), "1", 1L, 1L, 1L, true));
             return null;
-        }).when(globalContextHandler).putTemplateToGlobalContext(any(Template.class), any());
+        }).when(flowFrameworkIndicesHandler).putTemplateToGlobalContext(any(Template.class), any());
 
         createWorkflowTransportAction.doExecute(mock(Task.class), createNewWorkflow, listener);
         ArgumentCaptor<WorkflowResponse> responseCaptor = ArgumentCaptor.forClass(WorkflowResponse.class);
@@ -98,7 +101,7 @@ public class CreateWorkflowTransportActionTests extends OpenSearchTestCase {
             ActionListener<IndexResponse> responseListener = invocation.getArgument(1);
             responseListener.onFailure(new Exception("Failed to create global_context index"));
             return null;
-        }).when(globalContextHandler).putTemplateToGlobalContext(any(Template.class), any());
+        }).when(flowFrameworkIndicesHandler).putTemplateToGlobalContext(any(Template.class), any());
 
         createWorkflowTransportAction.doExecute(mock(Task.class), createNewWorkflow, listener);
         ArgumentCaptor<Exception> exceptionCaptor = ArgumentCaptor.forClass(Exception.class);
@@ -116,7 +119,7 @@ public class CreateWorkflowTransportActionTests extends OpenSearchTestCase {
             ActionListener<IndexResponse> responseListener = invocation.getArgument(2);
             responseListener.onResponse(new IndexResponse(new ShardId(GLOBAL_CONTEXT_INDEX, "", 1), "1", 1L, 1L, 1L, true));
             return null;
-        }).when(globalContextHandler).updateTemplateInGlobalContext(any(), any(Template.class), any());
+        }).when(flowFrameworkIndicesHandler).updateTemplateInGlobalContext(any(), any(Template.class), any());
 
         createWorkflowTransportAction.doExecute(mock(Task.class), updateWorkflow, listener);
         ArgumentCaptor<WorkflowResponse> responseCaptor = ArgumentCaptor.forClass(WorkflowResponse.class);
@@ -134,7 +137,7 @@ public class CreateWorkflowTransportActionTests extends OpenSearchTestCase {
             ActionListener<IndexResponse> responseListener = invocation.getArgument(2);
             responseListener.onFailure(new Exception("Failed to update use case template"));
             return null;
-        }).when(globalContextHandler).updateTemplateInGlobalContext(any(), any(Template.class), any());
+        }).when(flowFrameworkIndicesHandler).updateTemplateInGlobalContext(any(), any(Template.class), any());
 
         createWorkflowTransportAction.doExecute(mock(Task.class), updateWorkflow, listener);
         ArgumentCaptor<Exception> exceptionCaptor = ArgumentCaptor.forClass(Exception.class);

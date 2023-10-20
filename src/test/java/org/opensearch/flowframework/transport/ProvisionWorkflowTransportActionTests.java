@@ -19,6 +19,7 @@ import org.opensearch.common.xcontent.XContentFactory;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.core.common.bytes.BytesReference;
 import org.opensearch.core.xcontent.XContentBuilder;
+import org.opensearch.flowframework.indices.FlowFrameworkIndicesHandler;
 import org.opensearch.flowframework.model.Template;
 import org.opensearch.flowframework.model.Workflow;
 import org.opensearch.flowframework.model.WorkflowEdge;
@@ -50,6 +51,7 @@ public class ProvisionWorkflowTransportActionTests extends OpenSearchTestCase {
     private WorkflowProcessSorter workflowProcessSorter;
     private ProvisionWorkflowTransportAction provisionWorkflowTransportAction;
     private Template template;
+    private FlowFrameworkIndicesHandler flowFrameworkIndicesHandler;
 
     @Override
     public void setUp() throws Exception {
@@ -57,13 +59,15 @@ public class ProvisionWorkflowTransportActionTests extends OpenSearchTestCase {
         this.threadPool = mock(ThreadPool.class);
         this.client = mock(Client.class);
         this.workflowProcessSorter = mock(WorkflowProcessSorter.class);
+        this.flowFrameworkIndicesHandler = mock(FlowFrameworkIndicesHandler.class);
 
         this.provisionWorkflowTransportAction = new ProvisionWorkflowTransportAction(
             mock(TransportService.class),
             mock(ActionFilters.class),
             threadPool,
             client,
-            workflowProcessSorter
+            workflowProcessSorter,
+            flowFrameworkIndicesHandler
         );
 
         Version templateVersion = Version.fromString("1.0.0");

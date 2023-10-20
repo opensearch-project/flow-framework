@@ -17,8 +17,8 @@ import java.util.HashMap;
 import java.util.Map;
 
 import static org.opensearch.core.xcontent.XContentParserUtils.ensureExpectedToken;
-import static org.opensearch.flowframework.common.TemplateUtil.buildStringToStringMap;
-import static org.opensearch.flowframework.common.TemplateUtil.parseStringToStringMap;
+import static org.opensearch.flowframework.util.ParseUtils.buildStringToStringMap;
+import static org.opensearch.flowframework.util.ParseUtils.parseStringToStringMap;
 
 /**
  * This represents a processor associated with search and ingest pipelines in the {@link Template}.

@@ -1,0 +1,87 @@
+{
+  "dynamic": false,
+  "_meta": {
+    "schema_version": 1
+  },
+  "properties": {
+    "schema_version": {
+      "type": "integer"
+    },
+    "workflow_id": {
+      "type": "keyword"
+    },
+    "error": {
+      "type": "text"
+    }
+    "state": {
+      "type": "keyword"
+    },
+    "provisioning_progress": {
+      "type": "keyword"
+    },
+    "provision_start_time": {
+      "type": "date",
+      "format": "strict_date_time||epoch_millis"
+    },
+    "provision_end_time": {
+      "type": "date",
+      "format": "strict_date_time||epoch_millis"
+    },
+    "user": {
+      "type": "nested",
+      "properties": {
+        "name": {
+          "type": "text",
+          "fields": {
+            "keyword": {
+              "type": "keyword",
+              "ignore_above": 256
+            }
+          }
+        },
+        "backend_roles": {
+          "type" : "text",
+          "fields" : {
+            "keyword" : {
+              "type" : "keyword"
+            }
+          }
+        },
+        "roles": {
+          "type" : "text",
+          "fields" : {
+            "keyword" : {
+              "type" : "keyword"
+            }
+          }
+        },
+        "custom_attribute_names": {
+          "type" : "text",
+          "fields" : {
+            "keyword" : {
+              "type" : "keyword"
+            }
+          }
+        }
+      }
+    },
+    "ui_metadata": {
+      "type": "object",
+      "enabled": false
+    }
+  }
+  "ui_metadata": {
+    "features": {
+      "sum_http_5xx": {
+        "aggregationBy": "sum",
+        "aggregationOf": "http_5xx",
+        "featureType": "simple_aggs"
+      },
+      "sum_http_4xx": {
+        "aggregationBy": "sum",
+        "aggregationOf": "http_4xx",
+        "featureType": "simple_aggs"
+      }
+    },
+    "filters": []
+  },

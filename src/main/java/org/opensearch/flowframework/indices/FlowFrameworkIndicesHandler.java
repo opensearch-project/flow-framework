@@ -1,0 +1,432 @@
+/*
+ * Copyright OpenSearch Contributors
+ * SPDX-License-Identifier: Apache-2.0
+ *
+ * The OpenSearch Contributors require contributions made to
+ * this file be licensed under the Apache-2.0 license or a
+ * compatible open source license.
+ */
+package org.opensearch.flowframework.indices;
+
+import com.google.common.base.Charsets;
+import com.google.common.io.Resources;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import org.opensearch.action.admin.indices.create.CreateIndexRequest;
+import org.opensearch.action.admin.indices.create.CreateIndexResponse;
+import org.opensearch.action.admin.indices.mapping.put.PutMappingRequest;
+import org.opensearch.action.admin.indices.settings.put.UpdateSettingsRequest;
+import org.opensearch.action.index.IndexRequest;
+import org.opensearch.action.index.IndexResponse;
+import org.opensearch.action.search.SearchRequest;
+import org.opensearch.action.support.WriteRequest;
+import org.opensearch.action.update.UpdateRequest;
+import org.opensearch.action.update.UpdateResponse;
+import org.opensearch.client.Client;
+import org.opensearch.cluster.metadata.IndexMetadata;
+import org.opensearch.cluster.service.ClusterService;
+import org.opensearch.common.util.concurrent.ThreadContext;
+import org.opensearch.common.xcontent.XContentFactory;
+import org.opensearch.common.xcontent.XContentType;
+import org.opensearch.commons.authuser.User;
+import org.opensearch.core.action.ActionListener;
+import org.opensearch.core.rest.RestStatus;
+import org.opensearch.core.xcontent.ToXContent;
+import org.opensearch.core.xcontent.XContentBuilder;
+import org.opensearch.flowframework.exception.FlowFrameworkException;
+import org.opensearch.flowframework.model.ProvisioningProgress;
+import org.opensearch.flowframework.model.State;
+import org.opensearch.flowframework.model.Template;
+import org.opensearch.flowframework.model.WorkflowState;
+import org.opensearch.flowframework.transport.WorkflowResponse;
+import org.opensearch.index.query.BoolQueryBuilder;
+import org.opensearch.index.query.TermQueryBuilder;
+import org.opensearch.search.builder.SearchSourceBuilder;
+
+import java.io.IOException;
+import java.net.URL;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.concurrent.atomic.AtomicBoolean;
+
+import static org.opensearch.core.rest.RestStatus.BAD_REQUEST;
+import static org.opensearch.core.rest.RestStatus.INTERNAL_SERVER_ERROR;
+import static org.opensearch.flowframework.common.CommonValue.GLOBAL_CONTEXT_INDEX;
+import static org.opensearch.flowframework.common.CommonValue.GLOBAL_CONTEXT_INDEX_MAPPING;
+import static org.opensearch.flowframework.common.CommonValue.META;
+import static org.opensearch.flowframework.common.CommonValue.NO_SCHEMA_VERSION;
+import static org.opensearch.flowframework.common.CommonValue.SCHEMA_VERSION_FIELD;
+import static org.opensearch.flowframework.common.CommonValue.WORKFLOW_STATE_INDEX;
+import static org.opensearch.flowframework.model.WorkflowState.WORKFLOW_ID_FIELD;
+
+/**
+ * A handler for global context related operations
+ */
+public class FlowFrameworkIndicesHandler {
+    private static final Logger logger = LogManager.getLogger(FlowFrameworkIndicesHandler.class);
+    private final Client client;
+    ClusterService clusterService;
+    private static final Map<String, AtomicBoolean> indexMappingUpdated = new HashMap<>();
+    private static final Map<String, Object> indexSettings = Map.of("index.auto_expand_replicas", "0-1");
+
+    /**
+     * constructor
+     * @param client the open search client
+     * @param clusterService ClusterService
+     */
+    public FlowFrameworkIndicesHandler(Client client, ClusterService clusterService) {
+        this.client = client;
+        this.clusterService = clusterService;
+    }
+
+    static {
+        for (FlowFrameworkIndex mlIndex : FlowFrameworkIndex.values()) {
+            indexMappingUpdated.put(mlIndex.getIndexName(), new AtomicBoolean(false));
+        }
+    }
+
+    /**
+     * Get global-context index mapping
+     * @return global-context index mapping
+     * @throws IOException if mapping file cannot be read correctly
+     */
+    public static String getGlobalContextMappings() throws IOException {
+        return getIndexMappings(GLOBAL_CONTEXT_INDEX_MAPPING);
+    }
+
+    public void initGlobalContextIndexIfAbsent(ActionListener<Boolean> listener) {
+        initFlowFrameworkIndexIfAbsent(FlowFrameworkIndex.GLOBAL_CONTEXT, listener);
+    }
+
+    public void initWorkflowStateIndexIfAbsent(ActionListener<Boolean> listener) {
+        initFlowFrameworkIndexIfAbsent(FlowFrameworkIndex.WORKFLOW_STATE, listener);
+    }
+
+    /**
+     * Checks if the given index exists
+     * @param indexName the name of the index
+     * @return boolean indicating the existence of an index
+     */
+    public boolean doesIndexExist(String indexName) {
+        return clusterService.state().metadata().hasIndex(indexName);
+    }
+
+    /**
+     * Create Index if it's absent
+     * @param index The index that needs to be created
+     * @param listener The action listener
+     */
+    public void initFlowFrameworkIndexIfAbsent(FlowFrameworkIndex index, ActionListener<Boolean> listener) {
+        String indexName = index.getIndexName();
+        String mapping = index.getMapping();
+
+        try (ThreadContext.StoredContext threadContext = client.threadPool().getThreadContext().stashContext()) {
+            ActionListener<Boolean> internalListener = ActionListener.runBefore(listener, () -> threadContext.restore());
+            if (!clusterService.state().metadata().hasIndex(indexName)) {
+                @SuppressWarnings("deprecation")
+                ActionListener<CreateIndexResponse> actionListener = ActionListener.wrap(r -> {
+                    if (r.isAcknowledged()) {
+                        logger.info("create index:{}", indexName);
+                        internalListener.onResponse(true);
+                    } else {
+                        internalListener.onResponse(false);
+                    }
+                }, e -> {
+                    logger.error("Failed to create index " + indexName, e);
+                    internalListener.onFailure(e);
+                });
+                CreateIndexRequest request = new CreateIndexRequest(indexName).mapping(mapping).settings(indexSettings);
+                client.admin().indices().create(request, actionListener);
+            } else {
+                logger.debug("index:{} is already created", indexName);
+                if (indexMappingUpdated.containsKey(indexName) && !indexMappingUpdated.get(indexName).get()) {
+                    shouldUpdateIndex(indexName, index.getVersion(), ActionListener.wrap(r -> {
+                        if (r) {
+                            // return true if update index is needed
+                            client.admin()
+                                .indices()
+                                .putMapping(
+                                    new PutMappingRequest().indices(indexName).source(mapping, XContentType.JSON),
+                                    ActionListener.wrap(response -> {
+                                        if (response.isAcknowledged()) {
+                                            UpdateSettingsRequest updateSettingRequest = new UpdateSettingsRequest();
+                                            updateSettingRequest.indices(indexName).settings(indexSettings);
+                                            client.admin()
+                                                .indices()
+                                                .updateSettings(updateSettingRequest, ActionListener.wrap(updateResponse -> {
+                                                    if (response.isAcknowledged()) {
+                                                        indexMappingUpdated.get(indexName).set(true);
+                                                        internalListener.onResponse(true);
+                                                    } else {
+                                                        internalListener.onFailure(
+                                                            new FlowFrameworkException(
+                                                                "Failed to update index setting for: " + indexName,
+                                                                INTERNAL_SERVER_ERROR
+                                                            )
+                                                        );
+                                                    }
+                                                }, exception -> {
+                                                    logger.error("Failed to update index setting for: " + indexName, exception);
+                                                    internalListener.onFailure(exception);
+                                                }));
+                                        } else {
+                                            internalListener.onFailure(
+                                                new FlowFrameworkException("Failed to update index: " + indexName, INTERNAL_SERVER_ERROR)
+                                            );
+                                        }
+                                    }, exception -> {
+                                        logger.error("Failed to update index " + indexName, exception);
+                                        internalListener.onFailure(exception);
+                                    })
+                                );
+                        } else {
+                            // no need to update index if it does not exist or the version is already up-to-date.
+                            indexMappingUpdated.get(indexName).set(true);
+                            internalListener.onResponse(true);
+                        }
+                    }, e -> {
+                        logger.error("Failed to update index mapping", e);
+                        internalListener.onFailure(e);
+                    }));
+                } else {
+                    // No need to update index if it's already updated.
+                    internalListener.onResponse(true);
+                }
+            }
+        } catch (Exception e) {
+            logger.error("Failed to init index " + indexName, e);
+            listener.onFailure(e);
+        }
+    }
+
+    /**
+     * Check if we should update index based on schema version.
+     * @param indexName index name
+     * @param newVersion new index mapping version
+     * @param listener action listener, if update index is needed, will pass true to its onResponse method
+     */
+    private void shouldUpdateIndex(String indexName, Integer newVersion, ActionListener<Boolean> listener) {
+        IndexMetadata indexMetaData = clusterService.state().getMetadata().indices().get(indexName);
+        if (indexMetaData == null) {
+            listener.onResponse(Boolean.FALSE);
+            return;
+        }
+        Integer oldVersion = NO_SCHEMA_VERSION;
+        Map<String, Object> indexMapping = indexMetaData.mapping().getSourceAsMap();
+        Object meta = indexMapping.get(META);
+        if (meta != null && meta instanceof Map) {
+            @SuppressWarnings("unchecked")
+            Map<String, Object> metaMapping = (Map<String, Object>) meta;
+            Object schemaVersion = metaMapping.get(SCHEMA_VERSION_FIELD);
+            if (schemaVersion instanceof Integer) {
+                oldVersion = (Integer) schemaVersion;
+            }
+        }
+        listener.onResponse(newVersion > oldVersion);
+    }
+
+    /**
+     * Get index mapping json content.
+     *
+     * @param mapping type of the index to fetch the specific mapping file
+     * @return index mapping
+     * @throws IOException IOException if mapping file can't be read correctly
+     */
+    public static String getIndexMappings(String mapping) throws IOException {
+        URL url = FlowFrameworkIndicesHandler.class.getClassLoader().getResource(mapping);
+        return Resources.toString(url, Charsets.UTF_8);
+    }
+
+    /**
+     * add document insert into global context index
+     * @param template the use-case template
+     * @param listener action listener
+     */
+    public void putTemplateToGlobalContext(Template template, ActionListener<IndexResponse> listener) {
+        initGlobalContextIndexIfAbsent(ActionListener.wrap(indexCreated -> {
+            if (!indexCreated) {
+                listener.onFailure(new FlowFrameworkException("No response to create global_context index", INTERNAL_SERVER_ERROR));
+                return;
+            }
+            IndexRequest request = new IndexRequest(GLOBAL_CONTEXT_INDEX);
+            try (
+                XContentBuilder builder = XContentFactory.jsonBuilder();
+                ThreadContext.StoredContext context = client.threadPool().getThreadContext().stashContext()
+            ) {
+                request.source(template.toDocumentSource(builder, ToXContent.EMPTY_PARAMS))
+                    .setRefreshPolicy(WriteRequest.RefreshPolicy.IMMEDIATE);
+                client.index(request, ActionListener.runBefore(listener, () -> context.restore()));
+            } catch (Exception e) {
+                logger.error("Failed to index global_context index");
+                listener.onFailure(e);
+            }
+        }, e -> {
+            logger.error("Failed to create global_context index", e);
+            listener.onFailure(e);
+        }));
+    }
+
+    /**
+     * add document insert into global context index
+     * @param workflowId the workflowId, corresponds to document ID of
+     * @param listener action listener
+     */
+    public void putInitialStateToWorkflowState(String workflowId, User user, ActionListener<IndexResponse> listener) {
+        WorkflowState state = new WorkflowState.Builder().workflowId(workflowId)
+            .state(State.NOT_STARTED.name())
+            .provisioningProgress(ProvisioningProgress.NOT_STARTED.name())
+            .user(user)
+            .build();
+        initWorkflowStateIndexIfAbsent(ActionListener.wrap(indexCreated -> {
+            if (!indexCreated) {
+                listener.onFailure(new FlowFrameworkException("No response to create workflow_state index", INTERNAL_SERVER_ERROR));
+                return;
+            }
+            IndexRequest request = new IndexRequest(WORKFLOW_STATE_INDEX);
+            try (
+                XContentBuilder builder = XContentFactory.jsonBuilder();
+                ThreadContext.StoredContext context = client.threadPool().getThreadContext().stashContext();
+
+            ) {
+                request.source(state.toXContent(builder, ToXContent.EMPTY_PARAMS)).setRefreshPolicy(WriteRequest.RefreshPolicy.IMMEDIATE);
+                client.index(request, ActionListener.runBefore(listener, () -> context.restore()));
+            } catch (Exception e) {
+                logger.error("Failed to put state index document", e);
+                listener.onFailure(e);
+            }
+
+        }, e -> {
+            logger.error("Failed to create global_context index", e);
+            listener.onFailure(e);
+        }));
+    }
+
+    /**
+     * Replaces a document in the global context index
+     * @param documentId the document Id
+     * @param template the use-case template
+     * @param listener action listener
+     */
+    public void updateTemplateInGlobalContext(String documentId, Template template, ActionListener<IndexResponse> listener) {
+        if (!doesIndexExist(GLOBAL_CONTEXT_INDEX)) {
+            String exceptionMessage = "Failed to update workflow state for workflow_id : "
+                + documentId
+                + ", workflow_state index does not exist.";
+            logger.error(exceptionMessage);
+            listener.onFailure(new Exception(exceptionMessage));
+        } else {
+            IndexRequest request = new IndexRequest(GLOBAL_CONTEXT_INDEX).id(documentId);
+            try (
+                XContentBuilder builder = XContentFactory.jsonBuilder();
+                ThreadContext.StoredContext context = client.threadPool().getThreadContext().stashContext()
+            ) {
+                request.source(template.toDocumentSource(builder, ToXContent.EMPTY_PARAMS))
+                    .setRefreshPolicy(WriteRequest.RefreshPolicy.IMMEDIATE);
+                client.index(request, ActionListener.runBefore(listener, () -> context.restore()));
+            } catch (Exception e) {
+                logger.error("Failed to update global_context entry : {}. {}", documentId, e.getMessage());
+                listener.onFailure(e);
+            }
+        }
+    }
+
+    /**
+     * Updates a document in the workflow state index
+     * @param workflowStateDocId the document ID
+     * @param updatedFields the fields to update the global state index with
+     * @param listener action listener
+     */
+    public void updateWorkflowState(
+        String workflowStateDocId,
+        ThreadContext.StoredContext context,
+        Map<String, Object> updatedFields,
+        ActionListener<UpdateResponse> listener
+    ) {
+        if (!doesIndexExist(WORKFLOW_STATE_INDEX)) {
+            String exceptionMessage = "Failed to update state for given workflow due to missing workflow_state index";
+            logger.error(exceptionMessage);
+            listener.onFailure(new Exception(exceptionMessage));
+        } else {
+            UpdateRequest updateRequest = new UpdateRequest(WORKFLOW_STATE_INDEX, workflowStateDocId);
+            Map<String, Object> updatedContent = new HashMap<>();
+            updatedContent.putAll(updatedFields);
+            updateRequest.doc(updatedContent);
+            updateRequest.setRefreshPolicy(WriteRequest.RefreshPolicy.IMMEDIATE);
+            client.update(updateRequest, ActionListener.runBefore(listener, () -> context.restore()));
+        }
+    }
+
+    public void getWorkflowStateID(String workflowId, ActionListener<String> listener) {
+        BoolQueryBuilder query = new BoolQueryBuilder();
+        query.filter(new TermQueryBuilder(WORKFLOW_ID_FIELD, workflowId));
+        SearchRequest searchRequest = new SearchRequest();
+        SearchSourceBuilder sourceBuilder = new SearchSourceBuilder();
+        sourceBuilder.query(query).size(1); // we are making the assumption there is only one document with this workflowID
+        searchRequest.source(sourceBuilder).indices(WORKFLOW_STATE_INDEX);
+        client.search(searchRequest, ActionListener.wrap(searchResponse -> {
+            if (searchResponse == null
+                || searchResponse.getHits().getTotalHits() == null
+                || !(searchResponse.getHits().getTotalHits().value == 1)) {
+                logger.error("There are either one or no workflow state documents with the same workflowID: " + workflowId);
+                listener.onFailure(new FlowFrameworkException("Workflow state cannot be updated", INTERNAL_SERVER_ERROR));
+                return;
+            }
+            String stateWorkflowDocID = searchResponse.getHits().getHits()[0].getId();
+            listener.onResponse(stateWorkflowDocID);
+        }, exception -> {
+            logger.error("Failed to find workflow state for workflowID : {}. {}", workflowId, exception.getMessage());
+            listener.onFailure(new FlowFrameworkException("Failed to find workflow state for workflowID: " + workflowId, BAD_REQUEST));
+        }));
+    }
+
+    public void getAndUpdateWorkflowStateDoc(
+        String workflowId,
+        Map<String, Object> updatedFields,
+        ActionListener<WorkflowResponse> workflowResponseListener
+    ) {
+        try {
+            ThreadContext.StoredContext context = client.threadPool().getThreadContext().stashContext();
+            getWorkflowStateID(workflowId, ActionListener.wrap(stateWorkflowId -> {
+                updateWorkflowState(stateWorkflowId, context, updatedFields, ActionListener.wrap(r -> {}, e -> {
+                    logger.error("Failed to update workflow state : {}", e.getMessage());
+                    workflowResponseListener.onFailure(
+                        new FlowFrameworkException("Failed to update workflow state", RestStatus.BAD_REQUEST)
+                    );
+                }));
+            }, exception -> {
+                logger.error("Failed to save workflow state : {}", exception.getMessage());
+                workflowResponseListener.onFailure(new FlowFrameworkException("couldn't find workflow state", RestStatus.BAD_REQUEST));
+            }));
+        } catch (Exception e) {
+            logger.error("Failed to update workflow state : {}", e.getMessage());
+            workflowResponseListener.onFailure(new FlowFrameworkException("Failed to update workflow state", RestStatus.BAD_REQUEST));
+        }
+
+    }
+
+    /**
+     * Update global context index for specific fields
+     * @param documentId global context index document id
+     * @param updatedFields updated fields; key: field name, value: new value
+     * @param listener UpdateResponse action listener
+     */
+    public void storeResponseToGlobalContext(
+        String documentId,
+        Map<String, Object> updatedFields,
+        ActionListener<UpdateResponse> listener
+    ) {
+        UpdateRequest updateRequest = new UpdateRequest(GLOBAL_CONTEXT_INDEX, documentId);
+        Map<String, Object> updatedUserOutputsContext = new HashMap<>();
+        updatedUserOutputsContext.putAll(updatedFields);
+        updateRequest.doc(updatedUserOutputsContext);
+        updateRequest.setRefreshPolicy(WriteRequest.RefreshPolicy.IMMEDIATE);
+        // TODO: decide what condition can be considered as an update conflict and add retry strategy
+
+        try {
+            client.update(updateRequest, listener);
+        } catch (Exception e) {
+            logger.error("Failed to update global_context index");
+            listener.onFailure(e);
+        }
+    }
+}

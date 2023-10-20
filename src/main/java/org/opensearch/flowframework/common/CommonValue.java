@@ -27,6 +27,14 @@ public class CommonValue {
     public static final String GLOBAL_CONTEXT_INDEX_MAPPING = "mappings/global-context.json";
     /** Global Context index mapping version */
     public static final Integer GLOBAL_CONTEXT_INDEX_VERSION = 1;
+    /** Workflow State Index Name */
+    public static final String WORKFLOW_STATE_INDEX = ".plugins-workflow-state";
+    /** Workflow State index mapping file path */
+    public static final String WORKFLOW_STATE_INDEX_MAPPING = "mappings/workflow-state.json";
+    /** Workflow State index mapping version */
+    public static final Integer WORKFLOW_STATE_INDEX_VERSION = 1;
+
+
     /** The template field name for template use case */
     public static final String USE_CASE_FIELD = "use_case";
     /** The template field name for template version */
@@ -35,6 +43,7 @@ public class CommonValue {
     public static final String COMPATIBILITY_FIELD = "compatibility";
     /** The template field name for template workflows */
     public static final String WORKFLOWS_FIELD = "workflows";
+
 
     /** The transport action name prefix */
     public static final String TRANSPORT_ACION_NAME_PREFIX = "cluster:admin/opensearch/flow_framework/";

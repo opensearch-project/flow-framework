@@ -14,6 +14,8 @@ import java.util.function.Supplier;
 
 import static org.opensearch.flowframework.common.CommonValue.GLOBAL_CONTEXT_INDEX;
 import static org.opensearch.flowframework.common.CommonValue.GLOBAL_CONTEXT_INDEX_VERSION;
+import static org.opensearch.flowframework.common.CommonValue.WORKFLOW_STATE_INDEX;
+import static org.opensearch.flowframework.common.CommonValue.WORKFLOW_STATE_INDEX_VERSION;
 
 /**
  * An enumeration of Flow Framework indices
@@ -24,8 +26,13 @@ public enum FlowFrameworkIndex {
     */
     GLOBAL_CONTEXT(
         GLOBAL_CONTEXT_INDEX,
-        ThrowingSupplierWrapper.throwingSupplierWrapper(GlobalContextHandler::getGlobalContextMappings),
+        ThrowingSupplierWrapper.throwingSupplierWrapper(FlowFrameworkIndicesHandler::getGlobalContextMappings),
         GLOBAL_CONTEXT_INDEX_VERSION
+    ),
+    WORKFLOW_STATE(
+        WORKFLOW_STATE_INDEX,
+        ThrowingSupplierWrapper.throwingSupplierWrapper(FlowFrameworkIndicesHandler::getGlobalContextMappings),
+        WORKFLOW_STATE_INDEX_VERSION
     );
 
     private final String indexName;
