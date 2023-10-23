@@ -46,8 +46,6 @@ public class Template implements ToXContentObject {
     public static final String TEMPLATE_FIELD = "template";
     /** The template field name for template compatibility with OpenSearch versions */
     public static final String COMPATIBILITY_FIELD = "compatibility";
-    /** The template field name for template user inputs */
-    public static final String USER_INPUTS_FIELD = "user_inputs";
     /** The template field name for template workflows */
     public static final String WORKFLOWS_FIELD = "workflows";
     /** The template field name for template user outputs */
@@ -61,7 +59,6 @@ public class Template implements ToXContentObject {
     private final List<String> operations; // probably an ENUM actually
     private final Version templateVersion;
     private final List<Version> compatibilityVersion;
-    private final Map<String, Object> userInputs;
     private final Map<String, Workflow> workflows;
     private final Map<String, Object> userOutputs;
     private final Map<String, Object> resourcesCreated;
@@ -75,7 +72,6 @@ public class Template implements ToXContentObject {
      * @param operations Expected operations of this template. Should match defined workflows.
      * @param templateVersion The version of this template
      * @param compatibilityVersion OpenSearch version compatibility of this template
-     * @param userInputs Optional user inputs to apply globally
      * @param workflows Workflow graph definitions corresponding to the defined operations.
      * @param userOutputs A map of essential API responses for backend to use and lookup.
      * @param resourcesCreated A map of all the resources created.
@@ -87,7 +83,6 @@ public class Template implements ToXContentObject {
         List<String> operations,
         Version templateVersion,
         List<Version> compatibilityVersion,
-        Map<String, Object> userInputs,
         Map<String, Workflow> workflows,
         Map<String, Object> userOutputs,
         Map<String, Object> resourcesCreated
@@ -98,7 +93,6 @@ public class Template implements ToXContentObject {
         this.operations = List.copyOf(operations);
         this.templateVersion = templateVersion;
         this.compatibilityVersion = List.copyOf(compatibilityVersion);
-        this.userInputs = Map.copyOf(userInputs);
         this.workflows = Map.copyOf(workflows);
         this.userOutputs = Map.copyOf(userOutputs);
         this.resourcesCreated = Map.copyOf(resourcesCreated);
@@ -127,14 +121,6 @@ public class Template implements ToXContentObject {
                     xContentBuilder.value(v);
                 }
                 xContentBuilder.endArray();
-            }
-            xContentBuilder.endObject();
-        }
-
-        if (!this.userInputs.isEmpty()) {
-            xContentBuilder.startObject(USER_INPUTS_FIELD);
-            for (Entry<String, Object> e : userInputs.entrySet()) {
-                xContentBuilder.field(e.getKey(), e.getValue());
             }
             xContentBuilder.endObject();
         }
@@ -174,7 +160,6 @@ public class Template implements ToXContentObject {
         List<String> operations = new ArrayList<>();
         Version templateVersion = null;
         List<Version> compatibilityVersion = new ArrayList<>();
-        Map<String, Object> userInputs = new HashMap<>();
         Map<String, Workflow> workflows = new HashMap<>();
         Map<String, Object> userOutputs = new HashMap<>();
         Map<String, Object> resourcesCreated = new HashMap<>();
@@ -216,22 +201,6 @@ public class Template implements ToXContentObject {
                                 break;
                             default:
                                 throw new IOException("Unable to parse field [" + fieldName + "] in a version object.");
-                        }
-                    }
-                    break;
-                case USER_INPUTS_FIELD:
-                    ensureExpectedToken(XContentParser.Token.START_OBJECT, parser.currentToken(), parser);
-                    while (parser.nextToken() != XContentParser.Token.END_OBJECT) {
-                        String inputFieldName = parser.currentName();
-                        switch (parser.nextToken()) {
-                            case VALUE_STRING:
-                                userInputs.put(inputFieldName, parser.text());
-                                break;
-                            case START_OBJECT:
-                                userInputs.put(inputFieldName, parseStringToStringMap(parser));
-                                break;
-                            default:
-                                throw new IOException("Unable to parse field [" + inputFieldName + "] in a user inputs object.");
                         }
                     }
                     break;
@@ -294,7 +263,6 @@ public class Template implements ToXContentObject {
             operations,
             templateVersion,
             compatibilityVersion,
-            userInputs,
             workflows,
             userOutputs,
             resourcesCreated
@@ -395,14 +363,6 @@ public class Template implements ToXContentObject {
     }
 
     /**
-     * A map of user inputs
-     * @return the userInputs
-     */
-    public Map<String, Object> userInputs() {
-        return userInputs;
-    }
-
-    /**
      * Workflows encoded in this template, generally corresponding to the operations returned by {@link #operations()}.
      * @return the workflows
      */
@@ -440,8 +400,6 @@ public class Template implements ToXContentObject {
             + templateVersion
             + ", compatibilityVersion="
             + compatibilityVersion
-            + ", userInputs="
-            + userInputs
             + ", workflows="
             + workflows
             + ", userOutputs="

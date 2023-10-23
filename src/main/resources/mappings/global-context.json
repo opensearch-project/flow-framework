@@ -36,17 +36,6 @@
         }
       }
     },
-    "user_inputs": {
-      "type": "nested",
-      "properties": {
-        "index_name": {
-          "type": "keyword"
-        },
-        "index_setting": {
-          "type": "keyword"
-        }
-      }
-    },
     "workflows": {
       "type": "object"
     },

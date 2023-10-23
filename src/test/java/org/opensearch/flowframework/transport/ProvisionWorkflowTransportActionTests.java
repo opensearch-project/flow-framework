@@ -83,7 +83,6 @@ public class ProvisionWorkflowTransportActionTests extends OpenSearchTestCase {
             operations,
             templateVersion,
             compatibilityVersions,
-            Map.ofEntries(Map.entry("userKey", "userValue"), Map.entry("userMapKey", Map.of("nestedKey", "nestedValue"))),
             Map.of("provision", workflow),
             Map.of("outputKey", "outputValue"),
             Map.of("resourceKey", "resourceValue")
