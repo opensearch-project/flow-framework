@@ -18,7 +18,6 @@ import org.opensearch.common.util.concurrent.ThreadContext;
 import org.opensearch.common.xcontent.XContentFactory;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.core.common.bytes.BytesReference;
-import org.opensearch.core.xcontent.ToXContent;
 import org.opensearch.core.xcontent.XContentBuilder;
 import org.opensearch.flowframework.model.Template;
 import org.opensearch.flowframework.model.Workflow;
@@ -108,7 +107,7 @@ public class ProvisionWorkflowTransportActionTests extends OpenSearchTestCase {
             ActionListener<GetResponse> responseListener = invocation.getArgument(1);
 
             XContentBuilder builder = XContentFactory.jsonBuilder();
-            this.template.toDocumentSource(builder, ToXContent.EMPTY_PARAMS);
+            this.template.toXContent(builder, null);
             BytesReference templateBytesRef = BytesReference.bytes(builder);
             GetResult getResult = new GetResult(GLOBAL_CONTEXT_INDEX, workflowId, 1, 1, 1, true, templateBytesRef, null, null);
             responseListener.onResponse(new GetResponse(getResult));
