@@ -93,6 +93,7 @@ public class TemplateTests extends OpenSearchTestCase {
 
     public void testStrings() throws IOException {
         Template t = Template.parse(expectedTemplate);
+        assertTrue(t.toJson().contains("a test template"));
         assertTrue(t.toYaml().contains("a test template"));
         assertTrue(t.toString().contains("a test template"));
     }
