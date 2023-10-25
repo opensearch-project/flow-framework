@@ -36,25 +36,14 @@
         }
       }
     },
-    "user_inputs": {
-      "type": "nested",
-      "properties": {
-        "index_name": {
-          "type": "keyword"
-        },
-        "index_setting": {
-          "type": "keyword"
-        }
-      }
-    },
     "workflows": {
-      "type": "text"
+      "type": "object"
     },
     "user_outputs": {
-      "type": "text"
+      "type": "object"
     },
     "resources_created": {
-      "type": "text"
+      "type": "object"
     }
   }
 }
