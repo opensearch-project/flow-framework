@@ -10,6 +10,7 @@ package org.opensearch.flowframework.workflow;
 
 import org.opensearch.client.Client;
 import org.opensearch.cluster.service.ClusterService;
+import org.opensearch.ml.client.MachineLearningNodeClient;
 
 import java.util.HashMap;
 import java.util.List;
@@ -30,17 +31,19 @@ public class WorkflowStepFactory {
      *
      * @param clusterService The OpenSearch cluster service
      * @param client The OpenSearch client steps can use
+     * @param mlClient Machine Learning client to perform ml operations
      */
 
-    public WorkflowStepFactory(ClusterService clusterService, Client client) {
-        populateMap(clusterService, client);
+    public WorkflowStepFactory(ClusterService clusterService, Client client, MachineLearningNodeClient mlClient) {
+        populateMap(clusterService, client, mlClient);
     }
 
-    private void populateMap(ClusterService clusterService, Client client) {
+    private void populateMap(ClusterService clusterService, Client client, MachineLearningNodeClient mlClient) {
         stepMap.put(CreateIndexStep.NAME, new CreateIndexStep(clusterService, client));
         stepMap.put(CreateIngestPipelineStep.NAME, new CreateIngestPipelineStep(client));
-        stepMap.put(RegisterModelStep.NAME, new RegisterModelStep(client));
-        stepMap.put(DeployModelStep.NAME, new DeployModelStep(client));
+        stepMap.put(RegisterModelStep.NAME, new RegisterModelStep(mlClient));
+        stepMap.put(DeployModelStep.NAME, new DeployModelStep(mlClient));
+        stepMap.put(CreateConnectorStep.NAME, new CreateConnectorStep(mlClient));
 
         // TODO: These are from the demo class as placeholders, remove when demos are deleted
         stepMap.put("demo_delay_3", new DemoWorkflowStep(3000));
