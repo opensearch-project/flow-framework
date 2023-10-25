@@ -22,9 +22,6 @@
     "use_case": {
       "type": "keyword"
     },
-    "operations": {
-      "type": "keyword"
-    },
     "version": {
       "type": "nested",
       "properties": {
@@ -37,12 +34,6 @@
       }
     },
     "workflows": {
-      "type": "object"
-    },
-    "user_outputs": {
-      "type": "object"
-    },
-    "resources_created": {
       "type": "object"
     }
   }
