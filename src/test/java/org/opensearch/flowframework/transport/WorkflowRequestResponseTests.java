@@ -50,7 +50,6 @@ public class WorkflowRequestResponseTests extends OpenSearchTestCase {
             operations,
             templateVersion,
             compatibilityVersions,
-            Map.ofEntries(Map.entry("userKey", "userValue"), Map.entry("userMapKey", Map.of("nestedKey", "nestedValue"))),
             Map.of("workflow", workflow),
             Map.of("outputKey", "outputValue"),
             Map.of("resourceKey", "resourceValue")
