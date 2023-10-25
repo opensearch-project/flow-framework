@@ -41,7 +41,6 @@ public class RestCreateWorkflowActionTests extends OpenSearchTestCase {
     public void setUp() throws Exception {
         super.setUp();
 
-        List<String> operations = List.of("operation");
         Version templateVersion = Version.fromString("1.0.0");
         List<Version> compatibilityVersions = List.of(Version.fromString("2.0.0"), Version.fromString("3.0.0"));
         WorkflowNode nodeA = new WorkflowNode("A", "a-type", Map.of("foo", "bar"));
@@ -55,12 +54,9 @@ public class RestCreateWorkflowActionTests extends OpenSearchTestCase {
             "test",
             "description",
             "use case",
-            operations,
             templateVersion,
             compatibilityVersions,
-            Map.of("workflow", workflow),
-            Map.of("outputKey", "outputValue"),
-            Map.of("resourceKey", "resourceValue")
+            Map.of("workflow", workflow)
         );
 
         // Invalid template configuration, wrong field name

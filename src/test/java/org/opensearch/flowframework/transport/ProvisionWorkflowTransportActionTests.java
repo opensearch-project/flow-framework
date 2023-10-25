@@ -66,7 +66,6 @@ public class ProvisionWorkflowTransportActionTests extends OpenSearchTestCase {
             workflowProcessSorter
         );
 
-        List<String> operations = List.of("operation");
         Version templateVersion = Version.fromString("1.0.0");
         List<Version> compatibilityVersions = List.of(Version.fromString("2.0.0"), Version.fromString("3.0.0"));
         WorkflowNode nodeA = new WorkflowNode("A", "a-type", Map.of("foo", "bar"));
@@ -80,12 +79,9 @@ public class ProvisionWorkflowTransportActionTests extends OpenSearchTestCase {
             "test",
             "description",
             "use case",
-            operations,
             templateVersion,
             compatibilityVersions,
-            Map.of("provision", workflow),
-            Map.of("outputKey", "outputValue"),
-            Map.of("resourceKey", "resourceValue")
+            Map.of("provision", workflow)
         );
 
         ThreadPool clientThreadPool = mock(ThreadPool.class);

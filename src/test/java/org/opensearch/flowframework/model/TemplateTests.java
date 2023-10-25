@@ -8,8 +8,6 @@
  */
 package org.opensearch.flowframework.model;
 
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import org.opensearch.Version;
 import org.opensearch.test.OpenSearchTestCase;
 
@@ -19,13 +17,9 @@ import java.util.Map;
 
 public class TemplateTests extends OpenSearchTestCase {
 
-    private final Logger logger = LogManager.getLogger(TemplateTests.class);
-
     private String expectedTemplate =
-        "{\"name\":\"test\",\"description\":\"a test template\",\"use_case\":\"test use case\",\"operations\":[\"operation\"],\"version\":{\"template\":\"1.2.3\",\"compatibility\":[\"4.5.6\",\"7.8.9\"]},"
-            + "\"workflows\":{\"workflow\":{\"user_params\":{\"key\":\"value\"},\"nodes\":[{\"id\":\"A\",\"type\":\"a-type\",\"inputs\":{\"foo\":\"bar\"}},{\"id\":\"B\",\"type\":\"b-type\",\"inputs\":{\"baz\":\"qux\"}}],\"edges\":[{\"source\":\"A\",\"dest\":\"B\"}]}},"
-            + "\"user_outputs\":{\"responsesMapKey\":{\"nestedKey\":\"nestedValue\"},\"responsesKey\":\"testValue\"},"
-            + "\"resources_created\":{\"resourcesMapKey\":{\"nestedKey\":\"nestedValue\"},\"resourcesKey\":\"resourceValue\"}}";
+        "{\"name\":\"test\",\"description\":\"a test template\",\"use_case\":\"test use case\",\"version\":{\"template\":\"1.2.3\",\"compatibility\":[\"4.5.6\",\"7.8.9\"]},"
+            + "\"workflows\":{\"workflow\":{\"user_params\":{\"key\":\"value\"},\"nodes\":[{\"id\":\"A\",\"type\":\"a-type\",\"inputs\":{\"foo\":\"bar\"}},{\"id\":\"B\",\"type\":\"b-type\",\"inputs\":{\"baz\":\"qux\"}}],\"edges\":[{\"source\":\"A\",\"dest\":\"B\"}]}}}";
 
     @Override
     public void setUp() throws Exception {
@@ -35,7 +29,6 @@ public class TemplateTests extends OpenSearchTestCase {
     public void testTemplate() throws IOException {
         Version templateVersion = Version.fromString("1.2.3");
         List<Version> compatibilityVersion = List.of(Version.fromString("4.5.6"), Version.fromString("7.8.9"));
-
         WorkflowNode nodeA = new WorkflowNode("A", "a-type", Map.of("foo", "bar"));
         WorkflowNode nodeB = new WorkflowNode("B", "b-type", Map.of("baz", "qux"));
         WorkflowEdge edgeAB = new WorkflowEdge("A", "B");
@@ -47,18 +40,14 @@ public class TemplateTests extends OpenSearchTestCase {
             "test",
             "a test template",
             "test use case",
-            List.of("operation"),
             templateVersion,
             compatibilityVersion,
-            Map.of("workflow", workflow),
-            Map.ofEntries(Map.entry("responsesKey", "testValue"), Map.entry("responsesMapKey", Map.of("nestedKey", "nestedValue"))),
-            Map.ofEntries(Map.entry("resourcesKey", "resourceValue"), Map.entry("resourcesMapKey", Map.of("nestedKey", "nestedValue")))
+            Map.of("workflow", workflow)
         );
 
         assertEquals("test", template.name());
         assertEquals("a test template", template.description());
         assertEquals("test use case", template.useCase());
-        assertEquals(List.of("operation"), template.operations());
         assertEquals(templateVersion, template.templateVersion());
         assertEquals(compatibilityVersion, template.compatibilityVersion());
         Workflow wf = template.workflows().get("workflow");
@@ -71,7 +60,6 @@ public class TemplateTests extends OpenSearchTestCase {
         assertEquals("test", templateX.name());
         assertEquals("a test template", templateX.description());
         assertEquals("test use case", templateX.useCase());
-        assertEquals(List.of("operation"), templateX.operations());
         assertEquals(templateVersion, templateX.templateVersion());
         assertEquals(compatibilityVersion, templateX.compatibilityVersion());
         Workflow wfX = templateX.workflows().get("workflow");
