@@ -34,6 +34,7 @@ import org.opensearch.flowframework.transport.ProvisionWorkflowTransportAction;
 import org.opensearch.flowframework.workflow.CreateIndexStep;
 import org.opensearch.flowframework.workflow.WorkflowProcessSorter;
 import org.opensearch.flowframework.workflow.WorkflowStepFactory;
+import org.opensearch.ml.client.MachineLearningNodeClient;
 import org.opensearch.plugins.ActionPlugin;
 import org.opensearch.plugins.Plugin;
 import org.opensearch.repositories.RepositoriesService;
@@ -76,7 +77,8 @@ public class FlowFrameworkPlugin extends Plugin implements ActionPlugin {
         IndexNameExpressionResolver indexNameExpressionResolver,
         Supplier<RepositoriesService> repositoriesServiceSupplier
     ) {
-        WorkflowStepFactory workflowStepFactory = new WorkflowStepFactory(clusterService, client);
+        MachineLearningNodeClient mlClient = new MachineLearningNodeClient(client);
+        WorkflowStepFactory workflowStepFactory = new WorkflowStepFactory(clusterService, client, mlClient);
         WorkflowProcessSorter workflowProcessSorter = new WorkflowProcessSorter(workflowStepFactory, threadPool);
 
         // TODO : Refactor, move system index creation/associated methods outside of the CreateIndexStep
