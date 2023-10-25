@@ -48,8 +48,8 @@ public class CommonValue {
     public static final String MODEL_ID = "model_id";
     /** Function Name field */
     public static final String FUNCTION_NAME = "function_name";
-    /** Model Name field */
-    public static final String MODEL_NAME = "name";
+    /** Name field */
+    public static final String NAME_FIELD = "name";
     /** Model Version field */
     public static final String MODEL_VERSION = "model_version";
     /** Model Group Id field */
@@ -62,4 +62,14 @@ public class CommonValue {
     public static final String MODEL_FORMAT = "model_format";
     /** Model config field */
     public static final String MODEL_CONFIG = "model_config";
+    /** Version field */
+    public static final String VERSION_FIELD = "version";
+    /** Connector protocol field */
+    public static final String PROTOCOL_FIELD = "protocol";
+    /** Connector parameters field */
+    public static final String PARAMETERS_FIELD = "parameters";
+    /** Connector credentials field */
+    public static final String CREDENTIALS_FIELD = "credentials";
+    /** Connector actions field */
+    public static final String ACTIONS_FIELD = "actions";
 }

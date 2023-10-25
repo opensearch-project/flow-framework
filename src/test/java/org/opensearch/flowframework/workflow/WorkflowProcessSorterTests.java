@@ -14,6 +14,7 @@ import org.opensearch.cluster.service.ClusterService;
 import org.opensearch.core.xcontent.XContentParser;
 import org.opensearch.flowframework.model.TemplateTestJsonUtil;
 import org.opensearch.flowframework.model.Workflow;
+import org.opensearch.ml.client.MachineLearningNodeClient;
 import org.opensearch.test.OpenSearchTestCase;
 import org.opensearch.threadpool.TestThreadPool;
 import org.opensearch.threadpool.ThreadPool;
@@ -60,11 +61,12 @@ public class WorkflowProcessSorterTests extends OpenSearchTestCase {
         AdminClient adminClient = mock(AdminClient.class);
         ClusterService clusterService = mock(ClusterService.class);
         Client client = mock(Client.class);
+        MachineLearningNodeClient mlClient = mock(MachineLearningNodeClient.class);
 
         when(client.admin()).thenReturn(adminClient);
 
         testThreadPool = new TestThreadPool(WorkflowProcessSorterTests.class.getName());
-        WorkflowStepFactory factory = new WorkflowStepFactory(clusterService, client);
+        WorkflowStepFactory factory = new WorkflowStepFactory(clusterService, client, mlClient);
         workflowProcessSorter = new WorkflowProcessSorter(factory, testThreadPool);
     }
 
