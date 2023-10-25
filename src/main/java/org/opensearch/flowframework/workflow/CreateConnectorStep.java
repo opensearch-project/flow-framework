@@ -12,6 +12,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.opensearch.ExceptionsHelper;
 import org.opensearch.core.action.ActionListener;
+import org.opensearch.core.rest.RestStatus;
 import org.opensearch.flowframework.exception.FlowFrameworkException;
 import org.opensearch.ml.client.MachineLearningNodeClient;
 import org.opensearch.ml.common.connector.ConnectorAction;
@@ -129,6 +130,10 @@ public class CreateConnectorStep implements WorkflowStep {
                 .build();
 
             mlClient.createConnector(mlInput, actionListener);
+        } else {
+            createConnectorFuture.completeExceptionally(
+                new FlowFrameworkException("Required fields are not provided", RestStatus.BAD_REQUEST)
+            );
         }
 
         return createConnectorFuture;

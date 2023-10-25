@@ -12,6 +12,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.opensearch.ExceptionsHelper;
 import org.opensearch.core.action.ActionListener;
+import org.opensearch.core.rest.RestStatus;
 import org.opensearch.flowframework.exception.FlowFrameworkException;
 import org.opensearch.ml.client.MachineLearningNodeClient;
 import org.opensearch.ml.common.transport.deploy.MLDeployModelResponse;
@@ -68,7 +69,13 @@ public class DeployModelStep implements WorkflowStep {
                 break;
             }
         }
-        mlClient.deploy(modelId, actionListener);
+
+        if (modelId != null) {
+            mlClient.deploy(modelId, actionListener);
+        } else {
+            deployModelFuture.completeExceptionally(new FlowFrameworkException("Model ID is not provided", RestStatus.BAD_REQUEST));
+        }
+
         return deployModelFuture;
     }
 

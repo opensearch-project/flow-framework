@@ -12,6 +12,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.opensearch.ExceptionsHelper;
 import org.opensearch.core.action.ActionListener;
+import org.opensearch.core.rest.RestStatus;
 import org.opensearch.flowframework.exception.FlowFrameworkException;
 import org.opensearch.ml.client.MachineLearningNodeClient;
 import org.opensearch.ml.common.FunctionName;
@@ -137,6 +138,10 @@ public class RegisterModelStep implements WorkflowStep {
                 .build();
 
             mlClient.register(mlInput, actionListener);
+        } else {
+            registerModelFuture.completeExceptionally(
+                new FlowFrameworkException("Required fields are not provided", RestStatus.BAD_REQUEST)
+            );
         }
 
         return registerModelFuture;
