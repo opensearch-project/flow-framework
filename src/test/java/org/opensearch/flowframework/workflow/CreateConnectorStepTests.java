@@ -35,9 +35,6 @@ public class CreateConnectorStepTests extends OpenSearchTestCase {
     private WorkflowData inputData = WorkflowData.EMPTY;
 
     @Mock
-    ActionListener<MLCreateConnectorResponse> registerModelActionListener;
-
-    @Mock
     MachineLearningNodeClient machineLearningNodeClient;
 
     @Override

@@ -40,9 +40,6 @@ public class RegisterModelStepTests extends OpenSearchTestCase {
     private WorkflowData inputData = WorkflowData.EMPTY;
 
     @Mock
-    ActionListener<MLRegisterModelResponse> registerModelActionListener;
-
-    @Mock
     MachineLearningNodeClient machineLearningNodeClient;
 
     @Override

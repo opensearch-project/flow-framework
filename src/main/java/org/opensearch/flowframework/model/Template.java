@@ -32,19 +32,19 @@ import static org.opensearch.core.xcontent.XContentParserUtils.ensureExpectedTok
 public class Template implements ToXContentObject {
 
     /** The template field name for template name */
-    public static final String NAME_FIELD = "name";
+    private static final String NAME_FIELD = "name";
     /** The template field name for template description */
-    public static final String DESCRIPTION_FIELD = "description";
+    private static final String DESCRIPTION_FIELD = "description";
     /** The template field name for template use case */
-    public static final String USE_CASE_FIELD = "use_case";
+    private static final String USE_CASE_FIELD = "use_case";
     /** The template field name for template version information */
-    public static final String VERSION_FIELD = "version";
+    private static final String VERSION_FIELD = "version";
     /** The template field name for template version */
-    public static final String TEMPLATE_FIELD = "template";
+    private static final String TEMPLATE_FIELD = "template";
     /** The template field name for template compatibility with OpenSearch versions */
-    public static final String COMPATIBILITY_FIELD = "compatibility";
+    private static final String COMPATIBILITY_FIELD = "compatibility";
     /** The template field name for template workflows */
-    public static final String WORKFLOWS_FIELD = "workflows";
+    private static final String WORKFLOWS_FIELD = "workflows";
 
     private final String name;
     private final String description;
