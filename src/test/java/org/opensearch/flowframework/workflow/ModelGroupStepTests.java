@@ -8,10 +8,12 @@
  */
 package org.opensearch.flowframework.workflow;
 
+import com.google.common.collect.ImmutableList;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.core.rest.RestStatus;
 import org.opensearch.flowframework.exception.FlowFrameworkException;
 import org.opensearch.ml.client.MachineLearningNodeClient;
+import org.opensearch.ml.common.AccessMode;
 import org.opensearch.ml.common.MLTaskState;
 import org.opensearch.ml.common.transport.model_group.MLRegisterModelGroupInput;
 import org.opensearch.ml.common.transport.model_group.MLRegisterModelGroupResponse;
@@ -43,8 +45,15 @@ public class ModelGroupStepTests extends OpenSearchTestCase {
         super.setUp();
 
         MockitoAnnotations.openMocks(this);
-
-        inputData = new WorkflowData(Map.ofEntries(Map.entry("name", "test"), Map.entry("description", "description")));
+        inputData = new WorkflowData(
+            Map.ofEntries(
+                Map.entry("name", "test"),
+                Map.entry("description", "description"),
+                Map.entry("backend_roles", ImmutableList.of("role-1")),
+                Map.entry("access_mode", AccessMode.PUBLIC),
+                Map.entry("add_all_backend_roles", false)
+            )
+        );
     }
 
     public void testRegisterModelGroup() throws ExecutionException, InterruptedException, IOException {

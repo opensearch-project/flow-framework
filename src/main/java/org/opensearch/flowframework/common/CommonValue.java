@@ -72,4 +72,10 @@ public class CommonValue {
     public static final String CREDENTIALS_FIELD = "credentials";
     /** Connector actions field */
     public static final String ACTIONS_FIELD = "actions";
+    /** Backend roles for the model */
+    public static final String BACKEND_ROLES_FIELD = "backend_roles";
+    /** Access mode for the model */
+    public static final String MODEL_ACCESS_MODE = "access_mode";
+    /** Add all backend roles */
+    public static final String ADD_ALL_BACKEND_ROLES = "add_all_backend_roles";
 }
