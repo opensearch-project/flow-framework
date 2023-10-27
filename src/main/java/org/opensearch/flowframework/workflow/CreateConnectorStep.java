@@ -23,6 +23,7 @@ import java.io.IOException;
 import java.security.AccessController;
 import java.security.PrivilegedActionException;
 import java.security.PrivilegedExceptionAction;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -85,7 +86,7 @@ public class CreateConnectorStep implements WorkflowStep {
         String protocol = null;
         Map<String, String> parameters = new HashMap<>();
         Map<String, String> credentials = new HashMap<>();
-        List<ConnectorAction> actions = null;
+        List<ConnectorAction> actions = new ArrayList<>();
 
         for (WorkflowData workflowData : data) {
             Map<String, Object> content = workflowData.getContent();
