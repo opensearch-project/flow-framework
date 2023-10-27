@@ -13,11 +13,7 @@ import org.opensearch.cluster.service.ClusterService;
 import org.opensearch.ml.client.MachineLearningNodeClient;
 
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
-import java.util.concurrent.CompletableFuture;
-
-import demo.DemoWorkflowStep;
 
 /**
  * Generates instances implementing {@link WorkflowStep}.
@@ -44,25 +40,6 @@ public class WorkflowStepFactory {
         stepMap.put(RegisterModelStep.NAME, new RegisterModelStep(mlClient));
         stepMap.put(DeployModelStep.NAME, new DeployModelStep(mlClient));
         stepMap.put(CreateConnectorStep.NAME, new CreateConnectorStep(mlClient));
-
-        // TODO: These are from the demo class as placeholders, remove when demos are deleted
-        stepMap.put("demo_delay_3", new DemoWorkflowStep(3000));
-        stepMap.put("demo_delay_5", new DemoWorkflowStep(5000));
-
-        // Use as a default until all the actual implementations are ready
-        stepMap.put("placeholder", new WorkflowStep() {
-            @Override
-            public CompletableFuture<WorkflowData> execute(List<WorkflowData> data) {
-                CompletableFuture<WorkflowData> future = new CompletableFuture<>();
-                future.complete(WorkflowData.EMPTY);
-                return future;
-            }
-
-            @Override
-            public String getName() {
-                return "placeholder";
-            }
-        });
     }
 
     /**
@@ -77,5 +54,13 @@ public class WorkflowStepFactory {
         // TODO: replace this with a FlowFrameworkException
         // https://github.com/opensearch-project/opensearch-ai-flow-framework/pull/43
         return stepMap.get("placeholder");
+    }
+
+    /**
+     * Gets the step map
+     * @return the step map
+     */
+    public Map<String, WorkflowStep> getStepMap() {
+        return this.stepMap;
     }
 }

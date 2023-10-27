@@ -43,7 +43,7 @@ public class WorkflowValidator {
      * @return an instance of the WorkflowValidator
      * @throws IOException if the content cannot be parsed correctly
      */
-    private static WorkflowValidator parse(XContentParser parser) throws IOException {
+    public static WorkflowValidator parse(XContentParser parser) throws IOException {
 
         Map<String, WorkflowStepValidator> workflowStepValidators = new HashMap<>();
 
