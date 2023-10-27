@@ -49,7 +49,7 @@ public class CreateConnectorStepTests extends OpenSearchTestCase {
 
         ConnectorAction.ActionType actionType = ConnectorAction.ActionType.PREDICT;
         String method = "post";
-        String url = "https://test.com";
+        String url = "foot.test";
 
         inputData = new WorkflowData(
             Map.ofEntries(

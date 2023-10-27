@@ -80,6 +80,7 @@ public class RegisterModelStepTests extends OpenSearchTestCase {
 
         RegisterModelStep registerModelStep = new RegisterModelStep(machineLearningNodeClient);
 
+        @SuppressWarnings("unchecked")
         ArgumentCaptor<ActionListener<MLRegisterModelResponse>> actionListenerCaptor = ArgumentCaptor.forClass(ActionListener.class);
 
         doAnswer(invocation -> {
@@ -102,6 +103,7 @@ public class RegisterModelStepTests extends OpenSearchTestCase {
     public void testRegisterModelFailure() {
         RegisterModelStep registerModelStep = new RegisterModelStep(machineLearningNodeClient);
 
+        @SuppressWarnings("unchecked")
         ArgumentCaptor<ActionListener<MLRegisterModelResponse>> actionListenerCaptor = ArgumentCaptor.forClass(ActionListener.class);
 
         doAnswer(invocation -> {

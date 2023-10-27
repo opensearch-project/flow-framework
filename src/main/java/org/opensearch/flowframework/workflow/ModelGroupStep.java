@@ -82,7 +82,7 @@ public class ModelGroupStep implements WorkflowStep {
         String description = null;
         List<String> backendRoles = new ArrayList<>();
         AccessMode modelAccessMode = null;
-        Boolean isAddAllBackendRoles = false;
+        Boolean isAddAllBackendRoles = null;
 
         for (WorkflowData workflowData : data) {
             Map<String, Object> content = workflowData.getContent();
@@ -96,11 +96,14 @@ public class ModelGroupStep implements WorkflowStep {
                         description = (String) content.get(DESCRIPTION);
                         break;
                     case BACKEND_ROLES_FIELD:
-                        backendRoles = (List<String>) content.get(BACKEND_ROLES_FIELD);
+                        backendRoles = getBackendRoles(content);
+                        break;
                     case MODEL_ACCESS_MODE:
                         modelAccessMode = (AccessMode) content.get(MODEL_ACCESS_MODE);
+                        break;
                     case ADD_ALL_BACKEND_ROLES:
                         isAddAllBackendRoles = (Boolean) content.get(ADD_ALL_BACKEND_ROLES);
+                        break;
                     default:
                         break;
                 }
@@ -117,7 +120,7 @@ public class ModelGroupStep implements WorkflowStep {
             if (description != null) {
                 builder.description(description);
             }
-            if (backendRoles != null && backendRoles.size() > 0) {
+            if (!backendRoles.isEmpty()) {
                 builder.backendRoles(backendRoles);
             }
             if (modelAccessMode != null) {
@@ -137,5 +140,10 @@ public class ModelGroupStep implements WorkflowStep {
     @Override
     public String getName() {
         return NAME;
+    }
+
+    @SuppressWarnings("unchecked")
+    private List<String> getBackendRoles(Map<String, Object> content) {
+        return (List<String>) content.get(BACKEND_ROLES_FIELD);
     }
 }

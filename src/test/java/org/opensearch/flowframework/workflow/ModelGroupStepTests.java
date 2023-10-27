@@ -64,6 +64,7 @@ public class ModelGroupStepTests extends OpenSearchTestCase {
 
         ModelGroupStep modelGroupStep = new ModelGroupStep(machineLearningNodeClient);
 
+        @SuppressWarnings("unchecked")
         ArgumentCaptor<ActionListener<MLRegisterModelGroupResponse>> actionListenerCaptor = ArgumentCaptor.forClass(ActionListener.class);
 
         doAnswer(invocation -> {
@@ -86,6 +87,7 @@ public class ModelGroupStepTests extends OpenSearchTestCase {
     public void testRegisterModelGroupFailure() throws ExecutionException, InterruptedException, IOException {
         ModelGroupStep modelGroupStep = new ModelGroupStep(machineLearningNodeClient);
 
+        @SuppressWarnings("unchecked")
         ArgumentCaptor<ActionListener<MLRegisterModelGroupResponse>> actionListenerCaptor = ArgumentCaptor.forClass(ActionListener.class);
 
         doAnswer(invocation -> {
