@@ -54,7 +54,7 @@ public class CreateIngestPipelineStepTests extends OpenSearchTestCase {
         );
 
         // Set output data to returned pipelineId
-        outpuData = new WorkflowData(Map.ofEntries(Map.entry("pipelineId", "pipelineId")));
+        outpuData = new WorkflowData(Map.ofEntries(Map.entry("pipeline_id", "pipelineId")));
 
         client = mock(Client.class);
         adminClient = mock(AdminClient.class);
@@ -109,7 +109,7 @@ public class CreateIngestPipelineStepTests extends OpenSearchTestCase {
         // Data with missing input and output fields
         WorkflowData incorrectData = new WorkflowData(
             Map.ofEntries(
-                Map.entry("id", "pipelineId"),
+                Map.entry("id", "pipeline_id"),
                 Map.entry("description", "some description"),
                 Map.entry("type", "text_embedding"),
                 Map.entry("model_id", "model_id")

@@ -14,6 +14,7 @@ import org.opensearch.common.unit.TimeValue;
 import org.opensearch.flowframework.model.Workflow;
 import org.opensearch.flowframework.model.WorkflowEdge;
 import org.opensearch.flowframework.model.WorkflowNode;
+import org.opensearch.flowframework.model.WorkflowValidator;
 import org.opensearch.threadpool.ThreadPool;
 
 import java.util.ArrayDeque;
@@ -28,9 +29,9 @@ import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
-import static org.opensearch.flowframework.model.WorkflowNode.INPUTS_FIELD;
 import static org.opensearch.flowframework.model.WorkflowNode.NODE_TIMEOUT_DEFAULT_VALUE;
 import static org.opensearch.flowframework.model.WorkflowNode.NODE_TIMEOUT_FIELD;
+import static org.opensearch.flowframework.model.WorkflowNode.USER_INPUTS_FIELD;
 
 /**
  * Converts a workflow of nodes and edges into a topologically sorted list of Process Nodes.
@@ -65,7 +66,7 @@ public class WorkflowProcessSorter {
         Map<String, ProcessNode> idToNodeMap = new HashMap<>();
         for (WorkflowNode node : sortedNodes) {
             WorkflowStep step = workflowStepFactory.createStep(node.type());
-            WorkflowData data = new WorkflowData(node.inputs(), workflow.userParams());
+            WorkflowData data = new WorkflowData(node.userInputs(), workflow.userParams());
             List<ProcessNode> predecessorNodes = workflow.edges()
                 .stream()
                 .filter(e -> e.destination().equals(node.id()))
@@ -74,7 +75,15 @@ public class WorkflowProcessSorter {
                 .collect(Collectors.toList());
 
             TimeValue nodeTimeout = parseTimeout(node);
-            ProcessNode processNode = new ProcessNode(node.id(), step, data, predecessorNodes, threadPool, nodeTimeout);
+            ProcessNode processNode = new ProcessNode(
+                node.id(),
+                step,
+                node.previousNodeInputs(),
+                data,
+                predecessorNodes,
+                threadPool,
+                nodeTimeout
+            );
             idToNodeMap.put(processNode.id(), processNode);
             nodes.add(processNode);
         }
@@ -82,9 +91,52 @@ public class WorkflowProcessSorter {
         return nodes;
     }
 
+    /**
+     * Validates a sorted workflow, determines if each process node's user inputs and predecessor outputs match the expected workflow step inputs
+     * @param processNodes A list of process nodes
+     * @throws Exception on validation failure
+     */
+    public void validateGraph(List<ProcessNode> processNodes) throws Exception {
+
+        WorkflowValidator validator = WorkflowValidator.parse("mappings/workflow-steps.json");
+
+        // Iterate through process nodes in graph
+        for (ProcessNode processNode : processNodes) {
+
+            // Get predecessor nodes types of this processNode
+            List<String> predecessorNodeTypes = processNode.predecessors()
+                .stream()
+                .map(x -> x.workflowStep().getName())
+                .collect(Collectors.toList());
+
+            // Compile a list of outputs from the predecessor nodes based on type
+            List<String> predecessorOutputs = new ArrayList<>();
+            for (String nodeType : predecessorNodeTypes) {
+                List<String> nodeTypeOutputs = validator.getWorkflowStepValidators().get(nodeType).getOutputs();
+                predecessorOutputs.addAll(nodeTypeOutputs);
+            }
+
+            // Retrieve all the user input data from this node
+            List<String> currentNodeUserInputs = new ArrayList<String>(processNode.input().getContent().keySet());
+
+            // Combine both predecessor outputs and current node user inputs
+            List<String> allInputs = new ArrayList<>();
+            allInputs.addAll(predecessorOutputs);
+            allInputs.addAll(currentNodeUserInputs);
+
+            // Retrieve list of required inputs from the current process node and compare
+            List<String> expectedInputs = validator.getWorkflowStepValidators().get(processNode.workflowStep().getName()).getInputs();
+            if (!allInputs.containsAll(expectedInputs)) {
+                expectedInputs.removeAll(allInputs);
+                throw new IllegalArgumentException("Invalid graph, missing the following required inputs : " + expectedInputs.toString());
+            }
+        }
+
+    }
+
     private TimeValue parseTimeout(WorkflowNode node) {
-        String timeoutValue = (String) node.inputs().getOrDefault(NODE_TIMEOUT_FIELD, NODE_TIMEOUT_DEFAULT_VALUE);
-        String fieldName = String.join(".", node.id(), INPUTS_FIELD, NODE_TIMEOUT_FIELD);
+        String timeoutValue = (String) node.userInputs().getOrDefault(NODE_TIMEOUT_FIELD, NODE_TIMEOUT_DEFAULT_VALUE);
+        String fieldName = String.join(".", node.id(), USER_INPUTS_FIELD, NODE_TIMEOUT_FIELD);
         TimeValue timeValue = TimeValue.parseTimeValue(timeoutValue, fieldName);
         if (timeValue.millis() < 0) {
             throw new IllegalArgumentException(

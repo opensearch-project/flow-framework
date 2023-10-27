@@ -19,7 +19,7 @@ public class TemplateTests extends OpenSearchTestCase {
 
     private String expectedTemplate =
         "{\"name\":\"test\",\"description\":\"a test template\",\"use_case\":\"test use case\",\"version\":{\"template\":\"1.2.3\",\"compatibility\":[\"4.5.6\",\"7.8.9\"]},"
-            + "\"workflows\":{\"workflow\":{\"user_params\":{\"key\":\"value\"},\"nodes\":[{\"id\":\"A\",\"type\":\"a-type\",\"inputs\":{\"foo\":\"bar\"}},{\"id\":\"B\",\"type\":\"b-type\",\"inputs\":{\"baz\":\"qux\"}}],\"edges\":[{\"source\":\"A\",\"dest\":\"B\"}]}}}";
+            + "\"workflows\":{\"workflow\":{\"user_params\":{\"key\":\"value\"},\"nodes\":[{\"id\":\"A\",\"type\":\"a-type\",\"user_inputs\":{\"foo\":\"bar\"}},{\"id\":\"B\",\"type\":\"b-type\",\"user_inputs\":{\"baz\":\"qux\"}}],\"edges\":[{\"source\":\"A\",\"dest\":\"B\"}]}}}";
 
     @Override
     public void setUp() throws Exception {
@@ -29,8 +29,8 @@ public class TemplateTests extends OpenSearchTestCase {
     public void testTemplate() throws IOException {
         Version templateVersion = Version.fromString("1.2.3");
         List<Version> compatibilityVersion = List.of(Version.fromString("4.5.6"), Version.fromString("7.8.9"));
-        WorkflowNode nodeA = new WorkflowNode("A", "a-type", Map.of("foo", "bar"));
-        WorkflowNode nodeB = new WorkflowNode("B", "b-type", Map.of("baz", "qux"));
+        WorkflowNode nodeA = new WorkflowNode("A", "a-type", Map.of(), Map.of("foo", "bar"));
+        WorkflowNode nodeB = new WorkflowNode("B", "b-type", Map.of(), Map.of("baz", "qux"));
         WorkflowEdge edgeAB = new WorkflowEdge("A", "B");
         List<WorkflowNode> nodes = List.of(nodeA, nodeB);
         List<WorkflowEdge> edges = List.of(edgeAB);

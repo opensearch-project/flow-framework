@@ -73,7 +73,7 @@ public class CreateIndexStep implements WorkflowStep {
             @Override
             public void onResponse(CreateIndexResponse createIndexResponse) {
                 logger.info("created index: {}", createIndexResponse.index());
-                future.complete(new WorkflowData(Map.of("index-name", createIndexResponse.index())));
+                future.complete(new WorkflowData(Map.of("index_name", createIndexResponse.index())));
             }
 
             @Override
@@ -89,7 +89,7 @@ public class CreateIndexStep implements WorkflowStep {
 
         for (WorkflowData workflowData : data) {
             Map<String, Object> content = workflowData.getContent();
-            index = (String) content.get("index-name");
+            index = (String) content.get("index_name");
             type = (String) content.get("type");
             if (index != null && type != null && settings != null) {
                 break;

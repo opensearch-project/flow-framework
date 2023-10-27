@@ -74,7 +74,7 @@ public class CreateIndexStepTests extends OpenSearchTestCase {
     public void setUp() throws Exception {
         super.setUp();
         MockitoAnnotations.openMocks(this);
-        inputData = new WorkflowData(Map.ofEntries(Map.entry("index-name", "demo"), Map.entry("type", "knn")));
+        inputData = new WorkflowData(Map.ofEntries(Map.entry("index_name", "demo"), Map.entry("type", "knn")));
         clusterService = mock(ClusterService.class);
         client = mock(Client.class);
         adminClient = mock(AdminClient.class);
@@ -103,7 +103,7 @@ public class CreateIndexStepTests extends OpenSearchTestCase {
 
         assertTrue(future.isDone() && !future.isCompletedExceptionally());
 
-        Map<String, Object> outputData = Map.of("index-name", "demo");
+        Map<String, Object> outputData = Map.of("index_name", "demo");
         assertEquals(outputData, future.get().getContent());
 
     }

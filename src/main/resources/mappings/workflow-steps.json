@@ -1,0 +1,58 @@
+{
+    "create_index": {
+        "inputs":[
+            "index_name",
+            "type"
+        ],
+        "outputs":[
+            "index_name"
+        ]
+    },
+    "create_ingest_pipeline": {
+        "inputs":[
+            "id",
+            "description",
+            "type",
+            "model_id",
+            "input_field_name",
+            "output_field_name"
+        ],
+        "outputs":[
+            "pipeline_id"
+        ]
+    },
+    "create_connector": {
+        "inputs":[
+            "name",
+            "description",
+            "version",
+            "protocol",
+            "parameters",
+            "credentials",
+            "actions"
+        ],
+        "outputs":[
+            "connector_id"
+        ]
+    },
+    "register_model": {
+        "inputs":[
+            "function_name",
+            "name",
+            "description",
+            "connector_id"
+        ],
+        "outputs":[
+            "model_id",
+            "register_model_status"
+        ]
+    },
+    "deploy_model": {
+        "inputs":[
+            "model_id"
+        ],
+        "outputs":[
+            "deploy_model_status"
+        ]
+    }
+}

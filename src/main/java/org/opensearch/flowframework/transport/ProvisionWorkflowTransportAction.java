@@ -30,9 +30,7 @@ import org.opensearch.transport.TransportService;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
-import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CompletionException;
 import java.util.stream.Collectors;
 
 import static org.opensearch.flowframework.common.CommonValue.GLOBAL_CONTEXT_INDEX;
@@ -145,8 +143,11 @@ public class ProvisionWorkflowTransportAction extends HandledTransportAction<Wor
 
             // Attempt to topologically sort the workflow graph
             List<ProcessNode> processSequence = workflowProcessSorter.sortProcessNodes(workflow);
-            List<CompletableFuture<?>> workflowFutureList = new ArrayList<>();
 
+            // Validate the topologically sorted graph
+            workflowProcessSorter.validateGraph(processSequence);
+
+            List<CompletableFuture<?>> workflowFutureList = new ArrayList<>();
             for (ProcessNode processNode : processSequence) {
                 List<ProcessNode> predecessors = processNode.predecessors();
 
@@ -173,7 +174,7 @@ public class ProvisionWorkflowTransportAction extends HandledTransportAction<Wor
 
         } catch (IllegalArgumentException e) {
             workflowListener.onFailure(new FlowFrameworkException(e.getMessage(), RestStatus.BAD_REQUEST));
-        } catch (CancellationException | CompletionException ex) {
+        } catch (Exception ex) {
             workflowListener.onFailure(new FlowFrameworkException(ex.getMessage(), RestStatus.INTERNAL_SERVER_ERROR));
         }
     }
