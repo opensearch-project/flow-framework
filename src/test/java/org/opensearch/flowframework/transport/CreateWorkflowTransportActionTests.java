@@ -12,15 +12,20 @@ import org.opensearch.Version;
 import org.opensearch.action.index.IndexResponse;
 import org.opensearch.action.support.ActionFilters;
 import org.opensearch.client.Client;
+import org.opensearch.common.settings.Settings;
+import org.opensearch.common.util.concurrent.ThreadContext;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.core.index.shard.ShardId;
+import org.opensearch.flowframework.TestHelpers;
 import org.opensearch.flowframework.indices.FlowFrameworkIndicesHandler;
 import org.opensearch.flowframework.model.Template;
 import org.opensearch.flowframework.model.Workflow;
 import org.opensearch.flowframework.model.WorkflowEdge;
 import org.opensearch.flowframework.model.WorkflowNode;
+import org.opensearch.flowframework.util.ParseUtils;
 import org.opensearch.tasks.Task;
 import org.opensearch.test.OpenSearchTestCase;
+import org.opensearch.threadpool.ThreadPool;
 import org.opensearch.transport.TransportService;
 
 import java.util.List;
@@ -34,6 +39,7 @@ import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 public class CreateWorkflowTransportActionTests extends OpenSearchTestCase {
 
@@ -41,6 +47,8 @@ public class CreateWorkflowTransportActionTests extends OpenSearchTestCase {
     private FlowFrameworkIndicesHandler flowFrameworkIndicesHandler;
     private Template template;
     private Client client = mock(Client.class);
+    private ThreadPool threadPool;
+    private ParseUtils parseUtils;
 
     @Override
     public void setUp() throws Exception {
@@ -52,6 +60,12 @@ public class CreateWorkflowTransportActionTests extends OpenSearchTestCase {
             flowFrameworkIndicesHandler,
             client
         );
+        ThreadPool threadPool = mock(ThreadPool.class);
+        client = mock(Client.class);
+        ThreadContext threadContext = new ThreadContext(Settings.EMPTY);
+        when(client.threadPool()).thenReturn(threadPool);
+        when(client.threadPool().getThreadContext()).thenReturn(threadContext);
+        parseUtils = mock(ParseUtils.class);
 
         Version templateVersion = Version.fromString("1.0.0");
         List<Version> compatibilityVersions = List.of(Version.fromString("2.0.0"), Version.fromString("3.0.0"));
@@ -68,7 +82,8 @@ public class CreateWorkflowTransportActionTests extends OpenSearchTestCase {
             "use case",
             templateVersion,
             compatibilityVersions,
-            Map.of("workflow", workflow)
+            Map.of("workflow", workflow),
+            TestHelpers.randomUser()
         );
     }
 
@@ -77,7 +92,7 @@ public class CreateWorkflowTransportActionTests extends OpenSearchTestCase {
         @SuppressWarnings("unchecked")
         ActionListener<WorkflowResponse> listener = mock(ActionListener.class);
         WorkflowRequest createNewWorkflow = new WorkflowRequest(null, template);
-
+        when(parseUtils.getUserContext(client)).thenReturn(TestHelpers.randomUser());
         doAnswer(invocation -> {
             ActionListener<IndexResponse> responseListener = invocation.getArgument(1);
             responseListener.onResponse(new IndexResponse(new ShardId(GLOBAL_CONTEXT_INDEX, "", 1), "1", 1L, 1L, 1L, true));

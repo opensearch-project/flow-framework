@@ -8,6 +8,9 @@
  */
 package org.opensearch.flowframework.model;
 
+/**
+ * Enum relating to the state of a workflow
+ */
 public enum State {
     NOT_STARTED,
     PROVISIONING,

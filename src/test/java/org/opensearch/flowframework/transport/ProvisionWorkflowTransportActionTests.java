@@ -19,6 +19,7 @@ import org.opensearch.common.xcontent.XContentFactory;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.core.common.bytes.BytesReference;
 import org.opensearch.core.xcontent.XContentBuilder;
+import org.opensearch.flowframework.TestHelpers;
 import org.opensearch.flowframework.indices.FlowFrameworkIndicesHandler;
 import org.opensearch.flowframework.model.Template;
 import org.opensearch.flowframework.model.Workflow;
@@ -85,7 +86,8 @@ public class ProvisionWorkflowTransportActionTests extends OpenSearchTestCase {
             "use case",
             templateVersion,
             compatibilityVersions,
-            Map.of("provision", workflow)
+            Map.of("provision", workflow),
+            TestHelpers.randomUser()
         );
 
         ThreadPool clientThreadPool = mock(ThreadPool.class);

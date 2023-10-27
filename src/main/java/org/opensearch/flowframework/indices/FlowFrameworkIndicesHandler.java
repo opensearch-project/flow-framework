@@ -18,7 +18,6 @@ import org.opensearch.action.admin.indices.mapping.put.PutMappingRequest;
 import org.opensearch.action.admin.indices.settings.put.UpdateSettingsRequest;
 import org.opensearch.action.index.IndexRequest;
 import org.opensearch.action.index.IndexResponse;
-import org.opensearch.action.search.SearchRequest;
 import org.opensearch.action.support.WriteRequest;
 import org.opensearch.action.update.UpdateRequest;
 import org.opensearch.action.update.UpdateResponse;
@@ -30,7 +29,6 @@ import org.opensearch.common.xcontent.XContentFactory;
 import org.opensearch.common.xcontent.XContentType;
 import org.opensearch.commons.authuser.User;
 import org.opensearch.core.action.ActionListener;
-import org.opensearch.core.rest.RestStatus;
 import org.opensearch.core.xcontent.ToXContent;
 import org.opensearch.core.xcontent.XContentBuilder;
 import org.opensearch.flowframework.exception.FlowFrameworkException;
@@ -38,18 +36,14 @@ import org.opensearch.flowframework.model.ProvisioningProgress;
 import org.opensearch.flowframework.model.State;
 import org.opensearch.flowframework.model.Template;
 import org.opensearch.flowframework.model.WorkflowState;
-import org.opensearch.flowframework.transport.WorkflowResponse;
-import org.opensearch.index.query.BoolQueryBuilder;
-import org.opensearch.index.query.TermQueryBuilder;
-import org.opensearch.search.builder.SearchSourceBuilder;
 
 import java.io.IOException;
 import java.net.URL;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import static org.opensearch.core.rest.RestStatus.BAD_REQUEST;
 import static org.opensearch.core.rest.RestStatus.INTERNAL_SERVER_ERROR;
 import static org.opensearch.flowframework.common.CommonValue.GLOBAL_CONTEXT_INDEX;
 import static org.opensearch.flowframework.common.CommonValue.GLOBAL_CONTEXT_INDEX_MAPPING;
@@ -57,7 +51,6 @@ import static org.opensearch.flowframework.common.CommonValue.META;
 import static org.opensearch.flowframework.common.CommonValue.NO_SCHEMA_VERSION;
 import static org.opensearch.flowframework.common.CommonValue.SCHEMA_VERSION_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.WORKFLOW_STATE_INDEX;
-import static org.opensearch.flowframework.model.WorkflowState.WORKFLOW_ID_FIELD;
 
 /**
  * A handler for global context related operations
@@ -94,10 +87,18 @@ public class FlowFrameworkIndicesHandler {
         return getIndexMappings(GLOBAL_CONTEXT_INDEX_MAPPING);
     }
 
+    /**
+     * Create global context index if it's absent
+     * @param listener The action listener
+     */
     public void initGlobalContextIndexIfAbsent(ActionListener<Boolean> listener) {
         initFlowFrameworkIndexIfAbsent(FlowFrameworkIndex.GLOBAL_CONTEXT, listener);
     }
 
+    /**
+     * Create workflow state index if it's absent
+     * @param listener The action listener
+     */
     public void initWorkflowStateIndexIfAbsent(ActionListener<Boolean> listener) {
         initFlowFrameworkIndexIfAbsent(FlowFrameworkIndex.WORKFLOW_STATE, listener);
     }
@@ -253,7 +254,7 @@ public class FlowFrameworkIndicesHandler {
                 XContentBuilder builder = XContentFactory.jsonBuilder();
                 ThreadContext.StoredContext context = client.threadPool().getThreadContext().stashContext()
             ) {
-                request.source(template.toDocumentSource(builder, ToXContent.EMPTY_PARAMS))
+                request.source(template.toXContent(builder, ToXContent.EMPTY_PARAMS))
                     .setRefreshPolicy(WriteRequest.RefreshPolicy.IMMEDIATE);
                 client.index(request, ActionListener.runBefore(listener, () -> context.restore()));
             } catch (Exception e) {
@@ -269,6 +270,7 @@ public class FlowFrameworkIndicesHandler {
     /**
      * add document insert into global context index
      * @param workflowId the workflowId, corresponds to document ID of
+     * @param user passes the user that created the workflow
      * @param listener action listener
      */
     public void putInitialStateToWorkflowState(String workflowId, User user, ActionListener<IndexResponse> listener) {
@@ -276,6 +278,8 @@ public class FlowFrameworkIndicesHandler {
             .state(State.NOT_STARTED.name())
             .provisioningProgress(ProvisioningProgress.NOT_STARTED.name())
             .user(user)
+            .resourcesCreated(Collections.emptyMap())
+            .userOutputs(Collections.emptyMap())
             .build();
         initWorkflowStateIndexIfAbsent(ActionListener.wrap(indexCreated -> {
             if (!indexCreated) {
@@ -289,6 +293,7 @@ public class FlowFrameworkIndicesHandler {
 
             ) {
                 request.source(state.toXContent(builder, ToXContent.EMPTY_PARAMS)).setRefreshPolicy(WriteRequest.RefreshPolicy.IMMEDIATE);
+                request.id(workflowId);
                 client.index(request, ActionListener.runBefore(listener, () -> context.restore()));
             } catch (Exception e) {
                 logger.error("Failed to put state index document", e);
@@ -320,7 +325,7 @@ public class FlowFrameworkIndicesHandler {
                 XContentBuilder builder = XContentFactory.jsonBuilder();
                 ThreadContext.StoredContext context = client.threadPool().getThreadContext().stashContext()
             ) {
-                request.source(template.toDocumentSource(builder, ToXContent.EMPTY_PARAMS))
+                request.source(template.toXContent(builder, ToXContent.EMPTY_PARAMS))
                     .setRefreshPolicy(WriteRequest.RefreshPolicy.IMMEDIATE);
                 client.index(request, ActionListener.runBefore(listener, () -> context.restore()));
             } catch (Exception e) {
@@ -336,72 +341,24 @@ public class FlowFrameworkIndicesHandler {
      * @param updatedFields the fields to update the global state index with
      * @param listener action listener
      */
-    public void updateWorkflowState(
-        String workflowStateDocId,
-        ThreadContext.StoredContext context,
-        Map<String, Object> updatedFields,
-        ActionListener<UpdateResponse> listener
-    ) {
+    public void updateWorkflowState(String workflowStateDocId, Map<String, Object> updatedFields, ActionListener<UpdateResponse> listener) {
         if (!doesIndexExist(WORKFLOW_STATE_INDEX)) {
             String exceptionMessage = "Failed to update state for given workflow due to missing workflow_state index";
             logger.error(exceptionMessage);
             listener.onFailure(new Exception(exceptionMessage));
         } else {
-            UpdateRequest updateRequest = new UpdateRequest(WORKFLOW_STATE_INDEX, workflowStateDocId);
-            Map<String, Object> updatedContent = new HashMap<>();
-            updatedContent.putAll(updatedFields);
-            updateRequest.doc(updatedContent);
-            updateRequest.setRefreshPolicy(WriteRequest.RefreshPolicy.IMMEDIATE);
-            client.update(updateRequest, ActionListener.runBefore(listener, () -> context.restore()));
-        }
-    }
-
-    public void getWorkflowStateID(String workflowId, ActionListener<String> listener) {
-        BoolQueryBuilder query = new BoolQueryBuilder();
-        query.filter(new TermQueryBuilder(WORKFLOW_ID_FIELD, workflowId));
-        SearchRequest searchRequest = new SearchRequest();
-        SearchSourceBuilder sourceBuilder = new SearchSourceBuilder();
-        sourceBuilder.query(query).size(1); // we are making the assumption there is only one document with this workflowID
-        searchRequest.source(sourceBuilder).indices(WORKFLOW_STATE_INDEX);
-        client.search(searchRequest, ActionListener.wrap(searchResponse -> {
-            if (searchResponse == null
-                || searchResponse.getHits().getTotalHits() == null
-                || !(searchResponse.getHits().getTotalHits().value == 1)) {
-                logger.error("There are either one or no workflow state documents with the same workflowID: " + workflowId);
-                listener.onFailure(new FlowFrameworkException("Workflow state cannot be updated", INTERNAL_SERVER_ERROR));
-                return;
+            try (ThreadContext.StoredContext context = client.threadPool().getThreadContext().stashContext()) {
+                UpdateRequest updateRequest = new UpdateRequest(WORKFLOW_STATE_INDEX, workflowStateDocId);
+                Map<String, Object> updatedContent = new HashMap<>();
+                updatedContent.putAll(updatedFields);
+                updateRequest.doc(updatedContent);
+                updateRequest.setRefreshPolicy(WriteRequest.RefreshPolicy.IMMEDIATE);
+                client.update(updateRequest, ActionListener.runBefore(listener, () -> context.restore()));
+            } catch (Exception e) {
+                logger.error("Failed to update workflow_state entry : {}. {}", workflowStateDocId, e.getMessage());
+                listener.onFailure(e);
             }
-            String stateWorkflowDocID = searchResponse.getHits().getHits()[0].getId();
-            listener.onResponse(stateWorkflowDocID);
-        }, exception -> {
-            logger.error("Failed to find workflow state for workflowID : {}. {}", workflowId, exception.getMessage());
-            listener.onFailure(new FlowFrameworkException("Failed to find workflow state for workflowID: " + workflowId, BAD_REQUEST));
-        }));
-    }
-
-    public void getAndUpdateWorkflowStateDoc(
-        String workflowId,
-        Map<String, Object> updatedFields,
-        ActionListener<WorkflowResponse> workflowResponseListener
-    ) {
-        try {
-            ThreadContext.StoredContext context = client.threadPool().getThreadContext().stashContext();
-            getWorkflowStateID(workflowId, ActionListener.wrap(stateWorkflowId -> {
-                updateWorkflowState(stateWorkflowId, context, updatedFields, ActionListener.wrap(r -> {}, e -> {
-                    logger.error("Failed to update workflow state : {}", e.getMessage());
-                    workflowResponseListener.onFailure(
-                        new FlowFrameworkException("Failed to update workflow state", RestStatus.BAD_REQUEST)
-                    );
-                }));
-            }, exception -> {
-                logger.error("Failed to save workflow state : {}", exception.getMessage());
-                workflowResponseListener.onFailure(new FlowFrameworkException("couldn't find workflow state", RestStatus.BAD_REQUEST));
-            }));
-        } catch (Exception e) {
-            logger.error("Failed to update workflow state : {}", e.getMessage());
-            workflowResponseListener.onFailure(new FlowFrameworkException("Failed to update workflow state", RestStatus.BAD_REQUEST));
         }
-
     }
 
     /**

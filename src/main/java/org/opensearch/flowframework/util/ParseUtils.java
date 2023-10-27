@@ -92,7 +92,7 @@ public class ParseUtils {
      * @return instance of {@link java.time.Instant}
      * @throws IOException IOException if content can't be parsed correctly
      */
-    public static Instant toInstant(XContentParser parser) throws IOException {
+    public static Instant parseInstant(XContentParser parser) throws IOException {
         if (parser.currentToken() == null || parser.currentToken() == XContentParser.Token.VALUE_NULL) {
             return null;
         }

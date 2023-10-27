@@ -12,7 +12,7 @@
     },
     "error": {
       "type": "text"
-    }
+    },
     "state": {
       "type": "keyword"
     },
@@ -27,61 +27,15 @@
       "type": "date",
       "format": "strict_date_time||epoch_millis"
     },
-    "user": {
-      "type": "nested",
-      "properties": {
-        "name": {
-          "type": "text",
-          "fields": {
-            "keyword": {
-              "type": "keyword",
-              "ignore_above": 256
-            }
-          }
-        },
-        "backend_roles": {
-          "type" : "text",
-          "fields" : {
-            "keyword" : {
-              "type" : "keyword"
-            }
-          }
-        },
-        "roles": {
-          "type" : "text",
-          "fields" : {
-            "keyword" : {
-              "type" : "keyword"
-            }
-          }
-        },
-        "custom_attribute_names": {
-          "type" : "text",
-          "fields" : {
-            "keyword" : {
-              "type" : "keyword"
-            }
-          }
-        }
-      }
+    "user_outputs": {
+      "type": "object"
+    },
+    "resources_created": {
+      "type": "object"
     },
     "ui_metadata": {
       "type": "object",
       "enabled": false
     }
   }
-  "ui_metadata": {
-    "features": {
-      "sum_http_5xx": {
-        "aggregationBy": "sum",
-        "aggregationOf": "http_5xx",
-        "featureType": "simple_aggs"
-      },
-      "sum_http_4xx": {
-        "aggregationBy": "sum",
-        "aggregationOf": "http_4xx",
-        "featureType": "simple_aggs"
-      }
-    },
-    "filters": []
-  },
+}

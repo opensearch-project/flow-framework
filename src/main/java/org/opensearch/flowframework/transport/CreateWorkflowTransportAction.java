@@ -22,6 +22,7 @@ import org.opensearch.flowframework.exception.FlowFrameworkException;
 import org.opensearch.flowframework.indices.FlowFrameworkIndicesHandler;
 import org.opensearch.flowframework.model.ProvisioningProgress;
 import org.opensearch.flowframework.model.State;
+import org.opensearch.flowframework.model.Template;
 import org.opensearch.tasks.Task;
 import org.opensearch.transport.TransportService;
 
@@ -44,6 +45,7 @@ public class CreateWorkflowTransportAction extends HandledTransportAction<Workfl
      * @param transportService the TransportService
      * @param actionFilters action filters
      * @param flowFrameworkIndicesHandler The handler for the global context index
+     * @param client The client used to make the request to OS
      */
     @Inject
     public CreateWorkflowTransportAction(
@@ -60,9 +62,18 @@ public class CreateWorkflowTransportAction extends HandledTransportAction<Workfl
     @Override
     protected void doExecute(Task task, WorkflowRequest request, ActionListener<WorkflowResponse> listener) {
         User user = getUserContext(client);
+        Template templateWithUser = new Template(
+            request.getTemplate().name(),
+            request.getTemplate().description(),
+            request.getTemplate().useCase(),
+            request.getTemplate().templateVersion(),
+            request.getTemplate().compatibilityVersion(),
+            request.getTemplate().workflows(),
+            user
+        );
         if (request.getWorkflowId() == null) {
             // Create new global context and state index entries
-            flowFrameworkIndicesHandler.putTemplateToGlobalContext(request.getTemplate(), ActionListener.wrap(globalContextResponse -> {
+            flowFrameworkIndicesHandler.putTemplateToGlobalContext(templateWithUser, ActionListener.wrap(globalContextResponse -> {
                 flowFrameworkIndicesHandler.putInitialStateToWorkflowState(
                     globalContextResponse.getId(),
                     user,
@@ -84,10 +95,16 @@ public class CreateWorkflowTransportAction extends HandledTransportAction<Workfl
                 request.getWorkflowId(),
                 request.getTemplate(),
                 ActionListener.wrap(response -> {
-                    flowFrameworkIndicesHandler.getAndUpdateWorkflowStateDoc(
+                    flowFrameworkIndicesHandler.updateWorkflowState(
                         request.getWorkflowId(),
                         ImmutableMap.of(STATE_FIELD, State.NOT_STARTED, PROVISIONING_PROGRESS_FIELD, ProvisioningProgress.NOT_STARTED),
-                        listener
+                        ActionListener.wrap(updateResponse -> {
+                            logger.info("updated workflow {} state to NOT_STARTED", request.getWorkflowId());
+                            listener.onResponse(new WorkflowResponse(request.getWorkflowId()));
+                        }, exception -> {
+                            logger.error("Failed to update workflow state : {}", exception.getMessage());
+                            listener.onFailure(new FlowFrameworkException(exception.getMessage(), RestStatus.BAD_REQUEST));
+                        })
                     );
                 }, exception -> {
                     logger.error("Failed to updated use case template {} : {}", request.getWorkflowId(), exception.getMessage());

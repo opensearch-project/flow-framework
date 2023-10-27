@@ -43,6 +43,8 @@ public class CommonValue {
     public static final String COMPATIBILITY_FIELD = "compatibility";
     /** The template field name for template workflows */
     public static final String WORKFLOWS_FIELD = "workflows";
+    /** The template field name for the user who created the workflow **/
+    public static final String USER_FIELD = "user";
 
 
     /** The transport action name prefix */

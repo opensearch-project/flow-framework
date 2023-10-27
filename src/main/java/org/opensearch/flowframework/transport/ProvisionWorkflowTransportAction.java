@@ -35,6 +35,7 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
@@ -46,6 +47,7 @@ import static org.opensearch.flowframework.common.CommonValue.PROVISION_WORKFLOW
 import static org.opensearch.flowframework.model.WorkflowState.PROVISIONING_PROGRESS_FIELD;
 import static org.opensearch.flowframework.model.WorkflowState.PROVISION_START_TIME_FIELD;
 import static org.opensearch.flowframework.model.WorkflowState.STATE_FIELD;
+import static org.opensearch.flowframework.model.WorkflowState.USER_OUTPUTS_FIELD;
 
 /**
  * Transport Action to provision a workflow from a stored use case template
@@ -66,6 +68,7 @@ public class ProvisionWorkflowTransportAction extends HandledTransportAction<Wor
      * @param threadPool The OpenSearch thread pool
      * @param client The node client to retrieve a stored use case template
      * @param workflowProcessSorter Utility class to generate a togologically sorted list of Process nodes
+     * @param flowFrameworkIndicesHandler Class to handle all internal system indices actions
      */
     @Inject
     public ProvisionWorkflowTransportAction(
@@ -108,7 +111,7 @@ public class ProvisionWorkflowTransportAction extends HandledTransportAction<Wor
                 // Parse template from document source
                 Template template = Template.parse(response.getSourceAsString());
 
-                flowFrameworkIndicesHandler.getAndUpdateWorkflowStateDoc(
+                flowFrameworkIndicesHandler.updateWorkflowState(
                     workflowId,
                     ImmutableMap.of(
                         STATE_FIELD,
@@ -116,9 +119,17 @@ public class ProvisionWorkflowTransportAction extends HandledTransportAction<Wor
                         PROVISIONING_PROGRESS_FIELD,
                         ProvisioningProgress.IN_PROGRESS,
                         PROVISION_START_TIME_FIELD,
-                        Instant.now().toEpochMilli()
+                        Instant.now().toEpochMilli(),
+                        USER_OUTPUTS_FIELD,
+                        Map.of("key1", "key2")
                     ),
-                    listener
+                    ActionListener.wrap(updateResponse -> {
+                        logger.info("updated workflow {} state to PROVISIONING", request.getWorkflowId());
+                        listener.onResponse(new WorkflowResponse(request.getWorkflowId()));
+                    }, exception -> {
+                        logger.error("Failed to update workflow state : {}", exception.getMessage());
+                        listener.onFailure(new FlowFrameworkException(exception.getMessage(), RestStatus.BAD_REQUEST));
+                    })
                 );
 
                 // Respond to rest action then execute provisioning workflow async

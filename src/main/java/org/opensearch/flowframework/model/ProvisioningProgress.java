@@ -8,6 +8,10 @@
  */
 package org.opensearch.flowframework.model;
 
+/**
+ * Enum relating to the provisioning progress
+ */
+// TODO: transfer this to more detailed array for each step
 public enum ProvisioningProgress {
     IN_PROGRESS,
     DONE,
