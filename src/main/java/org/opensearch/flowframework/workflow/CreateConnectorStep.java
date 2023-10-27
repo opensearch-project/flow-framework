@@ -33,7 +33,7 @@ import java.util.stream.Stream;
 
 import static org.opensearch.flowframework.common.CommonValue.ACTIONS_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.CREDENTIALS_FIELD;
-import static org.opensearch.flowframework.common.CommonValue.DESCRIPTION;
+import static org.opensearch.flowframework.common.CommonValue.DESCRIPTION_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.NAME_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.PARAMETERS_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.PROTOCOL_FIELD;
@@ -96,8 +96,8 @@ public class CreateConnectorStep implements WorkflowStep {
                     case NAME_FIELD:
                         name = (String) content.get(NAME_FIELD);
                         break;
-                    case DESCRIPTION:
-                        description = (String) content.get(DESCRIPTION);
+                    case DESCRIPTION_FIELD:
+                        description = (String) content.get(DESCRIPTION_FIELD);
                         break;
                     case VERSION_FIELD:
                         version = (String) content.get(VERSION_FIELD);

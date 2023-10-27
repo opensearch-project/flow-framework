@@ -29,7 +29,7 @@ import java.util.concurrent.CompletableFuture;
 
 import static org.opensearch.flowframework.common.CommonValue.ADD_ALL_BACKEND_ROLES;
 import static org.opensearch.flowframework.common.CommonValue.BACKEND_ROLES_FIELD;
-import static org.opensearch.flowframework.common.CommonValue.DESCRIPTION;
+import static org.opensearch.flowframework.common.CommonValue.DESCRIPTION_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.MODEL_ACCESS_MODE;
 import static org.opensearch.flowframework.common.CommonValue.NAME_FIELD;
 
@@ -92,8 +92,8 @@ public class ModelGroupStep implements WorkflowStep {
                     case NAME_FIELD:
                         modelGroupName = (String) content.get(NAME_FIELD);
                         break;
-                    case DESCRIPTION:
-                        description = (String) content.get(DESCRIPTION);
+                    case DESCRIPTION_FIELD:
+                        description = (String) content.get(DESCRIPTION_FIELD);
                         break;
                     case BACKEND_ROLES_FIELD:
                         backendRoles = getBackendRoles(content);

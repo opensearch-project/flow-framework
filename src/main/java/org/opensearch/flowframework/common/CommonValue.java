@@ -27,6 +27,14 @@ public class CommonValue {
     public static final String GLOBAL_CONTEXT_INDEX_MAPPING = "mappings/global-context.json";
     /** Global Context index mapping version */
     public static final Integer GLOBAL_CONTEXT_INDEX_VERSION = 1;
+    /** The template field name for template use case */
+    public static final String USE_CASE_FIELD = "use_case";
+    /** The template field name for template version */
+    public static final String TEMPLATE_FIELD = "template";
+    /** The template field name for template compatibility with OpenSearch versions */
+    public static final String COMPATIBILITY_FIELD = "compatibility";
+    /** The template field name for template workflows */
+    public static final String WORKFLOWS_FIELD = "workflows";
 
     /** The transport action name prefix */
     public static final String TRANSPORT_ACION_NAME_PREFIX = "cluster:admin/opensearch/flow_framework/";
@@ -55,7 +63,7 @@ public class CommonValue {
     /** Model Group Id field */
     public static final String MODEL_GROUP_ID = "model_group_id";
     /** Description field */
-    public static final String DESCRIPTION = "description";
+    public static final String DESCRIPTION_FIELD = "description";
     /** Connector Id field */
     public static final String CONNECTOR_ID = "connector_id";
     /** Model format field */
