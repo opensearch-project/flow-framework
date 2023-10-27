@@ -14,6 +14,8 @@ import org.opensearch.cluster.service.ClusterService;
 import org.opensearch.core.xcontent.XContentParser;
 import org.opensearch.flowframework.model.TemplateTestJsonUtil;
 import org.opensearch.flowframework.model.Workflow;
+import org.opensearch.flowframework.model.WorkflowEdge;
+import org.opensearch.flowframework.model.WorkflowNode;
 import org.opensearch.ml.client.MachineLearningNodeClient;
 import org.opensearch.test.OpenSearchTestCase;
 import org.opensearch.threadpool.TestThreadPool;
@@ -24,6 +26,7 @@ import org.junit.BeforeClass;
 import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
@@ -198,5 +201,32 @@ public class WorkflowProcessSorterTests extends OpenSearchTestCase {
 
         ex = assertThrows(IllegalArgumentException.class, () -> parse(workflow(List.of(node("A"), node("B")), List.of(edge("A", "C")))));
         assertEquals("Edge destination C does not correspond to a node.", ex.getMessage());
+    }
+
+    public void testValidateGraph() {
+
+        // Create Register Model workflow node with missing connector_id field
+        WorkflowNode registerModel = new WorkflowNode(
+            "workflow_step_1",
+            RegisterModelStep.NAME,
+            Map.of(),
+            Map.ofEntries(Map.entry("name", "name"), Map.entry("function_name", "remote"), Map.entry("description", "description"))
+        );
+        WorkflowNode deployModel = new WorkflowNode(
+            "workflow_step_2",
+            RegisterModelStep.NAME,
+            Map.ofEntries(Map.entry("workflow_step_1", "model_id")),
+            Map.of()
+        );
+        WorkflowEdge edge = new WorkflowEdge(registerModel.id(), deployModel.id());
+        Workflow workflow = new Workflow(Map.of(), List.of(registerModel, deployModel), List.of(edge));
+
+        List<ProcessNode> sortedProcessNodes = workflowProcessSorter.sortProcessNodes(workflow);
+        IllegalArgumentException ex = expectThrows(
+            IllegalArgumentException.class,
+            () -> workflowProcessSorter.validateGraph(sortedProcessNodes)
+        );
+        assertEquals("Invalid graph, missing the following required inputs : [connector_id]", ex.getMessage());
+
     }
 }
