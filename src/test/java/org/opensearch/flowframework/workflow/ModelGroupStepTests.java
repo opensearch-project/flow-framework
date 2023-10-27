@@ -36,6 +36,7 @@ import static org.mockito.Mockito.verify;
 
 public class ModelGroupStepTests extends OpenSearchTestCase {
     private WorkflowData inputData = WorkflowData.EMPTY;
+    private WorkflowData inputDataWithNoName = WorkflowData.EMPTY;
 
     @Mock
     MachineLearningNodeClient machineLearningNodeClient;
@@ -54,6 +55,7 @@ public class ModelGroupStepTests extends OpenSearchTestCase {
                 Map.entry("add_all_backend_roles", false)
             )
         );
+
     }
 
     public void testRegisterModelGroup() throws ExecutionException, InterruptedException, IOException {
@@ -101,6 +103,17 @@ public class ModelGroupStepTests extends OpenSearchTestCase {
         assertTrue(ex.getCause() instanceof FlowFrameworkException);
         assertEquals("Failed to register model group", ex.getCause().getMessage());
 
+    }
+
+    public void testRegisterModelGroupWithNoName() throws IOException {
+        ModelGroupStep modelGroupStep = new ModelGroupStep(machineLearningNodeClient);
+
+        CompletableFuture<WorkflowData> future = modelGroupStep.execute(List.of(inputDataWithNoName));
+
+        assertTrue(future.isCompletedExceptionally());
+        ExecutionException ex = assertThrows(ExecutionException.class, () -> future.get().getContent());
+        assertTrue(ex.getCause() instanceof FlowFrameworkException);
+        assertEquals("Model group name is not provided", ex.getCause().getMessage());
     }
 
 }

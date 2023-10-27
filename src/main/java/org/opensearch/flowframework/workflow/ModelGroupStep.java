@@ -111,25 +111,25 @@ public class ModelGroupStep implements WorkflowStep {
             registerModelGroupFuture.completeExceptionally(
                 new FlowFrameworkException("Model group name is not provided", RestStatus.BAD_REQUEST)
             );
-        }
+        } else {
+            MLRegisterModelGroupInputBuilder builder = MLRegisterModelGroupInput.builder();
+            builder.name(modelGroupName);
+            if (description != null) {
+                builder.description(description);
+            }
+            if (backendRoles != null && backendRoles.size() > 0) {
+                builder.backendRoles(backendRoles);
+            }
+            if (modelAccessMode != null) {
+                builder.modelAccessMode(modelAccessMode);
+            }
+            if (isAddAllBackendRoles != null) {
+                builder.isAddAllBackendRoles(isAddAllBackendRoles);
+            }
+            MLRegisterModelGroupInput mlInput = builder.build();
 
-        MLRegisterModelGroupInputBuilder builder = MLRegisterModelGroupInput.builder();
-        builder.name(modelGroupName);
-        if (description != null) {
-            builder.description(description);
+            mlClient.registerModelGroup(mlInput, actionListener);
         }
-        if (backendRoles != null && backendRoles.size() > 0) {
-            builder.backendRoles(backendRoles);
-        }
-        if (modelAccessMode != null) {
-            builder.modelAccessMode(modelAccessMode);
-        }
-        if (isAddAllBackendRoles != null) {
-            builder.isAddAllBackendRoles(isAddAllBackendRoles);
-        }
-        MLRegisterModelGroupInput mlInput = builder.build();
-
-        mlClient.registerModelGroup(mlInput, actionListener);
 
         return registerModelGroupFuture;
     }
