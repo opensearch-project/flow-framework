@@ -25,26 +25,18 @@ import java.util.Map;
 import java.util.Map.Entry;
 
 import static org.opensearch.core.xcontent.XContentParserUtils.ensureExpectedToken;
+import static org.opensearch.flowframework.common.CommonValue.COMPATIBILITY_FIELD;
+import static org.opensearch.flowframework.common.CommonValue.DESCRIPTION_FIELD;
+import static org.opensearch.flowframework.common.CommonValue.NAME_FIELD;
+import static org.opensearch.flowframework.common.CommonValue.TEMPLATE_FIELD;
+import static org.opensearch.flowframework.common.CommonValue.USE_CASE_FIELD;
+import static org.opensearch.flowframework.common.CommonValue.VERSION_FIELD;
+import static org.opensearch.flowframework.common.CommonValue.WORKFLOWS_FIELD;
 
 /**
  * The Template is the central data structure which configures workflows. This object is used to parse JSON communicated via REST API.
  */
 public class Template implements ToXContentObject {
-
-    /** The template field name for template name */
-    public static final String NAME_FIELD = "name";
-    /** The template field name for template description */
-    public static final String DESCRIPTION_FIELD = "description";
-    /** The template field name for template use case */
-    public static final String USE_CASE_FIELD = "use_case";
-    /** The template field name for template version information */
-    public static final String VERSION_FIELD = "version";
-    /** The template field name for template version */
-    public static final String TEMPLATE_FIELD = "template";
-    /** The template field name for template compatibility with OpenSearch versions */
-    public static final String COMPATIBILITY_FIELD = "compatibility";
-    /** The template field name for template workflows */
-    public static final String WORKFLOWS_FIELD = "workflows";
 
     private final String name;
     private final String description;

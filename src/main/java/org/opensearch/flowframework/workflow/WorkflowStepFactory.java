@@ -40,6 +40,7 @@ public class WorkflowStepFactory {
         stepMap.put(RegisterModelStep.NAME, new RegisterModelStep(mlClient));
         stepMap.put(DeployModelStep.NAME, new DeployModelStep(mlClient));
         stepMap.put(CreateConnectorStep.NAME, new CreateConnectorStep(mlClient));
+        stepMap.put(ModelGroupStep.NAME, new ModelGroupStep(mlClient));
     }
 
     /**

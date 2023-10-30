@@ -12,6 +12,7 @@ import org.opensearch.core.action.ActionListener;
 import org.opensearch.core.rest.RestStatus;
 import org.opensearch.flowframework.exception.FlowFrameworkException;
 import org.opensearch.ml.client.MachineLearningNodeClient;
+import org.opensearch.ml.common.connector.ConnectorAction;
 import org.opensearch.ml.common.transport.connector.MLCreateConnectorInput;
 import org.opensearch.ml.common.transport.connector.MLCreateConnectorResponse;
 import org.opensearch.test.OpenSearchTestCase;
@@ -35,9 +36,6 @@ public class CreateConnectorStepTests extends OpenSearchTestCase {
     private WorkflowData inputData = WorkflowData.EMPTY;
 
     @Mock
-    ActionListener<MLCreateConnectorResponse> registerModelActionListener;
-
-    @Mock
     MachineLearningNodeClient machineLearningNodeClient;
 
     @Override
@@ -49,6 +47,10 @@ public class CreateConnectorStepTests extends OpenSearchTestCase {
 
         MockitoAnnotations.openMocks(this);
 
+        ConnectorAction.ActionType actionType = ConnectorAction.ActionType.PREDICT;
+        String method = "post";
+        String url = "foot.test";
+
         inputData = new WorkflowData(
             Map.ofEntries(
                 Map.entry("name", "test"),
@@ -57,7 +59,20 @@ public class CreateConnectorStepTests extends OpenSearchTestCase {
                 Map.entry("protocol", "test"),
                 Map.entry("params", params),
                 Map.entry("credentials", credentials),
-                Map.entry("actions", List.of("actions"))
+                Map.entry(
+                    "actions",
+                    List.of(
+                        new ConnectorAction(
+                            actionType,
+                            method,
+                            url,
+                            null,
+                            "{ \"model\": \"${parameters.model}\", \"messages\": ${parameters.messages} }",
+                            null,
+                            null
+                        )
+                    )
+                )
             )
         );
 

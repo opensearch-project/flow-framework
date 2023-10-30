@@ -29,7 +29,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.stream.Stream;
 
 import static org.opensearch.flowframework.common.CommonValue.CONNECTOR_ID;
-import static org.opensearch.flowframework.common.CommonValue.DESCRIPTION;
+import static org.opensearch.flowframework.common.CommonValue.DESCRIPTION_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.FUNCTION_NAME;
 import static org.opensearch.flowframework.common.CommonValue.MODEL_CONFIG;
 import static org.opensearch.flowframework.common.CommonValue.MODEL_FORMAT;
@@ -114,8 +114,8 @@ public class RegisterModelStep implements WorkflowStep {
                     case MODEL_CONFIG:
                         modelConfig = (MLModelConfig) content.get(MODEL_CONFIG);
                         break;
-                    case DESCRIPTION:
-                        description = (String) content.get(DESCRIPTION);
+                    case DESCRIPTION_FIELD:
+                        description = (String) content.get(DESCRIPTION_FIELD);
                         break;
                     case CONNECTOR_ID:
                         connectorId = (String) content.get(CONNECTOR_ID);
