@@ -23,6 +23,7 @@ import java.io.IOException;
 import java.security.AccessController;
 import java.security.PrivilegedActionException;
 import java.security.PrivilegedExceptionAction;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -32,7 +33,7 @@ import java.util.stream.Stream;
 
 import static org.opensearch.flowframework.common.CommonValue.ACTIONS_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.CREDENTIALS_FIELD;
-import static org.opensearch.flowframework.common.CommonValue.DESCRIPTION;
+import static org.opensearch.flowframework.common.CommonValue.DESCRIPTION_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.NAME_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.PARAMETERS_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.PROTOCOL_FIELD;
@@ -85,7 +86,7 @@ public class CreateConnectorStep implements WorkflowStep {
         String protocol = null;
         Map<String, String> parameters = new HashMap<>();
         Map<String, String> credentials = new HashMap<>();
-        List<ConnectorAction> actions = null;
+        List<ConnectorAction> actions = new ArrayList<>();
 
         for (WorkflowData workflowData : data) {
             Map<String, Object> content = workflowData.getContent();
@@ -95,8 +96,8 @@ public class CreateConnectorStep implements WorkflowStep {
                     case NAME_FIELD:
                         name = (String) content.get(NAME_FIELD);
                         break;
-                    case DESCRIPTION:
-                        description = (String) content.get(DESCRIPTION);
+                    case DESCRIPTION_FIELD:
+                        description = (String) content.get(DESCRIPTION_FIELD);
                         break;
                     case VERSION_FIELD:
                         version = (String) content.get(VERSION_FIELD);
