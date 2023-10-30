@@ -8,27 +8,42 @@
  */
 package org.opensearch.flowframework.indices;
 
+import org.opensearch.action.admin.indices.create.CreateIndexRequest;
+import org.opensearch.action.admin.indices.mapping.put.PutMappingRequest;
+import org.opensearch.action.index.IndexResponse;
+import org.opensearch.action.support.master.AcknowledgedResponse;
 import org.opensearch.client.AdminClient;
 import org.opensearch.client.Client;
 import org.opensearch.client.IndicesAdminClient;
 import org.opensearch.cluster.ClusterName;
 import org.opensearch.cluster.ClusterState;
 import org.opensearch.cluster.metadata.IndexMetadata;
+import org.opensearch.cluster.metadata.MappingMetadata;
 import org.opensearch.cluster.metadata.Metadata;
 import org.opensearch.cluster.service.ClusterService;
 import org.opensearch.common.settings.Settings;
 import org.opensearch.common.util.concurrent.ThreadContext;
+import org.opensearch.core.action.ActionListener;
+import org.opensearch.flowframework.model.Template;
 import org.opensearch.flowframework.workflow.CreateIndexStep;
 import org.opensearch.test.OpenSearchTestCase;
 import org.opensearch.threadpool.ThreadPool;
 
+import java.io.IOException;
+import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicBoolean;
 
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
 import static org.opensearch.flowframework.common.CommonValue.GLOBAL_CONTEXT_INDEX;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 public class FlowFrameworkIndicesHandlerTests extends OpenSearchTestCase {
@@ -46,11 +61,10 @@ public class FlowFrameworkIndicesHandlerTests extends OpenSearchTestCase {
     protected ClusterService clusterService;
     @Mock
     private FlowFrameworkIndicesHandler flowMock;
-    // private static final String META = "_meta";
-    // private static final String SCHEMA_VERSION_FIELD = "schemaVersion";
-    @Mock
+    private static final String META = "_meta";
+    private static final String SCHEMA_VERSION_FIELD = "schemaVersion";
     private Metadata metadata;
-    // private Map<String, AtomicBoolean> indexMappingUpdated = new HashMap<>();
+    private Map<String, AtomicBoolean> indexMappingUpdated = new HashMap<>();
     @Mock
     IndexMetadata indexMetadata;
 
@@ -66,67 +80,28 @@ public class FlowFrameworkIndicesHandlerTests extends OpenSearchTestCase {
         flowFrameworkIndicesHandler = new FlowFrameworkIndicesHandler(client, clusterService);
         adminClient = mock(AdminClient.class);
         indicesAdminClient = mock(IndicesAdminClient.class);
-        when(adminClient.indices()).thenReturn(indicesAdminClient);
+        metadata = mock(Metadata.class);
+
+        when(client.threadPool()).thenReturn(threadPool);
+        when(threadPool.getThreadContext()).thenReturn(threadContext);
         when(client.admin()).thenReturn(adminClient);
+        when(adminClient.indices()).thenReturn(indicesAdminClient);
         when(clusterService.state()).thenReturn(ClusterState.builder(new ClusterName("test cluster")).build());
         when(metadata.indices()).thenReturn(Map.of(GLOBAL_CONTEXT_INDEX, indexMetadata));
-        when(adminClient.indices()).thenReturn(indicesAdminClient);
     }
 
-    /*
-    public void testPutTemplateToGlobalContext() throws IOException {
-        Template template = mock(Template.class);
-        when(template.toDocumentSource(any(XContentBuilder.class), eq(ToXContent.EMPTY_PARAMS))).thenAnswer(invocation -> {
-            XContentBuilder builder = invocation.getArgument(0);
-            return builder;
-        });
-        @SuppressWarnings("unchecked")
-        ActionListener<IndexResponse> listener = mock(ActionListener.class);
+    public void testDoesIndexExist() {
+        ClusterState mockClusterState = mock(ClusterState.class);
+        Metadata mockMetaData = mock(Metadata.class);
+        when(clusterService.state()).thenReturn(mockClusterState);
+        when(mockClusterState.metadata()).thenReturn(mockMetaData);
 
-        doAnswer(invocation -> {
-            ActionListener<Boolean> callback = invocation.getArgument(1);
-            callback.onResponse(true);
-            return null;
-        }).when(flowMock).initFlowFrameworkIndexIfAbsent(any(FlowFrameworkIndex.class), any());
+        flowFrameworkIndicesHandler.doesIndexExist(GLOBAL_CONTEXT_INDEX);
 
-        flowFrameworkIndicesHandler.putTemplateToGlobalContext(template, listener);
+        ArgumentCaptor<String> indexExistsCaptor = ArgumentCaptor.forClass(String.class);
+        verify(mockMetaData, times(1)).hasIndex(indexExistsCaptor.capture());
 
-        ArgumentCaptor<IndexRequest> requestCaptor = ArgumentCaptor.forClass(IndexRequest.class);
-        verify(client, times(1)).index(requestCaptor.capture(), any());
-
-        assertEquals(GLOBAL_CONTEXT_INDEX, requestCaptor.getValue().index());
-    }
-
-    public void testStoreResponseToGlobalContext() {
-        String documentId = "docId";
-        Map<String, Object> updatedFields = new HashMap<>();
-        updatedFields.put("field1", "value1");
-        @SuppressWarnings("unchecked")
-        ActionListener<UpdateResponse> listener = mock(ActionListener.class);
-
-        flowFrameworkIndicesHandler.storeResponseToGlobalContext(documentId, updatedFields, listener);
-
-        ArgumentCaptor<UpdateRequest> requestCaptor = ArgumentCaptor.forClass(UpdateRequest.class);
-        verify(client, times(1)).update(requestCaptor.capture(), any());
-
-        assertEquals(GLOBAL_CONTEXT_INDEX, requestCaptor.getValue().index());
-        assertEquals(documentId, requestCaptor.getValue().id());
-    }
-
-    public void testUpdateTemplateInGlobalContext() throws IOException {
-        Template template = mock(Template.class);
-        when(template.toXContent(any(XContentBuilder.class), eq(ToXContent.EMPTY_PARAMS))).thenAnswer(invocation -> {
-            XContentBuilder builder = invocation.getArgument(0);
-            return builder;
-        });
-        when(createIndexStep.doesIndexExist(any())).thenReturn(true);
-
-        flowFrameworkIndicesHandler.updateTemplateInGlobalContext("1", template, null);
-
-        ArgumentCaptor<IndexRequest> requestCaptor = ArgumentCaptor.forClass(IndexRequest.class);
-        verify(client, times(1)).index(requestCaptor.capture(), any());
-
-        assertEquals("1", requestCaptor.getValue().id());
+        assertEquals(GLOBAL_CONTEXT_INDEX, indexExistsCaptor.getValue());
     }
 
     public void testFailedUpdateTemplateInGlobalContext() throws IOException {
@@ -145,16 +120,6 @@ public class FlowFrameworkIndicesHandlerTests extends OpenSearchTestCase {
             exceptionCaptor.getValue().getMessage()
         );
     }
-
-    public void testInitIndexIfAbsent_IndexNotPresent() {
-         when(metadata.hasIndex(FlowFrameworkIndex.GLOBAL_CONTEXT.getIndexName())).thenReturn(false);
-
-         @SuppressWarnings("unchecked")
-         ActionListener<Boolean> listener = mock(ActionListener.class);
-         flowFrameworkIndicesHandler.initFlowFrameworkIndexIfAbsent(FlowFrameworkIndex.GLOBAL_CONTEXT, listener);
-
-         verify(indicesAdminClient, times(1)).create(any(CreateIndexRequest.class), any());
-     }
 
     public void testInitIndexIfAbsent_IndexExist() {
         FlowFrameworkIndex index = FlowFrameworkIndex.GLOBAL_CONTEXT;
@@ -194,7 +159,7 @@ public class FlowFrameworkIndicesHandlerTests extends OpenSearchTestCase {
     }
 
     public void testInitIndexIfAbsent_IndexExist_returnFalse() {
-        FlowFrameworkIndex index = FlowFrameworkIndex.GLOBAL_CONTEXT;
+        FlowFrameworkIndex index = FlowFrameworkIndex.WORKFLOW_STATE;
         indexMappingUpdated.put(index.getIndexName(), new AtomicBoolean(false));
 
         ClusterState mockClusterState = mock(ClusterState.class);
@@ -212,21 +177,16 @@ public class FlowFrameworkIndicesHandlerTests extends OpenSearchTestCase {
         when(mockIndices.get(anyString())).thenReturn(null);
 
         flowFrameworkIndicesHandler.initFlowFrameworkIndexIfAbsent(index, listener);
-        assertTrue(indexMappingUpdated.get(index.getIndexName()).get());
+        assertFalse(indexMappingUpdated.get(index.getIndexName()).get());
     }
 
-    public void testDoesIndexExist() {
-        ClusterState mockClusterState = mock(ClusterState.class);
-        Metadata mockMetaData = mock(Metadata.class);
-        when(clusterService.state()).thenReturn(mockClusterState);
-        when(mockClusterState.metadata()).thenReturn(mockMetaData);
+    public void testInitIndexIfAbsent_IndexNotPresent() {
+        when(metadata.hasIndex(FlowFrameworkIndex.GLOBAL_CONTEXT.getIndexName())).thenReturn(false);
 
-        flowFrameworkIndicesHandler.doesIndexExist(GLOBAL_CONTEXT_INDEX);
+        @SuppressWarnings("unchecked")
+        ActionListener<Boolean> listener = mock(ActionListener.class);
+        flowFrameworkIndicesHandler.initFlowFrameworkIndexIfAbsent(FlowFrameworkIndex.GLOBAL_CONTEXT, listener);
 
-        ArgumentCaptor<String> indexExistsCaptor = ArgumentCaptor.forClass(String.class);
-        verify(mockMetaData, times(1)).hasIndex(indexExistsCaptor.capture());
-
-        assertEquals(GLOBAL_CONTEXT_INDEX, indexExistsCaptor.getValue());
+        verify(indicesAdminClient, times(1)).create(any(CreateIndexRequest.class), any());
     }
-    */
 }

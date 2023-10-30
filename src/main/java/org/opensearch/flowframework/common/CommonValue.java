@@ -34,7 +34,6 @@ public class CommonValue {
     /** Workflow State index mapping version */
     public static final Integer WORKFLOW_STATE_INDEX_VERSION = 1;
 
-
     /** The template field name for template use case */
     public static final String USE_CASE_FIELD = "use_case";
     /** The template field name for template version */
@@ -45,7 +44,6 @@ public class CommonValue {
     public static final String WORKFLOWS_FIELD = "workflows";
     /** The template field name for the user who created the workflow **/
     public static final String USER_FIELD = "user";
-
 
     /** The transport action name prefix */
     public static final String TRANSPORT_ACION_NAME_PREFIX = "cluster:admin/opensearch/flow_framework/";

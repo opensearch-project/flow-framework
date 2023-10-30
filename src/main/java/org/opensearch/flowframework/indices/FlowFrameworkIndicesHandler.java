@@ -51,14 +51,16 @@ import static org.opensearch.flowframework.common.CommonValue.META;
 import static org.opensearch.flowframework.common.CommonValue.NO_SCHEMA_VERSION;
 import static org.opensearch.flowframework.common.CommonValue.SCHEMA_VERSION_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.WORKFLOW_STATE_INDEX;
+import static org.opensearch.flowframework.common.CommonValue.WORKFLOW_STATE_INDEX_MAPPING;
 
 /**
- * A handler for global context related operations
+ * A handler for operations on system indices in the AI Flow Framework plugin
+ * The current indices we have are global-context and workflow-state indices
  */
 public class FlowFrameworkIndicesHandler {
     private static final Logger logger = LogManager.getLogger(FlowFrameworkIndicesHandler.class);
     private final Client client;
-    ClusterService clusterService;
+    private final ClusterService clusterService;
     private static final Map<String, AtomicBoolean> indexMappingUpdated = new HashMap<>();
     private static final Map<String, Object> indexSettings = Map.of("index.auto_expand_replicas", "0-1");
 
@@ -70,6 +72,9 @@ public class FlowFrameworkIndicesHandler {
     public FlowFrameworkIndicesHandler(Client client, ClusterService clusterService) {
         this.client = client;
         this.clusterService = clusterService;
+        for (FlowFrameworkIndex mlIndex : FlowFrameworkIndex.values()) {
+            indexMappingUpdated.put(mlIndex.getIndexName(), new AtomicBoolean(false));
+        }
     }
 
     static {
@@ -85,6 +90,15 @@ public class FlowFrameworkIndicesHandler {
      */
     public static String getGlobalContextMappings() throws IOException {
         return getIndexMappings(GLOBAL_CONTEXT_INDEX_MAPPING);
+    }
+
+    /**
+     * Get workflow-state index mapping
+     * @return workflow-state index mapping
+     * @throws IOException if mapping file cannot be read correctly
+     */
+    public static String getWorkflowStateMappings() throws IOException {
+        return getIndexMappings(WORKFLOW_STATE_INDEX_MAPPING);
     }
 
     /**
@@ -314,9 +328,9 @@ public class FlowFrameworkIndicesHandler {
      */
     public void updateTemplateInGlobalContext(String documentId, Template template, ActionListener<IndexResponse> listener) {
         if (!doesIndexExist(GLOBAL_CONTEXT_INDEX)) {
-            String exceptionMessage = "Failed to update workflow state for workflow_id : "
+            String exceptionMessage = "Failed to update template for workflow_id : "
                 + documentId
-                + ", workflow_state index does not exist.";
+                + ", global_context index does not exist.";
             logger.error(exceptionMessage);
             listener.onFailure(new Exception(exceptionMessage));
         } else {
@@ -337,53 +351,34 @@ public class FlowFrameworkIndicesHandler {
 
     /**
      * Updates a document in the workflow state index
-     * @param workflowStateDocId the document ID
+     * @param indexName the index that we will be updating a document of.
+     * @param documentId the document ID
      * @param updatedFields the fields to update the global state index with
      * @param listener action listener
      */
-    public void updateWorkflowState(String workflowStateDocId, Map<String, Object> updatedFields, ActionListener<UpdateResponse> listener) {
-        if (!doesIndexExist(WORKFLOW_STATE_INDEX)) {
-            String exceptionMessage = "Failed to update state for given workflow due to missing workflow_state index";
-            logger.error(exceptionMessage);
-            listener.onFailure(new Exception(exceptionMessage));
-        } else {
-            try (ThreadContext.StoredContext context = client.threadPool().getThreadContext().stashContext()) {
-                UpdateRequest updateRequest = new UpdateRequest(WORKFLOW_STATE_INDEX, workflowStateDocId);
-                Map<String, Object> updatedContent = new HashMap<>();
-                updatedContent.putAll(updatedFields);
-                updateRequest.doc(updatedContent);
-                updateRequest.setRefreshPolicy(WriteRequest.RefreshPolicy.IMMEDIATE);
-                client.update(updateRequest, ActionListener.runBefore(listener, () -> context.restore()));
-            } catch (Exception e) {
-                logger.error("Failed to update workflow_state entry : {}. {}", workflowStateDocId, e.getMessage());
-                listener.onFailure(e);
-            }
-        }
-    }
-
-    /**
-     * Update global context index for specific fields
-     * @param documentId global context index document id
-     * @param updatedFields updated fields; key: field name, value: new value
-     * @param listener UpdateResponse action listener
-     */
-    public void storeResponseToGlobalContext(
+    public void updateFlowFrameworkSystemIndexDoc(
+        String indexName,
         String documentId,
         Map<String, Object> updatedFields,
         ActionListener<UpdateResponse> listener
     ) {
-        UpdateRequest updateRequest = new UpdateRequest(GLOBAL_CONTEXT_INDEX, documentId);
-        Map<String, Object> updatedUserOutputsContext = new HashMap<>();
-        updatedUserOutputsContext.putAll(updatedFields);
-        updateRequest.doc(updatedUserOutputsContext);
-        updateRequest.setRefreshPolicy(WriteRequest.RefreshPolicy.IMMEDIATE);
-        // TODO: decide what condition can be considered as an update conflict and add retry strategy
-
-        try {
-            client.update(updateRequest, listener);
-        } catch (Exception e) {
-            logger.error("Failed to update global_context index");
-            listener.onFailure(e);
+        if (!doesIndexExist(indexName)) {
+            String exceptionMessage = "Failed to update document for given workflow due to missing " + indexName + " index";
+            logger.error(exceptionMessage);
+            listener.onFailure(new Exception(exceptionMessage));
+        } else {
+            try (ThreadContext.StoredContext context = client.threadPool().getThreadContext().stashContext()) {
+                UpdateRequest updateRequest = new UpdateRequest(indexName, documentId);
+                Map<String, Object> updatedContent = new HashMap<>();
+                updatedContent.putAll(updatedFields);
+                updateRequest.doc(updatedContent);
+                updateRequest.setRefreshPolicy(WriteRequest.RefreshPolicy.IMMEDIATE);
+                // TODO: decide what condition can be considered as an update conflict and add retry strategy
+                client.update(updateRequest, ActionListener.runBefore(listener, () -> context.restore()));
+            } catch (Exception e) {
+                logger.error("Failed to update {} entry : {}. {}", indexName, documentId, e.getMessage());
+                listener.onFailure(e);
+            }
         }
     }
 }

@@ -31,7 +31,7 @@ public enum FlowFrameworkIndex {
     ),
     WORKFLOW_STATE(
         WORKFLOW_STATE_INDEX,
-        ThrowingSupplierWrapper.throwingSupplierWrapper(FlowFrameworkIndicesHandler::getGlobalContextMappings),
+        ThrowingSupplierWrapper.throwingSupplierWrapper(FlowFrameworkIndicesHandler::getWorkflowStateMappings),
         WORKFLOW_STATE_INDEX_VERSION
     );
 

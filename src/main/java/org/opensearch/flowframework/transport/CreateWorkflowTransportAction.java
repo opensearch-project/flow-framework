@@ -26,6 +26,7 @@ import org.opensearch.flowframework.model.Template;
 import org.opensearch.tasks.Task;
 import org.opensearch.transport.TransportService;
 
+import static org.opensearch.flowframework.common.CommonValue.WORKFLOW_STATE_INDEX;
 import static org.opensearch.flowframework.model.WorkflowState.PROVISIONING_PROGRESS_FIELD;
 import static org.opensearch.flowframework.model.WorkflowState.STATE_FIELD;
 import static org.opensearch.flowframework.util.ParseUtils.getUserContext;
@@ -78,7 +79,7 @@ public class CreateWorkflowTransportAction extends HandledTransportAction<Workfl
                     globalContextResponse.getId(),
                     user,
                     ActionListener.wrap(stateResponse -> {
-                        logger.info("create state workflow doc " + stateResponse);
+                        logger.info("create state workflow doc");
                         listener.onResponse(new WorkflowResponse(globalContextResponse.getId()));
                     }, exception -> {
                         logger.error("Failed to save workflow state : {}", exception.getMessage());
@@ -95,11 +96,12 @@ public class CreateWorkflowTransportAction extends HandledTransportAction<Workfl
                 request.getWorkflowId(),
                 request.getTemplate(),
                 ActionListener.wrap(response -> {
-                    flowFrameworkIndicesHandler.updateWorkflowState(
+                    flowFrameworkIndicesHandler.updateFlowFrameworkSystemIndexDoc(
+                        WORKFLOW_STATE_INDEX,
                         request.getWorkflowId(),
                         ImmutableMap.of(STATE_FIELD, State.NOT_STARTED, PROVISIONING_PROGRESS_FIELD, ProvisioningProgress.NOT_STARTED),
                         ActionListener.wrap(updateResponse -> {
-                            logger.info("updated workflow {} state to NOT_STARTED", request.getWorkflowId());
+                            logger.info("updated workflow {} state to {}", request.getWorkflowId(), State.NOT_STARTED.name());
                             listener.onResponse(new WorkflowResponse(request.getWorkflowId()));
                         }, exception -> {
                             logger.error("Failed to update workflow state : {}", exception.getMessage());

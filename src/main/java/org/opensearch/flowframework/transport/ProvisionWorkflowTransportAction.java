@@ -35,7 +35,6 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
-import java.util.Map;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
@@ -44,10 +43,10 @@ import java.util.stream.Collectors;
 import static org.opensearch.flowframework.common.CommonValue.GLOBAL_CONTEXT_INDEX;
 import static org.opensearch.flowframework.common.CommonValue.PROVISION_THREAD_POOL;
 import static org.opensearch.flowframework.common.CommonValue.PROVISION_WORKFLOW;
+import static org.opensearch.flowframework.common.CommonValue.WORKFLOW_STATE_INDEX;
 import static org.opensearch.flowframework.model.WorkflowState.PROVISIONING_PROGRESS_FIELD;
 import static org.opensearch.flowframework.model.WorkflowState.PROVISION_START_TIME_FIELD;
 import static org.opensearch.flowframework.model.WorkflowState.STATE_FIELD;
-import static org.opensearch.flowframework.model.WorkflowState.USER_OUTPUTS_FIELD;
 
 /**
  * Transport Action to provision a workflow from a stored use case template
@@ -88,7 +87,6 @@ public class ProvisionWorkflowTransportAction extends HandledTransportAction<Wor
 
     @Override
     protected void doExecute(Task task, WorkflowRequest request, ActionListener<WorkflowResponse> listener) {
-
         // Retrieve use case template from global context
         String workflowId = request.getWorkflowId();
         GetRequest getRequest = new GetRequest(GLOBAL_CONTEXT_INDEX, workflowId);
@@ -111,7 +109,8 @@ public class ProvisionWorkflowTransportAction extends HandledTransportAction<Wor
                 // Parse template from document source
                 Template template = Template.parse(response.getSourceAsString());
 
-                flowFrameworkIndicesHandler.updateWorkflowState(
+                flowFrameworkIndicesHandler.updateFlowFrameworkSystemIndexDoc(
+                    WORKFLOW_STATE_INDEX,
                     workflowId,
                     ImmutableMap.of(
                         STATE_FIELD,
@@ -119,17 +118,11 @@ public class ProvisionWorkflowTransportAction extends HandledTransportAction<Wor
                         PROVISIONING_PROGRESS_FIELD,
                         ProvisioningProgress.IN_PROGRESS,
                         PROVISION_START_TIME_FIELD,
-                        Instant.now().toEpochMilli(),
-                        USER_OUTPUTS_FIELD,
-                        Map.of("key1", "key2")
+                        Instant.now().toEpochMilli()
                     ),
                     ActionListener.wrap(updateResponse -> {
                         logger.info("updated workflow {} state to PROVISIONING", request.getWorkflowId());
-                        listener.onResponse(new WorkflowResponse(request.getWorkflowId()));
-                    }, exception -> {
-                        logger.error("Failed to update workflow state : {}", exception.getMessage());
-                        listener.onFailure(new FlowFrameworkException(exception.getMessage(), RestStatus.BAD_REQUEST));
-                    })
+                    }, exception -> { logger.error("Failed to update workflow state : {}", exception.getMessage()); })
                 );
 
                 // Respond to rest action then execute provisioning workflow async
