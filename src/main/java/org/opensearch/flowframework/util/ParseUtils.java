@@ -93,10 +93,7 @@ public class ParseUtils {
      * @throws IOException IOException if content can't be parsed correctly
      */
     public static Instant parseInstant(XContentParser parser) throws IOException {
-        if (parser.currentToken() == null || parser.currentToken() == XContentParser.Token.VALUE_NULL) {
-            return null;
-        }
-        if (parser.currentToken().isValue()) {
+        if (parser.currentToken() != null && parser.currentToken().isValue() && parser.currentToken() != XContentParser.Token.VALUE_NULL) {
             return Instant.ofEpochMilli(parser.longValue());
         }
         return null;

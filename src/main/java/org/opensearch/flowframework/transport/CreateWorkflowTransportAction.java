@@ -26,9 +26,9 @@ import org.opensearch.flowframework.model.Template;
 import org.opensearch.tasks.Task;
 import org.opensearch.transport.TransportService;
 
+import static org.opensearch.flowframework.common.CommonValue.PROVISIONING_PROGRESS_FIELD;
+import static org.opensearch.flowframework.common.CommonValue.STATE_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.WORKFLOW_STATE_INDEX;
-import static org.opensearch.flowframework.model.WorkflowState.PROVISIONING_PROGRESS_FIELD;
-import static org.opensearch.flowframework.model.WorkflowState.STATE_FIELD;
 import static org.opensearch.flowframework.util.ParseUtils.getUserContext;
 
 /**

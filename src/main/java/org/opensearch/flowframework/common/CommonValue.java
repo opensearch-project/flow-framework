@@ -95,4 +95,23 @@ public class CommonValue {
     public static final String MODEL_ACCESS_MODE = "access_mode";
     /** Add all backend roles */
     public static final String ADD_ALL_BACKEND_ROLES = "add_all_backend_roles";
+
+    /** The template field name for the associated workflowID **/
+    public static final String WORKFLOW_ID_FIELD = "workflow_id";
+    /** The template field name for the workflow error **/
+    public static final String ERROR_FIELD = "error";
+    /** The template field name for the workflow state **/
+    public static final String STATE_FIELD = "state";
+    /** The template field name for the workflow provisioning progress **/
+    public static final String PROVISIONING_PROGRESS_FIELD = "provisioning_progress";
+    /** The template field name for the workflow provisioning start time **/
+    public static final String PROVISION_START_TIME_FIELD = "provision_start_time";
+    /** The template field name for the workflow provisioning end time **/
+    public static final String PROVISION_END_TIME_FIELD = "provision_end_time";
+    /** The template field name for the workflow ui metadata **/
+    public static final String UI_METADATA_FIELD = "ui_metadata";
+    /** The template field name for template user outputs */
+    public static final String USER_OUTPUTS_FIELD = "user_outputs";
+    /** The template field name for template resources created */
+    public static final String RESOURCES_CREATED_FIELD = "resources_created";
 }

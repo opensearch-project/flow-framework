@@ -15,5 +15,5 @@ public enum State {
     NOT_STARTED,
     PROVISIONING,
     FAILED,
-    READY
+    COMPLETED
 }

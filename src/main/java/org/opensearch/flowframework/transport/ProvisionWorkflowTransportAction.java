@@ -41,12 +41,12 @@ import java.util.concurrent.CompletionException;
 import java.util.stream.Collectors;
 
 import static org.opensearch.flowframework.common.CommonValue.GLOBAL_CONTEXT_INDEX;
+import static org.opensearch.flowframework.common.CommonValue.PROVISIONING_PROGRESS_FIELD;
+import static org.opensearch.flowframework.common.CommonValue.PROVISION_START_TIME_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.PROVISION_THREAD_POOL;
 import static org.opensearch.flowframework.common.CommonValue.PROVISION_WORKFLOW;
+import static org.opensearch.flowframework.common.CommonValue.STATE_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.WORKFLOW_STATE_INDEX;
-import static org.opensearch.flowframework.model.WorkflowState.PROVISIONING_PROGRESS_FIELD;
-import static org.opensearch.flowframework.model.WorkflowState.PROVISION_START_TIME_FIELD;
-import static org.opensearch.flowframework.model.WorkflowState.STATE_FIELD;
 
 /**
  * Transport Action to provision a workflow from a stored use case template

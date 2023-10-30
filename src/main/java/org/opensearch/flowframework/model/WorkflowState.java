@@ -20,6 +20,16 @@ import java.util.HashMap;
 import java.util.Map;
 
 import static org.opensearch.core.xcontent.XContentParserUtils.ensureExpectedToken;
+import static org.opensearch.flowframework.common.CommonValue.ERROR_FIELD;
+import static org.opensearch.flowframework.common.CommonValue.PROVISIONING_PROGRESS_FIELD;
+import static org.opensearch.flowframework.common.CommonValue.PROVISION_END_TIME_FIELD;
+import static org.opensearch.flowframework.common.CommonValue.PROVISION_START_TIME_FIELD;
+import static org.opensearch.flowframework.common.CommonValue.RESOURCES_CREATED_FIELD;
+import static org.opensearch.flowframework.common.CommonValue.STATE_FIELD;
+import static org.opensearch.flowframework.common.CommonValue.UI_METADATA_FIELD;
+import static org.opensearch.flowframework.common.CommonValue.USER_FIELD;
+import static org.opensearch.flowframework.common.CommonValue.USER_OUTPUTS_FIELD;
+import static org.opensearch.flowframework.common.CommonValue.WORKFLOW_ID_FIELD;
 import static org.opensearch.flowframework.util.ParseUtils.parseStringToStringMap;
 
 /**
@@ -27,27 +37,6 @@ import static org.opensearch.flowframework.util.ParseUtils.parseStringToStringMa
  * global context.
  */
 public class WorkflowState implements ToXContentObject {
-    /** The template field name for the associated workflowID **/
-    public static final String WORKFLOW_ID_FIELD = "workflow_id";
-    /** The template field name for the workflow error **/
-    public static final String ERROR_FIELD = "error";
-    /** The template field name for the workflow state **/
-    public static final String STATE_FIELD = "state";
-    /** The template field name for the workflow provisioning progress **/
-    public static final String PROVISIONING_PROGRESS_FIELD = "provisioning_progress";
-    /** The template field name for the workflow provisioning start time **/
-    public static final String PROVISION_START_TIME_FIELD = "provision_start_time";
-    /** The template field name for the workflow provisioning end time **/
-    public static final String PROVISION_END_TIME_FIELD = "provision_end_time";
-    /** The template field name for the user who created the workflow **/
-    public static final String USER_FIELD = "user";
-    /** The template field name for the workflow ui metadata **/
-    public static final String UI_METADATA_FIELD = "ui_metadata";
-    /** The template field name for template user outputs */
-    public static final String USER_OUTPUTS_FIELD = "user_outputs";
-    /** The template field name for template resources created */
-    public static final String RESOURCES_CREATED_FIELD = "resources_created";
-
     private String workflowId;
     private String error;
     private String state;
