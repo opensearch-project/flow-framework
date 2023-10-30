@@ -44,6 +44,7 @@ public class WorkflowStepFactory {
         stepMap.put(RegisterModelStep.NAME, new RegisterModelStep(mlClient));
         stepMap.put(DeployModelStep.NAME, new DeployModelStep(mlClient));
         stepMap.put(CreateConnectorStep.NAME, new CreateConnectorStep(mlClient));
+        stepMap.put(ModelGroupStep.NAME, new ModelGroupStep(mlClient));
 
         // TODO: These are from the demo class as placeholders, remove when demos are deleted
         stepMap.put("demo_delay_3", new DemoWorkflowStep(3000));
