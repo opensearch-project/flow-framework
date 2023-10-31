@@ -107,6 +107,11 @@ public class ProvisionWorkflowTransportAction extends HandledTransportAction<Wor
                 // Parse template from document source
                 Template template = Template.parse(response.getSourceAsString());
 
+                // Sort and validate graph
+                Workflow provisionWorkflow = template.workflows().get(PROVISION_WORKFLOW);
+                List<ProcessNode> provisionProcessSequence = workflowProcessSorter.sortProcessNodes(provisionWorkflow);
+                workflowProcessSorter.validateGraph(provisionProcessSequence);
+
                 flowFrameworkIndicesHandler.updateFlowFrameworkSystemIndexDoc(
                     WORKFLOW_STATE_INDEX,
                     workflowId,
@@ -122,11 +127,6 @@ public class ProvisionWorkflowTransportAction extends HandledTransportAction<Wor
                         logger.info("updated workflow {} state to PROVISIONING", request.getWorkflowId());
                     }, exception -> { logger.error("Failed to update workflow state : {}", exception.getMessage()); })
                 );
-
-                // Sort and validate graph
-                Workflow provisionWorkflow = template.workflows().get(PROVISION_WORKFLOW);
-                List<ProcessNode> provisionProcessSequence = workflowProcessSorter.sortProcessNodes(provisionWorkflow);
-                workflowProcessSorter.validateGraph(provisionProcessSequence);
 
                 // Respond to rest action then execute provisioning workflow async
                 listener.onResponse(new WorkflowResponse(workflowId));
