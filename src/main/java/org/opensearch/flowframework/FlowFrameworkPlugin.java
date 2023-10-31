@@ -29,10 +29,8 @@ import org.opensearch.flowframework.common.FlowFrameworkFeatureEnabledSetting;
 import org.opensearch.flowframework.indices.FlowFrameworkIndicesHandler;
 import org.opensearch.flowframework.rest.RestCreateWorkflowAction;
 import org.opensearch.flowframework.rest.RestProvisionWorkflowAction;
-import org.opensearch.flowframework.transport.CreateWorkflowAction;
-import org.opensearch.flowframework.transport.CreateWorkflowTransportAction;
-import org.opensearch.flowframework.transport.ProvisionWorkflowAction;
-import org.opensearch.flowframework.transport.ProvisionWorkflowTransportAction;
+import org.opensearch.flowframework.rest.RestSearchWorkflowAction;
+import org.opensearch.flowframework.transport.*;
 import org.opensearch.flowframework.workflow.WorkflowProcessSorter;
 import org.opensearch.flowframework.workflow.WorkflowStepFactory;
 import org.opensearch.ml.client.MachineLearningNodeClient;
@@ -104,7 +102,8 @@ public class FlowFrameworkPlugin extends Plugin implements ActionPlugin {
     ) {
         return ImmutableList.of(
             new RestCreateWorkflowAction(flowFrameworkFeatureEnabledSetting),
-            new RestProvisionWorkflowAction(flowFrameworkFeatureEnabledSetting)
+            new RestProvisionWorkflowAction(flowFrameworkFeatureEnabledSetting),
+            new RestSearchWorkflowAction(flowFrameworkFeatureEnabledSetting)
         );
     }
 
@@ -112,7 +111,8 @@ public class FlowFrameworkPlugin extends Plugin implements ActionPlugin {
     public List<ActionHandler<? extends ActionRequest, ? extends ActionResponse>> getActions() {
         return ImmutableList.of(
             new ActionHandler<>(CreateWorkflowAction.INSTANCE, CreateWorkflowTransportAction.class),
-            new ActionHandler<>(ProvisionWorkflowAction.INSTANCE, ProvisionWorkflowTransportAction.class)
+            new ActionHandler<>(ProvisionWorkflowAction.INSTANCE, ProvisionWorkflowTransportAction.class),
+            new ActionHandler<>(SearchWorkflowAction.INSTANCE, SearchWorkflowTransportAction.class)
         );
     }
 
