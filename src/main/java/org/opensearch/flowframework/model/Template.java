@@ -12,6 +12,7 @@ import org.opensearch.Version;
 import org.opensearch.common.xcontent.LoggingDeprecationHandler;
 import org.opensearch.common.xcontent.json.JsonXContent;
 import org.opensearch.common.xcontent.yaml.YamlXContent;
+import org.opensearch.commons.authuser.User;
 import org.opensearch.core.xcontent.NamedXContentRegistry;
 import org.opensearch.core.xcontent.ToXContentObject;
 import org.opensearch.core.xcontent.XContentBuilder;
@@ -29,6 +30,7 @@ import static org.opensearch.flowframework.common.CommonValue.COMPATIBILITY_FIEL
 import static org.opensearch.flowframework.common.CommonValue.DESCRIPTION_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.NAME_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.TEMPLATE_FIELD;
+import static org.opensearch.flowframework.common.CommonValue.USER_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.USE_CASE_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.VERSION_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.WORKFLOWS_FIELD;
@@ -44,6 +46,7 @@ public class Template implements ToXContentObject {
     private final Version templateVersion;
     private final List<Version> compatibilityVersion;
     private final Map<String, Workflow> workflows;
+    private final User user;
 
     /**
      * Instantiate the object representing a use case template
@@ -54,6 +57,7 @@ public class Template implements ToXContentObject {
      * @param templateVersion The version of this template
      * @param compatibilityVersion OpenSearch version compatibility of this template
      * @param workflows Workflow graph definitions corresponding to the defined operations.
+     * @param user The user extracted from the thread context from the request
      */
     public Template(
         String name,
@@ -61,7 +65,8 @@ public class Template implements ToXContentObject {
         String useCase,
         Version templateVersion,
         List<Version> compatibilityVersion,
-        Map<String, Workflow> workflows
+        Map<String, Workflow> workflows,
+        User user
     ) {
         this.name = name;
         this.description = description;
@@ -69,6 +74,7 @@ public class Template implements ToXContentObject {
         this.templateVersion = templateVersion;
         this.compatibilityVersion = List.copyOf(compatibilityVersion);
         this.workflows = Map.copyOf(workflows);
+        this.user = user;
     }
 
     @Override
@@ -98,6 +104,9 @@ public class Template implements ToXContentObject {
             xContentBuilder.field(e.getKey(), e.getValue(), params);
         }
         xContentBuilder.endObject();
+        if (user != null) {
+            xContentBuilder.field(USER_FIELD, user);
+        }
 
         return xContentBuilder.endObject();
     }
@@ -116,6 +125,7 @@ public class Template implements ToXContentObject {
         Version templateVersion = null;
         List<Version> compatibilityVersion = new ArrayList<>();
         Map<String, Workflow> workflows = new HashMap<>();
+        User user = null;
 
         ensureExpectedToken(XContentParser.Token.START_OBJECT, parser.currentToken(), parser);
         while (parser.nextToken() != XContentParser.Token.END_OBJECT) {
@@ -159,6 +169,9 @@ public class Template implements ToXContentObject {
                         workflows.put(workflowFieldName, Workflow.parse(parser));
                     }
                     break;
+                case USER_FIELD:
+                    user = User.parse(parser);
+                    break;
                 default:
                     throw new IOException("Unable to parse field [" + fieldName + "] in a template object.");
             }
@@ -167,7 +180,7 @@ public class Template implements ToXContentObject {
             throw new IOException("An template object requires a name.");
         }
 
-        return new Template(name, description, useCase, templateVersion, compatibilityVersion, workflows);
+        return new Template(name, description, useCase, templateVersion, compatibilityVersion, workflows, user);
     }
 
     /**
@@ -261,6 +274,14 @@ public class Template implements ToXContentObject {
      */
     public Map<String, Workflow> workflows() {
         return workflows;
+    }
+
+    /**
+     * User that created and owns this template
+     * @return the user
+     */
+    public User getUser() {
+        return user;
     }
 
     @Override

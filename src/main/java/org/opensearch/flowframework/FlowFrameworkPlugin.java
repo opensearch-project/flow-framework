@@ -24,14 +24,13 @@ import org.opensearch.core.common.io.stream.NamedWriteableRegistry;
 import org.opensearch.core.xcontent.NamedXContentRegistry;
 import org.opensearch.env.Environment;
 import org.opensearch.env.NodeEnvironment;
-import org.opensearch.flowframework.indices.GlobalContextHandler;
+import org.opensearch.flowframework.indices.FlowFrameworkIndicesHandler;
 import org.opensearch.flowframework.rest.RestCreateWorkflowAction;
 import org.opensearch.flowframework.rest.RestProvisionWorkflowAction;
 import org.opensearch.flowframework.transport.CreateWorkflowAction;
 import org.opensearch.flowframework.transport.CreateWorkflowTransportAction;
 import org.opensearch.flowframework.transport.ProvisionWorkflowAction;
 import org.opensearch.flowframework.transport.ProvisionWorkflowTransportAction;
-import org.opensearch.flowframework.workflow.CreateIndexStep;
 import org.opensearch.flowframework.workflow.WorkflowProcessSorter;
 import org.opensearch.flowframework.workflow.WorkflowStepFactory;
 import org.opensearch.ml.client.MachineLearningNodeClient;
@@ -81,10 +80,9 @@ public class FlowFrameworkPlugin extends Plugin implements ActionPlugin {
         WorkflowStepFactory workflowStepFactory = new WorkflowStepFactory(clusterService, client, mlClient);
         WorkflowProcessSorter workflowProcessSorter = new WorkflowProcessSorter(workflowStepFactory, threadPool);
 
-        // TODO : Refactor, move system index creation/associated methods outside of the CreateIndexStep
-        GlobalContextHandler globalContextHandler = new GlobalContextHandler(client, new CreateIndexStep(clusterService, client));
+        FlowFrameworkIndicesHandler flowFrameworkIndicesHandler = new FlowFrameworkIndicesHandler(client, clusterService);
 
-        return ImmutableList.of(workflowStepFactory, workflowProcessSorter, globalContextHandler);
+        return ImmutableList.of(workflowStepFactory, workflowProcessSorter, flowFrameworkIndicesHandler);
     }
 
     @Override

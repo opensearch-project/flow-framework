@@ -42,7 +42,8 @@ public class TemplateTests extends OpenSearchTestCase {
             "test use case",
             templateVersion,
             compatibilityVersion,
-            Map.of("workflow", workflow)
+            Map.of("workflow", workflow),
+            null
         );
 
         assertEquals("test", template.name());
