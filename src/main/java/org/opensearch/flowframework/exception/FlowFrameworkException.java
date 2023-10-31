@@ -9,11 +9,15 @@
 package org.opensearch.flowframework.exception;
 
 import org.opensearch.core.rest.RestStatus;
+import org.opensearch.core.xcontent.ToXContentObject;
+import org.opensearch.core.xcontent.XContentBuilder;
+
+import java.io.IOException;
 
 /**
  * Representation of Flow Framework Exceptions
  */
-public class FlowFrameworkException extends RuntimeException {
+public class FlowFrameworkException extends RuntimeException implements ToXContentObject {
 
     private static final long serialVersionUID = 1L;
 
@@ -59,5 +63,10 @@ public class FlowFrameworkException extends RuntimeException {
      */
     public RestStatus getRestStatus() {
         return restStatus;
+    }
+
+    @Override
+    public XContentBuilder toXContent(XContentBuilder builder, Params params) throws IOException {
+        return builder.startObject().field("error", "Request failed with exception: [" + this.getMessage() + "]").endObject();
     }
 }

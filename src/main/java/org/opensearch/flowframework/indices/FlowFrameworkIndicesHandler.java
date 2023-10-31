@@ -29,6 +29,7 @@ import org.opensearch.common.xcontent.XContentFactory;
 import org.opensearch.common.xcontent.XContentType;
 import org.opensearch.commons.authuser.User;
 import org.opensearch.core.action.ActionListener;
+import org.opensearch.core.rest.RestStatus;
 import org.opensearch.core.xcontent.ToXContent;
 import org.opensearch.core.xcontent.XContentBuilder;
 import org.opensearch.flowframework.exception.FlowFrameworkException;
@@ -148,7 +149,7 @@ public class FlowFrameworkIndicesHandler {
                     }
                 }, e -> {
                     logger.error("Failed to create index " + indexName, e);
-                    internalListener.onFailure(e);
+                    internalListener.onFailure(new FlowFrameworkException(e.getMessage(), INTERNAL_SERVER_ERROR));
                 });
                 CreateIndexRequest request = new CreateIndexRequest(indexName).mapping(mapping).settings(indexSettings);
                 client.admin().indices().create(request, actionListener);
@@ -182,7 +183,9 @@ public class FlowFrameworkIndicesHandler {
                                                     }
                                                 }, exception -> {
                                                     logger.error("Failed to update index setting for: " + indexName, exception);
-                                                    internalListener.onFailure(exception);
+                                                    internalListener.onFailure(
+                                                        new FlowFrameworkException(exception.getMessage(), INTERNAL_SERVER_ERROR)
+                                                    );
                                                 }));
                                         } else {
                                             internalListener.onFailure(
@@ -191,7 +194,9 @@ public class FlowFrameworkIndicesHandler {
                                         }
                                     }, exception -> {
                                         logger.error("Failed to update index " + indexName, exception);
-                                        internalListener.onFailure(exception);
+                                        internalListener.onFailure(
+                                            new FlowFrameworkException(exception.getMessage(), INTERNAL_SERVER_ERROR)
+                                        );
                                     })
                                 );
                         } else {
@@ -201,7 +206,7 @@ public class FlowFrameworkIndicesHandler {
                         }
                     }, e -> {
                         logger.error("Failed to update index mapping", e);
-                        internalListener.onFailure(e);
+                        internalListener.onFailure(new FlowFrameworkException(e.getMessage(), INTERNAL_SERVER_ERROR));
                     }));
                 } else {
                     // No need to update index if it's already updated.
@@ -210,7 +215,7 @@ public class FlowFrameworkIndicesHandler {
             }
         } catch (Exception e) {
             logger.error("Failed to init index " + indexName, e);
-            listener.onFailure(e);
+            listener.onFailure(new FlowFrameworkException(e.getMessage(), INTERNAL_SERVER_ERROR));
         }
     }
 
@@ -273,7 +278,7 @@ public class FlowFrameworkIndicesHandler {
                 client.index(request, ActionListener.runBefore(listener, () -> context.restore()));
             } catch (Exception e) {
                 logger.error("Failed to index global_context index");
-                listener.onFailure(e);
+                listener.onFailure(new FlowFrameworkException(e.getMessage(), INTERNAL_SERVER_ERROR));
             }
         }, e -> {
             logger.error("Failed to create global_context index", e);
@@ -311,12 +316,12 @@ public class FlowFrameworkIndicesHandler {
                 client.index(request, ActionListener.runBefore(listener, () -> context.restore()));
             } catch (Exception e) {
                 logger.error("Failed to put state index document", e);
-                listener.onFailure(e);
+                listener.onFailure(new FlowFrameworkException(e.getMessage(), INTERNAL_SERVER_ERROR));
             }
 
         }, e -> {
             logger.error("Failed to create global_context index", e);
-            listener.onFailure(e);
+            listener.onFailure(new FlowFrameworkException(e.getMessage(), INTERNAL_SERVER_ERROR));
         }));
     }
 
@@ -332,7 +337,7 @@ public class FlowFrameworkIndicesHandler {
                 + documentId
                 + ", global_context index does not exist.";
             logger.error(exceptionMessage);
-            listener.onFailure(new Exception(exceptionMessage));
+            listener.onFailure(new FlowFrameworkException(exceptionMessage, RestStatus.BAD_REQUEST));
         } else {
             IndexRequest request = new IndexRequest(GLOBAL_CONTEXT_INDEX).id(documentId);
             try (
@@ -344,7 +349,7 @@ public class FlowFrameworkIndicesHandler {
                 client.index(request, ActionListener.runBefore(listener, () -> context.restore()));
             } catch (Exception e) {
                 logger.error("Failed to update global_context entry : {}. {}", documentId, e.getMessage());
-                listener.onFailure(e);
+                listener.onFailure(new FlowFrameworkException(e.getMessage(), INTERNAL_SERVER_ERROR));
             }
         }
     }
@@ -365,7 +370,7 @@ public class FlowFrameworkIndicesHandler {
         if (!doesIndexExist(indexName)) {
             String exceptionMessage = "Failed to update document for given workflow due to missing " + indexName + " index";
             logger.error(exceptionMessage);
-            listener.onFailure(new Exception(exceptionMessage));
+            listener.onFailure(new FlowFrameworkException(exceptionMessage, RestStatus.BAD_REQUEST));
         } else {
             try (ThreadContext.StoredContext context = client.threadPool().getThreadContext().stashContext()) {
                 UpdateRequest updateRequest = new UpdateRequest(indexName, documentId);
@@ -377,7 +382,7 @@ public class FlowFrameworkIndicesHandler {
                 client.update(updateRequest, ActionListener.runBefore(listener, () -> context.restore()));
             } catch (Exception e) {
                 logger.error("Failed to update {} entry : {}. {}", indexName, documentId, e.getMessage());
-                listener.onFailure(e);
+                listener.onFailure(new FlowFrameworkException(e.getMessage(), INTERNAL_SERVER_ERROR));
             }
         }
     }

@@ -83,12 +83,21 @@ public class CreateWorkflowTransportAction extends HandledTransportAction<Workfl
                         listener.onResponse(new WorkflowResponse(globalContextResponse.getId()));
                     }, exception -> {
                         logger.error("Failed to save workflow state : {}", exception.getMessage());
-                        listener.onFailure(new FlowFrameworkException(exception.getMessage(), RestStatus.BAD_REQUEST));
+                        if (exception instanceof FlowFrameworkException) {
+                            listener.onFailure(exception);
+                        } else {
+                            listener.onFailure(new FlowFrameworkException(exception.getMessage(), RestStatus.BAD_REQUEST));
+                        }
                     })
                 );
             }, exception -> {
                 logger.error("Failed to save use case template : {}", exception.getMessage());
-                listener.onFailure(new FlowFrameworkException(exception.getMessage(), RestStatus.INTERNAL_SERVER_ERROR));
+                if (exception instanceof FlowFrameworkException) {
+                    listener.onFailure(exception);
+                } else {
+                    listener.onFailure(new FlowFrameworkException(exception.getMessage(), RestStatus.INTERNAL_SERVER_ERROR));
+                }
+
             }));
         } else {
             // Update existing entry, full document replacement
@@ -105,12 +114,21 @@ public class CreateWorkflowTransportAction extends HandledTransportAction<Workfl
                             listener.onResponse(new WorkflowResponse(request.getWorkflowId()));
                         }, exception -> {
                             logger.error("Failed to update workflow state : {}", exception.getMessage());
-                            listener.onFailure(new FlowFrameworkException(exception.getMessage(), RestStatus.BAD_REQUEST));
+                            if (exception instanceof FlowFrameworkException) {
+                                listener.onFailure(exception);
+                            } else {
+                                listener.onFailure(new FlowFrameworkException(exception.getMessage(), RestStatus.INTERNAL_SERVER_ERROR));
+                            }
                         })
                     );
                 }, exception -> {
                     logger.error("Failed to updated use case template {} : {}", request.getWorkflowId(), exception.getMessage());
-                    listener.onFailure(new FlowFrameworkException(exception.getMessage(), RestStatus.INTERNAL_SERVER_ERROR));
+                    if (exception instanceof FlowFrameworkException) {
+                        listener.onFailure(exception);
+                    } else {
+                        listener.onFailure(new FlowFrameworkException(exception.getMessage(), RestStatus.INTERNAL_SERVER_ERROR));
+                    }
+
                 })
             );
         }

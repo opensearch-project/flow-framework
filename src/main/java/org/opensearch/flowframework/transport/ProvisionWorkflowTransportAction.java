@@ -133,9 +133,9 @@ public class ProvisionWorkflowTransportAction extends HandledTransportAction<Wor
                 executeWorkflowAsync(workflowId, provisionProcessSequence);
 
             }, exception -> {
-                if (exception instanceof IllegalArgumentException) {
+                if (exception instanceof FlowFrameworkException) {
                     logger.error("Workflow validation failed for workflow : " + workflowId);
-                    listener.onFailure(new FlowFrameworkException(exception.getMessage(), RestStatus.BAD_REQUEST));
+                    listener.onFailure(exception);
                 } else {
                     logger.error("Failed to retrieve template from global context.", exception);
                     listener.onFailure(new FlowFrameworkException(exception.getMessage(), RestStatus.INTERNAL_SERVER_ERROR));

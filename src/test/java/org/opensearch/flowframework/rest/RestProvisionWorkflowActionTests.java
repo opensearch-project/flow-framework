@@ -12,13 +12,12 @@ import org.opensearch.client.node.NodeClient;
 import org.opensearch.core.common.bytes.BytesArray;
 import org.opensearch.core.rest.RestStatus;
 import org.opensearch.core.xcontent.MediaTypeRegistry;
-import org.opensearch.flowframework.exception.FlowFrameworkException;
 import org.opensearch.rest.RestHandler.Route;
 import org.opensearch.rest.RestRequest;
 import org.opensearch.test.OpenSearchTestCase;
+import org.opensearch.test.rest.FakeRestChannel;
 import org.opensearch.test.rest.FakeRestRequest;
 
-import java.io.IOException;
 import java.util.List;
 import java.util.Locale;
 
@@ -51,31 +50,35 @@ public class RestProvisionWorkflowActionTests extends OpenSearchTestCase {
         assertEquals(this.provisionWorkflowPath, routes.get(0).getPath());
     }
 
-    public void testNullWorkflowIdAndTemplate() throws IOException {
+    public void testNullWorkflowId() throws Exception {
 
-        // Request with no content or params
+        // Request with no params
         RestRequest request = new FakeRestRequest.Builder(xContentRegistry()).withMethod(RestRequest.Method.POST)
             .withPath(this.provisionWorkflowPath)
             .build();
 
-        FlowFrameworkException ex = expectThrows(FlowFrameworkException.class, () -> {
-            provisionWorkflowRestAction.prepareRequest(request, nodeClient);
-        });
-        assertEquals("workflow_id cannot be null", ex.getMessage());
-        assertEquals(RestStatus.BAD_REQUEST, ex.getRestStatus());
+        FakeRestChannel channel = new FakeRestChannel(request, true, 1);
+        provisionWorkflowRestAction.handleRequest(request, channel, nodeClient);
+
+        assertEquals(1, channel.errors().get());
+        assertEquals(RestStatus.BAD_REQUEST, channel.capturedResponse().status());
+        assertTrue(channel.capturedResponse().content().utf8ToString().contains("workflow_id cannot be null"));
     }
 
-    public void testInvalidRequestWithContent() throws IOException {
+    public void testInvalidRequestWithContent() {
         RestRequest request = new FakeRestRequest.Builder(xContentRegistry()).withMethod(RestRequest.Method.POST)
             .withPath(this.provisionWorkflowPath)
             .withContent(new BytesArray("request body"), MediaTypeRegistry.JSON)
             .build();
 
-        FlowFrameworkException ex = expectThrows(FlowFrameworkException.class, () -> {
-            provisionWorkflowRestAction.prepareRequest(request, nodeClient);
+        FakeRestChannel channel = new FakeRestChannel(request, false, 1);
+        IllegalArgumentException ex = expectThrows(IllegalArgumentException.class, () -> {
+            provisionWorkflowRestAction.handleRequest(request, channel, nodeClient);
         });
-        assertEquals("Invalid request format", ex.getMessage());
-        assertEquals(RestStatus.BAD_REQUEST, ex.getRestStatus());
+        assertEquals(
+            "request [POST /_plugins/_flow_framework/workflow/{workflow_id}/_provision] does not support having a body",
+            ex.getMessage()
+        );
     }
 
 }

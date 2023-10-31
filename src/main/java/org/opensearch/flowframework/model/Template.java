@@ -177,7 +177,7 @@ public class Template implements ToXContentObject {
             }
         }
         if (name == null) {
-            throw new IOException("An template object requires a name.");
+            throw new IOException("A template object requires a name.");
         }
 
         return new Template(name, description, useCase, templateVersion, compatibilityVersion, workflows, user);
