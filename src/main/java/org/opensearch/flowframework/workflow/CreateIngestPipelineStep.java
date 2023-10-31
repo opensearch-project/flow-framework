@@ -26,6 +26,16 @@ import java.util.Map.Entry;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Stream;
 
+import static org.opensearch.flowframework.common.CommonValue.DESCRIPTION_FIELD;
+import static org.opensearch.flowframework.common.CommonValue.FIELD_MAP;
+import static org.opensearch.flowframework.common.CommonValue.ID;
+import static org.opensearch.flowframework.common.CommonValue.INPUT_FIELD_NAME;
+import static org.opensearch.flowframework.common.CommonValue.MODEL_ID;
+import static org.opensearch.flowframework.common.CommonValue.OUTPUT_FIELD_NAME;
+import static org.opensearch.flowframework.common.CommonValue.PIPELINE_ID;
+import static org.opensearch.flowframework.common.CommonValue.PROCESSORS;
+import static org.opensearch.flowframework.common.CommonValue.TYPE;
+
 /**
  * Workflow step to create an ingest pipeline
  */
@@ -35,18 +45,6 @@ public class CreateIngestPipelineStep implements WorkflowStep {
 
     /** The name of this step, used as a key in the template and the {@link WorkflowStepFactory} */
     static final String NAME = "create_ingest_pipeline";
-
-    // Common pipeline configuration fields
-    private static final String PIPELINE_ID_FIELD = "id";
-    private static final String DESCRIPTION_FIELD = "description";
-    private static final String PROCESSORS_FIELD = "processors";
-    private static final String TYPE_FIELD = "type";
-
-    // Temporary text embedding processor fields
-    private static final String FIELD_MAP = "field_map";
-    private static final String MODEL_ID_FIELD = "model_id";
-    private static final String INPUT_FIELD = "input_field_name";
-    private static final String OUTPUT_FIELD = "output_field_name";
 
     // Client to store a pipeline in the cluster state
     private final ClusterAdminClient clusterAdminClient;
@@ -80,23 +78,23 @@ public class CreateIngestPipelineStep implements WorkflowStep {
 
             for (Entry<String, Object> entry : content.entrySet()) {
                 switch (entry.getKey()) {
-                    case PIPELINE_ID_FIELD:
-                        pipelineId = (String) content.get(PIPELINE_ID_FIELD);
+                    case ID:
+                        pipelineId = (String) content.get(ID);
                         break;
                     case DESCRIPTION_FIELD:
                         description = (String) content.get(DESCRIPTION_FIELD);
                         break;
-                    case TYPE_FIELD:
-                        type = (String) content.get(TYPE_FIELD);
+                    case TYPE:
+                        type = (String) content.get(TYPE);
                         break;
-                    case MODEL_ID_FIELD:
-                        modelId = (String) content.get(MODEL_ID_FIELD);
+                    case MODEL_ID:
+                        modelId = (String) content.get(MODEL_ID);
                         break;
-                    case INPUT_FIELD:
-                        inputFieldName = (String) content.get(INPUT_FIELD);
+                    case INPUT_FIELD_NAME:
+                        inputFieldName = (String) content.get(INPUT_FIELD_NAME);
                         break;
-                    case OUTPUT_FIELD:
-                        outputFieldName = (String) content.get(OUTPUT_FIELD);
+                    case OUTPUT_FIELD_NAME:
+                        outputFieldName = (String) content.get(OUTPUT_FIELD_NAME);
                         break;
                     default:
                         break;
@@ -127,7 +125,7 @@ public class CreateIngestPipelineStep implements WorkflowStep {
                 logger.info("Created ingest pipeline : " + putPipelineRequest.getId());
 
                 // PutPipelineRequest returns only an AcknowledgeResponse, returning pipelineId instead
-                createIngestPipelineFuture.complete(new WorkflowData(Map.of("pipeline_id", putPipelineRequest.getId())));
+                createIngestPipelineFuture.complete(new WorkflowData(Map.of(PIPELINE_ID, putPipelineRequest.getId())));
 
                 // TODO : Use node client to index response data to global context (pending global context index implementation)
 
@@ -178,10 +176,10 @@ public class CreateIngestPipelineStep implements WorkflowStep {
         return XContentFactory.jsonBuilder()
             .startObject()
             .field(DESCRIPTION_FIELD, description)
-            .startArray(PROCESSORS_FIELD)
+            .startArray(PROCESSORS)
             .startObject()
             .startObject(type)
-            .field(MODEL_ID_FIELD, modelId)
+            .field(MODEL_ID, modelId)
             .startObject(FIELD_MAP)
             .field(inputFieldName, outputFieldName)
             .endObject()
