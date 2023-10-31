@@ -16,6 +16,7 @@ import org.opensearch.threadpool.ThreadPool;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeoutException;
 import java.util.stream.Collectors;
@@ -30,6 +31,7 @@ public class ProcessNode {
 
     private final String id;
     private final WorkflowStep workflowStep;
+    private final Map<String, String> previousNodeInputs;
     private final WorkflowData input;
     private final List<ProcessNode> predecessors;
     private final ThreadPool threadPool;
@@ -42,6 +44,7 @@ public class ProcessNode {
      *
      * @param id A string identifying the workflow step
      * @param workflowStep A java class implementing {@link WorkflowStep} to be executed when it's this node's turn.
+     * @param previousNodeInputs A map of expected inputs coming from predecessor nodes used in graph validation
      * @param input Input required by the node encoded in a {@link WorkflowData} instance.
      * @param predecessors Nodes preceding this one in the workflow
      * @param threadPool The OpenSearch thread pool
@@ -50,6 +53,7 @@ public class ProcessNode {
     public ProcessNode(
         String id,
         WorkflowStep workflowStep,
+        Map<String, String> previousNodeInputs,
         WorkflowData input,
         List<ProcessNode> predecessors,
         ThreadPool threadPool,
@@ -57,6 +61,7 @@ public class ProcessNode {
     ) {
         this.id = id;
         this.workflowStep = workflowStep;
+        this.previousNodeInputs = previousNodeInputs;
         this.input = input;
         this.predecessors = predecessors;
         this.threadPool = threadPool;
@@ -77,6 +82,14 @@ public class ProcessNode {
      */
     public WorkflowStep workflowStep() {
         return workflowStep;
+    }
+
+    /**
+     * Returns the node's expected predecessor node input
+     * @return the expected predecessor node inputs
+     */
+    public Map<String, String> previousNodeInputs() {
+        return previousNodeInputs;
     }
 
     /**

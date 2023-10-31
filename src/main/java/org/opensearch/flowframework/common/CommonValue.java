@@ -61,6 +61,22 @@ public class CommonValue {
     /** The provision workflow thread pool name */
     public static final String PROVISION_THREAD_POOL = "opensearch_workflow_provision";
 
+    /** Index name field */
+    public static final String INDEX_NAME = "index_name";
+    /** Type field */
+    public static final String TYPE = "type";
+    /** ID Field */
+    public static final String ID = "id";
+    /** Pipeline Id field */
+    public static final String PIPELINE_ID = "pipeline_id";
+    /** Processors field */
+    public static final String PROCESSORS = "processors";
+    /** Field map field */
+    public static final String FIELD_MAP = "field_map";
+    /** Input Field Name field */
+    public static final String INPUT_FIELD_NAME = "input_field_name";
+    /** Output Field Name field */
+    public static final String OUTPUT_FIELD_NAME = "output_field_name";
     /** Model Id field */
     public static final String MODEL_ID = "model_id";
     /** Function Name field */

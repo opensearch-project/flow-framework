@@ -25,6 +25,9 @@ import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import static org.opensearch.flowframework.common.CommonValue.INDEX_NAME;
+import static org.opensearch.flowframework.common.CommonValue.TYPE;
+
 /**
  * Step to create an index
  */
@@ -58,7 +61,7 @@ public class CreateIndexStep implements WorkflowStep {
             @Override
             public void onResponse(CreateIndexResponse createIndexResponse) {
                 logger.info("created index: {}", createIndexResponse.index());
-                future.complete(new WorkflowData(Map.of("index-name", createIndexResponse.index())));
+                future.complete(new WorkflowData(Map.of(INDEX_NAME, createIndexResponse.index())));
             }
 
             @Override
@@ -74,8 +77,8 @@ public class CreateIndexStep implements WorkflowStep {
 
         for (WorkflowData workflowData : data) {
             Map<String, Object> content = workflowData.getContent();
-            index = (String) content.get("index-name");
-            type = (String) content.get("type");
+            index = (String) content.get(INDEX_NAME);
+            type = (String) content.get(TYPE);
             if (index != null && type != null && settings != null) {
                 break;
             }

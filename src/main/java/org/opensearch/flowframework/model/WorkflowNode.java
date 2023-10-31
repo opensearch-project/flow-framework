@@ -39,8 +39,10 @@ public class WorkflowNode implements ToXContentObject {
     public static final String ID_FIELD = "id";
     /** The template field name for node type */
     public static final String TYPE_FIELD = "type";
+    /** The template field name for previous node inputs */
+    public static final String PREVIOUS_NODE_INPUTS_FIELD = "previous_node_inputs";
     /** The template field name for node inputs */
-    public static final String INPUTS_FIELD = "inputs";
+    public static final String USER_INPUTS_FIELD = "user_inputs";
     /** The field defining processors in the inputs for search and ingest pipelines */
     public static final String PROCESSORS_FIELD = "processors";
     /** The field defining the timeout value for this node */
@@ -50,19 +52,22 @@ public class WorkflowNode implements ToXContentObject {
 
     private final String id; // unique id
     private final String type; // maps to a WorkflowStep
-    private final Map<String, Object> inputs; // maps to WorkflowData
+    private final Map<String, String> previousNodeInputs;
+    private final Map<String, Object> userInputs; // maps to WorkflowData
 
     /**
      * Create this node with the id and type, and any user input.
      *
      * @param id A unique string identifying this node
      * @param type The type of {@link WorkflowStep} to create for the corresponding {@link ProcessNode}
-     * @param inputs Optional input to populate params in {@link WorkflowData}
+     * @param previousNodeInputs Optional input to identify inputs coming from predecessor nodes
+     * @param userInputs Optional input to populate params in {@link WorkflowData}
      */
-    public WorkflowNode(String id, String type, Map<String, Object> inputs) {
+    public WorkflowNode(String id, String type, Map<String, String> previousNodeInputs, Map<String, Object> userInputs) {
         this.id = id;
         this.type = type;
-        this.inputs = Map.copyOf(inputs);
+        this.previousNodeInputs = Map.copyOf(previousNodeInputs);
+        this.userInputs = Map.copyOf(userInputs);
     }
 
     @Override
@@ -71,8 +76,11 @@ public class WorkflowNode implements ToXContentObject {
         xContentBuilder.field(ID_FIELD, this.id);
         xContentBuilder.field(TYPE_FIELD, this.type);
 
-        xContentBuilder.startObject(INPUTS_FIELD);
-        for (Entry<String, Object> e : inputs.entrySet()) {
+        xContentBuilder.field(PREVIOUS_NODE_INPUTS_FIELD);
+        buildStringToStringMap(xContentBuilder, previousNodeInputs);
+
+        xContentBuilder.startObject(USER_INPUTS_FIELD);
+        for (Entry<String, Object> e : userInputs.entrySet()) {
             xContentBuilder.field(e.getKey());
             if (e.getValue() instanceof String) {
                 xContentBuilder.value(e.getValue());
@@ -107,7 +115,8 @@ public class WorkflowNode implements ToXContentObject {
     public static WorkflowNode parse(XContentParser parser) throws IOException {
         String id = null;
         String type = null;
-        Map<String, Object> inputs = new HashMap<>();
+        Map<String, String> previousNodeInputs = new HashMap<>();
+        Map<String, Object> userInputs = new HashMap<>();
 
         ensureExpectedToken(XContentParser.Token.START_OBJECT, parser.currentToken(), parser);
         while (parser.nextToken() != XContentParser.Token.END_OBJECT) {
@@ -120,16 +129,19 @@ public class WorkflowNode implements ToXContentObject {
                 case TYPE_FIELD:
                     type = parser.text();
                     break;
-                case INPUTS_FIELD:
+                case PREVIOUS_NODE_INPUTS_FIELD:
+                    previousNodeInputs = parseStringToStringMap(parser);
+                    break;
+                case USER_INPUTS_FIELD:
                     ensureExpectedToken(XContentParser.Token.START_OBJECT, parser.currentToken(), parser);
                     while (parser.nextToken() != XContentParser.Token.END_OBJECT) {
                         String inputFieldName = parser.currentName();
                         switch (parser.nextToken()) {
                             case VALUE_STRING:
-                                inputs.put(inputFieldName, parser.text());
+                                userInputs.put(inputFieldName, parser.text());
                                 break;
                             case START_OBJECT:
-                                inputs.put(inputFieldName, parseStringToStringMap(parser));
+                                userInputs.put(inputFieldName, parseStringToStringMap(parser));
                                 break;
                             case START_ARRAY:
                                 if (PROCESSORS_FIELD.equals(inputFieldName)) {
@@ -137,13 +149,13 @@ public class WorkflowNode implements ToXContentObject {
                                     while (parser.nextToken() != XContentParser.Token.END_ARRAY) {
                                         processorList.add(PipelineProcessor.parse(parser));
                                     }
-                                    inputs.put(inputFieldName, processorList.toArray(new PipelineProcessor[0]));
+                                    userInputs.put(inputFieldName, processorList.toArray(new PipelineProcessor[0]));
                                 } else {
                                     List<Map<String, String>> mapList = new ArrayList<>();
                                     while (parser.nextToken() != XContentParser.Token.END_ARRAY) {
                                         mapList.add(parseStringToStringMap(parser));
                                     }
-                                    inputs.put(inputFieldName, mapList.toArray(new Map[0]));
+                                    userInputs.put(inputFieldName, mapList.toArray(new Map[0]));
                                 }
                                 break;
                             default:
@@ -159,7 +171,7 @@ public class WorkflowNode implements ToXContentObject {
             throw new IOException("An node object requires both an id and type field.");
         }
 
-        return new WorkflowNode(id, type, inputs);
+        return new WorkflowNode(id, type, previousNodeInputs, userInputs);
     }
 
     /**
@@ -179,11 +191,19 @@ public class WorkflowNode implements ToXContentObject {
     }
 
     /**
-     * Return this node's input data
+     * Return this node's user input data
      * @return the inputs
      */
-    public Map<String, Object> inputs() {
-        return inputs;
+    public Map<String, Object> userInputs() {
+        return userInputs;
+    }
+
+    /**
+     * Return this node's predecessor inputs
+     * @return the inputs
+     */
+    public Map<String, String> previousNodeInputs() {
+        return previousNodeInputs;
     }
 
     @Override
