@@ -57,4 +57,12 @@ public class WorkflowStepFactory {
         }
         throw new FlowFrameworkException("Workflow step type [" + type + "] is not implemented.", RestStatus.NOT_IMPLEMENTED);
     }
+
+    /**
+     * Gets the step map
+     * @return the step map
+     */
+    public Map<String, WorkflowStep> getStepMap() {
+        return Map.copyOf(this.stepMap);
+    }
 }

@@ -13,7 +13,10 @@ package org.opensearch.flowframework.model;
  */
 // TODO: transfer this to more detailed array for each step
 public enum ProvisioningProgress {
+    /** Not Started State */
     NOT_STARTED,
+    /** In Progress State */
     IN_PROGRESS,
+    /** Done State */
     DONE
 }

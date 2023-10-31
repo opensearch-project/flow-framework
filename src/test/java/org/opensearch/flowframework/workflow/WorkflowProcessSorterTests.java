@@ -16,6 +16,8 @@ import org.opensearch.core.xcontent.XContentParser;
 import org.opensearch.flowframework.exception.FlowFrameworkException;
 import org.opensearch.flowframework.model.TemplateTestJsonUtil;
 import org.opensearch.flowframework.model.Workflow;
+import org.opensearch.flowframework.model.WorkflowEdge;
+import org.opensearch.flowframework.model.WorkflowNode;
 import org.opensearch.ml.client.MachineLearningNodeClient;
 import org.opensearch.test.OpenSearchTestCase;
 import org.opensearch.threadpool.TestThreadPool;
@@ -26,6 +28,7 @@ import org.junit.BeforeClass;
 import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
@@ -207,5 +210,69 @@ public class WorkflowProcessSorterTests extends OpenSearchTestCase {
         );
         assertEquals("Workflow step type [unimplemented_step] is not implemented.", ex.getMessage());
         assertEquals(RestStatus.NOT_IMPLEMENTED, ((FlowFrameworkException) ex).getRestStatus());
+    }
+
+    public void testSuccessfulGraphValidation() throws Exception {
+        WorkflowNode createConnector = new WorkflowNode(
+            "workflow_step_1",
+            CreateConnectorStep.NAME,
+            Map.of(),
+            Map.ofEntries(
+                Map.entry("name", ""),
+                Map.entry("description", ""),
+                Map.entry("version", ""),
+                Map.entry("protocol", ""),
+                Map.entry("parameters", ""),
+                Map.entry("credentials", ""),
+                Map.entry("actions", "")
+            )
+        );
+        WorkflowNode registerModel = new WorkflowNode(
+            "workflow_step_2",
+            RegisterModelStep.NAME,
+            Map.ofEntries(Map.entry("workflow_step_1", "connector_id")),
+            Map.ofEntries(Map.entry("name", "name"), Map.entry("function_name", "remote"), Map.entry("description", "description"))
+        );
+        WorkflowNode deployModel = new WorkflowNode(
+            "workflow_step_3",
+            DeployModelStep.NAME,
+            Map.ofEntries(Map.entry("workflow_step_2", "model_id")),
+            Map.of()
+        );
+
+        WorkflowEdge edge1 = new WorkflowEdge(createConnector.id(), registerModel.id());
+        WorkflowEdge edge2 = new WorkflowEdge(registerModel.id(), deployModel.id());
+
+        Workflow workflow = new Workflow(Map.of(), List.of(createConnector, registerModel, deployModel), List.of(edge1, edge2));
+
+        List<ProcessNode> sortedProcessNodes = workflowProcessSorter.sortProcessNodes(workflow);
+        workflowProcessSorter.validateGraph(sortedProcessNodes);
+    }
+
+    public void testFailedGraphValidation() {
+
+        // Create Register Model workflow node with missing connector_id field
+        WorkflowNode registerModel = new WorkflowNode(
+            "workflow_step_1",
+            RegisterModelStep.NAME,
+            Map.of(),
+            Map.ofEntries(Map.entry("name", "name"), Map.entry("function_name", "remote"), Map.entry("description", "description"))
+        );
+        WorkflowNode deployModel = new WorkflowNode(
+            "workflow_step_2",
+            DeployModelStep.NAME,
+            Map.ofEntries(Map.entry("workflow_step_1", "model_id")),
+            Map.of()
+        );
+        WorkflowEdge edge = new WorkflowEdge(registerModel.id(), deployModel.id());
+        Workflow workflow = new Workflow(Map.of(), List.of(registerModel, deployModel), List.of(edge));
+
+        List<ProcessNode> sortedProcessNodes = workflowProcessSorter.sortProcessNodes(workflow);
+        IllegalArgumentException ex = expectThrows(
+            IllegalArgumentException.class,
+            () -> workflowProcessSorter.validateGraph(sortedProcessNodes)
+        );
+        assertEquals("Invalid graph, missing the following required inputs : [connector_id]", ex.getMessage());
+
     }
 }
