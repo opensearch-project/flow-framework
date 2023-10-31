@@ -10,10 +10,8 @@ package org.opensearch.flowframework.model;
 
 import com.google.common.base.Charsets;
 import com.google.common.io.Resources;
-import org.opensearch.common.xcontent.LoggingDeprecationHandler;
-import org.opensearch.common.xcontent.json.JsonXContent;
-import org.opensearch.core.xcontent.NamedXContentRegistry;
 import org.opensearch.core.xcontent.XContentParser;
+import org.opensearch.flowframework.util.ParseUtils;
 
 import java.io.IOException;
 import java.net.URL;
@@ -64,16 +62,9 @@ public class WorkflowValidator {
      * @throws IOException on failure to read and parse the json file
      */
     public static WorkflowValidator parse(String file) throws IOException {
-
         URL url = WorkflowValidator.class.getClassLoader().getResource(file);
         String json = Resources.toString(url, Charsets.UTF_8);
-        XContentParser parser = JsonXContent.jsonXContent.createParser(
-            NamedXContentRegistry.EMPTY,
-            LoggingDeprecationHandler.INSTANCE,
-            json
-        );
-        ensureExpectedToken(XContentParser.Token.START_OBJECT, parser.nextToken(), parser);
-        return parse(parser);
+        return parse(ParseUtils.jsonToParser(json));
     }
 
     /**
@@ -81,7 +72,7 @@ public class WorkflowValidator {
      * @return the map of WorkflowStepValidators
      */
     public Map<String, WorkflowStepValidator> getWorkflowStepValidators() {
-        return this.workflowStepValidators;
+        return Map.copyOf(this.workflowStepValidators);
     }
 
 }

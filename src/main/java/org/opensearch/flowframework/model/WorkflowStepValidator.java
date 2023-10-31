@@ -78,7 +78,7 @@ public class WorkflowStepValidator {
      * @return the inputs
      */
     public List<String> getInputs() {
-        return inputs;
+        return List.copyOf(inputs);
     }
 
     /**
@@ -86,6 +86,6 @@ public class WorkflowStepValidator {
      * @return the outputs
      */
     public List<String> getOutputs() {
-        return outputs;
+        return List.copyOf(outputs);
     }
 }

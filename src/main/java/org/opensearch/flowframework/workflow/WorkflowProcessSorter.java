@@ -125,7 +125,9 @@ public class WorkflowProcessSorter {
                 .collect(Collectors.toList());
 
             // Retrieve list of required inputs from the current process node and compare
-            List<String> expectedInputs = validator.getWorkflowStepValidators().get(processNode.workflowStep().getName()).getInputs();
+            List<String> expectedInputs = new ArrayList<String>(
+                validator.getWorkflowStepValidators().get(processNode.workflowStep().getName()).getInputs()
+            );
 
             if (!allInputs.containsAll(expectedInputs)) {
                 expectedInputs.removeAll(allInputs);

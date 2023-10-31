@@ -80,8 +80,8 @@ public class WorkflowValidatorTests extends OpenSearchTestCase {
         List<String> registeredWorkflowStepTypes = new ArrayList<String>(workflowStepFactory.getStepMap().keySet());
 
         // Check if each registered step has a corresponding validator definition
-        assertEquals(registeredWorkflowValidatorTypes, registeredWorkflowStepTypes);
-
+        assertTrue(registeredWorkflowStepTypes.containsAll(registeredWorkflowValidatorTypes));
+        assertTrue(registeredWorkflowValidatorTypes.containsAll(registeredWorkflowStepTypes));
     }
 
 }
