@@ -141,6 +141,7 @@ public class ProcessNode {
         if (this.future.isDone()) {
             throw new IllegalStateException("Process Node [" + this.id + "] already executed.");
         }
+
         CompletableFuture.runAsync(() -> {
             List<CompletableFuture<WorkflowData>> predFutures = predecessors.stream().map(p -> p.future()).collect(Collectors.toList());
             try {
@@ -165,9 +166,11 @@ public class ProcessNode {
                         }
                     }, this.nodeTimeout, ThreadPool.Names.SAME);
                 }
+                // record start time for this step.
                 CompletableFuture<WorkflowData> stepFuture = this.workflowStep.execute(input);
                 // If completed exceptionally, this is a no-op
                 future.complete(stepFuture.get());
+                // record end time passing workflow steps
                 if (delayExec != null) {
                     delayExec.cancel();
                 }

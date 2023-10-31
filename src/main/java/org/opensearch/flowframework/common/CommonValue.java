@@ -27,6 +27,13 @@ public class CommonValue {
     public static final String GLOBAL_CONTEXT_INDEX_MAPPING = "mappings/global-context.json";
     /** Global Context index mapping version */
     public static final Integer GLOBAL_CONTEXT_INDEX_VERSION = 1;
+    /** Workflow State Index Name */
+    public static final String WORKFLOW_STATE_INDEX = ".plugins-workflow-state";
+    /** Workflow State index mapping file path */
+    public static final String WORKFLOW_STATE_INDEX_MAPPING = "mappings/workflow-state.json";
+    /** Workflow State index mapping version */
+    public static final Integer WORKFLOW_STATE_INDEX_VERSION = 1;
+
     /** The template field name for template use case */
     public static final String USE_CASE_FIELD = "use_case";
     /** The template field name for template version */
@@ -35,6 +42,8 @@ public class CommonValue {
     public static final String COMPATIBILITY_FIELD = "compatibility";
     /** The template field name for template workflows */
     public static final String WORKFLOWS_FIELD = "workflows";
+    /** The template field name for the user who created the workflow **/
+    public static final String USER_FIELD = "user";
 
     /** The transport action name prefix */
     public static final String TRANSPORT_ACION_NAME_PREFIX = "cluster:admin/opensearch/flow_framework/";
@@ -86,4 +95,23 @@ public class CommonValue {
     public static final String MODEL_ACCESS_MODE = "access_mode";
     /** Add all backend roles */
     public static final String ADD_ALL_BACKEND_ROLES = "add_all_backend_roles";
+
+    /** The template field name for the associated workflowID **/
+    public static final String WORKFLOW_ID_FIELD = "workflow_id";
+    /** The template field name for the workflow error **/
+    public static final String ERROR_FIELD = "error";
+    /** The template field name for the workflow state **/
+    public static final String STATE_FIELD = "state";
+    /** The template field name for the workflow provisioning progress **/
+    public static final String PROVISIONING_PROGRESS_FIELD = "provisioning_progress";
+    /** The template field name for the workflow provisioning start time **/
+    public static final String PROVISION_START_TIME_FIELD = "provision_start_time";
+    /** The template field name for the workflow provisioning end time **/
+    public static final String PROVISION_END_TIME_FIELD = "provision_end_time";
+    /** The template field name for the workflow ui metadata **/
+    public static final String UI_METADATA_FIELD = "ui_metadata";
+    /** The template field name for template user outputs */
+    public static final String USER_OUTPUTS_FIELD = "user_outputs";
+    /** The template field name for template resources created */
+    public static final String RESOURCES_CREATED_FIELD = "resources_created";
 }

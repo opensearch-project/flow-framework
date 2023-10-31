@@ -12,6 +12,7 @@ import org.opensearch.Version;
 import org.opensearch.client.node.NodeClient;
 import org.opensearch.core.common.bytes.BytesArray;
 import org.opensearch.core.xcontent.MediaTypeRegistry;
+import org.opensearch.flowframework.TestHelpers;
 import org.opensearch.flowframework.model.Template;
 import org.opensearch.flowframework.model.Workflow;
 import org.opensearch.flowframework.model.WorkflowEdge;
@@ -56,7 +57,8 @@ public class RestCreateWorkflowActionTests extends OpenSearchTestCase {
             "use case",
             templateVersion,
             compatibilityVersions,
-            Map.of("workflow", workflow)
+            Map.of("workflow", workflow),
+            TestHelpers.randomUser()
         );
 
         // Invalid template configuration, wrong field name

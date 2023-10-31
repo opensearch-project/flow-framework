@@ -1,0 +1,41 @@
+{
+  "dynamic": false,
+  "_meta": {
+    "schema_version": 1
+  },
+  "properties": {
+    "schema_version": {
+      "type": "integer"
+    },
+    "workflow_id": {
+      "type": "keyword"
+    },
+    "error": {
+      "type": "text"
+    },
+    "state": {
+      "type": "keyword"
+    },
+    "provisioning_progress": {
+      "type": "keyword"
+    },
+    "provision_start_time": {
+      "type": "date",
+      "format": "strict_date_time||epoch_millis"
+    },
+    "provision_end_time": {
+      "type": "date",
+      "format": "strict_date_time||epoch_millis"
+    },
+    "user_outputs": {
+      "type": "object"
+    },
+    "resources_created": {
+      "type": "object"
+    },
+    "ui_metadata": {
+      "type": "object",
+      "enabled": false
+    }
+  }
+}

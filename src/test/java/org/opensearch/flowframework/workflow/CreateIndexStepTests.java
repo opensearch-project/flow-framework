@@ -10,21 +10,17 @@ package org.opensearch.flowframework.workflow;
 
 import org.opensearch.action.admin.indices.create.CreateIndexRequest;
 import org.opensearch.action.admin.indices.create.CreateIndexResponse;
-import org.opensearch.action.admin.indices.mapping.put.PutMappingRequest;
-import org.opensearch.action.support.master.AcknowledgedResponse;
 import org.opensearch.client.AdminClient;
 import org.opensearch.client.Client;
 import org.opensearch.client.IndicesAdminClient;
 import org.opensearch.cluster.ClusterName;
 import org.opensearch.cluster.ClusterState;
 import org.opensearch.cluster.metadata.IndexMetadata;
-import org.opensearch.cluster.metadata.MappingMetadata;
 import org.opensearch.cluster.metadata.Metadata;
 import org.opensearch.cluster.service.ClusterService;
 import org.opensearch.common.settings.Settings;
 import org.opensearch.common.util.concurrent.ThreadContext;
 import org.opensearch.core.action.ActionListener;
-import org.opensearch.flowframework.indices.FlowFrameworkIndex;
 import org.opensearch.test.OpenSearchTestCase;
 import org.opensearch.threadpool.ThreadPool;
 
@@ -41,7 +37,6 @@ import org.mockito.MockitoAnnotations;
 
 import static org.opensearch.flowframework.common.CommonValue.GLOBAL_CONTEXT_INDEX;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -121,88 +116,5 @@ public class CreateIndexStepTests extends OpenSearchTestCase {
         ExecutionException ex = assertThrows(ExecutionException.class, () -> future.get().getContent());
         assertTrue(ex.getCause() instanceof Exception);
         assertEquals("Failed to create an index", ex.getCause().getMessage());
-    }
-
-    public void testInitIndexIfAbsent_IndexNotPresent() {
-        when(metadata.hasIndex(FlowFrameworkIndex.GLOBAL_CONTEXT.getIndexName())).thenReturn(false);
-
-        @SuppressWarnings("unchecked")
-        ActionListener<Boolean> listener = mock(ActionListener.class);
-        createIndexStep.initIndexIfAbsent(FlowFrameworkIndex.GLOBAL_CONTEXT, listener);
-
-        verify(indicesAdminClient, times(1)).create(any(CreateIndexRequest.class), any());
-    }
-
-    public void testInitIndexIfAbsent_IndexExist() {
-        FlowFrameworkIndex index = FlowFrameworkIndex.GLOBAL_CONTEXT;
-        indexMappingUpdated.put(index.getIndexName(), new AtomicBoolean(false));
-
-        ClusterState mockClusterState = mock(ClusterState.class);
-        Metadata mockMetadata = mock(Metadata.class);
-        when(clusterService.state()).thenReturn(mockClusterState);
-        when(mockClusterState.metadata()).thenReturn(mockMetadata);
-        when(mockMetadata.hasIndex(index.getIndexName())).thenReturn(true);
-        @SuppressWarnings("unchecked")
-        ActionListener<Boolean> listener = mock(ActionListener.class);
-
-        IndexMetadata mockIndexMetadata = mock(IndexMetadata.class);
-        @SuppressWarnings("unchecked")
-        Map<String, IndexMetadata> mockIndices = mock(Map.class);
-        when(clusterService.state()).thenReturn(mockClusterState);
-        when(mockClusterState.getMetadata()).thenReturn(mockMetadata);
-        when(mockMetadata.indices()).thenReturn(mockIndices);
-        when(mockIndices.get(anyString())).thenReturn(mockIndexMetadata);
-        Map<String, Object> mockMapping = new HashMap<>();
-        Map<String, Object> mockMetaMapping = new HashMap<>();
-        mockMetaMapping.put(SCHEMA_VERSION_FIELD, 1);
-        mockMapping.put(META, mockMetaMapping);
-        MappingMetadata mockMappingMetadata = mock(MappingMetadata.class);
-        when(mockIndexMetadata.mapping()).thenReturn(mockMappingMetadata);
-        when(mockMappingMetadata.getSourceAsMap()).thenReturn(mockMapping);
-
-        createIndexStep.initIndexIfAbsent(index, listener);
-
-        ArgumentCaptor<PutMappingRequest> putMappingRequestArgumentCaptor = ArgumentCaptor.forClass(PutMappingRequest.class);
-        @SuppressWarnings({ "unchecked" })
-        ArgumentCaptor<ActionListener<AcknowledgedResponse>> listenerCaptor = ArgumentCaptor.forClass(ActionListener.class);
-        verify(indicesAdminClient, times(1)).putMapping(putMappingRequestArgumentCaptor.capture(), listenerCaptor.capture());
-        PutMappingRequest capturedRequest = putMappingRequestArgumentCaptor.getValue();
-        assertEquals(index.getIndexName(), capturedRequest.indices()[0]);
-    }
-
-    public void testInitIndexIfAbsent_IndexExist_returnFalse() {
-        FlowFrameworkIndex index = FlowFrameworkIndex.GLOBAL_CONTEXT;
-        indexMappingUpdated.put(index.getIndexName(), new AtomicBoolean(false));
-
-        ClusterState mockClusterState = mock(ClusterState.class);
-        Metadata mockMetadata = mock(Metadata.class);
-        when(clusterService.state()).thenReturn(mockClusterState);
-        when(mockClusterState.metadata()).thenReturn(mockMetadata);
-        when(mockMetadata.hasIndex(index.getIndexName())).thenReturn(true);
-
-        @SuppressWarnings("unchecked")
-        ActionListener<Boolean> listener = mock(ActionListener.class);
-        @SuppressWarnings("unchecked")
-        Map<String, IndexMetadata> mockIndices = mock(Map.class);
-        when(mockClusterState.getMetadata()).thenReturn(mockMetadata);
-        when(mockMetadata.indices()).thenReturn(mockIndices);
-        when(mockIndices.get(anyString())).thenReturn(null);
-
-        createIndexStep.initIndexIfAbsent(index, listener);
-        assertTrue(indexMappingUpdated.get(index.getIndexName()).get());
-    }
-
-    public void testDoesIndexExist() {
-        ClusterState mockClusterState = mock(ClusterState.class);
-        Metadata mockMetaData = mock(Metadata.class);
-        when(clusterService.state()).thenReturn(mockClusterState);
-        when(mockClusterState.metadata()).thenReturn(mockMetaData);
-
-        createIndexStep.doesIndexExist(GLOBAL_CONTEXT_INDEX);
-
-        ArgumentCaptor<String> indexExistsCaptor = ArgumentCaptor.forClass(String.class);
-        verify(mockMetaData, times(1)).hasIndex(indexExistsCaptor.capture());
-
-        assertEquals(GLOBAL_CONTEXT_INDEX, indexExistsCaptor.getValue());
     }
 }

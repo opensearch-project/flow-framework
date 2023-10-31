@@ -16,6 +16,7 @@ import org.opensearch.core.common.io.stream.BytesStreamInput;
 import org.opensearch.core.xcontent.MediaTypeRegistry;
 import org.opensearch.core.xcontent.ToXContent;
 import org.opensearch.core.xcontent.XContentBuilder;
+import org.opensearch.flowframework.TestHelpers;
 import org.opensearch.flowframework.model.Template;
 import org.opensearch.flowframework.model.Workflow;
 import org.opensearch.flowframework.model.WorkflowEdge;
@@ -48,7 +49,8 @@ public class WorkflowRequestResponseTests extends OpenSearchTestCase {
             "use case",
             templateVersion,
             compatibilityVersions,
-            Map.of("workflow", workflow)
+            Map.of("workflow", workflow),
+            TestHelpers.randomUser()
         );
     }
 
