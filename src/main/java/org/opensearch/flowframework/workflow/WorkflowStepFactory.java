@@ -10,6 +10,8 @@ package org.opensearch.flowframework.workflow;
 
 import org.opensearch.client.Client;
 import org.opensearch.cluster.service.ClusterService;
+import org.opensearch.core.rest.RestStatus;
+import org.opensearch.flowframework.exception.FlowFrameworkException;
 import org.opensearch.ml.client.MachineLearningNodeClient;
 
 import java.util.HashMap;
@@ -35,6 +37,7 @@ public class WorkflowStepFactory {
     }
 
     private void populateMap(ClusterService clusterService, Client client, MachineLearningNodeClient mlClient) {
+        stepMap.put(NoOpStep.NAME, new NoOpStep());
         stepMap.put(CreateIndexStep.NAME, new CreateIndexStep(clusterService, client));
         stepMap.put(CreateIngestPipelineStep.NAME, new CreateIngestPipelineStep(client));
         stepMap.put(RegisterModelStep.NAME, new RegisterModelStep(mlClient));
@@ -52,9 +55,7 @@ public class WorkflowStepFactory {
         if (stepMap.containsKey(type)) {
             return stepMap.get(type);
         }
-        // TODO: replace this with a FlowFrameworkException
-        // https://github.com/opensearch-project/opensearch-ai-flow-framework/pull/43
-        return stepMap.get("placeholder");
+        throw new FlowFrameworkException("Workflow step type [" + type + "] is not implemented.", RestStatus.NOT_IMPLEMENTED);
     }
 
     /**
