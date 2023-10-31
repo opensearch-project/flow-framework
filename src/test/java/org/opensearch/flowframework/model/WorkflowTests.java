@@ -23,8 +23,8 @@ public class WorkflowTests extends OpenSearchTestCase {
     }
 
     public void testWorkflow() throws IOException {
-        WorkflowNode nodeA = new WorkflowNode("A", "a-type", Map.of("foo", "bar"));
-        WorkflowNode nodeB = new WorkflowNode("B", "b-type", Map.of("baz", "qux"));
+        WorkflowNode nodeA = new WorkflowNode("A", "a-type", Map.of(), Map.of("foo", "bar"));
+        WorkflowNode nodeB = new WorkflowNode("B", "b-type", Map.of("A", "foo"), Map.of("baz", "qux"));
         WorkflowEdge edgeAB = new WorkflowEdge("A", "B");
         List<WorkflowNode> nodes = List.of(nodeA, nodeB);
         List<WorkflowEdge> edges = List.of(edgeAB);
@@ -35,8 +35,8 @@ public class WorkflowTests extends OpenSearchTestCase {
         assertEquals(List.of(edgeAB), workflow.edges());
 
         String expectedJson = "{\"user_params\":{\"key\":\"value\"},"
-            + "\"nodes\":[{\"id\":\"A\",\"type\":\"a-type\",\"inputs\":{\"foo\":\"bar\"}},"
-            + "{\"id\":\"B\",\"type\":\"b-type\",\"inputs\":{\"baz\":\"qux\"}}],"
+            + "\"nodes\":[{\"id\":\"A\",\"type\":\"a-type\",\"previous_node_inputs\":{},\"user_inputs\":{\"foo\":\"bar\"}},"
+            + "{\"id\":\"B\",\"type\":\"b-type\",\"previous_node_inputs\":{\"A\":\"foo\"},\"user_inputs\":{\"baz\":\"qux\"}}],"
             + "\"edges\":[{\"source\":\"A\",\"dest\":\"B\"}]}";
         String json = TemplateTestJsonUtil.parseToJson(workflow);
         assertEquals(expectedJson, json);

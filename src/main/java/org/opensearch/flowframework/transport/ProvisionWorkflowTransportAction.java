@@ -35,9 +35,7 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
-import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CompletionException;
 import java.util.stream.Collectors;
 
 import static org.opensearch.flowframework.common.CommonValue.GLOBAL_CONTEXT_INDEX;
@@ -109,6 +107,11 @@ public class ProvisionWorkflowTransportAction extends HandledTransportAction<Wor
                 // Parse template from document source
                 Template template = Template.parse(response.getSourceAsString());
 
+                // Sort and validate graph
+                Workflow provisionWorkflow = template.workflows().get(PROVISION_WORKFLOW);
+                List<ProcessNode> provisionProcessSequence = workflowProcessSorter.sortProcessNodes(provisionWorkflow);
+                workflowProcessSorter.validateGraph(provisionProcessSequence);
+
                 flowFrameworkIndicesHandler.updateFlowFrameworkSystemIndexDoc(
                     WORKFLOW_STATE_INDEX,
                     workflowId,
@@ -127,10 +130,16 @@ public class ProvisionWorkflowTransportAction extends HandledTransportAction<Wor
 
                 // Respond to rest action then execute provisioning workflow async
                 listener.onResponse(new WorkflowResponse(workflowId));
-                executeWorkflowAsync(workflowId, template.workflows().get(PROVISION_WORKFLOW));
+                executeWorkflowAsync(workflowId, provisionProcessSequence);
+
             }, exception -> {
-                logger.error("Failed to retrieve template from global context.", exception);
-                listener.onFailure(new FlowFrameworkException(exception.getMessage(), RestStatus.INTERNAL_SERVER_ERROR));
+                if (exception instanceof IllegalArgumentException) {
+                    logger.error("Workflow validation failed for workflow : " + workflowId);
+                    listener.onFailure(new FlowFrameworkException(exception.getMessage(), RestStatus.BAD_REQUEST));
+                } else {
+                    logger.error("Failed to retrieve template from global context.", exception);
+                    listener.onFailure(new FlowFrameworkException(exception.getMessage(), RestStatus.INTERNAL_SERVER_ERROR));
+                }
             }));
         } catch (Exception e) {
             logger.error("Failed to retrieve template from global context.", e);
@@ -141,9 +150,9 @@ public class ProvisionWorkflowTransportAction extends HandledTransportAction<Wor
     /**
      * Retrieves a thread from the provision thread pool to execute a workflow
      * @param workflowId The id of the workflow
-     * @param workflow The workflow to execute
+     * @param workflowSequence The sorted workflow to execute
      */
-    private void executeWorkflowAsync(String workflowId, Workflow workflow) {
+    private void executeWorkflowAsync(String workflowId, List<ProcessNode> workflowSequence) {
         // TODO : Update Action listener type to State index Request
         ActionListener<String> provisionWorkflowListener = ActionListener.wrap(response -> {
             logger.info("Provisioning completed successuflly for workflow {}", workflowId);
@@ -155,25 +164,22 @@ public class ProvisionWorkflowTransportAction extends HandledTransportAction<Wor
             // TODO : Create State index request to update STATE entry status to FAILED
         });
         try {
-            threadPool.executor(PROVISION_THREAD_POOL).execute(() -> { executeWorkflow(workflow, provisionWorkflowListener); });
+            threadPool.executor(PROVISION_THREAD_POOL).execute(() -> { executeWorkflow(workflowSequence, provisionWorkflowListener); });
         } catch (Exception exception) {
             provisionWorkflowListener.onFailure(new FlowFrameworkException(exception.getMessage(), RestStatus.INTERNAL_SERVER_ERROR));
         }
     }
 
     /**
-     * Topologically sorts a given workflow into a sequence of ProcessNodes and executes the workflow
-     * @param workflow The workflow to execute
+     * Executes the given workflow sequence
+     * @param workflowSequence The topologically sorted workflow to execute
      * @param workflowListener The listener that updates the status of a workflow execution
      */
-    private void executeWorkflow(Workflow workflow, ActionListener<String> workflowListener) {
+    private void executeWorkflow(List<ProcessNode> workflowSequence, ActionListener<String> workflowListener) {
         try {
 
-            // Attempt to topologically sort the workflow graph
-            List<ProcessNode> processSequence = workflowProcessSorter.sortProcessNodes(workflow);
             List<CompletableFuture<?>> workflowFutureList = new ArrayList<>();
-
-            for (ProcessNode processNode : processSequence) {
+            for (ProcessNode processNode : workflowSequence) {
                 List<ProcessNode> predecessors = processNode.predecessors();
 
                 logger.info(
@@ -199,7 +205,7 @@ public class ProvisionWorkflowTransportAction extends HandledTransportAction<Wor
 
         } catch (IllegalArgumentException e) {
             workflowListener.onFailure(new FlowFrameworkException(e.getMessage(), RestStatus.BAD_REQUEST));
-        } catch (CancellationException | CompletionException ex) {
+        } catch (Exception ex) {
             workflowListener.onFailure(new FlowFrameworkException(ex.getMessage(), RestStatus.INTERNAL_SERVER_ERROR));
         }
     }

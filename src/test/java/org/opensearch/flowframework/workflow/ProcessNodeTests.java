@@ -67,6 +67,7 @@ public class ProcessNodeTests extends OpenSearchTestCase {
                 return "test";
             }
         },
+            Map.of(),
             new WorkflowData(Map.of("test", "input"), Map.of("foo", "bar")),
             List.of(successfulNode),
             testThreadPool,
@@ -103,7 +104,7 @@ public class ProcessNodeTests extends OpenSearchTestCase {
             public String getName() {
                 return "test";
             }
-        }, WorkflowData.EMPTY, Collections.emptyList(), testThreadPool, TimeValue.timeValueMillis(250));
+        }, Map.of(), WorkflowData.EMPTY, Collections.emptyList(), testThreadPool, TimeValue.timeValueMillis(250));
         assertEquals("B", nodeB.id());
         assertEquals("test", nodeB.workflowStep().getName());
         assertEquals(WorkflowData.EMPTY, nodeB.input());
@@ -129,7 +130,7 @@ public class ProcessNodeTests extends OpenSearchTestCase {
             public String getName() {
                 return "sleepy";
             }
-        }, WorkflowData.EMPTY, Collections.emptyList(), testThreadPool, TimeValue.timeValueMillis(100));
+        }, Map.of(), WorkflowData.EMPTY, Collections.emptyList(), testThreadPool, TimeValue.timeValueMillis(100));
         assertEquals("Zzz", nodeZ.id());
         assertEquals("sleepy", nodeZ.workflowStep().getName());
         assertEquals(WorkflowData.EMPTY, nodeZ.input());
@@ -156,7 +157,7 @@ public class ProcessNodeTests extends OpenSearchTestCase {
             public String getName() {
                 return "test";
             }
-        }, WorkflowData.EMPTY, List.of(successfulNode, failedNode), testThreadPool, TimeValue.timeValueSeconds(15));
+        }, Map.of(), WorkflowData.EMPTY, List.of(successfulNode, failedNode), testThreadPool, TimeValue.timeValueSeconds(15));
         assertEquals("E", nodeE.id());
         assertEquals("test", nodeE.workflowStep().getName());
         assertEquals(WorkflowData.EMPTY, nodeE.input());

@@ -45,7 +45,7 @@ public class TemplateTestJsonUtil {
             + "\": \""
             + type
             + "\", \""
-            + WorkflowNode.INPUTS_FIELD
+            + WorkflowNode.USER_INPUTS_FIELD
             + "\": {\""
             + WorkflowNode.NODE_TIMEOUT_FIELD
             + "\": \""
