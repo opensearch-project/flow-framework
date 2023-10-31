@@ -19,6 +19,7 @@ import org.opensearch.threadpool.ThreadPool;
 
 import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -28,6 +29,7 @@ import java.util.Queue;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import static org.opensearch.flowframework.model.WorkflowNode.NODE_TIMEOUT_DEFAULT_VALUE;
 import static org.opensearch.flowframework.model.WorkflowNode.NODE_TIMEOUT_FIELD;
@@ -110,22 +112,21 @@ public class WorkflowProcessSorter {
                 .collect(Collectors.toList());
 
             // Compile a list of outputs from the predecessor nodes based on type
-            List<String> predecessorOutputs = new ArrayList<>();
-            for (String nodeType : predecessorNodeTypes) {
-                List<String> nodeTypeOutputs = validator.getWorkflowStepValidators().get(nodeType).getOutputs();
-                predecessorOutputs.addAll(nodeTypeOutputs);
-            }
+            List<String> predecessorOutputs = predecessorNodeTypes.stream()
+                .map(nodeType -> validator.getWorkflowStepValidators().get(nodeType).getOutputs())
+                .flatMap(Collection::stream)
+                .collect(Collectors.toList());
 
             // Retrieve all the user input data from this node
             List<String> currentNodeUserInputs = new ArrayList<String>(processNode.input().getContent().keySet());
 
             // Combine both predecessor outputs and current node user inputs
-            List<String> allInputs = new ArrayList<>();
-            allInputs.addAll(predecessorOutputs);
-            allInputs.addAll(currentNodeUserInputs);
+            List<String> allInputs = Stream.concat(predecessorOutputs.stream(), currentNodeUserInputs.stream())
+                .collect(Collectors.toList());
 
             // Retrieve list of required inputs from the current process node and compare
             List<String> expectedInputs = validator.getWorkflowStepValidators().get(processNode.workflowStep().getName()).getInputs();
+
             if (!allInputs.containsAll(expectedInputs)) {
                 expectedInputs.removeAll(allInputs);
                 throw new IllegalArgumentException("Invalid graph, missing the following required inputs : " + expectedInputs.toString());
