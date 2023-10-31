@@ -1,4 +1,8 @@
 {
+    "noop": {
+        "inputs":[],
+        "outputs":[]
+    },
     "create_index": {
         "inputs":[
             "index_name",
