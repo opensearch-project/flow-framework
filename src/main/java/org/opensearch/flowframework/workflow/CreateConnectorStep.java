@@ -91,32 +91,40 @@ public class CreateConnectorStep implements WorkflowStep {
         Map<String, String> credentials = Collections.emptyMap();
         List<ConnectorAction> actions = Collections.emptyList();
 
-        for (WorkflowData workflowData : data) {
-            for (Entry<String, Object> entry : workflowData.getContent().entrySet()) {
-                switch (entry.getKey()) {
-                    case NAME_FIELD:
-                        name = (String) entry.getValue();
-                        break;
-                    case DESCRIPTION_FIELD:
-                        description = (String) entry.getValue();
-                        break;
-                    case VERSION_FIELD:
-                        version = (String) entry.getValue();
-                        break;
-                    case PROTOCOL_FIELD:
-                        protocol = (String) entry.getValue();
-                        break;
-                    case PARAMETERS_FIELD:
-                        parameters = getParameterMap(entry.getValue());
-                        break;
-                    case CREDENTIALS_FIELD:
-                        credentials = getStringToStringMap(entry.getValue(), CREDENTIALS_FIELD);
-                        break;
-                    case ACTIONS_FIELD:
-                        actions = getConnectorActionList(entry.getValue());
-                        break;
+        try {
+            for (WorkflowData workflowData : data) {
+                for (Entry<String, Object> entry : workflowData.getContent().entrySet()) {
+                    switch (entry.getKey()) {
+                        case NAME_FIELD:
+                            name = (String) entry.getValue();
+                            break;
+                        case DESCRIPTION_FIELD:
+                            description = (String) entry.getValue();
+                            break;
+                        case VERSION_FIELD:
+                            version = (String) entry.getValue();
+                            break;
+                        case PROTOCOL_FIELD:
+                            protocol = (String) entry.getValue();
+                            break;
+                        case PARAMETERS_FIELD:
+                            parameters = getParameterMap(entry.getValue());
+                            break;
+                        case CREDENTIALS_FIELD:
+                            credentials = getStringToStringMap(entry.getValue(), CREDENTIALS_FIELD);
+                            break;
+                        case ACTIONS_FIELD:
+                            actions = getConnectorActionList(entry.getValue());
+                            break;
+                    }
                 }
             }
+        } catch (IllegalArgumentException iae) {
+            createConnectorFuture.completeExceptionally(new FlowFrameworkException(iae.getMessage(), RestStatus.BAD_REQUEST));
+            return createConnectorFuture;
+        } catch (PrivilegedActionException pae) {
+            createConnectorFuture.completeExceptionally(new FlowFrameworkException(pae.getMessage(), RestStatus.UNAUTHORIZED));
+            return createConnectorFuture;
         }
 
         if (Stream.of(name, description, version, protocol, parameters, credentials, actions).allMatch(x -> x != null)) {
@@ -153,17 +161,13 @@ public class CreateConnectorStep implements WorkflowStep {
         throw new IllegalArgumentException("[" + fieldName + "] must be a key-value map.");
     }
 
-    private static Map<String, String> getParameterMap(Object parameterMap) {
+    private static Map<String, String> getParameterMap(Object parameterMap) throws PrivilegedActionException {
         Map<String, String> parameters = new HashMap<>();
         for (Entry<String, String> entry : getStringToStringMap(parameterMap, PARAMETERS_FIELD).entrySet()) {
-            try {
-                AccessController.doPrivileged((PrivilegedExceptionAction<Void>) () -> {
-                    parameters.put(entry.getKey(), entry.getValue());
-                    return null;
-                });
-            } catch (PrivilegedActionException e) {
-                throw new RuntimeException(e);
-            }
+            AccessController.doPrivileged((PrivilegedExceptionAction<Void>) () -> {
+                parameters.put(entry.getKey(), entry.getValue());
+                return null;
+            });
         }
         return parameters;
     }
