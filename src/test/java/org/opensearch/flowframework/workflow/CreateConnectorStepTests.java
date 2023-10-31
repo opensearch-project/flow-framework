@@ -27,7 +27,6 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
-import static org.junit.Assert.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.verify;
@@ -44,12 +43,18 @@ public class CreateConnectorStepTests extends OpenSearchTestCase {
 
         Map<String, String> params = Map.ofEntries(Map.entry("endpoint", "endpoint"), Map.entry("temp", "7"));
         Map<String, String> credentials = Map.ofEntries(Map.entry("key1", "value1"), Map.entry("key2", "value2"));
+        Map<?, ?>[] actions = new Map<?, ?>[] {
+            Map.ofEntries(
+                Map.entry(ConnectorAction.ACTION_TYPE_FIELD, ConnectorAction.ActionType.PREDICT.name()),
+                Map.entry(ConnectorAction.METHOD_FIELD, "post"),
+                Map.entry(ConnectorAction.URL_FIELD, "foo.test"),
+                Map.entry(
+                    ConnectorAction.REQUEST_BODY_FIELD,
+                    "{ \"model\": \"${parameters.model}\", \"messages\": ${parameters.messages} }"
+                )
+            ) };
 
         MockitoAnnotations.openMocks(this);
-
-        ConnectorAction.ActionType actionType = ConnectorAction.ActionType.PREDICT;
-        String method = "post";
-        String url = "foot.test";
 
         inputData = new WorkflowData(
             Map.ofEntries(
@@ -59,23 +64,9 @@ public class CreateConnectorStepTests extends OpenSearchTestCase {
                 Map.entry("protocol", "test"),
                 Map.entry("params", params),
                 Map.entry("credentials", credentials),
-                Map.entry(
-                    "actions",
-                    List.of(
-                        new ConnectorAction(
-                            actionType,
-                            method,
-                            url,
-                            null,
-                            "{ \"model\": \"${parameters.model}\", \"messages\": ${parameters.messages} }",
-                            null,
-                            null
-                        )
-                    )
-                )
+                Map.entry("actions", actions)
             )
         );
-
     }
 
     public void testCreateConnector() throws IOException, ExecutionException, InterruptedException {
@@ -83,6 +74,7 @@ public class CreateConnectorStepTests extends OpenSearchTestCase {
         String connectorId = "connect";
         CreateConnectorStep createConnectorStep = new CreateConnectorStep(machineLearningNodeClient);
 
+        @SuppressWarnings("unchecked")
         ArgumentCaptor<ActionListener<MLCreateConnectorResponse>> actionListenerCaptor = ArgumentCaptor.forClass(ActionListener.class);
 
         doAnswer(invocation -> {
@@ -104,6 +96,7 @@ public class CreateConnectorStepTests extends OpenSearchTestCase {
     public void testCreateConnectorFailure() throws IOException {
         CreateConnectorStep createConnectorStep = new CreateConnectorStep(machineLearningNodeClient);
 
+        @SuppressWarnings("unchecked")
         ArgumentCaptor<ActionListener<MLCreateConnectorResponse>> actionListenerCaptor = ArgumentCaptor.forClass(ActionListener.class);
 
         doAnswer(invocation -> {
