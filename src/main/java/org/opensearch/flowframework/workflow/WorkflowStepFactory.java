@@ -10,14 +10,12 @@ package org.opensearch.flowframework.workflow;
 
 import org.opensearch.client.Client;
 import org.opensearch.cluster.service.ClusterService;
+import org.opensearch.core.rest.RestStatus;
+import org.opensearch.flowframework.exception.FlowFrameworkException;
 import org.opensearch.ml.client.MachineLearningNodeClient;
 
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
-import java.util.concurrent.CompletableFuture;
-
-import demo.DemoWorkflowStep;
 
 /**
  * Generates instances implementing {@link WorkflowStep}.
@@ -39,31 +37,13 @@ public class WorkflowStepFactory {
     }
 
     private void populateMap(ClusterService clusterService, Client client, MachineLearningNodeClient mlClient) {
+        stepMap.put(NoOpStep.NAME, new NoOpStep());
         stepMap.put(CreateIndexStep.NAME, new CreateIndexStep(clusterService, client));
         stepMap.put(CreateIngestPipelineStep.NAME, new CreateIngestPipelineStep(client));
         stepMap.put(RegisterModelStep.NAME, new RegisterModelStep(mlClient));
         stepMap.put(DeployModelStep.NAME, new DeployModelStep(mlClient));
         stepMap.put(CreateConnectorStep.NAME, new CreateConnectorStep(mlClient));
         stepMap.put(ModelGroupStep.NAME, new ModelGroupStep(mlClient));
-
-        // TODO: These are from the demo class as placeholders, remove when demos are deleted
-        stepMap.put("demo_delay_3", new DemoWorkflowStep(3000));
-        stepMap.put("demo_delay_5", new DemoWorkflowStep(5000));
-
-        // Use as a default until all the actual implementations are ready
-        stepMap.put("placeholder", new WorkflowStep() {
-            @Override
-            public CompletableFuture<WorkflowData> execute(List<WorkflowData> data) {
-                CompletableFuture<WorkflowData> future = new CompletableFuture<>();
-                future.complete(WorkflowData.EMPTY);
-                return future;
-            }
-
-            @Override
-            public String getName() {
-                return "placeholder";
-            }
-        });
     }
 
     /**
@@ -75,8 +55,6 @@ public class WorkflowStepFactory {
         if (stepMap.containsKey(type)) {
             return stepMap.get(type);
         }
-        // TODO: replace this with a FlowFrameworkException
-        // https://github.com/opensearch-project/opensearch-ai-flow-framework/pull/43
-        return stepMap.get("placeholder");
+        throw new FlowFrameworkException("Workflow step type [" + type + "] is not implemented.", RestStatus.NOT_IMPLEMENTED);
     }
 }

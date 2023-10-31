@@ -11,7 +11,9 @@ package org.opensearch.flowframework.workflow;
 import org.opensearch.client.AdminClient;
 import org.opensearch.client.Client;
 import org.opensearch.cluster.service.ClusterService;
+import org.opensearch.core.rest.RestStatus;
 import org.opensearch.core.xcontent.XContentParser;
+import org.opensearch.flowframework.exception.FlowFrameworkException;
 import org.opensearch.flowframework.model.TemplateTestJsonUtil;
 import org.opensearch.flowframework.model.Workflow;
 import org.opensearch.ml.client.MachineLearningNodeClient;
@@ -198,5 +200,12 @@ public class WorkflowProcessSorterTests extends OpenSearchTestCase {
 
         ex = assertThrows(IllegalArgumentException.class, () -> parse(workflow(List.of(node("A"), node("B")), List.of(edge("A", "C")))));
         assertEquals("Edge destination C does not correspond to a node.", ex.getMessage());
+
+        ex = assertThrows(
+            FlowFrameworkException.class,
+            () -> parse(workflow(List.of(nodeWithType("A", "unimplemented_step")), Collections.emptyList()))
+        );
+        assertEquals("Workflow step type [unimplemented_step] is not implemented.", ex.getMessage());
+        assertEquals(RestStatus.NOT_IMPLEMENTED, ((FlowFrameworkException) ex).getRestStatus());
     }
 }
