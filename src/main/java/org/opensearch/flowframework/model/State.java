@@ -12,8 +12,12 @@ package org.opensearch.flowframework.model;
  * Enum relating to the state of a workflow
  */
 public enum State {
+    /** Workflow not yet started */
     NOT_STARTED,
+    /** Workflow currently provisioning resources */
     PROVISIONING,
+    /** Workflow completed with failure */
     FAILED,
+    /** Workflow completed successfully */
     COMPLETED
 }
