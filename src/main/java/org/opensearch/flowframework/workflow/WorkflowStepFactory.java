@@ -63,6 +63,6 @@ public class WorkflowStepFactory {
      * @return the step map
      */
     public Map<String, WorkflowStep> getStepMap() {
-        return this.stepMap;
+        return Map.copyOf(this.stepMap);
     }
 }
