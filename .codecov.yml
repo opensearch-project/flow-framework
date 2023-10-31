@@ -1,10 +1,6 @@
 codecov:
   require_ci_to_pass: true
 
-# ignore files in demo package
-ignore:
-  - "src/main/java/demo"
-
 coverage:
   precision: 2
   round: down
