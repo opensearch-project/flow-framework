@@ -10,6 +10,7 @@ package org.opensearch.flowframework.workflow;
 
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.core.rest.RestStatus;
+import org.opensearch.flowframework.common.CommonValue;
 import org.opensearch.flowframework.exception.FlowFrameworkException;
 import org.opensearch.ml.client.MachineLearningNodeClient;
 import org.opensearch.ml.common.connector.ConnectorAction;
@@ -58,13 +59,13 @@ public class CreateConnectorStepTests extends OpenSearchTestCase {
 
         inputData = new WorkflowData(
             Map.ofEntries(
-                Map.entry("name", "test"),
-                Map.entry("description", "description"),
-                Map.entry("version", "1"),
-                Map.entry("protocol", "test"),
-                Map.entry("params", params),
-                Map.entry("credentials", credentials),
-                Map.entry("actions", actions)
+                Map.entry(CommonValue.NAME_FIELD, "test"),
+                Map.entry(CommonValue.DESCRIPTION_FIELD, "description"),
+                Map.entry(CommonValue.VERSION_FIELD, "1"),
+                Map.entry(CommonValue.PROTOCOL_FIELD, "test"),
+                Map.entry(CommonValue.PARAMETERS_FIELD, params),
+                Map.entry(CommonValue.CREDENTIALS_FIELD, credentials),
+                Map.entry(CommonValue.ACTIONS_FIELD, actions)
             )
         );
     }
