@@ -32,6 +32,9 @@ import java.util.List;
 import static org.opensearch.core.xcontent.ToXContent.EMPTY_PARAMS;
 import static org.opensearch.flowframework.util.RestHandlerUtils.getSourceContext;
 
+/**
+ * Abstract class to handle search request.
+ */
 public class AbstractSearchWorkflowAction<T extends ToXContentObject> extends BaseRestHandler {
 
     protected final List<String> urlPaths;
@@ -40,6 +43,13 @@ public class AbstractSearchWorkflowAction<T extends ToXContentObject> extends Ba
     protected final ActionType<SearchResponse> actionType;
     protected final FlowFrameworkFeatureEnabledSetting flowFrameworkFeatureEnabledSetting;
 
+    /**
+     * Instantiates a new AbstractSearchWorkflowAction
+     * @param urlPaths urlPaths to create routes
+     * @param index index the search should be done on
+     * @param clazz model class
+     * @param actionType from which action abstract class is called
+     */
     public AbstractSearchWorkflowAction(List<String> urlPaths, String index, Class<T> clazz, ActionType<SearchResponse> actionType, FlowFrameworkFeatureEnabledSetting flowFrameworkFeatureEnabledSetting) {
         this.urlPaths = urlPaths;
         this.index = index;
@@ -69,6 +79,12 @@ public class AbstractSearchWorkflowAction<T extends ToXContentObject> extends Ba
         return channel -> client.execute(actionType, searchRequest, search(channel));
     }
 
+    /**
+     * Builds the action response for the Search Request
+     *
+     * @param channel the REST channel
+     * @return the action response
+     */
     protected RestResponseListener<SearchResponse> search(RestChannel channel) {
         return new RestResponseListener<SearchResponse>(channel) {
             @Override

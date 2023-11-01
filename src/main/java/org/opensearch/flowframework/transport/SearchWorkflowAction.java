@@ -13,6 +13,9 @@ import org.opensearch.action.search.SearchResponse;
 
 import static org.opensearch.flowframework.common.CommonValue.TRANSPORT_ACION_NAME_PREFIX;
 
+/**
+ * External Action for public facing RestSearchWorkflowAction
+ */
 public class SearchWorkflowAction extends ActionType<SearchResponse> {
 
     /** The name of this action */

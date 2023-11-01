@@ -74,12 +74,18 @@ public class FlowFrameworkPluginTests extends OpenSearchTestCase {
 
     public void testPlugin() throws IOException {
         try (FlowFrameworkPlugin ffp = new FlowFrameworkPlugin()) {
+<<<<<<< HEAD
             assertEquals(
                 3,
                 ffp.createComponents(client, clusterService, threadPool, null, null, null, environment, null, null, null, null).size()
             );
             assertEquals(2, ffp.getRestHandlers(null, null, null, null, null, null, null).size());
             assertEquals(2, ffp.getActions().size());
+=======
+            assertEquals(3, ffp.createComponents(client, null, threadPool, null, null, null, null, null, null, null, null).size());
+            assertEquals(3, ffp.getRestHandlers(null, null, null, null, null, null, null).size());
+            assertEquals(3, ffp.getActions().size());
+>>>>>>> 57869ff (Added javadoc)
             assertEquals(1, ffp.getExecutorBuilders(settings).size());
             assertEquals(1, ffp.getSettings().size());
         }

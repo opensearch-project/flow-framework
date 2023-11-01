@@ -13,7 +13,7 @@ import org.opensearch.action.ActionType;
 import static org.opensearch.flowframework.common.CommonValue.TRANSPORT_ACION_NAME_PREFIX;
 
 /**
- * External Action for public facing RestCreateWorkflowActiom
+ * External Action for public facing RestCreateWorkflowAction
  */
 public class CreateWorkflowAction extends ActionType<WorkflowResponse> {
 

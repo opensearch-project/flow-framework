@@ -16,6 +16,9 @@ import org.opensearch.flowframework.transport.SearchWorkflowAction;
 import static org.opensearch.flowframework.common.CommonValue.GLOBAL_CONTEXT_INDEX;
 import static org.opensearch.flowframework.common.CommonValue.WORKFLOW_URI;
 
+/**
+ * Rest Action to facilitate requests to search workflows
+ */
 public class RestSearchWorkflowAction extends AbstractSearchWorkflowAction<Template> {
 
     private static final String SEARCH_WORKFLOW_ACTION = "search_workflow_action";
@@ -23,7 +26,7 @@ public class RestSearchWorkflowAction extends AbstractSearchWorkflowAction<Templ
 
     public RestSearchWorkflowAction(FlowFrameworkFeatureEnabledSetting flowFrameworkFeatureEnabledSetting) {
         super(ImmutableList.of(SEARCH_WORKFLOW_PATH), GLOBAL_CONTEXT_INDEX, Template.class, SearchWorkflowAction.INSTANCE, flowFrameworkFeatureEnabledSetting);
-    }
+
 
     @Override
     public String getName() {

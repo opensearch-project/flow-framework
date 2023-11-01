@@ -14,12 +14,22 @@ import org.opensearch.rest.RestRequest;
 import org.opensearch.search.builder.SearchSourceBuilder;
 import org.opensearch.search.fetch.subphase.FetchSourceContext;
 
+/**
+ * Utility methods for Rest Handlers
+ */
 public class RestHandlerUtils {
 
     public static final String[] USER_EXCLUDE = new String[] { CommonValue.USER_FIELD };
 
     private RestHandlerUtils() {}
 
+    /**
+     * Creates a source context and include/exclude information to be shared based on the user
+     *
+     * @param request the REST request
+     * @param searchSourceBuilder the search request source builder
+     * @return modified sources
+     */
     public static FetchSourceContext getSourceContext(RestRequest request, SearchSourceBuilder searchSourceBuilder) {
         // TODO
         // 1. Move UI_METADATA to GC Index
