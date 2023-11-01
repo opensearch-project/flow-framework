@@ -230,7 +230,7 @@ public class WorkflowProcessSorterTests extends OpenSearchTestCase {
                 Map.entry("version", ""),
                 Map.entry("protocol", ""),
                 Map.entry("parameters", ""),
-                Map.entry("credentials", ""),
+                Map.entry("credential", ""),
                 Map.entry("actions", "")
             )
         );
