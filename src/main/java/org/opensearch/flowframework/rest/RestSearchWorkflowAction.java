@@ -18,7 +18,7 @@ import static org.opensearch.flowframework.common.CommonValue.WORKFLOW_URI;
 
 public class RestSearchWorkflowAction extends AbstractSearchWorkflowAction<Template> {
 
-    private static final String GET_WORKFLOW_ACTION = "get_workflow_action";
+    private static final String SEARCH_WORKFLOW_ACTION = "search_workflow_action";
     private static final String SEARCH_WORKFLOW_PATH = WORKFLOW_URI + "/_search";
 
     public RestSearchWorkflowAction(FlowFrameworkFeatureEnabledSetting flowFrameworkFeatureEnabledSetting) {
@@ -27,6 +27,6 @@ public class RestSearchWorkflowAction extends AbstractSearchWorkflowAction<Templ
 
     @Override
     public String getName() {
-        return GET_WORKFLOW_ACTION;
+        return SEARCH_WORKFLOW_ACTION;
     }
 }
