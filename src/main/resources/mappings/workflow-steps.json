@@ -32,7 +32,7 @@
             "version",
             "protocol",
             "parameters",
-            "credentials",
+            "credential",
             "actions"
         ],
         "outputs":[
