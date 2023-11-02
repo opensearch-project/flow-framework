@@ -183,10 +183,11 @@ public class FlowFrameworkIndicesHandler {
                                                         );
                                                     }
                                                 }, exception -> {
-                                                    logger.error("Failed to update index setting for: " + indexName, exception);
+                                                    String errorMessage = "Failed to update index setting for: " + indexName;
+                                                    logger.error(errorMessage, exception);
                                                     internalListener.onFailure(
                                                         new FlowFrameworkException(
-                                                            exception.getMessage(),
+                                                            errorMessage + " : " + exception.getMessage(),
                                                             ExceptionsHelper.status(exception)
                                                         )
                                                     );
@@ -197,9 +198,13 @@ public class FlowFrameworkIndicesHandler {
                                             );
                                         }
                                     }, exception -> {
-                                        logger.error("Failed to update index " + indexName, exception);
+                                        String errorMessage = "Failed to update index " + indexName;
+                                        logger.error(errorMessage, exception);
                                         internalListener.onFailure(
-                                            new FlowFrameworkException(exception.getMessage(), ExceptionsHelper.status(exception))
+                                            new FlowFrameworkException(
+                                                errorMessage + " : " + exception.getMessage(),
+                                                ExceptionsHelper.status(exception)
+                                            )
                                         );
                                     })
                                 );
@@ -209,8 +214,11 @@ public class FlowFrameworkIndicesHandler {
                             internalListener.onResponse(true);
                         }
                     }, e -> {
-                        logger.error("Failed to update index mapping", e);
-                        internalListener.onFailure(new FlowFrameworkException(e.getMessage(), ExceptionsHelper.status(e)));
+                        String errorMessage = "Failed to update index mapping";
+                        logger.error(errorMessage, e);
+                        internalListener.onFailure(
+                            new FlowFrameworkException(errorMessage + " : " + e.getMessage(), ExceptionsHelper.status(e))
+                        );
                     }));
                 } else {
                     // No need to update index if it's already updated.
@@ -218,8 +226,9 @@ public class FlowFrameworkIndicesHandler {
                 }
             }
         } catch (Exception e) {
-            logger.error("Failed to init index " + indexName, e);
-            listener.onFailure(new FlowFrameworkException(e.getMessage(), ExceptionsHelper.status(e)));
+            String errorMessage = "Failed to init index " + indexName;
+            logger.error(errorMessage, e);
+            listener.onFailure(new FlowFrameworkException(errorMessage + " : " + e.getMessage(), ExceptionsHelper.status(e)));
         }
     }
 
@@ -281,8 +290,9 @@ public class FlowFrameworkIndicesHandler {
                     .setRefreshPolicy(WriteRequest.RefreshPolicy.IMMEDIATE);
                 client.index(request, ActionListener.runBefore(listener, () -> context.restore()));
             } catch (Exception e) {
-                logger.error("Failed to index global_context index");
-                listener.onFailure(new FlowFrameworkException(e.getMessage(), ExceptionsHelper.status(e)));
+                String errorMessage = "Failed to index global_context index";
+                logger.error(errorMessage);
+                listener.onFailure(new FlowFrameworkException(errorMessage + " : " + e.getMessage(), ExceptionsHelper.status(e)));
             }
         }, e -> {
             logger.error("Failed to create global_context index", e);
@@ -319,13 +329,15 @@ public class FlowFrameworkIndicesHandler {
                 request.id(workflowId);
                 client.index(request, ActionListener.runBefore(listener, () -> context.restore()));
             } catch (Exception e) {
-                logger.error("Failed to put state index document", e);
-                listener.onFailure(new FlowFrameworkException(e.getMessage(), ExceptionsHelper.status(e)));
+                String errorMessage = "Failed to put state index document";
+                logger.error(errorMessage, e);
+                listener.onFailure(new FlowFrameworkException(errorMessage + " : " + e.getMessage(), ExceptionsHelper.status(e)));
             }
 
         }, e -> {
-            logger.error("Failed to create global_context index", e);
-            listener.onFailure(new FlowFrameworkException(e.getMessage(), ExceptionsHelper.status(e)));
+            String errorMessage = "Failed to create global_context index";
+            logger.error(errorMessage, e);
+            listener.onFailure(new FlowFrameworkException(errorMessage + " : " + e.getMessage(), ExceptionsHelper.status(e)));
         }));
     }
 
@@ -352,8 +364,9 @@ public class FlowFrameworkIndicesHandler {
                     .setRefreshPolicy(WriteRequest.RefreshPolicy.IMMEDIATE);
                 client.index(request, ActionListener.runBefore(listener, () -> context.restore()));
             } catch (Exception e) {
-                logger.error("Failed to update global_context entry : {}. {}", documentId, e.getMessage());
-                listener.onFailure(new FlowFrameworkException(e.getMessage(), ExceptionsHelper.status(e)));
+                String errorMessage = "Failed to update global_context entry : " + documentId;
+                logger.error(errorMessage, e);
+                listener.onFailure(new FlowFrameworkException(errorMessage + " : " + e.getMessage(), ExceptionsHelper.status(e)));
             }
         }
     }
@@ -385,8 +398,9 @@ public class FlowFrameworkIndicesHandler {
                 // TODO: decide what condition can be considered as an update conflict and add retry strategy
                 client.update(updateRequest, ActionListener.runBefore(listener, () -> context.restore()));
             } catch (Exception e) {
-                logger.error("Failed to update {} entry : {}. {}", indexName, documentId, e.getMessage());
-                listener.onFailure(new FlowFrameworkException(e.getMessage(), ExceptionsHelper.status(e)));
+                String errorMessage = "Failed to update " + indexName + " entry : " + documentId;
+                logger.error(errorMessage, e);
+                listener.onFailure(new FlowFrameworkException(errorMessage + " : " + e.getMessage(), ExceptionsHelper.status(e)));
             }
         }
     }
