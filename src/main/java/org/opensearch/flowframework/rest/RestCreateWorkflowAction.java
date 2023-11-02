@@ -16,6 +16,7 @@ import org.opensearch.core.action.ActionListener;
 import org.opensearch.core.rest.RestStatus;
 import org.opensearch.core.xcontent.ToXContent;
 import org.opensearch.core.xcontent.XContentBuilder;
+import org.opensearch.flowframework.common.FlowFrameworkFeatureEnabledSetting;
 import org.opensearch.flowframework.exception.FlowFrameworkException;
 import org.opensearch.flowframework.model.Template;
 import org.opensearch.flowframework.transport.CreateWorkflowAction;
@@ -31,6 +32,7 @@ import java.util.Locale;
 import static org.opensearch.flowframework.common.CommonValue.DRY_RUN;
 import static org.opensearch.flowframework.common.CommonValue.WORKFLOW_ID;
 import static org.opensearch.flowframework.common.CommonValue.WORKFLOW_URI;
+import static org.opensearch.flowframework.common.FlowFrameworkFeatureEnabledSetting.FLOW_FRAMEWORK_ENABLED;
 
 /**
  * Rest Action to facilitate requests to create and update a use case template
@@ -40,10 +42,16 @@ public class RestCreateWorkflowAction extends BaseRestHandler {
     private static final Logger logger = LogManager.getLogger(RestCreateWorkflowAction.class);
     private static final String CREATE_WORKFLOW_ACTION = "create_workflow_action";
 
+    private FlowFrameworkFeatureEnabledSetting flowFrameworkFeatureEnabledSetting;
+
     /**
      * Intantiates a new RestCreateWorkflowAction
+     *
+     * @param flowFrameworkFeatureEnabledSetting Whether this API is enabled
      */
-    public RestCreateWorkflowAction() {}
+    public RestCreateWorkflowAction(FlowFrameworkFeatureEnabledSetting flowFrameworkFeatureEnabledSetting) {
+        this.flowFrameworkFeatureEnabledSetting = flowFrameworkFeatureEnabledSetting;
+    }
 
     @Override
     public String getName() {
@@ -62,6 +70,15 @@ public class RestCreateWorkflowAction extends BaseRestHandler {
 
     @Override
     protected RestChannelConsumer prepareRequest(RestRequest request, NodeClient client) throws IOException {
+        if (!flowFrameworkFeatureEnabledSetting.isFlowFrameworkEnabled()) {
+            FlowFrameworkException ffe = new FlowFrameworkException(
+                "This API is disabled. To enable it, set [" + FLOW_FRAMEWORK_ENABLED.getKey() + "] to true.",
+                RestStatus.FORBIDDEN
+            );
+            return channel -> channel.sendResponse(
+                new BytesRestResponse(ffe.getRestStatus(), ffe.toXContent(channel.newErrorBuilder(), ToXContent.EMPTY_PARAMS))
+            );
+        }
         try {
 
             String workflowId = request.param(WORKFLOW_ID);
@@ -89,5 +106,4 @@ public class RestCreateWorkflowAction extends BaseRestHandler {
             );
         }
     }
-
 }

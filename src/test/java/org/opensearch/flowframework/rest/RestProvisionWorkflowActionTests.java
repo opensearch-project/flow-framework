@@ -12,6 +12,7 @@ import org.opensearch.client.node.NodeClient;
 import org.opensearch.core.common.bytes.BytesArray;
 import org.opensearch.core.rest.RestStatus;
 import org.opensearch.core.xcontent.MediaTypeRegistry;
+import org.opensearch.flowframework.common.FlowFrameworkFeatureEnabledSetting;
 import org.opensearch.rest.RestHandler.Route;
 import org.opensearch.rest.RestRequest;
 import org.opensearch.test.OpenSearchTestCase;
@@ -23,6 +24,7 @@ import java.util.Locale;
 
 import static org.opensearch.flowframework.common.CommonValue.WORKFLOW_URI;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 public class RestProvisionWorkflowActionTests extends OpenSearchTestCase {
 
@@ -33,7 +35,10 @@ public class RestProvisionWorkflowActionTests extends OpenSearchTestCase {
     @Override
     public void setUp() throws Exception {
         super.setUp();
-        this.provisionWorkflowRestAction = new RestProvisionWorkflowAction();
+        FlowFrameworkFeatureEnabledSetting flowFrameworkFeatureEnabledSetting = mock(FlowFrameworkFeatureEnabledSetting.class);
+        when(flowFrameworkFeatureEnabledSetting.isFlowFrameworkEnabled()).thenReturn(true);
+
+        this.provisionWorkflowRestAction = new RestProvisionWorkflowAction(flowFrameworkFeatureEnabledSetting);
         this.provisionWorkflowPath = String.format(Locale.ROOT, "%s/{%s}/%s", WORKFLOW_URI, "workflow_id", "_provision");
         this.nodeClient = mock(NodeClient.class);
     }
