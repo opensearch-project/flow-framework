@@ -9,6 +9,7 @@ on:
       - '2.*'
 
 jobs:
+  if: github.repository == 'opensearch-project/opensearch-ai-flow-framework'
   build-and-publish-snapshots:
     strategy:
       fail-fast: false
