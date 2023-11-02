@@ -12,6 +12,7 @@ import com.google.common.base.Charsets;
 import com.google.common.io.Resources;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.opensearch.ExceptionsHelper;
 import org.opensearch.action.admin.indices.create.CreateIndexRequest;
 import org.opensearch.action.admin.indices.create.CreateIndexResponse;
 import org.opensearch.action.admin.indices.mapping.put.PutMappingRequest;
@@ -149,7 +150,7 @@ public class FlowFrameworkIndicesHandler {
                     }
                 }, e -> {
                     logger.error("Failed to create index " + indexName, e);
-                    internalListener.onFailure(new FlowFrameworkException(e.getMessage(), INTERNAL_SERVER_ERROR));
+                    internalListener.onFailure(new FlowFrameworkException(e.getMessage(), ExceptionsHelper.status(e)));
                 });
                 CreateIndexRequest request = new CreateIndexRequest(indexName).mapping(mapping).settings(indexSettings);
                 client.admin().indices().create(request, actionListener);
@@ -184,7 +185,10 @@ public class FlowFrameworkIndicesHandler {
                                                 }, exception -> {
                                                     logger.error("Failed to update index setting for: " + indexName, exception);
                                                     internalListener.onFailure(
-                                                        new FlowFrameworkException(exception.getMessage(), INTERNAL_SERVER_ERROR)
+                                                        new FlowFrameworkException(
+                                                            exception.getMessage(),
+                                                            ExceptionsHelper.status(exception)
+                                                        )
                                                     );
                                                 }));
                                         } else {
@@ -195,7 +199,7 @@ public class FlowFrameworkIndicesHandler {
                                     }, exception -> {
                                         logger.error("Failed to update index " + indexName, exception);
                                         internalListener.onFailure(
-                                            new FlowFrameworkException(exception.getMessage(), INTERNAL_SERVER_ERROR)
+                                            new FlowFrameworkException(exception.getMessage(), ExceptionsHelper.status(exception))
                                         );
                                     })
                                 );
@@ -206,7 +210,7 @@ public class FlowFrameworkIndicesHandler {
                         }
                     }, e -> {
                         logger.error("Failed to update index mapping", e);
-                        internalListener.onFailure(new FlowFrameworkException(e.getMessage(), INTERNAL_SERVER_ERROR));
+                        internalListener.onFailure(new FlowFrameworkException(e.getMessage(), ExceptionsHelper.status(e)));
                     }));
                 } else {
                     // No need to update index if it's already updated.
@@ -215,7 +219,7 @@ public class FlowFrameworkIndicesHandler {
             }
         } catch (Exception e) {
             logger.error("Failed to init index " + indexName, e);
-            listener.onFailure(new FlowFrameworkException(e.getMessage(), INTERNAL_SERVER_ERROR));
+            listener.onFailure(new FlowFrameworkException(e.getMessage(), ExceptionsHelper.status(e)));
         }
     }
 
@@ -278,7 +282,7 @@ public class FlowFrameworkIndicesHandler {
                 client.index(request, ActionListener.runBefore(listener, () -> context.restore()));
             } catch (Exception e) {
                 logger.error("Failed to index global_context index");
-                listener.onFailure(new FlowFrameworkException(e.getMessage(), INTERNAL_SERVER_ERROR));
+                listener.onFailure(new FlowFrameworkException(e.getMessage(), ExceptionsHelper.status(e)));
             }
         }, e -> {
             logger.error("Failed to create global_context index", e);
@@ -316,12 +320,12 @@ public class FlowFrameworkIndicesHandler {
                 client.index(request, ActionListener.runBefore(listener, () -> context.restore()));
             } catch (Exception e) {
                 logger.error("Failed to put state index document", e);
-                listener.onFailure(new FlowFrameworkException(e.getMessage(), INTERNAL_SERVER_ERROR));
+                listener.onFailure(new FlowFrameworkException(e.getMessage(), ExceptionsHelper.status(e)));
             }
 
         }, e -> {
             logger.error("Failed to create global_context index", e);
-            listener.onFailure(new FlowFrameworkException(e.getMessage(), INTERNAL_SERVER_ERROR));
+            listener.onFailure(new FlowFrameworkException(e.getMessage(), ExceptionsHelper.status(e)));
         }));
     }
 
@@ -349,7 +353,7 @@ public class FlowFrameworkIndicesHandler {
                 client.index(request, ActionListener.runBefore(listener, () -> context.restore()));
             } catch (Exception e) {
                 logger.error("Failed to update global_context entry : {}. {}", documentId, e.getMessage());
-                listener.onFailure(new FlowFrameworkException(e.getMessage(), INTERNAL_SERVER_ERROR));
+                listener.onFailure(new FlowFrameworkException(e.getMessage(), ExceptionsHelper.status(e)));
             }
         }
     }
@@ -382,7 +386,7 @@ public class FlowFrameworkIndicesHandler {
                 client.update(updateRequest, ActionListener.runBefore(listener, () -> context.restore()));
             } catch (Exception e) {
                 logger.error("Failed to update {} entry : {}. {}", indexName, documentId, e.getMessage());
-                listener.onFailure(new FlowFrameworkException(e.getMessage(), INTERNAL_SERVER_ERROR));
+                listener.onFailure(new FlowFrameworkException(e.getMessage(), ExceptionsHelper.status(e)));
             }
         }
     }

@@ -11,6 +11,7 @@ package org.opensearch.flowframework.transport;
 import com.google.common.collect.ImmutableMap;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.opensearch.ExceptionsHelper;
 import org.opensearch.action.support.ActionFilters;
 import org.opensearch.action.support.HandledTransportAction;
 import org.opensearch.client.Client;
@@ -95,7 +96,7 @@ public class CreateWorkflowTransportAction extends HandledTransportAction<Workfl
                 if (exception instanceof FlowFrameworkException) {
                     listener.onFailure(exception);
                 } else {
-                    listener.onFailure(new FlowFrameworkException(exception.getMessage(), RestStatus.INTERNAL_SERVER_ERROR));
+                    listener.onFailure(new FlowFrameworkException(exception.getMessage(), ExceptionsHelper.status(exception)));
                 }
 
             }));
@@ -117,7 +118,7 @@ public class CreateWorkflowTransportAction extends HandledTransportAction<Workfl
                             if (exception instanceof FlowFrameworkException) {
                                 listener.onFailure(exception);
                             } else {
-                                listener.onFailure(new FlowFrameworkException(exception.getMessage(), RestStatus.INTERNAL_SERVER_ERROR));
+                                listener.onFailure(new FlowFrameworkException(exception.getMessage(), ExceptionsHelper.status(exception)));
                             }
                         })
                     );
@@ -126,7 +127,7 @@ public class CreateWorkflowTransportAction extends HandledTransportAction<Workfl
                     if (exception instanceof FlowFrameworkException) {
                         listener.onFailure(exception);
                     } else {
-                        listener.onFailure(new FlowFrameworkException(exception.getMessage(), RestStatus.INTERNAL_SERVER_ERROR));
+                        listener.onFailure(new FlowFrameworkException(exception.getMessage(), ExceptionsHelper.status(exception)));
                     }
 
                 })
