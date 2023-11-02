@@ -22,6 +22,7 @@ import org.opensearch.flowframework.model.Workflow;
 import org.opensearch.flowframework.model.WorkflowEdge;
 import org.opensearch.flowframework.model.WorkflowNode;
 import org.opensearch.flowframework.util.ParseUtils;
+import org.opensearch.flowframework.workflow.WorkflowProcessSorter;
 import org.opensearch.tasks.Task;
 import org.opensearch.test.OpenSearchTestCase;
 import org.opensearch.threadpool.ThreadPool;
@@ -56,6 +57,7 @@ public class CreateWorkflowTransportActionTests extends OpenSearchTestCase {
         this.createWorkflowTransportAction = new CreateWorkflowTransportAction(
             mock(TransportService.class),
             mock(ActionFilters.class),
+            mock(WorkflowProcessSorter.class),
             flowFrameworkIndicesHandler,
             client
         );

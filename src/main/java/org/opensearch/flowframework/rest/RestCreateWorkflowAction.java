@@ -28,6 +28,7 @@ import java.io.IOException;
 import java.util.List;
 import java.util.Locale;
 
+import static org.opensearch.flowframework.common.CommonValue.DRY_RUN;
 import static org.opensearch.flowframework.common.CommonValue.WORKFLOW_ID;
 import static org.opensearch.flowframework.common.CommonValue.WORKFLOW_URI;
 
@@ -62,9 +63,13 @@ public class RestCreateWorkflowAction extends BaseRestHandler {
     @Override
     protected RestChannelConsumer prepareRequest(RestRequest request, NodeClient client) throws IOException {
         try {
+
             String workflowId = request.param(WORKFLOW_ID);
             Template template = Template.parse(request.content().utf8ToString());
-            WorkflowRequest workflowRequest = new WorkflowRequest(workflowId, template);
+            boolean dryRun = request.paramAsBoolean(DRY_RUN, false);
+
+            WorkflowRequest workflowRequest = new WorkflowRequest(workflowId, template, dryRun);
+
             return channel -> client.execute(CreateWorkflowAction.INSTANCE, workflowRequest, ActionListener.wrap(response -> {
                 XContentBuilder builder = response.toXContent(channel.newBuilder(), ToXContent.EMPTY_PARAMS);
                 channel.sendResponse(new BytesRestResponse(RestStatus.CREATED, builder));
