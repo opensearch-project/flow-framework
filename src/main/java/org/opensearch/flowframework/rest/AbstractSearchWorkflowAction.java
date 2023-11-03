@@ -13,6 +13,7 @@ import org.opensearch.action.search.SearchRequest;
 import org.opensearch.action.search.SearchResponse;
 import org.opensearch.client.node.NodeClient;
 import org.opensearch.core.rest.RestStatus;
+import org.opensearch.core.xcontent.ToXContent;
 import org.opensearch.core.xcontent.ToXContentObject;
 import org.opensearch.flowframework.common.FlowFrameworkFeatureEnabledSetting;
 import org.opensearch.flowframework.exception.FlowFrameworkException;
@@ -23,19 +24,19 @@ import org.opensearch.rest.RestRequest;
 import org.opensearch.rest.RestResponse;
 import org.opensearch.rest.action.RestResponseListener;
 import org.opensearch.search.builder.SearchSourceBuilder;
-import static org.opensearch.flowframework.common.FlowFrameworkFeatureEnabledSetting.FLOW_FRAMEWORK_ENABLED;
 
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
 import static org.opensearch.core.xcontent.ToXContent.EMPTY_PARAMS;
+import static org.opensearch.flowframework.common.FlowFrameworkFeatureEnabledSetting.FLOW_FRAMEWORK_ENABLED;
 import static org.opensearch.flowframework.util.RestHandlerUtils.getSourceContext;
 
 /**
  * Abstract class to handle search request.
  */
-public class AbstractSearchWorkflowAction<T extends ToXContentObject> extends BaseRestHandler {
+public abstract class AbstractSearchWorkflowAction<T extends ToXContentObject> extends BaseRestHandler {
 
     protected final List<String> urlPaths;
     protected final String index;
@@ -49,8 +50,15 @@ public class AbstractSearchWorkflowAction<T extends ToXContentObject> extends Ba
      * @param index index the search should be done on
      * @param clazz model class
      * @param actionType from which action abstract class is called
+     * @param flowFrameworkFeatureEnabledSetting Whether this API is enabled
      */
-    public AbstractSearchWorkflowAction(List<String> urlPaths, String index, Class<T> clazz, ActionType<SearchResponse> actionType, FlowFrameworkFeatureEnabledSetting flowFrameworkFeatureEnabledSetting) {
+    public AbstractSearchWorkflowAction(
+        List<String> urlPaths,
+        String index,
+        Class<T> clazz,
+        ActionType<SearchResponse> actionType,
+        FlowFrameworkFeatureEnabledSetting flowFrameworkFeatureEnabledSetting
+    ) {
         this.urlPaths = urlPaths;
         this.index = index;
         this.clazz = clazz;
@@ -59,16 +67,14 @@ public class AbstractSearchWorkflowAction<T extends ToXContentObject> extends Ba
     }
 
     @Override
-    public String getName() {
-        return null;
-    }
-
-    @Override
     protected RestChannelConsumer prepareRequest(RestRequest request, NodeClient client) throws IOException {
         if (!flowFrameworkFeatureEnabledSetting.isFlowFrameworkEnabled()) {
-            throw new FlowFrameworkException(
-                    "This API is disabled. To enable it, update the setting [" + FLOW_FRAMEWORK_ENABLED.getKey() + "] to true.",
-                    RestStatus.FORBIDDEN
+            FlowFrameworkException ffe = new FlowFrameworkException(
+                "This API is disabled. To enable it, update the setting [" + FLOW_FRAMEWORK_ENABLED.getKey() + "] to true.",
+                RestStatus.FORBIDDEN
+            );
+            return channel -> channel.sendResponse(
+                new BytesRestResponse(ffe.getRestStatus(), ffe.toXContent(channel.newErrorBuilder(), ToXContent.EMPTY_PARAMS))
             );
         }
         SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder();

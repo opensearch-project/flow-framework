@@ -24,9 +24,20 @@ public class RestSearchWorkflowAction extends AbstractSearchWorkflowAction<Templ
     private static final String SEARCH_WORKFLOW_ACTION = "search_workflow_action";
     private static final String SEARCH_WORKFLOW_PATH = WORKFLOW_URI + "/_search";
 
+    /**
+     * Instantiates a new RestSearchWorkflowAction
+     *
+     * @param flowFrameworkFeatureEnabledSetting Whether this API is enabled
+     */
     public RestSearchWorkflowAction(FlowFrameworkFeatureEnabledSetting flowFrameworkFeatureEnabledSetting) {
-        super(ImmutableList.of(SEARCH_WORKFLOW_PATH), GLOBAL_CONTEXT_INDEX, Template.class, SearchWorkflowAction.INSTANCE, flowFrameworkFeatureEnabledSetting);
-
+        super(
+            ImmutableList.of(SEARCH_WORKFLOW_PATH),
+            GLOBAL_CONTEXT_INDEX,
+            Template.class,
+            SearchWorkflowAction.INSTANCE,
+            flowFrameworkFeatureEnabledSetting
+        );
+    }
 
     @Override
     public String getName() {
