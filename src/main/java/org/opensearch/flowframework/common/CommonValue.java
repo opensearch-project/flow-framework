@@ -53,6 +53,8 @@ public class CommonValue {
     public static final String WORKFLOW_URI = FLOW_FRAMEWORK_BASE_URI + "/workflow";
     /** Field name for workflow Id, the document Id of the indexed use case template */
     public static final String WORKFLOW_ID = "workflow_id";
+    /** Field name for dry run, the flag to indicate if validation is necessary */
+    public static final String DRY_RUN = "dryrun";
     /** The field name for provision workflow within a use case template*/
     public static final String PROVISION_WORKFLOW = "provision";
 

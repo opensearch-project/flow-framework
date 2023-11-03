@@ -9,14 +9,19 @@
 package org.opensearch.flowframework.rest;
 
 import com.google.common.collect.ImmutableList;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.opensearch.client.node.NodeClient;
+import org.opensearch.core.action.ActionListener;
 import org.opensearch.core.rest.RestStatus;
+import org.opensearch.core.xcontent.ToXContent;
+import org.opensearch.core.xcontent.XContentBuilder;
 import org.opensearch.flowframework.exception.FlowFrameworkException;
 import org.opensearch.flowframework.transport.ProvisionWorkflowAction;
 import org.opensearch.flowframework.transport.WorkflowRequest;
 import org.opensearch.rest.BaseRestHandler;
+import org.opensearch.rest.BytesRestResponse;
 import org.opensearch.rest.RestRequest;
-import org.opensearch.rest.action.RestToXContentListener;
 
 import java.io.IOException;
 import java.util.List;
@@ -29,6 +34,8 @@ import static org.opensearch.flowframework.common.CommonValue.WORKFLOW_URI;
  * Rest action to facilitate requests to provision a workflow from an inline defined or stored use case template
  */
 public class RestProvisionWorkflowAction extends BaseRestHandler {
+
+    private static final Logger logger = LogManager.getLogger(RestProvisionWorkflowAction.class);
 
     private static final String PROVISION_WORKFLOW_ACTION = "provision_workflow_action";
 
@@ -52,21 +59,35 @@ public class RestProvisionWorkflowAction extends BaseRestHandler {
 
     @Override
     protected RestChannelConsumer prepareRequest(RestRequest request, NodeClient client) throws IOException {
-
-        // Validate content
-        if (request.hasContent()) {
-            throw new FlowFrameworkException("Invalid request format", RestStatus.BAD_REQUEST);
-        }
-
-        // Validate params
         String workflowId = request.param(WORKFLOW_ID);
-        if (workflowId == null) {
-            throw new FlowFrameworkException("workflow_id cannot be null", RestStatus.BAD_REQUEST);
+        try {
+            // Validate content
+            if (request.hasContent()) {
+                throw new FlowFrameworkException("Invalid request format", RestStatus.BAD_REQUEST);
+            }
+            // Validate params
+            if (workflowId == null) {
+                throw new FlowFrameworkException("workflow_id cannot be null", RestStatus.BAD_REQUEST);
+            }
+            // Create request and provision
+            WorkflowRequest workflowRequest = new WorkflowRequest(workflowId, null);
+            return channel -> client.execute(ProvisionWorkflowAction.INSTANCE, workflowRequest, ActionListener.wrap(response -> {
+                XContentBuilder builder = response.toXContent(channel.newBuilder(), ToXContent.EMPTY_PARAMS);
+                channel.sendResponse(new BytesRestResponse(RestStatus.OK, builder));
+            }, exception -> {
+                try {
+                    FlowFrameworkException ex = (FlowFrameworkException) exception;
+                    XContentBuilder exceptionBuilder = ex.toXContent(channel.newErrorBuilder(), ToXContent.EMPTY_PARAMS);
+                    channel.sendResponse(new BytesRestResponse(ex.getRestStatus(), exceptionBuilder));
+                } catch (IOException e) {
+                    logger.error("Failed to send back provision workflow exception", e);
+                }
+            }));
+        } catch (FlowFrameworkException ex) {
+            return channel -> channel.sendResponse(
+                new BytesRestResponse(ex.getRestStatus(), ex.toXContent(channel.newErrorBuilder(), ToXContent.EMPTY_PARAMS))
+            );
         }
-
-        // Create request and provision
-        WorkflowRequest workflowRequest = new WorkflowRequest(workflowId, null);
-        return channel -> client.execute(ProvisionWorkflowAction.INSTANCE, workflowRequest, new RestToXContentListener<>(channel));
     }
 
 }
