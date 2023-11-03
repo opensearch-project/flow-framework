@@ -40,11 +40,12 @@ public class RestCreateWorkflowActionTests extends OpenSearchTestCase {
     private String createWorkflowPath;
     private String updateWorkflowPath;
     private NodeClient nodeClient;
+    private FlowFrameworkFeatureEnabledSetting flowFrameworkFeatureEnabledSetting;
 
     @Override
     public void setUp() throws Exception {
         super.setUp();
-        FlowFrameworkFeatureEnabledSetting flowFrameworkFeatureEnabledSetting = mock(FlowFrameworkFeatureEnabledSetting.class);
+        flowFrameworkFeatureEnabledSetting = mock(FlowFrameworkFeatureEnabledSetting.class);
         when(flowFrameworkFeatureEnabledSetting.isFlowFrameworkEnabled()).thenReturn(true);
 
         Version templateVersion = Version.fromString("1.0.0");
@@ -98,5 +99,16 @@ public class RestCreateWorkflowActionTests extends OpenSearchTestCase {
         createWorkflowRestAction.handleRequest(request, channel, nodeClient);
         assertEquals(RestStatus.BAD_REQUEST, channel.capturedResponse().status());
         assertTrue(channel.capturedResponse().content().utf8ToString().contains("Unable to parse field [invalid] in a template object."));
+    }
+
+    public void testFeatureFlagNotEnabled() throws Exception {
+        when(flowFrameworkFeatureEnabledSetting.isFlowFrameworkEnabled()).thenReturn(false);
+        RestRequest request = new FakeRestRequest.Builder(xContentRegistry()).withMethod(RestRequest.Method.POST)
+            .withPath(this.createWorkflowPath)
+            .build();
+        FakeRestChannel channel = new FakeRestChannel(request, false, 1);
+        createWorkflowRestAction.handleRequest(request, channel, nodeClient);
+        assertEquals(RestStatus.FORBIDDEN, channel.capturedResponse().status());
+        assertTrue(channel.capturedResponse().content().utf8ToString().contains("This API is disabled."));
     }
 }

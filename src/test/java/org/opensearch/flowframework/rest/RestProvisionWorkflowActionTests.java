@@ -31,11 +31,12 @@ public class RestProvisionWorkflowActionTests extends OpenSearchTestCase {
     private RestProvisionWorkflowAction provisionWorkflowRestAction;
     private String provisionWorkflowPath;
     private NodeClient nodeClient;
+    private FlowFrameworkFeatureEnabledSetting flowFrameworkFeatureEnabledSetting;
 
     @Override
     public void setUp() throws Exception {
         super.setUp();
-        FlowFrameworkFeatureEnabledSetting flowFrameworkFeatureEnabledSetting = mock(FlowFrameworkFeatureEnabledSetting.class);
+        flowFrameworkFeatureEnabledSetting = mock(FlowFrameworkFeatureEnabledSetting.class);
         when(flowFrameworkFeatureEnabledSetting.isFlowFrameworkEnabled()).thenReturn(true);
 
         this.provisionWorkflowRestAction = new RestProvisionWorkflowAction(flowFrameworkFeatureEnabledSetting);
@@ -86,4 +87,14 @@ public class RestProvisionWorkflowActionTests extends OpenSearchTestCase {
         );
     }
 
+    public void testFeatureFlagNotEnabled() throws Exception {
+        when(flowFrameworkFeatureEnabledSetting.isFlowFrameworkEnabled()).thenReturn(false);
+        RestRequest request = new FakeRestRequest.Builder(xContentRegistry()).withMethod(RestRequest.Method.POST)
+            .withPath(this.provisionWorkflowPath)
+            .build();
+        FakeRestChannel channel = new FakeRestChannel(request, false, 1);
+        provisionWorkflowRestAction.handleRequest(request, channel, nodeClient);
+        assertEquals(RestStatus.FORBIDDEN, channel.capturedResponse().status());
+        assertTrue(channel.capturedResponse().content().utf8ToString().contains("This API is disabled."));
+    }
 }
