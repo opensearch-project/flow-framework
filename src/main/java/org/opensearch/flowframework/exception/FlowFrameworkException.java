@@ -67,6 +67,6 @@ public class FlowFrameworkException extends RuntimeException implements ToXConte
 
     @Override
     public XContentBuilder toXContent(XContentBuilder builder, Params params) throws IOException {
-        return builder.startObject().field("error", "Request failed with exception: [" + this.getMessage() + "]").endObject();
+        return builder.startObject().field("error", this.getMessage()).endObject();
     }
 }
