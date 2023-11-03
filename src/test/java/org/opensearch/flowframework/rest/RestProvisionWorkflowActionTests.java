@@ -12,6 +12,7 @@ import org.opensearch.client.node.NodeClient;
 import org.opensearch.core.common.bytes.BytesArray;
 import org.opensearch.core.rest.RestStatus;
 import org.opensearch.core.xcontent.MediaTypeRegistry;
+import org.opensearch.flowframework.common.FlowFrameworkFeatureEnabledSetting;
 import org.opensearch.rest.RestHandler.Route;
 import org.opensearch.rest.RestRequest;
 import org.opensearch.test.OpenSearchTestCase;
@@ -23,17 +24,22 @@ import java.util.Locale;
 
 import static org.opensearch.flowframework.common.CommonValue.WORKFLOW_URI;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 public class RestProvisionWorkflowActionTests extends OpenSearchTestCase {
 
     private RestProvisionWorkflowAction provisionWorkflowRestAction;
     private String provisionWorkflowPath;
     private NodeClient nodeClient;
+    private FlowFrameworkFeatureEnabledSetting flowFrameworkFeatureEnabledSetting;
 
     @Override
     public void setUp() throws Exception {
         super.setUp();
-        this.provisionWorkflowRestAction = new RestProvisionWorkflowAction();
+        flowFrameworkFeatureEnabledSetting = mock(FlowFrameworkFeatureEnabledSetting.class);
+        when(flowFrameworkFeatureEnabledSetting.isFlowFrameworkEnabled()).thenReturn(true);
+
+        this.provisionWorkflowRestAction = new RestProvisionWorkflowAction(flowFrameworkFeatureEnabledSetting);
         this.provisionWorkflowPath = String.format(Locale.ROOT, "%s/{%s}/%s", WORKFLOW_URI, "workflow_id", "_provision");
         this.nodeClient = mock(NodeClient.class);
     }
@@ -81,4 +87,14 @@ public class RestProvisionWorkflowActionTests extends OpenSearchTestCase {
         );
     }
 
+    public void testFeatureFlagNotEnabled() throws Exception {
+        when(flowFrameworkFeatureEnabledSetting.isFlowFrameworkEnabled()).thenReturn(false);
+        RestRequest request = new FakeRestRequest.Builder(xContentRegistry()).withMethod(RestRequest.Method.POST)
+            .withPath(this.provisionWorkflowPath)
+            .build();
+        FakeRestChannel channel = new FakeRestChannel(request, false, 1);
+        provisionWorkflowRestAction.handleRequest(request, channel, nodeClient);
+        assertEquals(RestStatus.FORBIDDEN, channel.capturedResponse().status());
+        assertTrue(channel.capturedResponse().content().utf8ToString().contains("This API is disabled."));
+    }
 }

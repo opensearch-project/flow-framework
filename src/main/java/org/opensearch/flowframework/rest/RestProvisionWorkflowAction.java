@@ -16,6 +16,7 @@ import org.opensearch.core.action.ActionListener;
 import org.opensearch.core.rest.RestStatus;
 import org.opensearch.core.xcontent.ToXContent;
 import org.opensearch.core.xcontent.XContentBuilder;
+import org.opensearch.flowframework.common.FlowFrameworkFeatureEnabledSetting;
 import org.opensearch.flowframework.exception.FlowFrameworkException;
 import org.opensearch.flowframework.transport.ProvisionWorkflowAction;
 import org.opensearch.flowframework.transport.WorkflowRequest;
@@ -29,6 +30,7 @@ import java.util.Locale;
 
 import static org.opensearch.flowframework.common.CommonValue.WORKFLOW_ID;
 import static org.opensearch.flowframework.common.CommonValue.WORKFLOW_URI;
+import static org.opensearch.flowframework.common.FlowFrameworkFeatureEnabledSetting.FLOW_FRAMEWORK_ENABLED;
 
 /**
  * Rest action to facilitate requests to provision a workflow from an inline defined or stored use case template
@@ -39,10 +41,16 @@ public class RestProvisionWorkflowAction extends BaseRestHandler {
 
     private static final String PROVISION_WORKFLOW_ACTION = "provision_workflow_action";
 
+    private FlowFrameworkFeatureEnabledSetting flowFrameworkFeatureEnabledSetting;
+
     /**
      * Instantiates a new RestProvisionWorkflowAction
+     *
+     * @param flowFrameworkFeatureEnabledSetting Whether this API is enabled
      */
-    public RestProvisionWorkflowAction() {}
+    public RestProvisionWorkflowAction(FlowFrameworkFeatureEnabledSetting flowFrameworkFeatureEnabledSetting) {
+        this.flowFrameworkFeatureEnabledSetting = flowFrameworkFeatureEnabledSetting;
+    }
 
     @Override
     public String getName() {
@@ -61,6 +69,12 @@ public class RestProvisionWorkflowAction extends BaseRestHandler {
     protected RestChannelConsumer prepareRequest(RestRequest request, NodeClient client) throws IOException {
         String workflowId = request.param(WORKFLOW_ID);
         try {
+            if (!flowFrameworkFeatureEnabledSetting.isFlowFrameworkEnabled()) {
+                throw new FlowFrameworkException(
+                    "This API is disabled. To enable it, update the setting [" + FLOW_FRAMEWORK_ENABLED.getKey() + "] to true.",
+                    RestStatus.FORBIDDEN
+                );
+            }
             // Validate content
             if (request.hasContent()) {
                 throw new FlowFrameworkException("Invalid request format", RestStatus.BAD_REQUEST);
