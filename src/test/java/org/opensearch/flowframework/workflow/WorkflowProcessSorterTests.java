@@ -141,31 +141,35 @@ public class WorkflowProcessSorterTests extends OpenSearchTestCase {
     public void testCycles() {
         Exception ex;
 
-        ex = assertThrows(IllegalArgumentException.class, () -> parse(workflow(List.of(node("A")), List.of(edge("A", "A")))));
+        ex = assertThrows(FlowFrameworkException.class, () -> parse(workflow(List.of(node("A")), List.of(edge("A", "A")))));
         assertEquals("Edge connects node A to itself.", ex.getMessage());
+        assertEquals(RestStatus.BAD_REQUEST, ((FlowFrameworkException) ex).getRestStatus());
 
         ex = assertThrows(
-            IllegalArgumentException.class,
+            FlowFrameworkException.class,
             () -> parse(workflow(List.of(node("A"), node("B")), List.of(edge("A", "B"), edge("B", "B"))))
         );
         assertEquals("Edge connects node B to itself.", ex.getMessage());
+        assertEquals(RestStatus.BAD_REQUEST, ((FlowFrameworkException) ex).getRestStatus());
 
         ex = assertThrows(
-            IllegalArgumentException.class,
+            FlowFrameworkException.class,
             () -> parse(workflow(List.of(node("A"), node("B")), List.of(edge("A", "B"), edge("B", "A"))))
         );
         assertEquals(NO_START_NODE_DETECTED, ex.getMessage());
+        assertEquals(RestStatus.BAD_REQUEST, ((FlowFrameworkException) ex).getRestStatus());
 
         ex = assertThrows(
-            IllegalArgumentException.class,
+            FlowFrameworkException.class,
             () -> parse(workflow(List.of(node("A"), node("B"), node("C")), List.of(edge("A", "B"), edge("B", "C"), edge("C", "B"))))
         );
         assertTrue(ex.getMessage().startsWith(CYCLE_DETECTED));
         assertTrue(ex.getMessage().contains("B->C"));
         assertTrue(ex.getMessage().contains("C->B"));
+        assertEquals(RestStatus.BAD_REQUEST, ((FlowFrameworkException) ex).getRestStatus());
 
         ex = assertThrows(
-            IllegalArgumentException.class,
+            FlowFrameworkException.class,
             () -> parse(
                 workflow(
                     List.of(node("A"), node("B"), node("C"), node("D")),
@@ -177,6 +181,7 @@ public class WorkflowProcessSorterTests extends OpenSearchTestCase {
         assertTrue(ex.getMessage().contains("B->C"));
         assertTrue(ex.getMessage().contains("C->D"));
         assertTrue(ex.getMessage().contains("D->B"));
+        assertEquals(RestStatus.BAD_REQUEST, ((FlowFrameworkException) ex).getRestStatus());
     }
 
     public void testNoEdges() throws IOException {
@@ -196,13 +201,15 @@ public class WorkflowProcessSorterTests extends OpenSearchTestCase {
 
     public void testExceptions() throws IOException {
         Exception ex = assertThrows(
-            IllegalArgumentException.class,
+            FlowFrameworkException.class,
             () -> parse(workflow(List.of(node("A"), node("B")), List.of(edge("C", "B"))))
         );
         assertEquals("Edge source C does not correspond to a node.", ex.getMessage());
+        assertEquals(RestStatus.BAD_REQUEST, ((FlowFrameworkException) ex).getRestStatus());
 
-        ex = assertThrows(IllegalArgumentException.class, () -> parse(workflow(List.of(node("A"), node("B")), List.of(edge("A", "C")))));
+        ex = assertThrows(FlowFrameworkException.class, () -> parse(workflow(List.of(node("A"), node("B")), List.of(edge("A", "C")))));
         assertEquals("Edge destination C does not correspond to a node.", ex.getMessage());
+        assertEquals(RestStatus.BAD_REQUEST, ((FlowFrameworkException) ex).getRestStatus());
 
         ex = assertThrows(
             FlowFrameworkException.class,
@@ -223,7 +230,7 @@ public class WorkflowProcessSorterTests extends OpenSearchTestCase {
                 Map.entry("version", ""),
                 Map.entry("protocol", ""),
                 Map.entry("parameters", ""),
-                Map.entry("credentials", ""),
+                Map.entry("credential", ""),
                 Map.entry("actions", "")
             )
         );
@@ -268,11 +275,11 @@ public class WorkflowProcessSorterTests extends OpenSearchTestCase {
         Workflow workflow = new Workflow(Map.of(), List.of(registerModel, deployModel), List.of(edge));
 
         List<ProcessNode> sortedProcessNodes = workflowProcessSorter.sortProcessNodes(workflow);
-        IllegalArgumentException ex = expectThrows(
-            IllegalArgumentException.class,
+        FlowFrameworkException ex = expectThrows(
+            FlowFrameworkException.class,
             () -> workflowProcessSorter.validateGraph(sortedProcessNodes)
         );
         assertEquals("Invalid graph, missing the following required inputs : [connector_id]", ex.getMessage());
-
+        assertEquals(RestStatus.BAD_REQUEST, ex.getRestStatus());
     }
 }

@@ -32,15 +32,30 @@ public class WorkflowRequest extends ActionRequest {
      */
     @Nullable
     private Template template;
+    /**
+     * Validation flag
+     */
+    private boolean dryRun;
+
+    /**
+     * Instantiates a new WorkflowRequest and defaults dry run to false
+     * @param workflowId the documentId of the workflow
+     * @param template the use case template which describes the workflow
+     */
+    public WorkflowRequest(@Nullable String workflowId, @Nullable Template template) {
+        this(workflowId, template, false);
+    }
 
     /**
      * Instantiates a new WorkflowRequest
      * @param workflowId the documentId of the workflow
      * @param template the use case template which describes the workflow
+     * @param dryRun flag to indicate if validation is necessary
      */
-    public WorkflowRequest(@Nullable String workflowId, @Nullable Template template) {
+    public WorkflowRequest(@Nullable String workflowId, @Nullable Template template, boolean dryRun) {
         this.workflowId = workflowId;
         this.template = template;
+        this.dryRun = dryRun;
     }
 
     /**
@@ -53,6 +68,7 @@ public class WorkflowRequest extends ActionRequest {
         this.workflowId = in.readOptionalString();
         String templateJson = in.readOptionalString();
         this.template = templateJson == null ? null : Template.parse(templateJson);
+        this.dryRun = in.readBoolean();
     }
 
     /**
@@ -73,11 +89,20 @@ public class WorkflowRequest extends ActionRequest {
         return this.template;
     }
 
+    /**
+     * Gets the dry run validation flag
+     * @return the dry run boolean
+     */
+    public boolean isDryRun() {
+        return this.dryRun;
+    }
+
     @Override
     public void writeTo(StreamOutput out) throws IOException {
         super.writeTo(out);
         out.writeOptionalString(workflowId);
         out.writeOptionalString(template == null ? null : template.toJson());
+        out.writeBoolean(dryRun);
     }
 
     @Override

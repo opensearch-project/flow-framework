@@ -11,6 +11,7 @@ package org.opensearch.flowframework.transport;
 import com.google.common.collect.ImmutableMap;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.opensearch.ExceptionsHelper;
 import org.opensearch.action.get.GetRequest;
 import org.opensearch.action.support.ActionFilters;
 import org.opensearch.action.support.HandledTransportAction;
@@ -133,17 +134,17 @@ public class ProvisionWorkflowTransportAction extends HandledTransportAction<Wor
                 executeWorkflowAsync(workflowId, provisionProcessSequence);
 
             }, exception -> {
-                if (exception instanceof IllegalArgumentException) {
+                if (exception instanceof FlowFrameworkException) {
                     logger.error("Workflow validation failed for workflow : " + workflowId);
-                    listener.onFailure(new FlowFrameworkException(exception.getMessage(), RestStatus.BAD_REQUEST));
+                    listener.onFailure(exception);
                 } else {
                     logger.error("Failed to retrieve template from global context.", exception);
-                    listener.onFailure(new FlowFrameworkException(exception.getMessage(), RestStatus.INTERNAL_SERVER_ERROR));
+                    listener.onFailure(new FlowFrameworkException(exception.getMessage(), ExceptionsHelper.status(exception)));
                 }
             }));
         } catch (Exception e) {
             logger.error("Failed to retrieve template from global context.", e);
-            listener.onFailure(new FlowFrameworkException(e.getMessage(), RestStatus.INTERNAL_SERVER_ERROR));
+            listener.onFailure(new FlowFrameworkException(e.getMessage(), ExceptionsHelper.status(e)));
         }
     }
 
@@ -166,7 +167,7 @@ public class ProvisionWorkflowTransportAction extends HandledTransportAction<Wor
         try {
             threadPool.executor(PROVISION_THREAD_POOL).execute(() -> { executeWorkflow(workflowSequence, provisionWorkflowListener); });
         } catch (Exception exception) {
-            provisionWorkflowListener.onFailure(new FlowFrameworkException(exception.getMessage(), RestStatus.INTERNAL_SERVER_ERROR));
+            provisionWorkflowListener.onFailure(new FlowFrameworkException(exception.getMessage(), ExceptionsHelper.status(exception)));
         }
     }
 
@@ -206,7 +207,7 @@ public class ProvisionWorkflowTransportAction extends HandledTransportAction<Wor
         } catch (IllegalArgumentException e) {
             workflowListener.onFailure(new FlowFrameworkException(e.getMessage(), RestStatus.BAD_REQUEST));
         } catch (Exception ex) {
-            workflowListener.onFailure(new FlowFrameworkException(ex.getMessage(), RestStatus.INTERNAL_SERVER_ERROR));
+            workflowListener.onFailure(new FlowFrameworkException(ex.getMessage(), ExceptionsHelper.status(ex)));
         }
     }
 
