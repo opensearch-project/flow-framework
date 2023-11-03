@@ -16,6 +16,7 @@ import org.opensearch.cluster.node.DiscoveryNodes;
 import org.opensearch.cluster.service.ClusterService;
 import org.opensearch.common.settings.ClusterSettings;
 import org.opensearch.common.settings.IndexScopedSettings;
+import org.opensearch.common.settings.Setting;
 import org.opensearch.common.settings.Settings;
 import org.opensearch.common.settings.SettingsFilter;
 import org.opensearch.common.util.concurrent.OpenSearchExecutors;
@@ -24,6 +25,7 @@ import org.opensearch.core.common.io.stream.NamedWriteableRegistry;
 import org.opensearch.core.xcontent.NamedXContentRegistry;
 import org.opensearch.env.Environment;
 import org.opensearch.env.NodeEnvironment;
+import org.opensearch.flowframework.common.FlowFrameworkFeatureEnabledSetting;
 import org.opensearch.flowframework.indices.FlowFrameworkIndicesHandler;
 import org.opensearch.flowframework.rest.RestCreateWorkflowAction;
 import org.opensearch.flowframework.rest.RestProvisionWorkflowAction;
@@ -57,6 +59,8 @@ import static org.opensearch.flowframework.common.CommonValue.PROVISION_THREAD_P
  */
 public class FlowFrameworkPlugin extends Plugin implements ActionPlugin {
 
+    private FlowFrameworkFeatureEnabledSetting flowFrameworkFeatureEnabledSetting;
+
     /**
      * Instantiate this plugin.
      */
@@ -76,6 +80,9 @@ public class FlowFrameworkPlugin extends Plugin implements ActionPlugin {
         IndexNameExpressionResolver indexNameExpressionResolver,
         Supplier<RepositoriesService> repositoriesServiceSupplier
     ) {
+        Settings settings = environment.settings();
+        flowFrameworkFeatureEnabledSetting = new FlowFrameworkFeatureEnabledSetting(clusterService, settings);
+
         MachineLearningNodeClient mlClient = new MachineLearningNodeClient(client);
         WorkflowStepFactory workflowStepFactory = new WorkflowStepFactory(clusterService, client, mlClient);
         WorkflowProcessSorter workflowProcessSorter = new WorkflowProcessSorter(workflowStepFactory, threadPool);
@@ -95,7 +102,10 @@ public class FlowFrameworkPlugin extends Plugin implements ActionPlugin {
         IndexNameExpressionResolver indexNameExpressionResolver,
         Supplier<DiscoveryNodes> nodesInCluster
     ) {
-        return ImmutableList.of(new RestCreateWorkflowAction(), new RestProvisionWorkflowAction());
+        return ImmutableList.of(
+            new RestCreateWorkflowAction(flowFrameworkFeatureEnabledSetting),
+            new RestProvisionWorkflowAction(flowFrameworkFeatureEnabledSetting)
+        );
     }
 
     @Override
@@ -104,6 +114,12 @@ public class FlowFrameworkPlugin extends Plugin implements ActionPlugin {
             new ActionHandler<>(CreateWorkflowAction.INSTANCE, CreateWorkflowTransportAction.class),
             new ActionHandler<>(ProvisionWorkflowAction.INSTANCE, ProvisionWorkflowTransportAction.class)
         );
+    }
+
+    @Override
+    public List<Setting<?>> getSettings() {
+        List<Setting<?>> settings = ImmutableList.of(FlowFrameworkFeatureEnabledSetting.FLOW_FRAMEWORK_ENABLED);
+        return settings;
     }
 
     @Override

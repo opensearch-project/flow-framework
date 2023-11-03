@@ -14,6 +14,7 @@ import org.opensearch.core.common.bytes.BytesArray;
 import org.opensearch.core.rest.RestStatus;
 import org.opensearch.core.xcontent.MediaTypeRegistry;
 import org.opensearch.flowframework.TestHelpers;
+import org.opensearch.flowframework.common.FlowFrameworkFeatureEnabledSetting;
 import org.opensearch.flowframework.model.Template;
 import org.opensearch.flowframework.model.Workflow;
 import org.opensearch.flowframework.model.WorkflowEdge;
@@ -30,6 +31,7 @@ import java.util.Map;
 
 import static org.opensearch.flowframework.common.CommonValue.WORKFLOW_URI;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 public class RestCreateWorkflowActionTests extends OpenSearchTestCase {
 
@@ -38,10 +40,13 @@ public class RestCreateWorkflowActionTests extends OpenSearchTestCase {
     private String createWorkflowPath;
     private String updateWorkflowPath;
     private NodeClient nodeClient;
+    private FlowFrameworkFeatureEnabledSetting flowFrameworkFeatureEnabledSetting;
 
     @Override
     public void setUp() throws Exception {
         super.setUp();
+        flowFrameworkFeatureEnabledSetting = mock(FlowFrameworkFeatureEnabledSetting.class);
+        when(flowFrameworkFeatureEnabledSetting.isFlowFrameworkEnabled()).thenReturn(true);
 
         Version templateVersion = Version.fromString("1.0.0");
         List<Version> compatibilityVersions = List.of(Version.fromString("2.0.0"), Version.fromString("3.0.0"));
@@ -64,7 +69,7 @@ public class RestCreateWorkflowActionTests extends OpenSearchTestCase {
 
         // Invalid template configuration, wrong field name
         this.invalidTemplate = template.toJson().replace("use_case", "invalid");
-        this.createWorkflowRestAction = new RestCreateWorkflowAction();
+        this.createWorkflowRestAction = new RestCreateWorkflowAction(flowFrameworkFeatureEnabledSetting);
         this.createWorkflowPath = String.format(Locale.ROOT, "%s", WORKFLOW_URI);
         this.updateWorkflowPath = String.format(Locale.ROOT, "%s/{%s}", WORKFLOW_URI, "workflow_id");
         this.nodeClient = mock(NodeClient.class);
@@ -94,5 +99,16 @@ public class RestCreateWorkflowActionTests extends OpenSearchTestCase {
         createWorkflowRestAction.handleRequest(request, channel, nodeClient);
         assertEquals(RestStatus.BAD_REQUEST, channel.capturedResponse().status());
         assertTrue(channel.capturedResponse().content().utf8ToString().contains("Unable to parse field [invalid] in a template object."));
+    }
+
+    public void testFeatureFlagNotEnabled() throws Exception {
+        when(flowFrameworkFeatureEnabledSetting.isFlowFrameworkEnabled()).thenReturn(false);
+        RestRequest request = new FakeRestRequest.Builder(xContentRegistry()).withMethod(RestRequest.Method.POST)
+            .withPath(this.createWorkflowPath)
+            .build();
+        FakeRestChannel channel = new FakeRestChannel(request, false, 1);
+        createWorkflowRestAction.handleRequest(request, channel, nodeClient);
+        assertEquals(RestStatus.FORBIDDEN, channel.capturedResponse().status());
+        assertTrue(channel.capturedResponse().content().utf8ToString().contains("This API is disabled."));
     }
 }
