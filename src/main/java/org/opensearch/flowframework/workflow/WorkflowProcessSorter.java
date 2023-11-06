@@ -61,16 +61,17 @@ public class WorkflowProcessSorter {
     /**
      * Sort a workflow into a topologically sorted list of process nodes.
      * @param workflow A workflow with (unsorted) nodes and edges which define predecessors and successors
+     * @param workflowId The workflowId associated with the step
      * @return A list of Process Nodes sorted topologically.  All predecessors of any node will occur prior to it in the list.
      */
-    public List<ProcessNode> sortProcessNodes(Workflow workflow) {
+    public List<ProcessNode> sortProcessNodes(Workflow workflow, String workflowId) {
         List<WorkflowNode> sortedNodes = topologicalSort(workflow.nodes(), workflow.edges());
 
         List<ProcessNode> nodes = new ArrayList<>();
         Map<String, ProcessNode> idToNodeMap = new HashMap<>();
         for (WorkflowNode node : sortedNodes) {
             WorkflowStep step = workflowStepFactory.createStep(node.type());
-            WorkflowData data = new WorkflowData(node.userInputs(), workflow.userParams());
+            WorkflowData data = new WorkflowData(node.userInputs(), workflow.userParams(), workflowId);
             List<ProcessNode> predecessorNodes = workflow.edges()
                 .stream()
                 .filter(e -> e.destination().equals(node.id()))

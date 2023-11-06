@@ -74,6 +74,11 @@ public class WorkflowRequest extends ActionRequest {
     }
 
     /**
+     * The all parameter on the get request
+     */
+    private boolean all;
+
+    /**
      * Instantiates a new WorkflowRequest
      * @param workflowId the documentId of the workflow
      * @param template the use case template which describes the workflow
@@ -94,7 +99,7 @@ public class WorkflowRequest extends ActionRequest {
         this.requestTimeout = requestTimeout;
         this.maxWorkflows = maxWorkflows;
     }
-
+    
     /**
      * Instantiates a new Workflow request
      * @param in The input stream to read from
@@ -151,7 +156,7 @@ public class WorkflowRequest extends ActionRequest {
     public Integer getMaxWorkflows() {
         return maxWorkflows;
     }
-
+    
     @Override
     public void writeTo(StreamOutput out) throws IOException {
         super.writeTo(out);

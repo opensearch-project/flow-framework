@@ -9,14 +9,23 @@
 package org.opensearch.flowframework.model;
 
 import org.opensearch.commons.authuser.User;
+import org.opensearch.core.common.ParsingException;
+import org.opensearch.core.common.io.stream.StreamInput;
+import org.opensearch.core.common.io.stream.StreamOutput;
+import org.opensearch.core.common.io.stream.Writeable;
+import org.opensearch.core.rest.RestStatus;
 import org.opensearch.core.xcontent.ToXContentObject;
 import org.opensearch.core.xcontent.XContentBuilder;
+import org.opensearch.core.xcontent.XContentParseException;
 import org.opensearch.core.xcontent.XContentParser;
+import org.opensearch.flowframework.exception.FlowFrameworkException;
 import org.opensearch.flowframework.util.ParseUtils;
 
 import java.io.IOException;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import static org.opensearch.core.xcontent.XContentParserUtils.ensureExpectedToken;
@@ -35,17 +44,17 @@ import static org.opensearch.flowframework.util.ParseUtils.parseStringToStringMa
  * The WorkflowState is used to store all additional information regarding a workflow that isn't part of the
  * global context.
  */
-public class WorkflowState implements ToXContentObject {
+public class WorkflowState implements ToXContentObject, Writeable {
     private String workflowId;
     private String error;
     private String state;
-    // TODO: Tranisiton the provisioning progress from a string to detailed array of objects
+    // TODO: Transition the provisioning progress from a string to detailed array of objects
     private String provisioningProgress;
     private Instant provisionStartTime;
     private Instant provisionEndTime;
     private User user;
     private Map<String, Object> userOutputs;
-    private Map<String, Object> resourcesCreated;
+    private List<ResourcesCreated> resourcesCreated;
 
     /**
      * Instantiate the object representing the workflow state
@@ -69,7 +78,7 @@ public class WorkflowState implements ToXContentObject {
         Instant provisionEndTime,
         User user,
         Map<String, Object> userOutputs,
-        Map<String, Object> resourcesCreated
+        List<ResourcesCreated> resourcesCreated
     ) {
         this.workflowId = workflowId;
         this.error = error;
@@ -79,10 +88,28 @@ public class WorkflowState implements ToXContentObject {
         this.provisionEndTime = provisionEndTime;
         this.user = user;
         this.userOutputs = Map.copyOf(userOutputs);
-        this.resourcesCreated = Map.copyOf(resourcesCreated);
+        this.resourcesCreated = List.copyOf(resourcesCreated);
     }
 
     private WorkflowState() {}
+
+    /**
+     * Instatiates a new WorkflowState from an input stream
+     * @param input the input stream to read from
+     * @throws IOException if the workflowId cannot be read from the input stream
+     */
+    public WorkflowState(StreamInput input) throws IOException {
+        this.workflowId = input.readString();
+        this.error = input.readOptionalString();
+        this.state = input.readOptionalString();
+        this.provisioningProgress = input.readOptionalString();
+        this.provisionStartTime = input.readOptionalInstant();
+        this.provisionEndTime = input.readOptionalInstant();
+        // TODO: fix error: cannot access Response issue when integrating with access control
+        // this.user = input.readBoolean() ? new User(input) : null;
+        this.userOutputs = input.readBoolean() ? input.readMap() : null;
+        this.resourcesCreated = input.readList(ResourcesCreated::new);
+    }
 
     /**
      * Constructs a builder object for workflowState
@@ -104,7 +131,7 @@ public class WorkflowState implements ToXContentObject {
         private Instant provisionEndTime = null;
         private User user = null;
         private Map<String, Object> userOutputs = null;
-        private Map<String, Object> resourcesCreated = null;
+        private List<ResourcesCreated> resourcesCreated = null;
 
         /**
          * Empty Constructor for the Builder object
@@ -196,8 +223,8 @@ public class WorkflowState implements ToXContentObject {
          * @param resourcesCreated resourcesCreated
          * @return the Builder object
          */
-        public Builder resourcesCreated(Map<String, Object> resourcesCreated) {
-            this.userOutputs = resourcesCreated;
+        public Builder resourcesCreated(List<ResourcesCreated> resourcesCreated) {
+            this.resourcesCreated = resourcesCreated;
             return this;
         }
 
@@ -248,9 +275,34 @@ public class WorkflowState implements ToXContentObject {
             xContentBuilder.field(USER_OUTPUTS_FIELD, userOutputs);
         }
         if (resourcesCreated != null && !resourcesCreated.isEmpty()) {
-            xContentBuilder.field(RESOURCES_CREATED_FIELD, resourcesCreated);
+            xContentBuilder.field(RESOURCES_CREATED_FIELD, resourcesCreated.toArray());
         }
         return xContentBuilder.endObject();
+    }
+
+    @Override
+    public void writeTo(StreamOutput output) throws IOException {
+        output.writeString(workflowId);
+        output.writeOptionalString(error);
+        output.writeOptionalString(state);
+        output.writeOptionalString(provisioningProgress);
+        output.writeOptionalInstant(provisionStartTime);
+        output.writeOptionalInstant(provisionEndTime);
+
+        if (user != null) {
+            output.writeBoolean(true); // user exists
+            user.writeTo(output);
+        } else {
+            output.writeBoolean(false); // user does not exist
+        }
+
+        if (userOutputs != null) {
+            output.writeBoolean(true);
+            output.writeMap(userOutputs);
+        } else {
+            output.writeBoolean(false);
+        }
+        output.writeList(resourcesCreated);
     }
 
     /**
@@ -269,7 +321,7 @@ public class WorkflowState implements ToXContentObject {
         Instant provisionEndTime = null;
         User user = null;
         Map<String, Object> userOutputs = new HashMap<>();
-        Map<String, Object> resourcesCreated = new HashMap<>();
+        List<ResourcesCreated> resourcesCreated = new ArrayList<>();
 
         ensureExpectedToken(XContentParser.Token.START_OBJECT, parser.currentToken(), parser);
         while (parser.nextToken() != XContentParser.Token.END_OBJECT) {
@@ -313,23 +365,17 @@ public class WorkflowState implements ToXContentObject {
                         }
                     }
                     break;
-
                 case RESOURCES_CREATED_FIELD:
-                    ensureExpectedToken(XContentParser.Token.START_OBJECT, parser.currentToken(), parser);
-                    while (parser.nextToken() != XContentParser.Token.END_OBJECT) {
-                        String resourcesCreatedField = parser.currentName();
-                        switch (parser.nextToken()) {
-                            case VALUE_STRING:
-                                resourcesCreated.put(resourcesCreatedField, parser.text());
-                                break;
-                            case START_OBJECT:
-                                resourcesCreated.put(resourcesCreatedField, parseStringToStringMap(parser));
-                                break;
-                            default:
-                                throw new IOException(
-                                    "Unable to parse field [" + resourcesCreatedField + "] in a resources_created object."
-                                );
+                    try {
+                        ensureExpectedToken(XContentParser.Token.START_ARRAY, parser.currentToken(), parser);
+                        while (parser.nextToken() != XContentParser.Token.END_ARRAY) {
+                            resourcesCreated.add(ResourcesCreated.parse(parser));
                         }
+                    } catch (Exception e) {
+                        if (e instanceof ParsingException || e instanceof XContentParseException) {
+                            throw new FlowFrameworkException("Error parsing newly created resources", RestStatus.INTERNAL_SERVER_ERROR);
+                        }
+                        throw e;
                     }
                     break;
                 default:
@@ -416,24 +462,24 @@ public class WorkflowState implements ToXContentObject {
      * A map of all the resources created
      * @return the resources created
      */
-    public Map<String, Object> resourcesCreated() {
+    public List<ResourcesCreated> resourcesCreated() {
         return resourcesCreated;
     }
 
     @Override
     public String toString() {
         return "WorkflowState [workflowId="
-            + workflowId
-            + ", error="
-            + error
-            + ", state="
-            + state
-            + ", provisioningProgress="
-            + provisioningProgress
-            + ", userOutputs="
-            + userOutputs
-            + ", resourcesCreated="
-            + resourcesCreated
-            + "]";
+                + workflowId
+                + ", error="
+                + error
+                + ", state="
+                + state
+                + ", provisioningProgress="
+                + provisioningProgress
+                + ", userOutputs="
+                + userOutputs
+                + ", resourcesCreated="
+                + resourcesCreated
+                + "]";
     }
 }

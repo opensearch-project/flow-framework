@@ -23,9 +23,10 @@ public class WorkflowData {
 
     private final Map<String, Object> content;
     private final Map<String, String> params;
+    private String workflowId;
 
     private WorkflowData() {
-        this(Collections.emptyMap(), Collections.emptyMap());
+        this(Collections.emptyMap(), Collections.emptyMap(), "");
     }
 
     /**
@@ -44,6 +45,19 @@ public class WorkflowData {
     public WorkflowData(Map<String, Object> content, Map<String, String> params) {
         this.content = Map.copyOf(content);
         this.params = Map.copyOf(params);
+        this.workflowId = "";
+    }
+
+    /**
+     * Instantiate this object with content and params.
+     * @param content The content map
+     * @param params The params map
+     * @param workflowId The workflow ID associated with this step
+     */
+    public WorkflowData(Map<String, Object> content, Map<String, String> params, String workflowId) {
+        this.content = Map.copyOf(content);
+        this.params = Map.copyOf(params);
+        this.workflowId = workflowId;
     }
 
     /**
@@ -61,5 +75,13 @@ public class WorkflowData {
      */
     public Map<String, String> getParams() {
         return this.params;
+    };
+
+    /**
+     * Returns the workflowId associated with this workflow.
+     * @return the workflowId of this data.
+     */
+    public String getWorkflowId() {
+        return this.workflowId;
     };
 }

@@ -12,6 +12,7 @@ import org.opensearch.core.action.ActionListener;
 import org.opensearch.core.rest.RestStatus;
 import org.opensearch.flowframework.common.CommonValue;
 import org.opensearch.flowframework.exception.FlowFrameworkException;
+import org.opensearch.flowframework.indices.FlowFrameworkIndicesHandler;
 import org.opensearch.ml.client.MachineLearningNodeClient;
 import org.opensearch.ml.common.connector.ConnectorAction;
 import org.opensearch.ml.common.transport.connector.MLCreateConnectorInput;
@@ -30,6 +31,7 @@ import org.mockito.MockitoAnnotations;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 
 public class CreateConnectorStepTests extends OpenSearchTestCase {
@@ -38,10 +40,12 @@ public class CreateConnectorStepTests extends OpenSearchTestCase {
     @Mock
     MachineLearningNodeClient machineLearningNodeClient;
 
+    private FlowFrameworkIndicesHandler flowFrameworkIndicesHandler;
+
     @Override
     public void setUp() throws Exception {
         super.setUp();
-
+        this.flowFrameworkIndicesHandler = mock(FlowFrameworkIndicesHandler.class);
         Map<String, String> params = Map.ofEntries(Map.entry("endpoint", "endpoint"), Map.entry("temp", "7"));
         Map<String, String> credentials = Map.ofEntries(Map.entry("key1", "value1"), Map.entry("key2", "value2"));
         Map<?, ?>[] actions = new Map<?, ?>[] {
@@ -73,7 +77,7 @@ public class CreateConnectorStepTests extends OpenSearchTestCase {
     public void testCreateConnector() throws IOException, ExecutionException, InterruptedException {
 
         String connectorId = "connect";
-        CreateConnectorStep createConnectorStep = new CreateConnectorStep(machineLearningNodeClient);
+        CreateConnectorStep createConnectorStep = new CreateConnectorStep(machineLearningNodeClient, flowFrameworkIndicesHandler);
 
         @SuppressWarnings("unchecked")
         ArgumentCaptor<ActionListener<MLCreateConnectorResponse>> actionListenerCaptor = ArgumentCaptor.forClass(ActionListener.class);
@@ -95,7 +99,7 @@ public class CreateConnectorStepTests extends OpenSearchTestCase {
     }
 
     public void testCreateConnectorFailure() throws IOException {
-        CreateConnectorStep createConnectorStep = new CreateConnectorStep(machineLearningNodeClient);
+        CreateConnectorStep createConnectorStep = new CreateConnectorStep(machineLearningNodeClient, flowFrameworkIndicesHandler);
 
         @SuppressWarnings("unchecked")
         ArgumentCaptor<ActionListener<MLCreateConnectorResponse>> actionListenerCaptor = ArgumentCaptor.forClass(ActionListener.class);
