@@ -9,20 +9,21 @@
 package org.opensearch.flowframework.transport;
 
 import org.opensearch.action.ActionType;
+import org.opensearch.action.search.SearchResponse;
 
 import static org.opensearch.flowframework.common.CommonValue.TRANSPORT_ACION_NAME_PREFIX;
 
 /**
- * External Action for public facing RestCreateWorkflowAction
+ * External Action for public facing RestSearchWorkflowAction
  */
-public class CreateWorkflowAction extends ActionType<WorkflowResponse> {
+public class SearchWorkflowAction extends ActionType<SearchResponse> {
 
     /** The name of this action */
-    public static final String NAME = TRANSPORT_ACION_NAME_PREFIX + "workflow/create";
+    public static final String NAME = TRANSPORT_ACION_NAME_PREFIX + "workflow/search";
     /** An instance of this action */
-    public static final CreateWorkflowAction INSTANCE = new CreateWorkflowAction();
+    public static final SearchWorkflowAction INSTANCE = new SearchWorkflowAction();
 
-    private CreateWorkflowAction() {
-        super(NAME, WorkflowResponse::new);
+    private SearchWorkflowAction() {
+        super(NAME, SearchResponse::new);
     }
 }
