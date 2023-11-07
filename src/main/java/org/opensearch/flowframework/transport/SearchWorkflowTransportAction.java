@@ -39,6 +39,7 @@ public class SearchWorkflowTransportAction extends HandledTransportAction<Search
 
     @Override
     protected void doExecute(Task task, SearchRequest request, ActionListener<SearchResponse> actionListener) {
+        // TODO: AccessController should take care of letting the user with right permission to view the workflow
         try (ThreadContext.StoredContext context = client.threadPool().getThreadContext().stashContext()) {
             client.search(request, ActionListener.runBefore(actionListener, () -> context.restore()));
         } catch (Exception e) {
