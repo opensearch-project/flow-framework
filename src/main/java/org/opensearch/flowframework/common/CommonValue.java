@@ -97,8 +97,20 @@ public class CommonValue {
     public static final String CONNECTOR_ID = "connector_id";
     /** Model format field */
     public static final String MODEL_FORMAT = "model_format";
+    /** Model content hash value field */
+    public static final String MODEL_CONTENT_HASH_VALUE = "model_content_hash_value";
+    /** URL field */
+    public static final String URL = "url";
     /** Model config field */
     public static final String MODEL_CONFIG = "model_config";
+    /** Model type field */
+    public static final String MODEL_TYPE = "model_type";
+    /** Embedding dimension field */
+    public static final String EMBEDDING_DIMENSION = "embedding_dimension";
+    /** Framework type field */
+    public static final String FRAMEWORK_TYPE = "framework_type";
+    /** All config field */
+    public static final String ALL_CONFIG = "all_config";
     /** Version field */
     public static final String VERSION_FIELD = "version";
     /** Connector protocol field */

@@ -75,6 +75,7 @@ public class RegisterRemoteModelStepTests extends OpenSearchTestCase {
         verify(mlNodeClient).register(any(MLRegisterModelInput.class), any());
 
         assertTrue(future.isDone());
+        assertTrue(!future.isCompletedExceptionally());
         assertEquals(modelId, future.get().getContent().get(MODEL_ID));
         assertEquals(status, future.get().getContent().get(REGISTER_MODEL_STATUS));
 
@@ -97,8 +98,8 @@ public class RegisterRemoteModelStepTests extends OpenSearchTestCase {
     }
 
     public void testMissingInputs() {
-
         CompletableFuture<WorkflowData> future = this.registerRemoteModelStep.execute(List.of(WorkflowData.EMPTY));
+        assertTrue(future.isDone());
         assertTrue(future.isCompletedExceptionally());
         ExecutionException ex = assertThrows(ExecutionException.class, () -> future.get().getContent());
         assertTrue(ex.getCause() instanceof FlowFrameworkException);

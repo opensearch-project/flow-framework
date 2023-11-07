@@ -40,7 +40,7 @@ public class WorkflowStepFactory {
         stepMap.put(NoOpStep.NAME, new NoOpStep());
         stepMap.put(CreateIndexStep.NAME, new CreateIndexStep(clusterService, client));
         stepMap.put(CreateIngestPipelineStep.NAME, new CreateIngestPipelineStep(client));
-        stepMap.put(RegisterModelStep.NAME, new RegisterModelStep(mlClient));
+        stepMap.put(RegisterLocalModelStep.NAME, new RegisterLocalModelStep(mlClient));
         stepMap.put(RegisterRemoteModelStep.NAME, new RegisterRemoteModelStep(mlClient));
         stepMap.put(DeployModelStep.NAME, new DeployModelStep(mlClient));
         stepMap.put(CreateConnectorStep.NAME, new CreateConnectorStep(mlClient));

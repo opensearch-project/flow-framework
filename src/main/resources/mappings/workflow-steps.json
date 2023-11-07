@@ -39,12 +39,18 @@
             "connector_id"
         ]
     },
-    "register_model": {
+    "register_local_model": {
         "inputs":[
-            "function_name",
             "name",
+            "version",
             "description",
-            "connector_id"
+            "model_format",
+            "model_group_id",
+            "model_content_hash_value",
+            "model_type",
+            "embedding_dimension",
+            "framework_type",
+            "url"
         ],
         "outputs":[
             "model_id",
