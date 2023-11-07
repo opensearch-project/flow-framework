@@ -11,6 +11,7 @@ package org.opensearch.flowframework.transport;
 import org.opensearch.action.ActionRequest;
 import org.opensearch.action.ActionRequestValidationException;
 import org.opensearch.common.Nullable;
+import org.opensearch.common.unit.TimeValue;
 import org.opensearch.core.common.io.stream.StreamInput;
 import org.opensearch.core.common.io.stream.StreamOutput;
 import org.opensearch.flowframework.model.Template;
@@ -38,12 +39,29 @@ public class WorkflowRequest extends ActionRequest {
     private boolean dryRun;
 
     /**
+     * Timeout for request
+     */
+    private TimeValue requestTimeout;
+
+    /**
+     * Max workflows
+     */
+    private Integer maxWorkflows;
+
+    /**
      * Instantiates a new WorkflowRequest and defaults dry run to false
      * @param workflowId the documentId of the workflow
      * @param template the use case template which describes the workflow
+     * @param requestTimeout timeout of the request
+     * @param maxWorkflows max number of workflows
      */
-    public WorkflowRequest(@Nullable String workflowId, @Nullable Template template) {
-        this(workflowId, template, false);
+    public WorkflowRequest(
+        @Nullable String workflowId,
+        @Nullable Template template,
+        @Nullable TimeValue requestTimeout,
+        @Nullable Integer maxWorkflows
+    ) {
+        this(workflowId, template, false, requestTimeout, maxWorkflows);
     }
 
     /**
@@ -51,11 +69,21 @@ public class WorkflowRequest extends ActionRequest {
      * @param workflowId the documentId of the workflow
      * @param template the use case template which describes the workflow
      * @param dryRun flag to indicate if validation is necessary
+     * @param requestTimeout timeout of the request
+     * @param maxWorkflows max number of workflows
      */
-    public WorkflowRequest(@Nullable String workflowId, @Nullable Template template, boolean dryRun) {
+    public WorkflowRequest(
+        @Nullable String workflowId,
+        @Nullable Template template,
+        boolean dryRun,
+        TimeValue requestTimeout,
+        Integer maxWorkflows
+    ) {
         this.workflowId = workflowId;
         this.template = template;
         this.dryRun = dryRun;
+        this.requestTimeout = requestTimeout;
+        this.maxWorkflows = maxWorkflows;
     }
 
     /**
@@ -69,6 +97,8 @@ public class WorkflowRequest extends ActionRequest {
         String templateJson = in.readOptionalString();
         this.template = templateJson == null ? null : Template.parse(templateJson);
         this.dryRun = in.readBoolean();
+        this.requestTimeout = in.readOptionalTimeValue();
+        this.maxWorkflows = in.readOptionalInt();
     }
 
     /**
@@ -97,12 +127,30 @@ public class WorkflowRequest extends ActionRequest {
         return this.dryRun;
     }
 
+    /**
+     * Gets the timeout of the request
+     * @return the requestTimeout
+     */
+    public TimeValue getRequestTimeout() {
+        return requestTimeout;
+    }
+
+    /**
+     * Gets the max workflows
+     * @return the maxWorkflows
+     */
+    public Integer getMaxWorkflows() {
+        return maxWorkflows;
+    }
+
     @Override
     public void writeTo(StreamOutput out) throws IOException {
         super.writeTo(out);
         out.writeOptionalString(workflowId);
         out.writeOptionalString(template == null ? null : template.toJson());
         out.writeBoolean(dryRun);
+        out.writeOptionalTimeValue(requestTimeout);
+        out.writeOptionalInt(maxWorkflows);
     }
 
     @Override

@@ -102,7 +102,7 @@ public class ProvisionWorkflowTransportActionTests extends OpenSearchTestCase {
         String workflowId = "1";
         @SuppressWarnings("unchecked")
         ActionListener<WorkflowResponse> listener = mock(ActionListener.class);
-        WorkflowRequest workflowRequest = new WorkflowRequest(workflowId, null);
+        WorkflowRequest workflowRequest = new WorkflowRequest(workflowId, null, null, null);
 
         doAnswer(invocation -> {
             ActionListener<GetResponse> responseListener = invocation.getArgument(1);
@@ -124,7 +124,7 @@ public class ProvisionWorkflowTransportActionTests extends OpenSearchTestCase {
     public void testFailedToRetrieveTemplateFromGlobalContext() {
         @SuppressWarnings("unchecked")
         ActionListener<WorkflowResponse> listener = mock(ActionListener.class);
-        WorkflowRequest request = new WorkflowRequest("1", null);
+        WorkflowRequest request = new WorkflowRequest("1", null, null, null);
         doAnswer(invocation -> {
             ActionListener<GetResponse> responseListener = invocation.getArgument(1);
             responseListener.onFailure(new Exception("Failed to retrieve template from global context."));

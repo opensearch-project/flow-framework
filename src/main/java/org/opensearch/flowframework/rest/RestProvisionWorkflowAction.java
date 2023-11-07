@@ -30,7 +30,7 @@ import java.util.Locale;
 
 import static org.opensearch.flowframework.common.CommonValue.WORKFLOW_ID;
 import static org.opensearch.flowframework.common.CommonValue.WORKFLOW_URI;
-import static org.opensearch.flowframework.common.FlowFrameworkFeatureEnabledSetting.FLOW_FRAMEWORK_ENABLED;
+import static org.opensearch.flowframework.common.FlowFrameworkSettings.FLOW_FRAMEWORK_ENABLED;
 
 /**
  * Rest action to facilitate requests to provision a workflow from an inline defined or stored use case template
@@ -84,7 +84,7 @@ public class RestProvisionWorkflowAction extends BaseRestHandler {
                 throw new FlowFrameworkException("workflow_id cannot be null", RestStatus.BAD_REQUEST);
             }
             // Create request and provision
-            WorkflowRequest workflowRequest = new WorkflowRequest(workflowId, null);
+            WorkflowRequest workflowRequest = new WorkflowRequest(workflowId, null, null, null);
             return channel -> client.execute(ProvisionWorkflowAction.INSTANCE, workflowRequest, ActionListener.wrap(response -> {
                 XContentBuilder builder = response.toXContent(channel.newBuilder(), ToXContent.EMPTY_PARAMS);
                 channel.sendResponse(new BytesRestResponse(RestStatus.OK, builder));

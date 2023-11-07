@@ -12,13 +12,18 @@ import com.google.common.collect.ImmutableMap;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.opensearch.ExceptionsHelper;
+import org.opensearch.action.search.SearchRequest;
+import org.opensearch.action.search.SearchResponse;
 import org.opensearch.action.support.ActionFilters;
 import org.opensearch.action.support.HandledTransportAction;
 import org.opensearch.client.Client;
 import org.opensearch.common.inject.Inject;
+import org.opensearch.common.settings.Settings;
+import org.opensearch.common.unit.TimeValue;
 import org.opensearch.commons.authuser.User;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.core.rest.RestStatus;
+import org.opensearch.flowframework.common.CommonValue;
 import org.opensearch.flowframework.exception.FlowFrameworkException;
 import org.opensearch.flowframework.indices.FlowFrameworkIndicesHandler;
 import org.opensearch.flowframework.model.ProvisioningProgress;
@@ -27,6 +32,9 @@ import org.opensearch.flowframework.model.Template;
 import org.opensearch.flowframework.model.Workflow;
 import org.opensearch.flowframework.workflow.ProcessNode;
 import org.opensearch.flowframework.workflow.WorkflowProcessSorter;
+import org.opensearch.index.query.QueryBuilder;
+import org.opensearch.index.query.QueryBuilders;
+import org.opensearch.search.builder.SearchSourceBuilder;
 import org.opensearch.tasks.Task;
 import org.opensearch.transport.TransportService;
 
@@ -47,6 +55,7 @@ public class CreateWorkflowTransportAction extends HandledTransportAction<Workfl
     private final WorkflowProcessSorter workflowProcessSorter;
     private final FlowFrameworkIndicesHandler flowFrameworkIndicesHandler;
     private final Client client;
+    private final Settings settings;
 
     /**
      * Intantiates a new CreateWorkflowTransportAction
@@ -54,6 +63,7 @@ public class CreateWorkflowTransportAction extends HandledTransportAction<Workfl
      * @param actionFilters action filters
      * @param workflowProcessSorter the workflow process sorter
      * @param flowFrameworkIndicesHandler The handler for the global context index
+     * @param settings Environment settings
      * @param client The client used to make the request to OS
      */
     @Inject
@@ -62,11 +72,13 @@ public class CreateWorkflowTransportAction extends HandledTransportAction<Workfl
         ActionFilters actionFilters,
         WorkflowProcessSorter workflowProcessSorter,
         FlowFrameworkIndicesHandler flowFrameworkIndicesHandler,
+        Settings settings,
         Client client
     ) {
         super(CreateWorkflowAction.NAME, transportService, actionFilters, WorkflowRequest::new);
         this.workflowProcessSorter = workflowProcessSorter;
         this.flowFrameworkIndicesHandler = flowFrameworkIndicesHandler;
+        this.settings = settings;
         this.client = client;
     }
 
@@ -99,6 +111,22 @@ public class CreateWorkflowTransportAction extends HandledTransportAction<Workfl
         }
 
         if (request.getWorkflowId() == null) {
+
+            // Throttle incoming requests
+            QueryBuilder query = QueryBuilders.matchAllQuery();
+            TimeValue requestTimeOut = request.getRequestTimeout();
+            SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder().query(query).size(0).timeout(requestTimeOut);
+
+            SearchRequest searchRequest = new SearchRequest(CommonValue.GLOBAL_CONTEXT_INDEX).source(searchSourceBuilder);
+
+            client.search(
+                searchRequest,
+                ActionListener.wrap(
+                    response -> onSearchGlobalContext(response, listener, request.getMaxWorkflows()),
+                    exception -> listener.onFailure(exception)
+                )
+            );
+
             // Create new global context and state index entries
             flowFrameworkIndicesHandler.putTemplateToGlobalContext(templateWithUser, ActionListener.wrap(globalContextResponse -> {
                 flowFrameworkIndicesHandler.putInitialStateToWorkflowState(
@@ -157,6 +185,21 @@ public class CreateWorkflowTransportAction extends HandledTransportAction<Workfl
 
                 })
             );
+        }
+    }
+
+    /**
+     * Checks if the max workflows limit has been reachesd
+     *
+     * @param response response of the GC index SearchRequest
+     * @param listener ActionListener of the SearchRequest
+     * @param maxWorkflow max workflows
+     */
+    protected void onSearchGlobalContext(SearchResponse response, ActionListener listener, Integer maxWorkflow) {
+        if (response.getHits().getTotalHits().value >= maxWorkflow) {
+            String errorMessage = "Maximum workflows limit reached" + maxWorkflow;
+            logger.error(errorMessage);
+            listener.onFailure(new FlowFrameworkException(errorMessage, RestStatus.BAD_REQUEST));
         }
     }
 

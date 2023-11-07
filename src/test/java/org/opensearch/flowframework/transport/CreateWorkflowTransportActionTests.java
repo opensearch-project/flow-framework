@@ -13,6 +13,7 @@ import org.opensearch.action.index.IndexResponse;
 import org.opensearch.action.support.ActionFilters;
 import org.opensearch.client.Client;
 import org.opensearch.common.settings.Settings;
+import org.opensearch.common.unit.TimeValue;
 import org.opensearch.common.util.concurrent.ThreadContext;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.flowframework.TestHelpers;
@@ -51,11 +52,16 @@ public class CreateWorkflowTransportActionTests extends OpenSearchTestCase {
     private ThreadPool threadPool;
     private ParseUtils parseUtils;
     private ThreadContext threadContext;
+    private Settings settings;
 
     @Override
     public void setUp() throws Exception {
         super.setUp();
         threadPool = mock(ThreadPool.class);
+        settings = Settings.builder()
+            .put("plugins.flow_framework.max_workflows.", 2)
+            .put("plugins.anomaly_detection.backoff_initial_delay", TimeValue.timeValueSeconds(10))
+            .build();
         this.flowFrameworkIndicesHandler = mock(FlowFrameworkIndicesHandler.class);
         this.workflowProcessSorter = new WorkflowProcessSorter(mock(WorkflowStepFactory.class), threadPool);
         this.createWorkflowTransportAction = new CreateWorkflowTransportAction(
@@ -63,6 +69,7 @@ public class CreateWorkflowTransportActionTests extends OpenSearchTestCase {
             mock(ActionFilters.class),
             workflowProcessSorter,
             flowFrameworkIndicesHandler,
+            settings,
             client
         );
         // client = mock(Client.class);
@@ -146,7 +153,7 @@ public class CreateWorkflowTransportActionTests extends OpenSearchTestCase {
 
         @SuppressWarnings("unchecked")
         ActionListener<WorkflowResponse> listener = mock(ActionListener.class);
-        WorkflowRequest createNewWorkflow = new WorkflowRequest(null, cyclicalTemplate, true);
+        WorkflowRequest createNewWorkflow = new WorkflowRequest(null, cyclicalTemplate, true, null, null);
 
         createWorkflowTransportAction.doExecute(mock(Task.class), createNewWorkflow, listener);
         ArgumentCaptor<Exception> exceptionCaptor = ArgumentCaptor.forClass(Exception.class);
@@ -157,7 +164,7 @@ public class CreateWorkflowTransportActionTests extends OpenSearchTestCase {
     public void testFailedToCreateNewWorkflow() {
         @SuppressWarnings("unchecked")
         ActionListener<WorkflowResponse> listener = mock(ActionListener.class);
-        WorkflowRequest createNewWorkflow = new WorkflowRequest(null, template);
+        WorkflowRequest createNewWorkflow = new WorkflowRequest(null, template, null, null);
 
         doAnswer(invocation -> {
             ActionListener<IndexResponse> responseListener = invocation.getArgument(1);
@@ -174,7 +181,7 @@ public class CreateWorkflowTransportActionTests extends OpenSearchTestCase {
     public void testFailedToUpdateWorkflow() {
         @SuppressWarnings("unchecked")
         ActionListener<WorkflowResponse> listener = mock(ActionListener.class);
-        WorkflowRequest updateWorkflow = new WorkflowRequest("1", template);
+        WorkflowRequest updateWorkflow = new WorkflowRequest("1", template, null, null);
 
         doAnswer(invocation -> {
             ActionListener<IndexResponse> responseListener = invocation.getArgument(2);
