@@ -45,7 +45,7 @@ public class RestCreateWorkflowAction extends BaseRestHandler {
     private FlowFrameworkFeatureEnabledSetting flowFrameworkFeatureEnabledSetting;
 
     /**
-     * Intantiates a new RestCreateWorkflowAction
+     * Instantiates a new RestCreateWorkflowAction
      *
      * @param flowFrameworkFeatureEnabledSetting Whether this API is enabled
      */
