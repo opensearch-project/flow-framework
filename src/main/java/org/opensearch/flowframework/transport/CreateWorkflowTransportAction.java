@@ -197,7 +197,7 @@ public class CreateWorkflowTransportAction extends HandledTransportAction<Workfl
      */
     protected void onSearchGlobalContext(SearchResponse response, ActionListener listener, Integer maxWorkflow) {
         if (response.getHits().getTotalHits().value >= maxWorkflow) {
-            String errorMessage = "Maximum workflows limit reached" + maxWorkflow;
+            String errorMessage = "Maximum workflows limit reached " + maxWorkflow;
             logger.error(errorMessage);
             listener.onFailure(new FlowFrameworkException(errorMessage, RestStatus.BAD_REQUEST));
         }

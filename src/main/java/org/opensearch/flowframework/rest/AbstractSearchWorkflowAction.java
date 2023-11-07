@@ -30,7 +30,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import static org.opensearch.core.xcontent.ToXContent.EMPTY_PARAMS;
-import static org.opensearch.flowframework.common.FlowFrameworkFeatureEnabledSetting.FLOW_FRAMEWORK_ENABLED;
+import static org.opensearch.flowframework.common.FlowFrameworkSettings.FLOW_FRAMEWORK_ENABLED;
 import static org.opensearch.flowframework.util.RestHandlerUtils.getSourceContext;
 
 /**
