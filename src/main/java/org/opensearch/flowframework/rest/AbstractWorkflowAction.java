@@ -20,7 +20,9 @@ import static org.opensearch.flowframework.common.FlowFrameworkSettings.WORKFLOW
  * Abstract action for the rest actions
  */
 public abstract class AbstractWorkflowAction extends BaseRestHandler {
+    /** Timeout for the request*/
     protected volatile TimeValue requestTimeout;
+    /** Max workflows that can be created*/
     protected volatile Integer maxWorkflows;
 
     /**

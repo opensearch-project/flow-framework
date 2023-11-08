@@ -118,6 +118,33 @@ public class CreateWorkflowTransportAction extends HandledTransportAction<Workfl
                     FlowFrameworkException ffe = new FlowFrameworkException(errorMessage, RestStatus.BAD_REQUEST);
                     listener.onFailure(ffe);
                     return;
+                } else {
+                    // Create new global context and state index entries
+                    flowFrameworkIndicesHandler.putTemplateToGlobalContext(templateWithUser, ActionListener.wrap(globalContextResponse -> {
+                        flowFrameworkIndicesHandler.putInitialStateToWorkflowState(
+                            globalContextResponse.getId(),
+                            user,
+                            ActionListener.wrap(stateResponse -> {
+                                logger.info("create state workflow doc");
+                                listener.onResponse(new WorkflowResponse(globalContextResponse.getId()));
+                            }, exception -> {
+                                logger.error("Failed to save workflow state : {}", exception.getMessage());
+                                if (exception instanceof FlowFrameworkException) {
+                                    listener.onFailure(exception);
+                                } else {
+                                    listener.onFailure(new FlowFrameworkException(exception.getMessage(), RestStatus.BAD_REQUEST));
+                                }
+                            })
+                        );
+                    }, exception -> {
+                        logger.error("Failed to save use case template : {}", exception.getMessage());
+                        if (exception instanceof FlowFrameworkException) {
+                            listener.onFailure(exception);
+                        } else {
+                            listener.onFailure(new FlowFrameworkException(exception.getMessage(), ExceptionsHelper.status(exception)));
+                        }
+
+                    }));
                 }
             }, e -> {
                 logger.error("Failed to updated use case template {} : {}", request.getWorkflowId(), e.getMessage());
@@ -126,33 +153,6 @@ public class CreateWorkflowTransportAction extends HandledTransportAction<Workfl
                 } else {
                     listener.onFailure(new FlowFrameworkException(e.getMessage(), ExceptionsHelper.status(e)));
                 }
-            }));
-
-            // Create new global context and state index entries
-            flowFrameworkIndicesHandler.putTemplateToGlobalContext(templateWithUser, ActionListener.wrap(globalContextResponse -> {
-                flowFrameworkIndicesHandler.putInitialStateToWorkflowState(
-                    globalContextResponse.getId(),
-                    user,
-                    ActionListener.wrap(stateResponse -> {
-                        logger.info("create state workflow doc");
-                        listener.onResponse(new WorkflowResponse(globalContextResponse.getId()));
-                    }, exception -> {
-                        logger.error("Failed to save workflow state : {}", exception.getMessage());
-                        if (exception instanceof FlowFrameworkException) {
-                            listener.onFailure(exception);
-                        } else {
-                            listener.onFailure(new FlowFrameworkException(exception.getMessage(), RestStatus.BAD_REQUEST));
-                        }
-                    })
-                );
-            }, exception -> {
-                logger.error("Failed to save use case template : {}", exception.getMessage());
-                if (exception instanceof FlowFrameworkException) {
-                    listener.onFailure(exception);
-                } else {
-                    listener.onFailure(new FlowFrameworkException(exception.getMessage(), ExceptionsHelper.status(exception)));
-                }
-
             }));
         } else {
             // Update existing entry, full document replacement
@@ -192,8 +192,8 @@ public class CreateWorkflowTransportAction extends HandledTransportAction<Workfl
     /**
      * Checks if the max workflows limit has been reachesd
      *  @param requestTimeOut request time out
-     * @param maxWorkflow max workflows
-     * @return
+     *  @param maxWorkflow max workflows
+     *  @param internalListener listener for search request
      */
     protected void onSearchGlobalContext(TimeValue requestTimeOut, Integer maxWorkflow, ActionListener<Boolean> internalListener) {
         QueryBuilder query = QueryBuilders.matchAllQuery();
@@ -202,7 +202,6 @@ public class CreateWorkflowTransportAction extends HandledTransportAction<Workfl
         SearchRequest searchRequest = new SearchRequest(CommonValue.GLOBAL_CONTEXT_INDEX).source(searchSourceBuilder);
 
         client.search(searchRequest, ActionListener.wrap(searchResponse -> {
-            logger.info("SEARCH RESPONSE SIZE {}", searchResponse.getHits().getTotalHits().value);
             if (searchResponse.getHits().getTotalHits().value >= maxWorkflow) {
                 internalListener.onResponse(false);
             } else {

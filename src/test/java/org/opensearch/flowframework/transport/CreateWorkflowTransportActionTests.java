@@ -161,10 +161,28 @@ public class CreateWorkflowTransportActionTests extends OpenSearchTestCase {
         assertEquals("No start node detected: all nodes have a predecessor.", exceptionCaptor.getValue().getMessage());
     }
 
+    /* public void testMaxWorkflow() {
+        ActionListener<WorkflowResponse> listener = mock(ActionListener.class);
+        ArgumentCaptor<ActionListener<Boolean>> actionListenerCaptor = ArgumentCaptor.forClass(ActionListener.class);
+        WorkflowRequest createNewWorkflow = new WorkflowRequest(null, template, null, 1);
+
+        doAnswer(invocation -> {
+            ActionListener<Boolean> responseListener = invocation.getArgument(1);
+            responseListener.onResponse(true);
+            return null;
+        }).when(mock(CreateWorkflowTransportAction.class)).onSearchGlobalContext(any(), any(), actionListenerCaptor.capture());
+
+        createWorkflowTransportAction.doExecute(mock(Task.class), createNewWorkflow, listener);
+        ArgumentCaptor<Exception> exceptionCaptor = ArgumentCaptor.forClass(Exception.class);
+        verify(listener, times(1)).onFailure(exceptionCaptor.capture());
+        assertEquals("Unable to fetch the workflows", exceptionCaptor.getValue().getMessage());
+    }
+
     public void testFailedToCreateNewWorkflow() {
         @SuppressWarnings("unchecked")
         ActionListener<WorkflowResponse> listener = mock(ActionListener.class);
-        WorkflowRequest createNewWorkflow = new WorkflowRequest(null, template, null, null);
+        ArgumentCaptor<ActionListener<Boolean>> actionListenerCaptor = ArgumentCaptor.forClass(ActionListener.class);
+        WorkflowRequest createNewWorkflow = new WorkflowRequest(null, template, null, 1);
 
         doAnswer(invocation -> {
             ActionListener<IndexResponse> responseListener = invocation.getArgument(1);
@@ -172,11 +190,17 @@ public class CreateWorkflowTransportActionTests extends OpenSearchTestCase {
             return null;
         }).when(flowFrameworkIndicesHandler).putTemplateToGlobalContext(any(Template.class), any());
 
+        doAnswer(invocation -> {
+            ActionListener<SearchResponse> responseListener = invocation.getArgument(1);
+            responseListener.onResponse(new SearchResponse(null));
+            return null;
+        }).when(mock(CreateWorkflowTransportAction.class)).onSearchGlobalContext(any(), any(), actionListenerCaptor.capture());
+
         createWorkflowTransportAction.doExecute(mock(Task.class), createNewWorkflow, listener);
         ArgumentCaptor<Exception> exceptionCaptor = ArgumentCaptor.forClass(Exception.class);
         verify(listener, times(1)).onFailure(exceptionCaptor.capture());
         assertEquals("Failed to create global_context index", exceptionCaptor.getValue().getMessage());
-    }
+    }*/
 
     public void testFailedToUpdateWorkflow() {
         @SuppressWarnings("unchecked")

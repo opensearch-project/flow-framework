@@ -17,12 +17,12 @@ public class FlowFrameworkSettings {
     private FlowFrameworkSettings() {}
 
     /** The upper limit of max workflows that can be created  */
-    public static final int MAX_WORKFLOWS_LIMIT = 1000;
+    public static final int MAX_WORKFLOWS_LIMIT = 10000;
 
     /** This setting sets max workflows that can be created  */
     public static final Setting<Integer> MAX_WORKFLOWS = Setting.intSetting(
         "plugins.flow_framework.max_workflows",
-        100,
+        1000,
         0,
         MAX_WORKFLOWS_LIMIT,
         Setting.Property.NodeScope,
