@@ -38,10 +38,15 @@ import static org.opensearch.flowframework.util.RestHandlerUtils.getSourceContex
  */
 public abstract class AbstractSearchWorkflowAction<T extends ToXContentObject> extends BaseRestHandler {
 
+    /** List of paths to create routes */
     protected final List<String> urlPaths;
+    /** The index to search */
     protected final String index;
+    /** The model class */
     protected final Class<T> clazz;
+    /** Action Type */
     protected final ActionType<SearchResponse> actionType;
+    /** Feature flag */
     protected final FlowFrameworkFeatureEnabledSetting flowFrameworkFeatureEnabledSetting;
 
     /**

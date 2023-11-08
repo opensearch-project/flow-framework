@@ -19,6 +19,7 @@ import org.opensearch.search.fetch.subphase.FetchSourceContext;
  */
 public class RestHandlerUtils {
 
+    /** User exclude field */
     public static final String[] USER_EXCLUDE = new String[] { CommonValue.USER_FIELD };
 
     private RestHandlerUtils() {}
