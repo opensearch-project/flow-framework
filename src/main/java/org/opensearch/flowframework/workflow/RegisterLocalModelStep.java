@@ -145,17 +145,8 @@ public class RegisterLocalModelStep implements WorkflowStep {
             }
         }
 
-        if (Stream.of(
-            modelName,
-            modelVersion,
-            description,
-            modelFormat,
-            modelGroupId,
-            embeddingDimension,
-            frameworkType,
-            modelContentHashValue,
-            url
-        ).allMatch(x -> x != null)) {
+        if (Stream.of(modelName, modelVersion, modelFormat, modelGroupId, embeddingDimension, frameworkType, modelContentHashValue, url)
+            .allMatch(x -> x != null)) {
 
             // Create model configuration, assuming null pooling mode, null model max length, normalize results set to false
             TextEmbeddingModelConfigBuilder builder = TextEmbeddingModelConfig.builder();

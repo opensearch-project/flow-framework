@@ -115,7 +115,7 @@ public class RegisterRemoteModelStep implements WorkflowStep {
             }
         }
 
-        if (Stream.of(modelName, functionName, description, connectorId).allMatch(x -> x != null)) {
+        if (Stream.of(modelName, functionName, connectorId).allMatch(x -> x != null)) {
 
             MLRegisterModelInputBuilder builder = MLRegisterModelInput.builder();
 

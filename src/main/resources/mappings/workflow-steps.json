@@ -43,7 +43,6 @@
         "inputs":[
             "name",
             "version",
-            "description",
             "model_format",
             "model_group_id",
             "model_content_hash_value",
@@ -61,7 +60,6 @@
         "inputs": [
             "name",
             "function_name",
-            "description",
             "connector_id"
         ],
         "outputs": [
