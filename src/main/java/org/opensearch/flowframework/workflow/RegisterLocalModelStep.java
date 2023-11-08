@@ -149,18 +149,19 @@ public class RegisterLocalModelStep implements WorkflowStep {
             .allMatch(x -> x != null)) {
 
             // Create model configuration, assuming null pooling mode, null model max length, normalize results set to false
-            TextEmbeddingModelConfigBuilder builder = TextEmbeddingModelConfig.builder();
-            if (allConfig != null) {
-                builder.allConfig(allConfig);
-            }
-
-            MLModelConfig modelConfig = builder.modelType(modelType)
+            TextEmbeddingModelConfigBuilder modelConfigBuilder = TextEmbeddingModelConfig.builder()
+                .modelType(modelType)
                 .embeddingDimension(Integer.valueOf(embeddingDimension))
                 .frameworkType(frameworkType)
                 .poolingMode(null)
                 .modelMaxLength(null)
-                .normalizeResult(false)
-                .build();
+                .normalizeResult(false);
+
+            if (allConfig != null) {
+                modelConfigBuilder.allConfig(allConfig);
+            }
+
+            MLModelConfig modelConfig = modelConfigBuilder.build();
 
             MLRegisterModelInput mlInput = MLRegisterModelInput.builder()
                 .modelName(modelName)
