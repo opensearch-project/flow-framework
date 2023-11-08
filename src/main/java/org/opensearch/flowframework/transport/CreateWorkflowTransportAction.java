@@ -111,7 +111,7 @@ public class CreateWorkflowTransportAction extends HandledTransportAction<Workfl
 
         if (request.getWorkflowId() == null) {
             // Throttle incoming requests
-            onSearchGlobalContext(request.getRequestTimeout(), request.getMaxWorkflows(), ActionListener.wrap(max -> {
+            checkMaxWorkflows(request.getRequestTimeout(), request.getMaxWorkflows(), ActionListener.wrap(max -> {
                 if (!max) {
                     String errorMessage = "Maximum workflows limit reached " + request.getMaxWorkflows();
                     logger.error(errorMessage);
@@ -195,7 +195,7 @@ public class CreateWorkflowTransportAction extends HandledTransportAction<Workfl
      *  @param maxWorkflow max workflows
      *  @param internalListener listener for search request
      */
-    protected void onSearchGlobalContext(TimeValue requestTimeOut, Integer maxWorkflow, ActionListener<Boolean> internalListener) {
+    protected void checkMaxWorkflows(TimeValue requestTimeOut, Integer maxWorkflow, ActionListener<Boolean> internalListener) {
         QueryBuilder query = QueryBuilders.matchAllQuery();
         SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder().query(query).size(0).timeout(requestTimeOut);
 

@@ -60,7 +60,7 @@ public class CreateWorkflowTransportActionTests extends OpenSearchTestCase {
         threadPool = mock(ThreadPool.class);
         settings = Settings.builder()
             .put("plugins.flow_framework.max_workflows.", 2)
-            .put("plugins.anomaly_detection.backoff_initial_delay", TimeValue.timeValueSeconds(10))
+            .put("plugins.flow_framework.request_timeout", TimeValue.timeValueSeconds(10))
             .build();
         this.flowFrameworkIndicesHandler = mock(FlowFrameworkIndicesHandler.class);
         this.workflowProcessSorter = new WorkflowProcessSorter(mock(WorkflowStepFactory.class), threadPool);

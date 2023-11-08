@@ -49,6 +49,15 @@ public class WorkflowRequest extends ActionRequest {
     private Integer maxWorkflows;
 
     /**
+     * Instantiates a new WorkflowRequest, defaults dry run to false and set requestTimeout and maxWorkflows to null
+     * @param workflowId the documentId of the workflow
+     * @param template the use case template which describes the workflow
+     */
+    public WorkflowRequest(@Nullable String workflowId, @Nullable Template template) {
+        this(workflowId, template, false, null, null);
+    }
+
+    /**
      * Instantiates a new WorkflowRequest and defaults dry run to false
      * @param workflowId the documentId of the workflow
      * @param template the use case template which describes the workflow
@@ -76,8 +85,8 @@ public class WorkflowRequest extends ActionRequest {
         @Nullable String workflowId,
         @Nullable Template template,
         boolean dryRun,
-        TimeValue requestTimeout,
-        Integer maxWorkflows
+        @Nullable TimeValue requestTimeout,
+        @Nullable Integer maxWorkflows
     ) {
         this.workflowId = workflowId;
         this.template = template;

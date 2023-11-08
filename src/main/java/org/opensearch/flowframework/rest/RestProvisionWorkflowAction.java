@@ -84,7 +84,7 @@ public class RestProvisionWorkflowAction extends BaseRestHandler {
                 throw new FlowFrameworkException("workflow_id cannot be null", RestStatus.BAD_REQUEST);
             }
             // Create request and provision
-            WorkflowRequest workflowRequest = new WorkflowRequest(workflowId, null, null, null);
+            WorkflowRequest workflowRequest = new WorkflowRequest(workflowId, null);
             return channel -> client.execute(ProvisionWorkflowAction.INSTANCE, workflowRequest, ActionListener.wrap(response -> {
                 XContentBuilder builder = response.toXContent(channel.newBuilder(), ToXContent.EMPTY_PARAMS);
                 channel.sendResponse(new BytesRestResponse(RestStatus.OK, builder));

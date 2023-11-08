@@ -55,7 +55,7 @@ public class WorkflowRequestResponseTests extends OpenSearchTestCase {
     }
 
     public void testNullIdWorkflowRequest() throws IOException {
-        WorkflowRequest nullIdRequest = new WorkflowRequest(null, template, null, null);
+        WorkflowRequest nullIdRequest = new WorkflowRequest(null, template);
         assertNull(nullIdRequest.getWorkflowId());
         assertEquals(template, nullIdRequest.getTemplate());
         assertNull(nullIdRequest.validate());
@@ -71,7 +71,7 @@ public class WorkflowRequestResponseTests extends OpenSearchTestCase {
     }
 
     public void testNullTemplateWorkflowRequest() throws IOException {
-        WorkflowRequest nullTemplateRequest = new WorkflowRequest("123", null, null, null);
+        WorkflowRequest nullTemplateRequest = new WorkflowRequest("123", null);
         assertNotNull(nullTemplateRequest.getWorkflowId());
         assertNull(nullTemplateRequest.getTemplate());
         assertNull(nullTemplateRequest.validate());
@@ -87,7 +87,7 @@ public class WorkflowRequestResponseTests extends OpenSearchTestCase {
     }
 
     public void testWorkflowRequest() throws IOException {
-        WorkflowRequest workflowRequest = new WorkflowRequest("123", template, null, null);
+        WorkflowRequest workflowRequest = new WorkflowRequest("123", template);
         assertNotNull(workflowRequest.getWorkflowId());
         assertEquals(template, workflowRequest.getTemplate());
         assertNull(workflowRequest.validate());
