@@ -87,6 +87,7 @@ public class ProvisionWorkflowTransportActionTests extends OpenSearchTestCase {
             templateVersion,
             compatibilityVersions,
             Map.of("provision", workflow),
+            Map.of(),
             TestHelpers.randomUser()
         );
 
