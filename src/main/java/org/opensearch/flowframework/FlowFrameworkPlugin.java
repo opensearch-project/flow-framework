@@ -115,7 +115,8 @@ public class FlowFrameworkPlugin extends Plugin implements ActionPlugin {
         return ImmutableList.of(
             new RestCreateWorkflowAction(flowFrameworkFeatureEnabledSetting, settings, clusterService),
             new RestProvisionWorkflowAction(flowFrameworkFeatureEnabledSetting),
-            new RestSearchWorkflowAction(flowFrameworkFeatureEnabledSetting)
+            new RestSearchWorkflowAction(flowFrameworkFeatureEnabledSetting),
+            new RestGetWorkflowAction(flowFrameworkFeatureEnabledSetting)
         );
     }
 

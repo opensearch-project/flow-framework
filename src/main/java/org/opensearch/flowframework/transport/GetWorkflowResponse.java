@@ -48,6 +48,7 @@ public class GetWorkflowResponse extends ActionResponse implements ToXContentObj
             this.workflowState = new WorkflowState.Builder().workflowId(workflowState.getWorkflowId())
                 .error(workflowState.getError())
                 .state(workflowState.getState())
+                .resourcesCreated(workflowState.resourcesCreated())
                 .build();
         }
     }

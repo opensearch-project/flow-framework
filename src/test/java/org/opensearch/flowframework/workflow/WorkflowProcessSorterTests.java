@@ -278,8 +278,8 @@ public class WorkflowProcessSorterTests extends OpenSearchTestCase {
 
         List<ProcessNode> sortedProcessNodes = workflowProcessSorter.sortProcessNodes(workflow, "123");
         FlowFrameworkException ex = expectThrows(
-                FlowFrameworkException.class,
-                () -> workflowProcessSorter.validateGraph(sortedProcessNodes)
+            FlowFrameworkException.class,
+            () -> workflowProcessSorter.validateGraph(sortedProcessNodes)
         );
         assertEquals("Invalid graph, missing the following required inputs : [connector_id]", ex.getMessage());
         assertEquals(RestStatus.BAD_REQUEST, ex.getRestStatus());
