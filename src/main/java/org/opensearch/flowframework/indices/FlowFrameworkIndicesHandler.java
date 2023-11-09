@@ -373,24 +373,22 @@ public class FlowFrameworkIndicesHandler {
 
     /**
      * Updates a document in the workflow state index
-     * @param indexName the index that we will be updating a document of.
      * @param documentId the document ID
      * @param updatedFields the fields to update the global state index with
      * @param listener action listener
      */
     public void updateFlowFrameworkSystemIndexDoc(
-        String indexName,
         String documentId,
         Map<String, Object> updatedFields,
         ActionListener<UpdateResponse> listener
     ) {
-        if (!doesIndexExist(indexName)) {
-            String exceptionMessage = "Failed to update document for given workflow due to missing " + indexName + " index";
+        if (!doesIndexExist(WORKFLOW_STATE_INDEX)) {
+            String exceptionMessage = "Failed to update document for given workflow due to missing " + WORKFLOW_STATE_INDEX + " index";
             logger.error(exceptionMessage);
             listener.onFailure(new FlowFrameworkException(exceptionMessage, RestStatus.BAD_REQUEST));
         } else {
             try (ThreadContext.StoredContext context = client.threadPool().getThreadContext().stashContext()) {
-                UpdateRequest updateRequest = new UpdateRequest(indexName, documentId);
+                UpdateRequest updateRequest = new UpdateRequest(WORKFLOW_STATE_INDEX, documentId);
                 Map<String, Object> updatedContent = new HashMap<>();
                 updatedContent.putAll(updatedFields);
                 updateRequest.doc(updatedContent);
@@ -398,7 +396,7 @@ public class FlowFrameworkIndicesHandler {
                 // TODO: decide what condition can be considered as an update conflict and add retry strategy
                 client.update(updateRequest, ActionListener.runBefore(listener, () -> context.restore()));
             } catch (Exception e) {
-                String errorMessage = "Failed to update " + indexName + " entry : " + documentId;
+                String errorMessage = "Failed to update " + WORKFLOW_STATE_INDEX + " entry : " + documentId;
                 logger.error(errorMessage, e);
                 listener.onFailure(new FlowFrameworkException(errorMessage + " : " + e.getMessage(), ExceptionsHelper.status(e)));
             }

@@ -41,7 +41,6 @@ import java.util.List;
 
 import static org.opensearch.flowframework.common.CommonValue.PROVISIONING_PROGRESS_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.STATE_FIELD;
-import static org.opensearch.flowframework.common.CommonValue.WORKFLOW_STATE_INDEX;
 import static org.opensearch.flowframework.util.ParseUtils.getUserContext;
 
 /**
@@ -161,7 +160,6 @@ public class CreateWorkflowTransportAction extends HandledTransportAction<Workfl
                 request.getTemplate(),
                 ActionListener.wrap(response -> {
                     flowFrameworkIndicesHandler.updateFlowFrameworkSystemIndexDoc(
-                        WORKFLOW_STATE_INDEX,
                         request.getWorkflowId(),
                         ImmutableMap.of(STATE_FIELD, State.NOT_STARTED, PROVISIONING_PROGRESS_FIELD, ProvisioningProgress.NOT_STARTED),
                         ActionListener.wrap(updateResponse -> {
