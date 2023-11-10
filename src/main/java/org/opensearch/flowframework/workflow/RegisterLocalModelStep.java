@@ -149,21 +149,17 @@ public class RegisterLocalModelStep implements WorkflowStep {
         if (Stream.of(modelName, modelVersion, modelFormat, modelGroupId, embeddingDimension, frameworkType, modelContentHashValue, url)
             .allMatch(x -> x != null)) {
 
-            // Create model configuration, assuming null pooling mode, null model max length, normalize results set to false
+            // Create Model configudation
             TextEmbeddingModelConfigBuilder modelConfigBuilder = TextEmbeddingModelConfig.builder()
                 .modelType(modelType)
                 .embeddingDimension(Integer.valueOf(embeddingDimension))
-                .frameworkType(frameworkType)
-                .poolingMode(null)
-                .modelMaxLength(null)
-                .normalizeResult(false);
-
+                .frameworkType(frameworkType);
             if (allConfig != null) {
                 modelConfigBuilder.allConfig(allConfig);
             }
-
             MLModelConfig modelConfig = modelConfigBuilder.build();
 
+            // Create register local model input
             MLRegisterModelInputBuilder mlInputBuilder = MLRegisterModelInput.builder()
                 .modelName(modelName)
                 .version(modelVersion)
@@ -172,7 +168,6 @@ public class RegisterLocalModelStep implements WorkflowStep {
                 .hashValue(modelContentHashValue)
                 .modelConfig(modelConfig)
                 .url(url);
-
             if (description != null) {
                 mlInputBuilder.description(description);
             }
