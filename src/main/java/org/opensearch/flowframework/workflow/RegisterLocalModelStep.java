@@ -37,10 +37,10 @@ import static org.opensearch.flowframework.common.CommonValue.FRAMEWORK_TYPE;
 import static org.opensearch.flowframework.common.CommonValue.MODEL_CONTENT_HASH_VALUE;
 import static org.opensearch.flowframework.common.CommonValue.MODEL_FORMAT;
 import static org.opensearch.flowframework.common.CommonValue.MODEL_GROUP_ID;
-import static org.opensearch.flowframework.common.CommonValue.MODEL_ID;
 import static org.opensearch.flowframework.common.CommonValue.MODEL_TYPE;
 import static org.opensearch.flowframework.common.CommonValue.NAME_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.REGISTER_MODEL_STATUS;
+import static org.opensearch.flowframework.common.CommonValue.TASK_ID;
 import static org.opensearch.flowframework.common.CommonValue.URL;
 import static org.opensearch.flowframework.common.CommonValue.VERSION_FIELD;
 
@@ -71,11 +71,11 @@ public class RegisterLocalModelStep implements WorkflowStep {
         ActionListener<MLRegisterModelResponse> actionListener = new ActionListener<>() {
             @Override
             public void onResponse(MLRegisterModelResponse mlRegisterModelResponse) {
-                logger.info("Local Model registration successful");
+                logger.info("Local Model registration task creation successful");
                 registerLocalModelFuture.complete(
                     new WorkflowData(
                         Map.ofEntries(
-                            Map.entry(MODEL_ID, mlRegisterModelResponse.getModelId()),
+                            Map.entry(TASK_ID, mlRegisterModelResponse.getTaskId()),
                             Map.entry(REGISTER_MODEL_STATUS, mlRegisterModelResponse.getStatus())
                         )
                     )

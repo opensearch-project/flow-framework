@@ -81,6 +81,8 @@ public class CommonValue {
     public static final String OUTPUT_FIELD_NAME = "output_field_name";
     /** Model Id field */
     public static final String MODEL_ID = "model_id";
+    /** Task Id field */
+    public static final String TASK_ID = "task_id";
     /** Register Model Status field */
     public static final String REGISTER_MODEL_STATUS = "register_model_status";
     /** Function Name field */

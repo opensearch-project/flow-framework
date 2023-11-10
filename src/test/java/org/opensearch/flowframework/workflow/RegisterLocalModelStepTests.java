@@ -28,8 +28,8 @@ import java.util.concurrent.ExecutionException;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
-import static org.opensearch.flowframework.common.CommonValue.MODEL_ID;
 import static org.opensearch.flowframework.common.CommonValue.REGISTER_MODEL_STATUS;
+import static org.opensearch.flowframework.common.CommonValue.TASK_ID;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.verify;
@@ -77,12 +77,11 @@ public class RegisterLocalModelStepTests extends OpenSearchTestCase {
     public void testRegisterLocalModelSuccess() throws Exception {
 
         String taskId = "abcd";
-        String modelId = "efgh";
         String status = MLTaskState.CREATED.name();
 
         doAnswer(invocation -> {
             ActionListener<MLRegisterModelResponse> actionListener = invocation.getArgument(1);
-            MLRegisterModelResponse output = new MLRegisterModelResponse(taskId, status, modelId);
+            MLRegisterModelResponse output = new MLRegisterModelResponse(taskId, status, null);
             actionListener.onResponse(output);
             return null;
         }).when(machineLearningNodeClient).register(any(MLRegisterModelInput.class), any());
@@ -92,7 +91,7 @@ public class RegisterLocalModelStepTests extends OpenSearchTestCase {
 
         assertTrue(future.isDone());
         assertTrue(!future.isCompletedExceptionally());
-        assertEquals(modelId, future.get().getContent().get(MODEL_ID));
+        assertEquals(taskId, future.get().getContent().get(TASK_ID));
         assertEquals(status, future.get().getContent().get(REGISTER_MODEL_STATUS));
 
     }

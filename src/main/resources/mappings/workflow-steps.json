@@ -52,7 +52,7 @@
             "url"
         ],
         "outputs":[
-            "model_id",
+            "task_id",
             "register_model_status"
         ]
     },
