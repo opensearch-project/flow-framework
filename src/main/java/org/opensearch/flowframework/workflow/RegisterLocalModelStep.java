@@ -21,6 +21,7 @@ import org.opensearch.ml.common.model.TextEmbeddingModelConfig;
 import org.opensearch.ml.common.model.TextEmbeddingModelConfig.FrameworkType;
 import org.opensearch.ml.common.model.TextEmbeddingModelConfig.TextEmbeddingModelConfigBuilder;
 import org.opensearch.ml.common.transport.register.MLRegisterModelInput;
+import org.opensearch.ml.common.transport.register.MLRegisterModelInput.MLRegisterModelInputBuilder;
 import org.opensearch.ml.common.transport.register.MLRegisterModelResponse;
 
 import java.util.List;
@@ -163,15 +164,20 @@ public class RegisterLocalModelStep implements WorkflowStep {
 
             MLModelConfig modelConfig = modelConfigBuilder.build();
 
-            MLRegisterModelInput mlInput = MLRegisterModelInput.builder()
+            MLRegisterModelInputBuilder mlInputBuilder = MLRegisterModelInput.builder()
                 .modelName(modelName)
                 .version(modelVersion)
                 .modelFormat(modelFormat)
                 .modelGroupId(modelGroupId)
                 .hashValue(modelContentHashValue)
                 .modelConfig(modelConfig)
-                .url(url)
-                .build();
+                .url(url);
+
+            if (description != null) {
+                mlInputBuilder.description(description);
+            }
+
+            MLRegisterModelInput mlInput = mlInputBuilder.build();
 
             mlClient.register(mlInput, actionListener);
         } else {
