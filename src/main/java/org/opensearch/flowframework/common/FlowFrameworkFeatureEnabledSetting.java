@@ -9,21 +9,14 @@
 package org.opensearch.flowframework.common;
 
 import org.opensearch.cluster.service.ClusterService;
-import org.opensearch.common.settings.Setting;
 import org.opensearch.common.settings.Settings;
+
+import static org.opensearch.flowframework.common.FlowFrameworkSettings.FLOW_FRAMEWORK_ENABLED;
 
 /**
  * Controls enabling or disabling features of this plugin
  */
 public class FlowFrameworkFeatureEnabledSetting {
-
-    /** This setting enables/disables the Flow Framework REST API */
-    public static final Setting<Boolean> FLOW_FRAMEWORK_ENABLED = Setting.boolSetting(
-        "plugins.flow_framework.enabled",
-        false,
-        Setting.Property.NodeScope,
-        Setting.Property.Dynamic
-    );
 
     private volatile Boolean isFlowFrameworkEnabled;
 
