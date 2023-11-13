@@ -56,6 +56,9 @@ import java.util.function.Supplier;
 
 import static org.opensearch.flowframework.common.CommonValue.FLOW_FRAMEWORK_THREAD_POOL_PREFIX;
 import static org.opensearch.flowframework.common.CommonValue.PROVISION_THREAD_POOL;
+import static org.opensearch.flowframework.common.FlowFrameworkSettings.FLOW_FRAMEWORK_ENABLED;
+import static org.opensearch.flowframework.common.FlowFrameworkSettings.MAX_WORKFLOWS;
+import static org.opensearch.flowframework.common.FlowFrameworkSettings.WORKFLOW_REQUEST_TIMEOUT;
 
 /**
  * An OpenSearch plugin that enables builders to innovate AI apps on OpenSearch.
@@ -63,6 +66,7 @@ import static org.opensearch.flowframework.common.CommonValue.PROVISION_THREAD_P
 public class FlowFrameworkPlugin extends Plugin implements ActionPlugin {
 
     private FlowFrameworkFeatureEnabledSetting flowFrameworkFeatureEnabledSetting;
+    private ClusterService clusterService;
 
     /**
      * Instantiate this plugin.
@@ -84,6 +88,7 @@ public class FlowFrameworkPlugin extends Plugin implements ActionPlugin {
         Supplier<RepositoriesService> repositoriesServiceSupplier
     ) {
         Settings settings = environment.settings();
+        this.clusterService = clusterService;
         flowFrameworkFeatureEnabledSetting = new FlowFrameworkFeatureEnabledSetting(clusterService, settings);
 
         MachineLearningNodeClient mlClient = new MachineLearningNodeClient(client);
@@ -106,7 +111,7 @@ public class FlowFrameworkPlugin extends Plugin implements ActionPlugin {
         Supplier<DiscoveryNodes> nodesInCluster
     ) {
         return ImmutableList.of(
-            new RestCreateWorkflowAction(flowFrameworkFeatureEnabledSetting),
+            new RestCreateWorkflowAction(flowFrameworkFeatureEnabledSetting, settings, clusterService),
             new RestProvisionWorkflowAction(flowFrameworkFeatureEnabledSetting),
             new RestSearchWorkflowAction(flowFrameworkFeatureEnabledSetting)
         );
@@ -123,7 +128,7 @@ public class FlowFrameworkPlugin extends Plugin implements ActionPlugin {
 
     @Override
     public List<Setting<?>> getSettings() {
-        List<Setting<?>> settings = ImmutableList.of(FlowFrameworkFeatureEnabledSetting.FLOW_FRAMEWORK_ENABLED);
+        List<Setting<?>> settings = ImmutableList.of(FLOW_FRAMEWORK_ENABLED, MAX_WORKFLOWS, WORKFLOW_REQUEST_TIMEOUT);
         return settings;
     }
 
