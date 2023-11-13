@@ -11,10 +11,8 @@ package org.opensearch.flowframework.workflow;
 import com.carrotsearch.randomizedtesting.annotations.ThreadLeakScope;
 
 import org.opensearch.core.action.ActionListener;
-import org.opensearch.core.rest.RestStatus;
 import org.opensearch.flowframework.exception.FlowFrameworkException;
 import org.opensearch.ml.client.MachineLearningNodeClient;
-import org.opensearch.ml.common.FunctionName;
 import org.opensearch.ml.common.MLTaskState;
 import org.opensearch.ml.common.model.MLModelConfig;
 import org.opensearch.ml.common.model.TextEmbeddingModelConfig;
@@ -27,17 +25,20 @@ import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 
-import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
+import static org.opensearch.flowframework.common.CommonValue.REGISTER_MODEL_STATUS;
+import static org.opensearch.flowframework.common.CommonValue.TASK_ID;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.verify;
 
 @ThreadLeakScope(ThreadLeakScope.Scope.NONE)
-public class RegisterModelStepTests extends OpenSearchTestCase {
-    private WorkflowData inputData = WorkflowData.EMPTY;
+public class RegisterLocalModelStepTests extends OpenSearchTestCase {
+
+    private RegisterLocalModelStep registerLocalModelStep;
+    private WorkflowData workflowData;
 
     @Mock
     MachineLearningNodeClient machineLearningNodeClient;
@@ -46,6 +47,9 @@ public class RegisterModelStepTests extends OpenSearchTestCase {
     public void setUp() throws Exception {
         super.setUp();
 
+        MockitoAnnotations.openMocks(this);
+        this.registerLocalModelStep = new RegisterLocalModelStep(machineLearningNodeClient);
+
         MLModelConfig config = TextEmbeddingModelConfig.builder()
             .modelType("testModelType")
             .allConfig("{\"field1\":\"value1\",\"field2\":\"value2\"}")
@@ -53,73 +57,68 @@ public class RegisterModelStepTests extends OpenSearchTestCase {
             .embeddingDimension(100)
             .build();
 
-        MockitoAnnotations.openMocks(this);
-
-        inputData = new WorkflowData(
+        this.workflowData = new WorkflowData(
             Map.ofEntries(
-                Map.entry("function_name", "remote"),
                 Map.entry("name", "xyz"),
+                Map.entry("version", "1.0.0"),
                 Map.entry("description", "description"),
-                Map.entry("connector_id", "abcdefg")
+                Map.entry("model_format", "TORCH_SCRIPT"),
+                Map.entry("model_group_id", "abcdefg"),
+                Map.entry("model_content_hash_value", "aiwoeifjoaijeofiwe"),
+                Map.entry("model_type", "bert"),
+                Map.entry("embedding_dimension", "384"),
+                Map.entry("framework_type", "sentence_transformers"),
+                Map.entry("url", "something.com")
             )
         );
 
     }
 
-    public void testRegisterModel() throws ExecutionException, InterruptedException {
+    public void testRegisterLocalModelSuccess() throws Exception {
 
         String taskId = "abcd";
-        String modelId = "efgh";
         String status = MLTaskState.CREATED.name();
-        MLRegisterModelInput mlInput = MLRegisterModelInput.builder()
-            .functionName(FunctionName.from("REMOTE"))
-            .modelName("testModelName")
-            .description("description")
-            .connectorId("abcdefgh")
-            .build();
-
-        RegisterModelStep registerModelStep = new RegisterModelStep(machineLearningNodeClient);
-
-        @SuppressWarnings("unchecked")
-        ArgumentCaptor<ActionListener<MLRegisterModelResponse>> actionListenerCaptor = ArgumentCaptor.forClass(ActionListener.class);
 
         doAnswer(invocation -> {
             ActionListener<MLRegisterModelResponse> actionListener = invocation.getArgument(1);
-            MLRegisterModelResponse output = new MLRegisterModelResponse(taskId, status, modelId);
+            MLRegisterModelResponse output = new MLRegisterModelResponse(taskId, status, null);
             actionListener.onResponse(output);
             return null;
-        }).when(machineLearningNodeClient).register(any(MLRegisterModelInput.class), actionListenerCaptor.capture());
+        }).when(machineLearningNodeClient).register(any(MLRegisterModelInput.class), any());
 
-        CompletableFuture<WorkflowData> future = registerModelStep.execute(List.of(inputData));
-
-        verify(machineLearningNodeClient).register(any(MLRegisterModelInput.class), actionListenerCaptor.capture());
+        CompletableFuture<WorkflowData> future = registerLocalModelStep.execute(List.of(workflowData));
+        verify(machineLearningNodeClient).register(any(MLRegisterModelInput.class), any());
 
         assertTrue(future.isDone());
-        assertEquals(modelId, future.get().getContent().get("model_id"));
-        assertEquals(status, future.get().getContent().get("register_model_status"));
+        assertTrue(!future.isCompletedExceptionally());
+        assertEquals(taskId, future.get().getContent().get(TASK_ID));
+        assertEquals(status, future.get().getContent().get(REGISTER_MODEL_STATUS));
 
     }
 
-    public void testRegisterModelFailure() {
-        RegisterModelStep registerModelStep = new RegisterModelStep(machineLearningNodeClient);
-
-        @SuppressWarnings("unchecked")
-        ArgumentCaptor<ActionListener<MLRegisterModelResponse>> actionListenerCaptor = ArgumentCaptor.forClass(ActionListener.class);
+    public void testRegisterLocalModelFailure() {
 
         doAnswer(invocation -> {
             ActionListener<MLRegisterModelResponse> actionListener = invocation.getArgument(1);
-            actionListener.onFailure(new FlowFrameworkException("Failed to register model", RestStatus.INTERNAL_SERVER_ERROR));
+            actionListener.onFailure(new IllegalArgumentException("test"));
             return null;
-        }).when(machineLearningNodeClient).register(any(MLRegisterModelInput.class), actionListenerCaptor.capture());
+        }).when(machineLearningNodeClient).register(any(MLRegisterModelInput.class), any());
 
-        CompletableFuture<WorkflowData> future = registerModelStep.execute(List.of(inputData));
+        CompletableFuture<WorkflowData> future = this.registerLocalModelStep.execute(List.of(workflowData));
+        assertTrue(future.isDone());
+        assertTrue(future.isCompletedExceptionally());
+        ExecutionException ex = expectThrows(ExecutionException.class, () -> future.get().getClass());
+        assertTrue(ex.getCause() instanceof FlowFrameworkException);
+        assertEquals("test", ex.getCause().getMessage());
+    }
 
-        verify(machineLearningNodeClient).register(any(MLRegisterModelInput.class), actionListenerCaptor.capture());
-
+    public void testMissingInputs() {
+        CompletableFuture<WorkflowData> future = registerLocalModelStep.execute(List.of(WorkflowData.EMPTY));
+        assertTrue(future.isDone());
         assertTrue(future.isCompletedExceptionally());
         ExecutionException ex = assertThrows(ExecutionException.class, () -> future.get().getContent());
         assertTrue(ex.getCause() instanceof FlowFrameworkException);
-        assertEquals("Failed to register model", ex.getCause().getMessage());
+        assertEquals("Required fields are not provided", ex.getCause().getMessage());
     }
 
 }

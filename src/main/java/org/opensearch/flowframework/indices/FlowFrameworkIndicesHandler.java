@@ -335,7 +335,7 @@ public class FlowFrameworkIndicesHandler {
             }
 
         }, e -> {
-            String errorMessage = "Failed to create global_context index";
+            String errorMessage = "Failed to create workflow_state index";
             logger.error(errorMessage, e);
             listener.onFailure(new FlowFrameworkException(errorMessage + " : " + e.getMessage(), ExceptionsHelper.status(e)));
         }));
