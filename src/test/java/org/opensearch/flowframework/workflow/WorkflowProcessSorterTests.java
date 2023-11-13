@@ -236,7 +236,7 @@ public class WorkflowProcessSorterTests extends OpenSearchTestCase {
         );
         WorkflowNode registerModel = new WorkflowNode(
             "workflow_step_2",
-            RegisterModelStep.NAME,
+            RegisterRemoteModelStep.NAME,
             Map.ofEntries(Map.entry("workflow_step_1", "connector_id")),
             Map.ofEntries(Map.entry("name", "name"), Map.entry("function_name", "remote"), Map.entry("description", "description"))
         );
@@ -261,7 +261,7 @@ public class WorkflowProcessSorterTests extends OpenSearchTestCase {
         // Create Register Model workflow node with missing connector_id field
         WorkflowNode registerModel = new WorkflowNode(
             "workflow_step_1",
-            RegisterModelStep.NAME,
+            RegisterRemoteModelStep.NAME,
             Map.of(),
             Map.ofEntries(Map.entry("name", "name"), Map.entry("function_name", "remote"), Map.entry("description", "description"))
         );
