@@ -50,6 +50,7 @@ public class WorkflowRequestResponseTests extends OpenSearchTestCase {
             templateVersion,
             compatibilityVersions,
             Map.of("workflow", workflow),
+            Map.of(),
             TestHelpers.randomUser()
         );
     }

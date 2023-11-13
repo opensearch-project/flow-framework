@@ -20,7 +20,7 @@ import org.opensearch.search.fetch.subphase.FetchSourceContext;
 public class RestHandlerUtils {
 
     /** Fields that need to be excluded from the Search Response*/
-    public static final String[] USER_EXCLUDE = new String[] { CommonValue.USER_FIELD };
+    public static final String[] USER_EXCLUDE = new String[] { CommonValue.USER_FIELD, CommonValue.UI_METADATA_FIELD };
 
     private RestHandlerUtils() {}
 
@@ -33,8 +33,7 @@ public class RestHandlerUtils {
      */
     public static FetchSourceContext getSourceContext(RestRequest request, SearchSourceBuilder searchSourceBuilder) {
         // TODO
-        // 1. Move UI_METADATA to GC Index
-        // 2. check if the request came from dashboard and exclude UI_METADATA
+        // 1. check if the request came from dashboard and exclude UI_METADATA
         if (searchSourceBuilder.fetchSource() != null) {
             String[] newArray = (String[]) ArrayUtils.addAll(searchSourceBuilder.fetchSource().excludes(), USER_EXCLUDE);
             return new FetchSourceContext(true, searchSourceBuilder.fetchSource().includes(), newArray);

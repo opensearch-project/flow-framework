@@ -35,6 +35,7 @@ public class TemplateTests extends OpenSearchTestCase {
         List<WorkflowNode> nodes = List.of(nodeA, nodeB);
         List<WorkflowEdge> edges = List.of(edgeAB);
         Workflow workflow = new Workflow(Map.of("key", "value"), nodes, edges);
+        Map<String, Object> uiMetadata = null;
 
         Template template = new Template(
             "test",
@@ -43,6 +44,7 @@ public class TemplateTests extends OpenSearchTestCase {
             templateVersion,
             compatibilityVersion,
             Map.of("workflow", workflow),
+            uiMetadata,
             null
         );
 
@@ -51,6 +53,7 @@ public class TemplateTests extends OpenSearchTestCase {
         assertEquals("test use case", template.useCase());
         assertEquals(templateVersion, template.templateVersion());
         assertEquals(compatibilityVersion, template.compatibilityVersion());
+        assertEquals(uiMetadata, template.getUiMetadata());
         Workflow wf = template.workflows().get("workflow");
         assertNotNull(wf);
         assertEquals("Workflow [userParams={key=value}, nodes=[A, B], edges=[A->B]]", wf.toString());
@@ -63,6 +66,7 @@ public class TemplateTests extends OpenSearchTestCase {
         assertEquals("test use case", templateX.useCase());
         assertEquals(templateVersion, templateX.templateVersion());
         assertEquals(compatibilityVersion, templateX.compatibilityVersion());
+        assertEquals(uiMetadata, templateX.getUiMetadata());
         Workflow wfX = templateX.workflows().get("workflow");
         assertNotNull(wfX);
         assertEquals("Workflow [userParams={key=value}, nodes=[A, B], edges=[A->B]]", wfX.toString());

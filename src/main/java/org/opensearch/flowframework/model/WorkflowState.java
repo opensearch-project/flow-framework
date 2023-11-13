@@ -26,7 +26,6 @@ import static org.opensearch.flowframework.common.CommonValue.PROVISION_END_TIME
 import static org.opensearch.flowframework.common.CommonValue.PROVISION_START_TIME_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.RESOURCES_CREATED_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.STATE_FIELD;
-import static org.opensearch.flowframework.common.CommonValue.UI_METADATA_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.USER_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.USER_OUTPUTS_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.WORKFLOW_ID_FIELD;
@@ -45,7 +44,6 @@ public class WorkflowState implements ToXContentObject {
     private Instant provisionStartTime;
     private Instant provisionEndTime;
     private User user;
-    private Map<String, Object> uiMetadata;
     private Map<String, Object> userOutputs;
     private Map<String, Object> resourcesCreated;
 
@@ -59,7 +57,6 @@ public class WorkflowState implements ToXContentObject {
      * @param provisionStartTime Indicates the start time of the whole provisioning flow
      * @param provisionEndTime Indicates the end time of the whole provisioning flow
      * @param user The user extracted from the thread context from the request
-     * @param uiMetadata The UI metadata related to the given workflow
      * @param userOutputs A map of essential API responses for backend to use and lookup.
      * @param resourcesCreated A map of all the resources created.
      */
@@ -71,7 +68,6 @@ public class WorkflowState implements ToXContentObject {
         Instant provisionStartTime,
         Instant provisionEndTime,
         User user,
-        Map<String, Object> uiMetadata,
         Map<String, Object> userOutputs,
         Map<String, Object> resourcesCreated
     ) {
@@ -82,7 +78,6 @@ public class WorkflowState implements ToXContentObject {
         this.provisionStartTime = provisionStartTime;
         this.provisionEndTime = provisionEndTime;
         this.user = user;
-        this.uiMetadata = uiMetadata;
         this.userOutputs = Map.copyOf(userOutputs);
         this.resourcesCreated = Map.copyOf(resourcesCreated);
     }
@@ -108,7 +103,6 @@ public class WorkflowState implements ToXContentObject {
         private Instant provisionStartTime = null;
         private Instant provisionEndTime = null;
         private User user = null;
-        private Map<String, Object> uiMetadata = null;
         private Map<String, Object> userOutputs = null;
         private Map<String, Object> resourcesCreated = null;
 
@@ -188,16 +182,6 @@ public class WorkflowState implements ToXContentObject {
         }
 
         /**
-         * Builder method for adding uiMetadata
-         * @param uiMetadata uiMetadata
-         * @return the Builder object
-         */
-        public Builder uiMetadata(Map<String, Object> uiMetadata) {
-            this.uiMetadata = uiMetadata;
-            return this;
-        }
-
-        /**
          * Builder method for adding userOutputs
          * @param userOutputs userOutputs
          * @return the Builder object
@@ -230,7 +214,6 @@ public class WorkflowState implements ToXContentObject {
             workflowState.provisionStartTime = this.provisionStartTime;
             workflowState.provisionEndTime = this.provisionEndTime;
             workflowState.user = this.user;
-            workflowState.uiMetadata = this.uiMetadata;
             workflowState.userOutputs = this.userOutputs;
             workflowState.resourcesCreated = this.resourcesCreated;
             return workflowState;
@@ -261,9 +244,6 @@ public class WorkflowState implements ToXContentObject {
         if (user != null) {
             xContentBuilder.field(USER_FIELD, user);
         }
-        if (uiMetadata != null && !uiMetadata.isEmpty()) {
-            xContentBuilder.field(UI_METADATA_FIELD, uiMetadata);
-        }
         if (userOutputs != null && !userOutputs.isEmpty()) {
             xContentBuilder.field(USER_OUTPUTS_FIELD, userOutputs);
         }
@@ -288,7 +268,6 @@ public class WorkflowState implements ToXContentObject {
         Instant provisionStartTime = null;
         Instant provisionEndTime = null;
         User user = null;
-        Map<String, Object> uiMetadata = null;
         Map<String, Object> userOutputs = new HashMap<>();
         Map<String, Object> resourcesCreated = new HashMap<>();
 
@@ -317,9 +296,6 @@ public class WorkflowState implements ToXContentObject {
                     break;
                 case USER_FIELD:
                     user = User.parse(parser);
-                    break;
-                case UI_METADATA_FIELD:
-                    uiMetadata = parser.map();
                     break;
                 case USER_OUTPUTS_FIELD:
                     ensureExpectedToken(XContentParser.Token.START_OBJECT, parser.currentToken(), parser);
@@ -367,7 +343,6 @@ public class WorkflowState implements ToXContentObject {
             .provisionStartTime(provisionStartTime)
             .provisionEndTime(provisionEndTime)
             .user(user)
-            .uiMetadata(uiMetadata)
             .userOutputs(userOutputs)
             .resourcesCreated(resourcesCreated)
             .build();
@@ -430,14 +405,6 @@ public class WorkflowState implements ToXContentObject {
     }
 
     /**
-     * A map corresponding to the UI metadata
-     * @return the userOutputs
-     */
-    public Map<String, Object> getUiMetadata() {
-        return uiMetadata;
-    }
-
-    /**
      * A map of essential API responses
      * @return the userOutputs
      */
@@ -451,5 +418,22 @@ public class WorkflowState implements ToXContentObject {
      */
     public Map<String, Object> resourcesCreated() {
         return resourcesCreated;
+    }
+
+    @Override
+    public String toString() {
+        return "WorkflowState [workflowId="
+            + workflowId
+            + ", error="
+            + error
+            + ", state="
+            + state
+            + ", provisioningProgress="
+            + provisioningProgress
+            + ", userOutputs="
+            + userOutputs
+            + ", resourcesCreated="
+            + resourcesCreated
+            + "]";
     }
 }
