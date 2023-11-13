@@ -37,7 +37,7 @@ public class FlowFrameworkFeatureEnabledSettingTests extends OpenSearchTestCase 
         settings = Settings.builder().build();
         final Set<Setting<?>> settingsSet = Stream.concat(
             ClusterSettings.BUILT_IN_CLUSTER_SETTINGS.stream(),
-            Stream.of(FlowFrameworkFeatureEnabledSetting.FLOW_FRAMEWORK_ENABLED)
+            Stream.of(FlowFrameworkSettings.FLOW_FRAMEWORK_ENABLED)
         ).collect(Collectors.toSet());
         clusterSettings = new ClusterSettings(settings, settingsSet);
         clusterService = mock(ClusterService.class);

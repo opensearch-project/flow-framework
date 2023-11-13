@@ -45,7 +45,6 @@ import static org.opensearch.flowframework.common.CommonValue.PROVISION_START_TI
 import static org.opensearch.flowframework.common.CommonValue.PROVISION_THREAD_POOL;
 import static org.opensearch.flowframework.common.CommonValue.PROVISION_WORKFLOW;
 import static org.opensearch.flowframework.common.CommonValue.STATE_FIELD;
-import static org.opensearch.flowframework.common.CommonValue.WORKFLOW_STATE_INDEX;
 
 /**
  * Transport Action to provision a workflow from a stored use case template
@@ -114,7 +113,6 @@ public class ProvisionWorkflowTransportAction extends HandledTransportAction<Wor
                 workflowProcessSorter.validateGraph(provisionProcessSequence);
 
                 flowFrameworkIndicesHandler.updateFlowFrameworkSystemIndexDoc(
-                    WORKFLOW_STATE_INDEX,
                     workflowId,
                     ImmutableMap.of(
                         STATE_FIELD,
