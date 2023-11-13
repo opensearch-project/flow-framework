@@ -108,6 +108,7 @@ public class CreateWorkflowTransportActionTests extends OpenSearchTestCase {
             templateVersion,
             compatibilityVersions,
             Map.of("workflow", workflow),
+            Map.of(),
             TestHelpers.randomUser()
         );
     }
@@ -160,6 +161,7 @@ public class CreateWorkflowTransportActionTests extends OpenSearchTestCase {
             Version.fromString("1.0.0"),
             List.of(Version.fromString("2.0.0"), Version.fromString("3.0.0")),
             Map.of("workflow", workflow),
+            Map.of(),
             TestHelpers.randomUser()
         );
 
