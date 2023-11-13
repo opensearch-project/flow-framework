@@ -38,7 +38,7 @@ import static org.opensearch.flowframework.common.CommonValue.NAME_FIELD;
  */
 public class ModelGroupStep implements WorkflowStep {
 
-    private static final Logger logger = LogManager.getLogger(RegisterModelStep.class);
+    private static final Logger logger = LogManager.getLogger(ModelGroupStep.class);
 
     private MachineLearningNodeClient mlClient;
 

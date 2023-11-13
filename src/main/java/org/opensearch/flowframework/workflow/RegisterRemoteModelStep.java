@@ -16,9 +16,8 @@ import org.opensearch.core.rest.RestStatus;
 import org.opensearch.flowframework.exception.FlowFrameworkException;
 import org.opensearch.ml.client.MachineLearningNodeClient;
 import org.opensearch.ml.common.FunctionName;
-import org.opensearch.ml.common.model.MLModelConfig;
-import org.opensearch.ml.common.model.MLModelFormat;
 import org.opensearch.ml.common.transport.register.MLRegisterModelInput;
+import org.opensearch.ml.common.transport.register.MLRegisterModelInput.MLRegisterModelInputBuilder;
 import org.opensearch.ml.common.transport.register.MLRegisterModelResponse;
 
 import java.util.List;
@@ -31,45 +30,44 @@ import java.util.stream.Stream;
 import static org.opensearch.flowframework.common.CommonValue.CONNECTOR_ID;
 import static org.opensearch.flowframework.common.CommonValue.DESCRIPTION_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.FUNCTION_NAME;
-import static org.opensearch.flowframework.common.CommonValue.MODEL_CONFIG;
-import static org.opensearch.flowframework.common.CommonValue.MODEL_FORMAT;
 import static org.opensearch.flowframework.common.CommonValue.MODEL_GROUP_ID;
-import static org.opensearch.flowframework.common.CommonValue.MODEL_VERSION;
+import static org.opensearch.flowframework.common.CommonValue.MODEL_ID;
 import static org.opensearch.flowframework.common.CommonValue.NAME_FIELD;
+import static org.opensearch.flowframework.common.CommonValue.REGISTER_MODEL_STATUS;
 
 /**
  * Step to register a remote model
  */
-public class RegisterModelStep implements WorkflowStep {
+public class RegisterRemoteModelStep implements WorkflowStep {
 
-    private static final Logger logger = LogManager.getLogger(RegisterModelStep.class);
+    private static final Logger logger = LogManager.getLogger(RegisterRemoteModelStep.class);
 
     private MachineLearningNodeClient mlClient;
 
-    static final String NAME = "register_model";
+    static final String NAME = "register_remote_model";
 
     /**
      * Instantiate this class
      * @param mlClient client to instantiate MLClient
      */
-    public RegisterModelStep(MachineLearningNodeClient mlClient) {
+    public RegisterRemoteModelStep(MachineLearningNodeClient mlClient) {
         this.mlClient = mlClient;
     }
 
     @Override
     public CompletableFuture<WorkflowData> execute(List<WorkflowData> data) {
 
-        CompletableFuture<WorkflowData> registerModelFuture = new CompletableFuture<>();
+        CompletableFuture<WorkflowData> registerRemoteModelFuture = new CompletableFuture<>();
 
         ActionListener<MLRegisterModelResponse> actionListener = new ActionListener<>() {
             @Override
             public void onResponse(MLRegisterModelResponse mlRegisterModelResponse) {
-                logger.info("Model registration successful");
-                registerModelFuture.complete(
+                logger.info("Remote Model registration successful");
+                registerRemoteModelFuture.complete(
                     new WorkflowData(
                         Map.ofEntries(
-                            Map.entry("model_id", mlRegisterModelResponse.getModelId()),
-                            Map.entry("register_model_status", mlRegisterModelResponse.getStatus())
+                            Map.entry(MODEL_ID, mlRegisterModelResponse.getModelId()),
+                            Map.entry(REGISTER_MODEL_STATUS, mlRegisterModelResponse.getStatus())
                         )
                     )
                 );
@@ -77,42 +75,32 @@ public class RegisterModelStep implements WorkflowStep {
 
             @Override
             public void onFailure(Exception e) {
-                logger.error("Failed to register model");
-                registerModelFuture.completeExceptionally(new FlowFrameworkException(e.getMessage(), ExceptionsHelper.status(e)));
+                logger.error("Failed to register remote model");
+                registerRemoteModelFuture.completeExceptionally(new FlowFrameworkException(e.getMessage(), ExceptionsHelper.status(e)));
             }
         };
 
-        FunctionName functionName = null;
         String modelName = null;
-        String modelVersion = null;
+        FunctionName functionName = null;
         String modelGroupId = null;
-        String connectorId = null;
         String description = null;
-        MLModelFormat modelFormat = null;
-        MLModelConfig modelConfig = null;
+        String connectorId = null;
+
+        // TODO : Handle inline connector configuration : https://github.com/opensearch-project/opensearch-ai-flow-framework/issues/149
 
         for (WorkflowData workflowData : data) {
-            Map<String, Object> content = workflowData.getContent();
 
+            Map<String, Object> content = workflowData.getContent();
             for (Entry<String, Object> entry : content.entrySet()) {
                 switch (entry.getKey()) {
-                    case FUNCTION_NAME:
-                        functionName = FunctionName.from(((String) content.get(FUNCTION_NAME)).toUpperCase(Locale.ROOT));
-                        break;
                     case NAME_FIELD:
                         modelName = (String) content.get(NAME_FIELD);
                         break;
-                    case MODEL_VERSION:
-                        modelVersion = (String) content.get(MODEL_VERSION);
+                    case FUNCTION_NAME:
+                        functionName = FunctionName.from(((String) content.get(FUNCTION_NAME)).toUpperCase(Locale.ROOT));
                         break;
                     case MODEL_GROUP_ID:
                         modelGroupId = (String) content.get(MODEL_GROUP_ID);
-                        break;
-                    case MODEL_FORMAT:
-                        modelFormat = MLModelFormat.from((String) content.get(MODEL_FORMAT));
-                        break;
-                    case MODEL_CONFIG:
-                        modelConfig = (MLModelConfig) content.get(MODEL_CONFIG);
                         break;
                     case DESCRIPTION_FIELD:
                         description = (String) content.get(DESCRIPTION_FIELD);
@@ -127,28 +115,34 @@ public class RegisterModelStep implements WorkflowStep {
             }
         }
 
-        if (Stream.of(functionName, modelName, description, connectorId).allMatch(x -> x != null)) {
+        if (Stream.of(modelName, functionName, connectorId).allMatch(x -> x != null)) {
 
-            // TODO: Add model Config and type cast correctly
-            MLRegisterModelInput mlInput = MLRegisterModelInput.builder()
+            MLRegisterModelInputBuilder builder = MLRegisterModelInput.builder()
                 .functionName(functionName)
                 .modelName(modelName)
-                .description(description)
-                .connectorId(connectorId)
-                .build();
+                .connectorId(connectorId);
+
+            if (modelGroupId != null) {
+                builder.modelGroupId(modelGroupId);
+            }
+            if (description != null) {
+                builder.description(description);
+            }
+            MLRegisterModelInput mlInput = builder.build();
 
             mlClient.register(mlInput, actionListener);
         } else {
-            registerModelFuture.completeExceptionally(
+            registerRemoteModelFuture.completeExceptionally(
                 new FlowFrameworkException("Required fields are not provided", RestStatus.BAD_REQUEST)
             );
         }
 
-        return registerModelFuture;
+        return registerRemoteModelFuture;
     }
 
     @Override
     public String getName() {
         return NAME;
     }
+
 }
