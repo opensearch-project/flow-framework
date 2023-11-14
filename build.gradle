@@ -223,26 +223,23 @@ task updateVersion {
     }
 }
 
-// Get uncommitted files via git diff
-// https://github.com/form-com/diff-coverage-gradle/issues/73
-ext.createDiffFile = { ->
-    def file = Files.createTempFile(URLEncoder.encode(project.name, 'UTF-8'), '.diff').toFile()
-    def diffBase = 'refs/remotes/origin/main'
-    // Only run locally
-    if (!System.getenv('CI')) {
-        file.withOutputStream { out ->
-            exec {
-                commandLine 'git', 'diff', '--no-color', '--minimal', diffBase
-                standardOutput = out
-            }
-        }
-    }
-    return file
-}
-
 diffCoverageReport {
     afterEvaluate {
-        diffSource.file = createDiffFile()
+        // Get uncommitted files via git diff
+        // https://github.com/form-com/diff-coverage-gradle/issues/73
+        def file = Files.createTempFile(URLEncoder.encode(project.name, 'UTF-8'), '.diff').toFile()
+        def diffBase = 'refs/remotes/origin/main'
+        // Only run locally
+        if (!System.getenv('CI')) {
+            file.withOutputStream { out ->
+                exec {
+                    ignoreExitValue true
+                    commandLine 'git', 'diff', '--no-color', '--minimal', diffBase, '|| true'
+                    standardOutput = out
+                }
+            }
+        }
+        diffSource.file = file
     }
 
     // View report at build/reports/jacoco/diffCoverage/html/index.html
