@@ -11,6 +11,7 @@ package org.opensearch.flowframework.rest;
 import com.google.common.collect.ImmutableList;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.opensearch.ExceptionsHelper;
 import org.opensearch.client.node.NodeClient;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.core.rest.RestStatus;
@@ -19,7 +20,7 @@ import org.opensearch.core.xcontent.XContentBuilder;
 import org.opensearch.flowframework.common.FlowFrameworkFeatureEnabledSetting;
 import org.opensearch.flowframework.exception.FlowFrameworkException;
 import org.opensearch.flowframework.transport.GetWorkflowAction;
-import org.opensearch.flowframework.transport.WorkflowRequest;
+import org.opensearch.flowframework.transport.GetWorkflowRequest;
 import org.opensearch.rest.BaseRestHandler;
 import org.opensearch.rest.BytesRestResponse;
 import org.opensearch.rest.RestRequest;
@@ -67,7 +68,7 @@ public class RestGetWorkflowAction extends BaseRestHandler {
 
             // Validate content
             if (request.hasContent()) {
-                throw new FlowFrameworkException("Invalid request format", RestStatus.BAD_REQUEST);
+                throw new FlowFrameworkException("No request body present", RestStatus.BAD_REQUEST);
             }
             // Validate params
             String workflowId = request.param(WORKFLOW_ID);
@@ -75,14 +76,14 @@ public class RestGetWorkflowAction extends BaseRestHandler {
                 throw new FlowFrameworkException("workflow_id cannot be null", RestStatus.BAD_REQUEST);
             }
 
-            boolean all = request.paramAsBoolean("_all", false);
-            WorkflowRequest workflowRequest = new WorkflowRequest(workflowId, null, false, all);
-            return channel -> client.execute(GetWorkflowAction.INSTANCE, workflowRequest, ActionListener.wrap(response -> {
+            boolean all = request.paramAsBoolean("all", false);
+            GetWorkflowRequest getWorkflowRequest = new GetWorkflowRequest(workflowId, all);
+            return channel -> client.execute(GetWorkflowAction.INSTANCE, getWorkflowRequest, ActionListener.wrap(response -> {
                 XContentBuilder builder = response.toXContent(channel.newBuilder(), ToXContent.EMPTY_PARAMS);
                 channel.sendResponse(new BytesRestResponse(RestStatus.OK, builder));
             }, exception -> {
                 try {
-                    FlowFrameworkException ex = (FlowFrameworkException) exception;
+                    FlowFrameworkException ex = new FlowFrameworkException(exception.getMessage(), ExceptionsHelper.status(exception));
                     XContentBuilder exceptionBuilder = ex.toXContent(channel.newErrorBuilder(), ToXContent.EMPTY_PARAMS);
                     channel.sendResponse(new BytesRestResponse(ex.getRestStatus(), exceptionBuilder));
                 } catch (IOException e) {

@@ -72,6 +72,7 @@ public class CreateConnectorStep implements WorkflowStep {
         this.flowFrameworkIndicesHandler = flowFrameworkIndicesHandler;
     }
 
+    // TODO: need to add retry conflicts here
     @Override
     public CompletableFuture<WorkflowData> execute(List<WorkflowData> data) throws IOException {
         CompletableFuture<WorkflowData> createConnectorFuture = new CompletableFuture<>();
@@ -80,6 +81,9 @@ public class CreateConnectorStep implements WorkflowStep {
 
             @Override
             public void onResponse(MLCreateConnectorResponse mlCreateConnectorResponse) {
+                createConnectorFuture.complete(
+                    new WorkflowData(Map.ofEntries(Map.entry("connector_id", mlCreateConnectorResponse.getConnectorId())))
+                );
                 try {
                     logger.info("Created connector successfully");
                     String workflowId = data.get(0).getWorkflowId();
@@ -102,19 +106,16 @@ public class CreateConnectorStep implements WorkflowStep {
                         script,
                         ActionListener.wrap(updateResponse -> {
                             logger.info("updated resources craeted of {}", workflowId);
-                        },
-                            exception -> {
-                                logger.error("Failed to update workflow state with newly created resource: {}", exception.getMessage());
-                            }
-                        )
+                        }, exception -> {
+                            createConnectorFuture.completeExceptionally(
+                                new FlowFrameworkException(exception.getMessage(), ExceptionsHelper.status(exception))
+                            );
+                            logger.error("Failed to update workflow state with newly created resource: {}", exception);
+                        })
                     );
                 } catch (IOException e) {
                     logger.error("Failed to parse new created resource", e);
                 }
-
-                createConnectorFuture.complete(
-                    new WorkflowData(Map.ofEntries(Map.entry("connector_id", mlCreateConnectorResponse.getConnectorId())))
-                );
             }
 
             @Override

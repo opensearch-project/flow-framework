@@ -65,18 +65,13 @@ public class WorkflowRequest extends ActionRequest {
      * @param maxWorkflows max number of workflows
      */
     public WorkflowRequest(
-        @Nullable String workflowId,
-        @Nullable Template template,
-        @Nullable TimeValue requestTimeout,
-        @Nullable Integer maxWorkflows
+            @Nullable String workflowId,
+            @Nullable Template template,
+            @Nullable TimeValue requestTimeout,
+            @Nullable Integer maxWorkflows
     ) {
         this(workflowId, template, false, requestTimeout, maxWorkflows);
     }
-
-    /**
-     * The all parameter on the get request
-     */
-    private boolean all;
 
     /**
      * Instantiates a new WorkflowRequest
@@ -87,11 +82,11 @@ public class WorkflowRequest extends ActionRequest {
      * @param maxWorkflows max number of workflows
      */
     public WorkflowRequest(
-        @Nullable String workflowId,
-        @Nullable Template template,
-        boolean dryRun,
-        @Nullable TimeValue requestTimeout,
-        @Nullable Integer maxWorkflows
+            @Nullable String workflowId,
+            @Nullable Template template,
+            boolean dryRun,
+            @Nullable TimeValue requestTimeout,
+            @Nullable Integer maxWorkflows
     ) {
         this.workflowId = workflowId;
         this.template = template;
@@ -99,7 +94,7 @@ public class WorkflowRequest extends ActionRequest {
         this.requestTimeout = requestTimeout;
         this.maxWorkflows = maxWorkflows;
     }
-    
+
     /**
      * Instantiates a new Workflow request
      * @param in The input stream to read from
@@ -156,7 +151,7 @@ public class WorkflowRequest extends ActionRequest {
     public Integer getMaxWorkflows() {
         return maxWorkflows;
     }
-    
+
     @Override
     public void writeTo(StreamOutput out) throws IOException {
         super.writeTo(out);

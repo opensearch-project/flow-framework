@@ -34,6 +34,7 @@ import org.opensearch.transport.TransportService;
 
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
 import java.util.concurrent.CompletableFuture;
@@ -46,6 +47,7 @@ import static org.opensearch.flowframework.common.CommonValue.PROVISION_END_TIME
 import static org.opensearch.flowframework.common.CommonValue.PROVISION_START_TIME_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.PROVISION_THREAD_POOL;
 import static org.opensearch.flowframework.common.CommonValue.PROVISION_WORKFLOW;
+import static org.opensearch.flowframework.common.CommonValue.RESOURCES_CREATED_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.STATE_FIELD;
 
 /**
@@ -123,7 +125,9 @@ public class ProvisionWorkflowTransportAction extends HandledTransportAction<Wor
                         PROVISIONING_PROGRESS_FIELD,
                         ProvisioningProgress.IN_PROGRESS,
                         PROVISION_START_TIME_FIELD,
-                        Instant.now().toEpochMilli()
+                        Instant.now().toEpochMilli(),
+                        RESOURCES_CREATED_FIELD,
+                        Collections.emptyList()
                     ),
                     ActionListener.wrap(updateResponse -> {
                         logger.info("updated workflow {} state to PROVISIONING", request.getWorkflowId());
@@ -231,7 +235,7 @@ public class ProvisionWorkflowTransportAction extends HandledTransportAction<Wor
             // Attempt to join each workflow step future, may throw a CompletionException if any step completes exceptionally
             workflowFutureList.forEach(CompletableFuture::join);
 
-            workflowListener.onResponse("READY");
+            // workflowListener.onResponse("READY");
 
         } catch (IllegalArgumentException e) {
             workflowListener.onFailure(new FlowFrameworkException(e.getMessage(), RestStatus.BAD_REQUEST));

@@ -19,23 +19,23 @@ import java.io.IOException;
 
 import static org.opensearch.core.xcontent.XContentParserUtils.ensureExpectedToken;
 import static org.opensearch.flowframework.common.CommonValue.RESOURCE_ID_FIELD;
-import static org.opensearch.flowframework.common.CommonValue.RESOURCE_NAME_FIELD;
+import static org.opensearch.flowframework.common.CommonValue.WORKFLOW_STEP_NAME;
 
 /**
  * This represents an object in the WorkflowState {@link WorkflowState}.
  */
 public class ResourcesCreated implements ToXContentObject, Writeable {
 
-    private String resourceName;
+    private String workflowStepName;
     private String resourceId;
 
     /**
      * Create this resources created object with given resource name and ID.
-     * @param resourceName The resource name associating to the step name where it was created
+     * @param workflowStepName The workflow step name associating to the step where it was created
      * @param resourceId The resources ID for relating to the created resource
      */
-    public ResourcesCreated(String resourceName, String resourceId) {
-        this.resourceName = resourceName;
+    public ResourcesCreated(String workflowStepName, String resourceId) {
+        this.workflowStepName = workflowStepName;
         this.resourceId = resourceId;
     }
 
@@ -45,22 +45,40 @@ public class ResourcesCreated implements ToXContentObject, Writeable {
      * @throws IOException if failed to read input stream
      */
     public ResourcesCreated(StreamInput input) throws IOException {
-        this.resourceName = input.readString();
+        this.workflowStepName = input.readString();
         this.resourceId = input.readString();
     }
 
     @Override
     public XContentBuilder toXContent(XContentBuilder builder, Params params) throws IOException {
         XContentBuilder xContentBuilder = builder.startObject()
-            .field(RESOURCE_NAME_FIELD, resourceName)
+            .field(WORKFLOW_STEP_NAME, workflowStepName)
             .field(RESOURCE_ID_FIELD, resourceId);
         return xContentBuilder.endObject();
     }
 
     @Override
     public void writeTo(StreamOutput out) throws IOException {
-        out.writeString(resourceName);
+        out.writeString(workflowStepName);
         out.writeString(resourceId);
+    }
+
+    /**
+     * Gets the resource id.
+     *
+     * @return the resourceId.
+     */
+    public String resourceId() {
+        return resourceId;
+    }
+
+    /**
+     * Gets the workflow step name associated to the created resource
+     *
+     * @return the workflowStepName.
+     */
+    public String workflowStepName() {
+        return workflowStepName;
     }
 
     /**
@@ -71,7 +89,7 @@ public class ResourcesCreated implements ToXContentObject, Writeable {
      * @throws IOException if content can't be parsed correctly
      */
     public static ResourcesCreated parse(XContentParser parser) throws IOException {
-        String resourceName = null;
+        String workflowStepName = null;
         String resourceId = null;
 
         ensureExpectedToken(XContentParser.Token.START_OBJECT, parser.currentToken(), parser);
@@ -80,8 +98,8 @@ public class ResourcesCreated implements ToXContentObject, Writeable {
             parser.nextToken();
 
             switch (fieldName) {
-                case RESOURCE_NAME_FIELD:
-                    resourceName = parser.text();
+                case WORKFLOW_STEP_NAME:
+                    workflowStepName = parser.text();
                     break;
                 case RESOURCE_ID_FIELD:
                     resourceId = parser.text();
@@ -90,7 +108,15 @@ public class ResourcesCreated implements ToXContentObject, Writeable {
                     throw new IOException("Unable to parse field [" + fieldName + "] in a resources_created object.");
             }
         }
-        return new ResourcesCreated(resourceName, resourceId);
+        if (workflowStepName == null || resourceId == null) {
+            throw new IOException("A resourcesCreated object requires both a workflowStepName and resourceId.");
+        }
+        return new ResourcesCreated(workflowStepName, resourceId);
+    }
+
+    @Override
+    public String toString() {
+        return "resources_Created [resource_name=" + workflowStepName + ", id=" + resourceId + "]";
     }
 
 }

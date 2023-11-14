@@ -151,6 +151,6 @@ public class CommonValue {
     /** The field name for the ResourcesCreated's resource ID */
     public static final String RESOURCE_ID_FIELD = "resource_id";
     /** The field name for the ResourcesCreated's resource name */
-    public static final String RESOURCE_NAME_FIELD = "resource_type";
+    public static final String WORKFLOW_STEP_NAME = "workflow_step_name";
 
 }

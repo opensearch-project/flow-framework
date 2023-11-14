@@ -34,9 +34,10 @@ import static org.opensearch.flowframework.common.CommonValue.WORKFLOW_STATE_IND
 //TODO: Currently we only get the workflow status but we should change to be able to get the
 // full template as well
 /**
- * Transport Action to get status of a current workflow
+ * Transport Action to get a specific workflow. Currently, we only support the action with _status
+ * in the API path but will add the ability to get the workflow and not just the status in the future
  */
-public class GetWorkflowTransportAction extends HandledTransportAction<WorkflowRequest, GetWorkflowResponse> {
+public class GetWorkflowTransportAction extends HandledTransportAction<GetWorkflowRequest, GetWorkflowResponse> {
 
     private final Logger logger = LogManager.getLogger(GetWorkflowTransportAction.class);
 
@@ -57,13 +58,13 @@ public class GetWorkflowTransportAction extends HandledTransportAction<WorkflowR
         Client client,
         NamedXContentRegistry xContentRegistry
     ) {
-        super(GetWorkflowAction.NAME, transportService, actionFilters, WorkflowRequest::new);
+        super(GetWorkflowAction.NAME, transportService, actionFilters, GetWorkflowRequest::new);
         this.client = client;
         this.xContentRegistry = xContentRegistry;
     }
 
     @Override
-    protected void doExecute(Task task, WorkflowRequest request, ActionListener<GetWorkflowResponse> listener) {
+    protected void doExecute(Task task, GetWorkflowRequest request, ActionListener<GetWorkflowResponse> listener) {
         String workflowId = request.getWorkflowId();
         User user = ParseUtils.getUserContext(client);
         GetRequest getRequest = new GetRequest(WORKFLOW_STATE_INDEX).id(workflowId);
@@ -81,11 +82,11 @@ public class GetWorkflowTransportAction extends HandledTransportAction<WorkflowR
                         listener.onFailure(e);
                     }
                 } else {
-                    listener.onFailure(new FlowFrameworkException("Fail to find workflow", RestStatus.BAD_REQUEST));
+                    listener.onFailure(new FlowFrameworkException("Fail to find workflow", RestStatus.NOT_FOUND));
                 }
             }, e -> {
                 if (e instanceof IndexNotFoundException) {
-                    listener.onFailure(new FlowFrameworkException("Fail to find workflow", RestStatus.BAD_REQUEST));
+                    listener.onFailure(new FlowFrameworkException("Fail to find workflow", RestStatus.NOT_FOUND));
                 } else {
                     logger.error("Failed to get workflow status of  " + workflowId, e);
                     listener.onFailure(e);
