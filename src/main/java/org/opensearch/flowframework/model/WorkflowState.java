@@ -469,17 +469,17 @@ public class WorkflowState implements ToXContentObject, Writeable {
     @Override
     public String toString() {
         return "WorkflowState [workflowId="
-                + workflowId
-                + ", error="
-                + error
-                + ", state="
-                + state
-                + ", provisioningProgress="
-                + provisioningProgress
-                + ", userOutputs="
-                + userOutputs
-                + ", resourcesCreated="
-                + resourcesCreated
-                + "]";
+            + workflowId
+            + ", error="
+            + error
+            + ", state="
+            + state
+            + ", provisioningProgress="
+            + provisioningProgress
+            + ", userOutputs="
+            + userOutputs
+            + ", resourcesCreated="
+            + resourcesCreated
+            + "]";
     }
 }

@@ -65,10 +65,10 @@ public class WorkflowRequest extends ActionRequest {
      * @param maxWorkflows max number of workflows
      */
     public WorkflowRequest(
-            @Nullable String workflowId,
-            @Nullable Template template,
-            @Nullable TimeValue requestTimeout,
-            @Nullable Integer maxWorkflows
+        @Nullable String workflowId,
+        @Nullable Template template,
+        @Nullable TimeValue requestTimeout,
+        @Nullable Integer maxWorkflows
     ) {
         this(workflowId, template, false, requestTimeout, maxWorkflows);
     }
@@ -82,11 +82,11 @@ public class WorkflowRequest extends ActionRequest {
      * @param maxWorkflows max number of workflows
      */
     public WorkflowRequest(
-            @Nullable String workflowId,
-            @Nullable Template template,
-            boolean dryRun,
-            @Nullable TimeValue requestTimeout,
-            @Nullable Integer maxWorkflows
+        @Nullable String workflowId,
+        @Nullable Template template,
+        boolean dryRun,
+        @Nullable TimeValue requestTimeout,
+        @Nullable Integer maxWorkflows
     ) {
         this.workflowId = workflowId;
         this.template = template;

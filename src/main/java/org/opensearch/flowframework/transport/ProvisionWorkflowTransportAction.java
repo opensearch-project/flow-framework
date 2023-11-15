@@ -163,7 +163,6 @@ public class ProvisionWorkflowTransportAction extends HandledTransportAction<Wor
         ActionListener<String> provisionWorkflowListener = ActionListener.wrap(response -> {
             logger.info("Provisioning completed successfully for workflow {}", workflowId);
             flowFrameworkIndicesHandler.updateFlowFrameworkSystemIndexDoc(
-                WORKFLOW_STATE_INDEX,
                 workflowId,
                 ImmutableMap.of(
                     STATE_FIELD,
@@ -181,7 +180,6 @@ public class ProvisionWorkflowTransportAction extends HandledTransportAction<Wor
         }, exception -> {
             logger.error("Provisioning failed for workflow {} : {}", workflowId, exception);
             flowFrameworkIndicesHandler.updateFlowFrameworkSystemIndexDoc(
-                WORKFLOW_STATE_INDEX,
                 workflowId,
                 ImmutableMap.of(
                     STATE_FIELD,
