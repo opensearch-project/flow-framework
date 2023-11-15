@@ -43,7 +43,7 @@ jobs:
         run: |
           ./gradlew check
       - name: Upload Coverage Report
-        if: ${{ matrix.codecov }}
+        if: matrix.os == 'ubuntu-latest'
         uses: codecov/codecov-action@v3
         with:
           file: ./build/reports/jacoco/test/jacocoTestReport.xml
