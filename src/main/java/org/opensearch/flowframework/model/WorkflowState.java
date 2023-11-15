@@ -290,10 +290,9 @@ public class WorkflowState implements ToXContentObject, Writeable {
         output.writeOptionalInstant(provisionEndTime);
 
         if (user != null) {
-            output.writeBoolean(true); // user exists
             user.writeTo(output);
         } else {
-            output.writeBoolean(false); // user does not exist
+            output.writeBoolean(false);
         }
 
         if (userOutputs != null) {
@@ -407,7 +406,7 @@ public class WorkflowState implements ToXContentObject, Writeable {
      * @return the error
      */
     public String getError() {
-        return workflowId;
+        return error;
     }
 
     /**

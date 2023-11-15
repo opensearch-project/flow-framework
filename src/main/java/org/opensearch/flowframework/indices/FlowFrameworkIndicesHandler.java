@@ -431,9 +431,10 @@ public class FlowFrameworkIndicesHandler {
                 client.update(updateRequest, ActionListener.runBefore(listener, () -> context.restore()));
             } catch (Exception e) {
                 logger.error("Failed to update {} entry : {}. {}", indexName, documentId, e.getMessage());
-                listener.onFailure(e);
+                listener.onFailure(
+                    new FlowFrameworkException("Failed to update " + indexName + "entry: " + documentId, ExceptionsHelper.status(e))
+                );
             }
         }
     }
-
 }

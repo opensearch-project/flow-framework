@@ -82,7 +82,10 @@ public class CreateConnectorStep implements WorkflowStep {
             @Override
             public void onResponse(MLCreateConnectorResponse mlCreateConnectorResponse) {
                 createConnectorFuture.complete(
-                    new WorkflowData(Map.ofEntries(Map.entry("connector_id", mlCreateConnectorResponse.getConnectorId())))
+                    new WorkflowData(
+                        Map.ofEntries(Map.entry("connector_id", mlCreateConnectorResponse.getConnectorId())),
+                        data.get(0).getWorkflowId()
+                    )
                 );
                 try {
                     logger.info("Created connector successfully");
@@ -105,7 +108,7 @@ public class CreateConnectorStep implements WorkflowStep {
                         workflowId,
                         script,
                         ActionListener.wrap(updateResponse -> {
-                            logger.info("updated resources craeted of {}", workflowId);
+                            logger.info("updated resources created of {}", workflowId);
                         }, exception -> {
                             createConnectorFuture.completeExceptionally(
                                 new FlowFrameworkException(exception.getMessage(), ExceptionsHelper.status(exception))

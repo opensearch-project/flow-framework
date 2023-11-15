@@ -26,13 +26,14 @@ public class WorkflowDataTests extends OpenSearchTestCase {
         assertTrue(empty.getContent().isEmpty());
 
         Map<String, Object> expectedContent = Map.of("baz", new String[] { "qux", "quxx" });
-        WorkflowData contentOnly = new WorkflowData(expectedContent);
+        WorkflowData contentOnly = new WorkflowData(expectedContent, "test-id-123");
         assertTrue(contentOnly.getParams().isEmpty());
         assertEquals(expectedContent, contentOnly.getContent());
 
         Map<String, String> expectedParams = Map.of("foo", "bar");
-        WorkflowData contentAndParams = new WorkflowData(expectedContent, expectedParams);
+        WorkflowData contentAndParams = new WorkflowData(expectedContent, expectedParams, "test-id-123");
         assertEquals(expectedParams, contentAndParams.getParams());
         assertEquals(expectedContent, contentAndParams.getContent());
+        assertEquals("test-id-123", contentAndParams.getWorkflowId());
     }
 }

@@ -33,7 +33,7 @@ public class GetWorkflowResponse extends ActionResponse implements ToXContentObj
     public GetWorkflowResponse(StreamInput in) throws IOException {
         super(in);
         workflowState = new WorkflowState(in);
-        allStatus = false;
+        allStatus = in.readBoolean();
     }
 
     /**

@@ -10,6 +10,7 @@ package org.opensearch.flowframework.transport;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.opensearch.ExceptionsHelper;
 import org.opensearch.action.get.GetRequest;
 import org.opensearch.action.support.ActionFilters;
 import org.opensearch.action.support.HandledTransportAction;
@@ -46,7 +47,7 @@ public class GetWorkflowTransportAction extends HandledTransportAction<GetWorkfl
 
     /**
      * Intantiates a new CreateWorkflowTransportAction
-     * @param transportService the TransportService
+     * @param transportService The TransportService
      * @param actionFilters action filters
      * @param client The client used to make the request to OS
      * @param xContentRegistry contentRegister to parse get response
@@ -70,8 +71,6 @@ public class GetWorkflowTransportAction extends HandledTransportAction<GetWorkfl
         GetRequest getRequest = new GetRequest(WORKFLOW_STATE_INDEX).id(workflowId);
         try (ThreadContext.StoredContext context = client.threadPool().getThreadContext().stashContext()) {
             client.get(getRequest, ActionListener.runBefore(ActionListener.wrap(r -> {
-                logger.debug("Completed Get Workflow Status Request, id:{}", workflowId);
-
                 if (r != null && r.isExists()) {
                     try (XContentParser parser = ParseUtils.createXContentParserFromRegistry(xContentRegistry, r.getSourceAsBytesRef())) {
                         ensureExpectedToken(XContentParser.Token.START_OBJECT, parser.nextToken(), parser);
@@ -79,7 +78,7 @@ public class GetWorkflowTransportAction extends HandledTransportAction<GetWorkfl
                         listener.onResponse(new GetWorkflowResponse(workflowState, request.getAll()));
                     } catch (Exception e) {
                         logger.error("Failed to parse workflowState" + r.getId(), e);
-                        listener.onFailure(e);
+                        listener.onFailure(new FlowFrameworkException("Failed to parse workflowState" + r.getId(), RestStatus.BAD_REQUEST));
                     }
                 } else {
                     listener.onFailure(new FlowFrameworkException("Fail to find workflow", RestStatus.NOT_FOUND));
@@ -88,13 +87,13 @@ public class GetWorkflowTransportAction extends HandledTransportAction<GetWorkfl
                 if (e instanceof IndexNotFoundException) {
                     listener.onFailure(new FlowFrameworkException("Fail to find workflow", RestStatus.NOT_FOUND));
                 } else {
-                    logger.error("Failed to get workflow status of  " + workflowId, e);
-                    listener.onFailure(e);
+                    logger.error("Failed to get workflow status of: " + workflowId, e);
+                    listener.onFailure(new FlowFrameworkException("Failed to get workflow status of: " + workflowId, RestStatus.NOT_FOUND));
                 }
             }), () -> context.restore()));
         } catch (Exception e) {
             logger.error("Failed to get workflow: " + workflowId, e);
-            listener.onFailure(e);
+            listener.onFailure(new FlowFrameworkException(e.getMessage(), ExceptionsHelper.status(e)));
         }
     }
 }

@@ -110,8 +110,6 @@ public class ProvisionWorkflowTransportAction extends HandledTransportAction<Wor
 
                 // Parse template from document source
                 Template template = Template.parse(response.getSourceAsString());
-                // TODO: Add the workflowID to the workflow data so I can update the state Index.
-
                 // Sort and validate graph
                 Workflow provisionWorkflow = template.workflows().get(PROVISION_WORKFLOW);
                 List<ProcessNode> provisionProcessSequence = workflowProcessSorter.sortProcessNodes(provisionWorkflow, workflowId);
@@ -179,13 +177,14 @@ public class ProvisionWorkflowTransportAction extends HandledTransportAction<Wor
 
         }, exception -> {
             logger.error("Provisioning failed for workflow {} : {}", workflowId, exception);
+
             flowFrameworkIndicesHandler.updateFlowFrameworkSystemIndexDoc(
                 workflowId,
                 ImmutableMap.of(
                     STATE_FIELD,
                     State.FAILED,
                     ERROR_FIELD,
-                    "failed provision", // TODO: improve the error message here
+                    exception.getMessage(), // TODO: potentially improve the error message here
                     PROVISIONING_PROGRESS_FIELD,
                     ProvisioningProgress.FAILED,
                     PROVISION_END_TIME_FIELD,
@@ -233,7 +232,7 @@ public class ProvisionWorkflowTransportAction extends HandledTransportAction<Wor
             // Attempt to join each workflow step future, may throw a CompletionException if any step completes exceptionally
             workflowFutureList.forEach(CompletableFuture::join);
 
-            // workflowListener.onResponse("READY");
+            workflowListener.onResponse("READY");
 
         } catch (IllegalArgumentException e) {
             workflowListener.onFailure(new FlowFrameworkException(e.getMessage(), RestStatus.BAD_REQUEST));

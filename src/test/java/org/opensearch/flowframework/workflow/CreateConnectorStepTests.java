@@ -70,7 +70,8 @@ public class CreateConnectorStepTests extends OpenSearchTestCase {
                 Map.entry(CommonValue.PARAMETERS_FIELD, params),
                 Map.entry(CommonValue.CREDENTIALS_FIELD, credentials),
                 Map.entry(CommonValue.ACTIONS_FIELD, actions)
-            )
+            ),
+            "test-id"
         );
     }
 

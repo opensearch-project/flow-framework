@@ -8,6 +8,8 @@
  */
 package org.opensearch.flowframework.workflow;
 
+import org.opensearch.common.Nullable;
+
 import java.util.Collections;
 import java.util.Map;
 
@@ -23,6 +25,8 @@ public class WorkflowData {
 
     private final Map<String, Object> content;
     private final Map<String, String> params;
+
+    @Nullable
     private String workflowId;
 
     private WorkflowData() {
@@ -32,20 +36,10 @@ public class WorkflowData {
     /**
      * Instantiate this object with content and empty params.
      * @param content The content map
+     * @param workflowId The workflow ID associated with this step
      */
-    public WorkflowData(Map<String, Object> content) {
-        this(content, Collections.emptyMap());
-    }
-
-    /**
-     * Instantiate this object with content and params.
-     * @param content The content map
-     * @param params The params map
-     */
-    public WorkflowData(Map<String, Object> content, Map<String, String> params) {
-        this.content = Map.copyOf(content);
-        this.params = Map.copyOf(params);
-        this.workflowId = "";
+    public WorkflowData(Map<String, Object> content, @Nullable String workflowId) {
+        this(content, Collections.emptyMap(), workflowId);
     }
 
     /**
@@ -54,7 +48,7 @@ public class WorkflowData {
      * @param params The params map
      * @param workflowId The workflow ID associated with this step
      */
-    public WorkflowData(Map<String, Object> content, Map<String, String> params, String workflowId) {
+    public WorkflowData(Map<String, Object> content, Map<String, String> params, @Nullable String workflowId) {
         this.content = Map.copyOf(content);
         this.params = Map.copyOf(params);
         this.workflowId = workflowId;
@@ -81,6 +75,7 @@ public class WorkflowData {
      * Returns the workflowId associated with this workflow.
      * @return the workflowId of this data.
      */
+    @Nullable
     public String getWorkflowId() {
         return this.workflowId;
     };

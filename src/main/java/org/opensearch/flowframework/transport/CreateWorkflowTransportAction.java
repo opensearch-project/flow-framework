@@ -100,7 +100,7 @@ public class CreateWorkflowTransportAction extends HandledTransportAction<Workfl
             try {
                 // generating random workflowId only for validation purpose
                 String uniqueID = UUID.randomUUID().toString();
-                validateWorkflows(templateWithUser, uniqueID);
+                validateWorkflows(templateWithUser);
             } catch (Exception e) {
                 if (e instanceof FlowFrameworkException) {
                     logger.error("Workflow validation failed for template : " + templateWithUser.name());
@@ -215,9 +215,9 @@ public class CreateWorkflowTransportAction extends HandledTransportAction<Workfl
         }));
     }
 
-    private void validateWorkflows(Template template, String testWorkflowID) throws Exception {
+    private void validateWorkflows(Template template) throws Exception {
         for (Workflow workflow : template.workflows().values()) {
-            List<ProcessNode> sortedNodes = workflowProcessSorter.sortProcessNodes(workflow, testWorkflowID);
+            List<ProcessNode> sortedNodes = workflowProcessSorter.sortProcessNodes(workflow, null);
             workflowProcessSorter.validateGraph(sortedNodes);
         }
     }
