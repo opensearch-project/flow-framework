@@ -69,7 +69,7 @@ public class CreateIndexStepTests extends OpenSearchTestCase {
     public void setUp() throws Exception {
         super.setUp();
         MockitoAnnotations.openMocks(this);
-        inputData = new WorkflowData(Map.ofEntries(Map.entry("index_name", "demo"), Map.entry("type", "knn")));
+        inputData = new WorkflowData(Map.ofEntries(Map.entry("index_name", "demo"), Map.entry("type", "knn")), "test-id");
         clusterService = mock(ClusterService.class);
         client = mock(Client.class);
         adminClient = mock(AdminClient.class);

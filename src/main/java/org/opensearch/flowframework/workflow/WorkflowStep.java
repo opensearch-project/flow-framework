@@ -30,5 +30,4 @@ public interface WorkflowStep {
      * @return the name of this workflow step.
      */
     String getName();
-
 }
