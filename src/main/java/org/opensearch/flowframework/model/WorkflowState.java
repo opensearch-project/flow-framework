@@ -54,7 +54,7 @@ public class WorkflowState implements ToXContentObject, Writeable {
     private Instant provisionEndTime;
     private User user;
     private Map<String, Object> userOutputs;
-    private List<ResourcesCreated> resourcesCreated;
+    private List<ResourceCreated> resourcesCreated;
 
     /**
      * Instantiate the object representing the workflow state
@@ -78,7 +78,7 @@ public class WorkflowState implements ToXContentObject, Writeable {
         Instant provisionEndTime,
         User user,
         Map<String, Object> userOutputs,
-        List<ResourcesCreated> resourcesCreated
+        List<ResourceCreated> resourcesCreated
     ) {
         this.workflowId = workflowId;
         this.error = error;
@@ -108,7 +108,7 @@ public class WorkflowState implements ToXContentObject, Writeable {
         // TODO: fix error: cannot access Response issue when integrating with access control
         // this.user = input.readBoolean() ? new User(input) : null;
         this.userOutputs = input.readBoolean() ? input.readMap() : null;
-        this.resourcesCreated = input.readList(ResourcesCreated::new);
+        this.resourcesCreated = input.readList(ResourceCreated::new);
     }
 
     /**
@@ -131,7 +131,7 @@ public class WorkflowState implements ToXContentObject, Writeable {
         private Instant provisionEndTime = null;
         private User user = null;
         private Map<String, Object> userOutputs = null;
-        private List<ResourcesCreated> resourcesCreated = null;
+        private List<ResourceCreated> resourcesCreated = null;
 
         /**
          * Empty Constructor for the Builder object
@@ -223,7 +223,7 @@ public class WorkflowState implements ToXContentObject, Writeable {
          * @param resourcesCreated resourcesCreated
          * @return the Builder object
          */
-        public Builder resourcesCreated(List<ResourcesCreated> resourcesCreated) {
+        public Builder resourcesCreated(List<ResourceCreated> resourcesCreated) {
             this.resourcesCreated = resourcesCreated;
             return this;
         }
@@ -320,7 +320,7 @@ public class WorkflowState implements ToXContentObject, Writeable {
         Instant provisionEndTime = null;
         User user = null;
         Map<String, Object> userOutputs = new HashMap<>();
-        List<ResourcesCreated> resourcesCreated = new ArrayList<>();
+        List<ResourceCreated> resourcesCreated = new ArrayList<>();
 
         ensureExpectedToken(XContentParser.Token.START_OBJECT, parser.currentToken(), parser);
         while (parser.nextToken() != XContentParser.Token.END_OBJECT) {
@@ -368,7 +368,7 @@ public class WorkflowState implements ToXContentObject, Writeable {
                     try {
                         ensureExpectedToken(XContentParser.Token.START_ARRAY, parser.currentToken(), parser);
                         while (parser.nextToken() != XContentParser.Token.END_ARRAY) {
-                            resourcesCreated.add(ResourcesCreated.parse(parser));
+                            resourcesCreated.add(ResourceCreated.parse(parser));
                         }
                     } catch (Exception e) {
                         if (e instanceof ParsingException || e instanceof XContentParseException) {
@@ -461,7 +461,7 @@ public class WorkflowState implements ToXContentObject, Writeable {
      * A map of all the resources created
      * @return the resources created
      */
-    public List<ResourcesCreated> resourcesCreated() {
+    public List<ResourceCreated> resourcesCreated() {
         return resourcesCreated;
     }
 

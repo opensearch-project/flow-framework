@@ -38,7 +38,6 @@ import org.opensearch.tasks.Task;
 import org.opensearch.transport.TransportService;
 
 import java.util.List;
-import java.util.UUID;
 
 import static org.opensearch.flowframework.common.CommonValue.PROVISIONING_PROGRESS_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.STATE_FIELD;
@@ -98,8 +97,6 @@ public class CreateWorkflowTransportAction extends HandledTransportAction<Workfl
 
         if (request.isDryRun()) {
             try {
-                // generating random workflowId only for validation purpose
-                String uniqueID = UUID.randomUUID().toString();
                 validateWorkflows(templateWithUser);
             } catch (Exception e) {
                 if (e instanceof FlowFrameworkException) {

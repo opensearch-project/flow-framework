@@ -18,7 +18,7 @@ import org.opensearch.core.xcontent.ToXContentObject;
 import org.opensearch.core.xcontent.XContentBuilder;
 import org.opensearch.flowframework.exception.FlowFrameworkException;
 import org.opensearch.flowframework.indices.FlowFrameworkIndicesHandler;
-import org.opensearch.flowframework.model.ResourcesCreated;
+import org.opensearch.flowframework.model.ResourceCreated;
 import org.opensearch.ml.client.MachineLearningNodeClient;
 import org.opensearch.ml.common.connector.ConnectorAction;
 import org.opensearch.ml.common.connector.ConnectorAction.ActionType;
@@ -91,7 +91,7 @@ public class CreateConnectorStep implements WorkflowStep {
                     logger.info("Created connector successfully");
                     String workflowId = data.get(0).getWorkflowId();
                     String workflowStepName = getName();
-                    ResourcesCreated newResource = new ResourcesCreated(workflowStepName, mlCreateConnectorResponse.getConnectorId());
+                    ResourceCreated newResource = new ResourceCreated(workflowStepName, mlCreateConnectorResponse.getConnectorId());
                     XContentBuilder builder = XContentBuilder.builder(XContentType.JSON.xContent());
                     newResource.toXContent(builder, ToXContentObject.EMPTY_PARAMS);
 

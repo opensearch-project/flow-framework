@@ -148,9 +148,9 @@ public class CommonValue {
     public static final String USER_OUTPUTS_FIELD = "user_outputs";
     /** The template field name for template resources created */
     public static final String RESOURCES_CREATED_FIELD = "resources_created";
-    /** The field name for the ResourcesCreated's resource ID */
+    /** The field name for the ResourceCreated's resource ID */
     public static final String RESOURCE_ID_FIELD = "resource_id";
-    /** The field name for the ResourcesCreated's resource name */
+    /** The field name for the ResourceCreated's resource name */
     public static final String WORKFLOW_STEP_NAME = "workflow_step_name";
 
 }

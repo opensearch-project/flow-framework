@@ -24,17 +24,18 @@ import static org.opensearch.flowframework.common.CommonValue.WORKFLOW_STEP_NAME
 /**
  * This represents an object in the WorkflowState {@link WorkflowState}.
  */
-public class ResourcesCreated implements ToXContentObject, Writeable {
+// TODO: create an enum to add the resource name itself for each step example (create_connector_step -> connector)
+public class ResourceCreated implements ToXContentObject, Writeable {
 
-    private String workflowStepName;
-    private String resourceId;
+    private final String workflowStepName;
+    private final String resourceId;
 
     /**
      * Create this resources created object with given resource name and ID.
      * @param workflowStepName The workflow step name associating to the step where it was created
      * @param resourceId The resources ID for relating to the created resource
      */
-    public ResourcesCreated(String workflowStepName, String resourceId) {
+    public ResourceCreated(String workflowStepName, String resourceId) {
         this.workflowStepName = workflowStepName;
         this.resourceId = resourceId;
     }
@@ -44,7 +45,7 @@ public class ResourcesCreated implements ToXContentObject, Writeable {
      * @param input the input stream to read from
      * @throws IOException if failed to read input stream
      */
-    public ResourcesCreated(StreamInput input) throws IOException {
+    public ResourceCreated(StreamInput input) throws IOException {
         this.workflowStepName = input.readString();
         this.resourceId = input.readString();
     }
@@ -82,13 +83,13 @@ public class ResourcesCreated implements ToXContentObject, Writeable {
     }
 
     /**
-     * Parse raw JSON content into a resourcesCreated instance.
+     * Parse raw JSON content into a ResourceCreated instance.
      *
      * @param parser JSON based content parser
-     * @return the parsed ResourcesCreated instance
+     * @return the parsed ResourceCreated instance
      * @throws IOException if content can't be parsed correctly
      */
-    public static ResourcesCreated parse(XContentParser parser) throws IOException {
+    public static ResourceCreated parse(XContentParser parser) throws IOException {
         String workflowStepName = null;
         String resourceId = null;
 
@@ -109,9 +110,9 @@ public class ResourcesCreated implements ToXContentObject, Writeable {
             }
         }
         if (workflowStepName == null || resourceId == null) {
-            throw new IOException("A resourcesCreated object requires both a workflowStepName and resourceId.");
+            throw new IOException("A ResourceCreated object requires both a workflowStepName and resourceId.");
         }
-        return new ResourcesCreated(workflowStepName, resourceId);
+        return new ResourceCreated(workflowStepName, resourceId);
     }
 
     @Override
