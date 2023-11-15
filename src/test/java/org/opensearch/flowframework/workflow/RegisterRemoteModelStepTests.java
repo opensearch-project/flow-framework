@@ -54,7 +54,8 @@ public class RegisterRemoteModelStepTests extends OpenSearchTestCase {
                 Map.entry("name", "xyz"),
                 Map.entry("description", "description"),
                 Map.entry("connector_id", "abcdefg")
-            )
+            ),
+            "test-id"
         );
     }
 

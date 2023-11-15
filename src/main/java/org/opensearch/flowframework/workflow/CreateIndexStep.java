@@ -61,7 +61,7 @@ public class CreateIndexStep implements WorkflowStep {
             @Override
             public void onResponse(CreateIndexResponse createIndexResponse) {
                 logger.info("created index: {}", createIndexResponse.index());
-                future.complete(new WorkflowData(Map.of(INDEX_NAME, createIndexResponse.index())));
+                future.complete(new WorkflowData(Map.of(INDEX_NAME, createIndexResponse.index()), data.get(0).getWorkflowId()));
             }
 
             @Override

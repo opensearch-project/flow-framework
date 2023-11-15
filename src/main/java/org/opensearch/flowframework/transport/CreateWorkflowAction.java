@@ -10,7 +10,7 @@ package org.opensearch.flowframework.transport;
 
 import org.opensearch.action.ActionType;
 
-import static org.opensearch.flowframework.common.CommonValue.TRANSPORT_ACION_NAME_PREFIX;
+import static org.opensearch.flowframework.common.CommonValue.TRANSPORT_ACTION_NAME_PREFIX;
 
 /**
  * External Action for public facing RestCreateWorkflowAction
@@ -18,7 +18,7 @@ import static org.opensearch.flowframework.common.CommonValue.TRANSPORT_ACION_NA
 public class CreateWorkflowAction extends ActionType<WorkflowResponse> {
 
     /** The name of this action */
-    public static final String NAME = TRANSPORT_ACION_NAME_PREFIX + "workflow/create";
+    public static final String NAME = TRANSPORT_ACTION_NAME_PREFIX + "workflow/create";
     /** An instance of this action */
     public static final CreateWorkflowAction INSTANCE = new CreateWorkflowAction();
 

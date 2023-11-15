@@ -69,7 +69,8 @@ public class RegisterLocalModelStepTests extends OpenSearchTestCase {
                 Map.entry("embedding_dimension", "384"),
                 Map.entry("framework_type", "sentence_transformers"),
                 Map.entry("url", "something.com")
-            )
+            ),
+            "test-id"
         );
 
     }

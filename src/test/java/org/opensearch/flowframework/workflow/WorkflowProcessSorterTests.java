@@ -14,6 +14,7 @@ import org.opensearch.cluster.service.ClusterService;
 import org.opensearch.core.rest.RestStatus;
 import org.opensearch.core.xcontent.XContentParser;
 import org.opensearch.flowframework.exception.FlowFrameworkException;
+import org.opensearch.flowframework.indices.FlowFrameworkIndicesHandler;
 import org.opensearch.flowframework.model.TemplateTestJsonUtil;
 import org.opensearch.flowframework.model.Workflow;
 import org.opensearch.flowframework.model.WorkflowEdge;
@@ -50,7 +51,7 @@ public class WorkflowProcessSorterTests extends OpenSearchTestCase {
     private static List<ProcessNode> parseToNodes(String json) throws IOException {
         XContentParser parser = TemplateTestJsonUtil.jsonToParser(json);
         Workflow w = Workflow.parse(parser);
-        return workflowProcessSorter.sortProcessNodes(w);
+        return workflowProcessSorter.sortProcessNodes(w, "123");
     }
 
     // Wrap parser into string list
@@ -67,11 +68,12 @@ public class WorkflowProcessSorterTests extends OpenSearchTestCase {
         ClusterService clusterService = mock(ClusterService.class);
         Client client = mock(Client.class);
         MachineLearningNodeClient mlClient = mock(MachineLearningNodeClient.class);
+        FlowFrameworkIndicesHandler flowFrameworkIndicesHandler = mock(FlowFrameworkIndicesHandler.class);
 
         when(client.admin()).thenReturn(adminClient);
 
         testThreadPool = new TestThreadPool(WorkflowProcessSorterTests.class.getName());
-        WorkflowStepFactory factory = new WorkflowStepFactory(clusterService, client, mlClient);
+        WorkflowStepFactory factory = new WorkflowStepFactory(clusterService, client, mlClient, flowFrameworkIndicesHandler);
         workflowProcessSorter = new WorkflowProcessSorter(factory, testThreadPool);
     }
 
@@ -252,7 +254,7 @@ public class WorkflowProcessSorterTests extends OpenSearchTestCase {
 
         Workflow workflow = new Workflow(Map.of(), List.of(createConnector, registerModel, deployModel), List.of(edge1, edge2));
 
-        List<ProcessNode> sortedProcessNodes = workflowProcessSorter.sortProcessNodes(workflow);
+        List<ProcessNode> sortedProcessNodes = workflowProcessSorter.sortProcessNodes(workflow, "123");
         workflowProcessSorter.validateGraph(sortedProcessNodes);
     }
 
@@ -274,7 +276,7 @@ public class WorkflowProcessSorterTests extends OpenSearchTestCase {
         WorkflowEdge edge = new WorkflowEdge(registerModel.id(), deployModel.id());
         Workflow workflow = new Workflow(Map.of(), List.of(registerModel, deployModel), List.of(edge));
 
-        List<ProcessNode> sortedProcessNodes = workflowProcessSorter.sortProcessNodes(workflow);
+        List<ProcessNode> sortedProcessNodes = workflowProcessSorter.sortProcessNodes(workflow, "123");
         FlowFrameworkException ex = expectThrows(
             FlowFrameworkException.class,
             () -> workflowProcessSorter.validateGraph(sortedProcessNodes)
