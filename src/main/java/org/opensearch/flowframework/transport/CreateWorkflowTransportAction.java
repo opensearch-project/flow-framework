@@ -214,7 +214,7 @@ public class CreateWorkflowTransportAction extends HandledTransportAction<Workfl
 
     private void validateWorkflows(Template template) throws Exception {
         for (Workflow workflow : template.workflows().values()) {
-            List<ProcessNode> sortedNodes = workflowProcessSorter.sortProcessNodes(workflow);
+            List<ProcessNode> sortedNodes = workflowProcessSorter.sortProcessNodes(workflow, null);
             workflowProcessSorter.validateGraph(sortedNodes);
         }
     }

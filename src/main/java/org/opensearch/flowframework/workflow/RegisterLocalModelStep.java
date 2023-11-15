@@ -77,7 +77,8 @@ public class RegisterLocalModelStep implements WorkflowStep {
                         Map.ofEntries(
                             Map.entry(TASK_ID, mlRegisterModelResponse.getTaskId()),
                             Map.entry(REGISTER_MODEL_STATUS, mlRegisterModelResponse.getStatus())
-                        )
+                        ),
+                        data.get(0).getWorkflowId()
                     )
                 );
             }

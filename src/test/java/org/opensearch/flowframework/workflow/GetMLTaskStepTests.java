@@ -48,7 +48,7 @@ public class GetMLTaskStepTests extends OpenSearchTestCase {
 
         MockitoAnnotations.openMocks(this);
         this.getMLTaskStep = new GetMLTaskStep(mlNodeClient);
-        this.workflowData = new WorkflowData(Map.ofEntries(Map.entry(TASK_ID, "test")));
+        this.workflowData = new WorkflowData(Map.ofEntries(Map.entry(TASK_ID, "test")), "test-id");
     }
 
     public void testGetMLTaskSuccess() throws Exception {

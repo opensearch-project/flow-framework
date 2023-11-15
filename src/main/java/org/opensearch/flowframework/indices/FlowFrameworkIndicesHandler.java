@@ -38,6 +38,7 @@ import org.opensearch.flowframework.model.ProvisioningProgress;
 import org.opensearch.flowframework.model.State;
 import org.opensearch.flowframework.model.Template;
 import org.opensearch.flowframework.model.WorkflowState;
+import org.opensearch.script.Script;
 
 import java.io.IOException;
 import java.net.URL;
@@ -311,7 +312,7 @@ public class FlowFrameworkIndicesHandler {
             .state(State.NOT_STARTED.name())
             .provisioningProgress(ProvisioningProgress.NOT_STARTED.name())
             .user(user)
-            .resourcesCreated(Collections.emptyMap())
+            .resourcesCreated(Collections.emptyList())
             .userOutputs(Collections.emptyMap())
             .build();
         initWorkflowStateIndexIfAbsent(ActionListener.wrap(indexCreated -> {
@@ -399,6 +400,40 @@ public class FlowFrameworkIndicesHandler {
                 String errorMessage = "Failed to update " + WORKFLOW_STATE_INDEX + " entry : " + documentId;
                 logger.error(errorMessage, e);
                 listener.onFailure(new FlowFrameworkException(errorMessage + " : " + e.getMessage(), ExceptionsHelper.status(e)));
+            }
+        }
+    }
+
+    /**
+     * Updates a document in the workflow state index
+     * @param indexName the index that we will be updating a document of.
+     * @param documentId the document ID
+     * @param script the given script to update doc
+     * @param listener action listener
+     */
+    public void updateFlowFrameworkSystemIndexDocWithScript(
+        String indexName,
+        String documentId,
+        Script script,
+        ActionListener<UpdateResponse> listener
+    ) {
+        if (!doesIndexExist(indexName)) {
+            String exceptionMessage = "Failed to update document for given workflow due to missing " + indexName + " index";
+            logger.error(exceptionMessage);
+            listener.onFailure(new Exception(exceptionMessage));
+        } else {
+            try (ThreadContext.StoredContext context = client.threadPool().getThreadContext().stashContext()) {
+                UpdateRequest updateRequest = new UpdateRequest(indexName, documentId);
+                // TODO: Also add ability to change other fields at the same time when adding detailed provision progress
+                updateRequest.script(script);
+                updateRequest.setRefreshPolicy(WriteRequest.RefreshPolicy.IMMEDIATE);
+                // TODO: decide what condition can be considered as an update conflict and add retry strategy
+                client.update(updateRequest, ActionListener.runBefore(listener, () -> context.restore()));
+            } catch (Exception e) {
+                logger.error("Failed to update {} entry : {}. {}", indexName, documentId, e.getMessage());
+                listener.onFailure(
+                    new FlowFrameworkException("Failed to update " + indexName + "entry: " + documentId, ExceptionsHelper.status(e))
+                );
             }
         }
     }

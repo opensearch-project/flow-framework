@@ -18,5 +18,7 @@ public enum ProvisioningProgress {
     /** In Progress State */
     IN_PROGRESS,
     /** Done State */
-    DONE
+    DONE,
+    /** Failed State */
+    FAILED
 }
