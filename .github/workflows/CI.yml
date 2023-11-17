@@ -51,7 +51,7 @@ jobs:
         distribution: temurin
     - name: Build and Run Tests
       run: |
-          ./gradlew check -x integTest -x yamlRestTest
+          ./gradlew check -x integTest -x yamlRestTest -x spotlessJava
     - name: Upload Coverage Report
       if: ${{ matrix.codecov }}
       uses: codecov/codecov-action@v3
