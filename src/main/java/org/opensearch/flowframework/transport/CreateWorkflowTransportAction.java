@@ -197,23 +197,23 @@ public class CreateWorkflowTransportAction extends HandledTransportAction<Workfl
     protected void checkMaxWorkflows(TimeValue requestTimeOut, Integer maxWorkflow, ActionListener<Boolean> internalListener) {
         if (!flowFrameworkIndicesHandler.doesIndexExist(CommonValue.GLOBAL_CONTEXT_INDEX)) {
             internalListener.onResponse(true);
-            return;
+        } else {
+            QueryBuilder query = QueryBuilders.matchAllQuery();
+            SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder().query(query).size(0).timeout(requestTimeOut);
+
+            SearchRequest searchRequest = new SearchRequest(CommonValue.GLOBAL_CONTEXT_INDEX).source(searchSourceBuilder);
+
+            client.search(searchRequest, ActionListener.wrap(searchResponse -> {
+                if (searchResponse.getHits().getTotalHits().value >= maxWorkflow) {
+                    internalListener.onResponse(false);
+                } else {
+                    internalListener.onResponse(true);
+                }
+            }, exception -> {
+                logger.error("Unable to fetch the workflows {}", exception);
+                internalListener.onFailure(new FlowFrameworkException("Unable to fetch the workflows", RestStatus.BAD_REQUEST));
+            }));
         }
-        QueryBuilder query = QueryBuilders.matchAllQuery();
-        SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder().query(query).size(0).timeout(requestTimeOut);
-
-        SearchRequest searchRequest = new SearchRequest(CommonValue.GLOBAL_CONTEXT_INDEX).source(searchSourceBuilder);
-
-        client.search(searchRequest, ActionListener.wrap(searchResponse -> {
-            if (searchResponse.getHits().getTotalHits().value >= maxWorkflow) {
-                internalListener.onResponse(false);
-            } else {
-                internalListener.onResponse(true);
-            }
-        }, exception -> {
-            logger.error("Unable to fetch the workflows {}", exception);
-            internalListener.onFailure(new FlowFrameworkException("Unable to fetch the workflows", RestStatus.BAD_REQUEST));
-        }));
     }
 
     private void validateWorkflows(Template template) throws Exception {
