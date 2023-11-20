@@ -34,6 +34,7 @@ import org.opensearch.transport.TransportService;
 
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 
 import org.mockito.ArgumentCaptor;
 
@@ -196,6 +197,20 @@ public class CreateWorkflowTransportActionTests extends OpenSearchTestCase {
         ArgumentCaptor<Exception> exceptionCaptor = ArgumentCaptor.forClass(Exception.class);
         verify(listener, times(1)).onFailure(exceptionCaptor.capture());
         assertEquals(("Maximum workflows limit reached 1000"), exceptionCaptor.getValue().getMessage());
+    }
+
+    public void testMaxWorkflowWithNoIndex() {
+        @SuppressWarnings("unchecked")
+        ActionListener<Boolean> listener = new ActionListener<Boolean>() {
+            @Override
+            public void onResponse(Boolean booleanResponse) {
+                assertTrue(booleanResponse);
+            }
+
+            @Override
+            public void onFailure(Exception e) {}
+        };
+        createWorkflowTransportAction.checkMaxWorkflows(new TimeValue(10, TimeUnit.SECONDS), 10, listener);
     }
 
     public void testFailedToCreateNewWorkflow() {
