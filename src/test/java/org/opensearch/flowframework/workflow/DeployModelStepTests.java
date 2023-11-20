@@ -44,7 +44,7 @@ public class DeployModelStepTests extends OpenSearchTestCase {
     public void setUp() throws Exception {
         super.setUp();
 
-        inputData = new WorkflowData(Map.ofEntries(Map.entry("model_id", "modelId")));
+        inputData = new WorkflowData(Map.ofEntries(Map.entry("model_id", "modelId")), "test-id");
 
         MockitoAnnotations.openMocks(this);
 

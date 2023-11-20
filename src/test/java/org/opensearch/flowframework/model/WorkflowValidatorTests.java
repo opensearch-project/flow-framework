@@ -13,6 +13,7 @@ import org.opensearch.client.Client;
 import org.opensearch.client.ClusterAdminClient;
 import org.opensearch.cluster.service.ClusterService;
 import org.opensearch.core.xcontent.XContentParser;
+import org.opensearch.flowframework.indices.FlowFrameworkIndicesHandler;
 import org.opensearch.flowframework.workflow.WorkflowStepFactory;
 import org.opensearch.ml.client.MachineLearningNodeClient;
 import org.opensearch.test.OpenSearchTestCase;
@@ -67,8 +68,9 @@ public class WorkflowValidatorTests extends OpenSearchTestCase {
         when(client.admin()).thenReturn(adminClient);
         when(adminClient.cluster()).thenReturn(clusterAdminClient);
         MachineLearningNodeClient mlClient = mock(MachineLearningNodeClient.class);
+        FlowFrameworkIndicesHandler flowFrameworkIndicesHandler = mock(FlowFrameworkIndicesHandler.class);
 
-        WorkflowStepFactory workflowStepFactory = new WorkflowStepFactory(clusterService, client, mlClient);
+        WorkflowStepFactory workflowStepFactory = new WorkflowStepFactory(clusterService, client, mlClient, flowFrameworkIndicesHandler);
 
         // Read in workflow-steps.json
         WorkflowValidator workflowValidator = WorkflowValidator.parse("mappings/workflow-steps.json");

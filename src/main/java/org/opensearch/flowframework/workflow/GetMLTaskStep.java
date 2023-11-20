@@ -56,7 +56,8 @@ public class GetMLTaskStep implements WorkflowStep {
             logger.info("ML Task retrieval successful");
             getMLTaskFuture.complete(
                 new WorkflowData(
-                    Map.ofEntries(Map.entry(MODEL_ID, response.getModelId()), Map.entry(REGISTER_MODEL_STATUS, response.getState().name()))
+                    Map.ofEntries(Map.entry(MODEL_ID, response.getModelId()), Map.entry(REGISTER_MODEL_STATUS, response.getState().name())),
+                    data.get(0).getWorkflowId()
                 )
             );
         }, exception -> {

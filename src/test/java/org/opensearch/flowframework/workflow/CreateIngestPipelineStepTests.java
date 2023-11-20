@@ -50,11 +50,12 @@ public class CreateIngestPipelineStepTests extends OpenSearchTestCase {
                 Map.entry("model_id", "model_id"),
                 Map.entry("input_field_name", "inputField"),
                 Map.entry("output_field_name", "outputField")
-            )
+            ),
+            "test-id"
         );
 
         // Set output data to returned pipelineId
-        outpuData = new WorkflowData(Map.ofEntries(Map.entry("pipeline_id", "pipelineId")));
+        outpuData = new WorkflowData(Map.ofEntries(Map.entry("pipeline_id", "pipelineId")), "test-id");
 
         client = mock(Client.class);
         adminClient = mock(AdminClient.class);
@@ -113,7 +114,8 @@ public class CreateIngestPipelineStepTests extends OpenSearchTestCase {
                 Map.entry("description", "some description"),
                 Map.entry("type", "text_embedding"),
                 Map.entry("model_id", "model_id")
-            )
+            ),
+            "test-id"
         );
 
         CompletableFuture<WorkflowData> future = createIngestPipelineStep.execute(List.of(incorrectData));
