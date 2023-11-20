@@ -11,6 +11,7 @@ package org.opensearch.flowframework.workflow;
 import org.opensearch.client.Client;
 import org.opensearch.cluster.service.ClusterService;
 import org.opensearch.core.rest.RestStatus;
+import org.opensearch.flowframework.common.FlowFrameworkMaxRequestRetrySetting;
 import org.opensearch.flowframework.exception.FlowFrameworkException;
 import org.opensearch.flowframework.indices.FlowFrameworkIndicesHandler;
 import org.opensearch.ml.client.MachineLearningNodeClient;
@@ -33,22 +34,25 @@ public class WorkflowStepFactory {
      * @param client The OpenSearch client steps can use
      * @param mlClient Machine Learning client to perform ml operations
      * @param flowFrameworkIndicesHandler FlowFrameworkIndicesHandler class to update system indices
+     * @param maxRequestRetrySetting FlowFramework Setting to control maximum transport request retries
      */
     public WorkflowStepFactory(
         ClusterService clusterService,
         Client client,
         MachineLearningNodeClient mlClient,
-        FlowFrameworkIndicesHandler flowFrameworkIndicesHandler
+        FlowFrameworkIndicesHandler flowFrameworkIndicesHandler,
+        FlowFrameworkMaxRequestRetrySetting maxRequestRetrySetting
     ) {
         this.flowFrameworkIndicesHandler = flowFrameworkIndicesHandler;
-        populateMap(clusterService, client, mlClient, flowFrameworkIndicesHandler);
+        populateMap(clusterService, client, mlClient, flowFrameworkIndicesHandler, maxRequestRetrySetting);
     }
 
     private void populateMap(
         ClusterService clusterService,
         Client client,
         MachineLearningNodeClient mlClient,
-        FlowFrameworkIndicesHandler flowFrameworkIndicesHandler
+        FlowFrameworkIndicesHandler flowFrameworkIndicesHandler,
+        FlowFrameworkMaxRequestRetrySetting maxRequestRetrySetting
     ) {
         stepMap.put(NoOpStep.NAME, new NoOpStep());
         stepMap.put(CreateIndexStep.NAME, new CreateIndexStep(clusterService, client));
@@ -58,7 +62,7 @@ public class WorkflowStepFactory {
         stepMap.put(DeployModelStep.NAME, new DeployModelStep(mlClient));
         stepMap.put(CreateConnectorStep.NAME, new CreateConnectorStep(mlClient, flowFrameworkIndicesHandler));
         stepMap.put(ModelGroupStep.NAME, new ModelGroupStep(mlClient));
-        stepMap.put(GetMLTaskStep.NAME, new GetMLTaskStep(mlClient));
+        stepMap.put(GetMLTaskStep.NAME, new GetMLTaskStep(mlClient, maxRequestRetrySetting));
     }
 
     /**

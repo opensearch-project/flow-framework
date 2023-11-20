@@ -13,9 +13,10 @@ import org.apache.logging.log4j.Logger;
 import org.opensearch.ExceptionsHelper;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.core.rest.RestStatus;
+import org.opensearch.flowframework.common.FlowFrameworkMaxRequestRetrySetting;
 import org.opensearch.flowframework.exception.FlowFrameworkException;
 import org.opensearch.ml.client.MachineLearningNodeClient;
-import org.opensearch.ml.common.MLTask;
+import org.opensearch.ml.common.MLTaskState;
 
 import java.util.List;
 import java.util.Map;
@@ -32,38 +33,24 @@ import static org.opensearch.flowframework.common.CommonValue.TASK_ID;
 public class GetMLTaskStep implements WorkflowStep {
 
     private static final Logger logger = LogManager.getLogger(GetMLTaskStep.class);
+    private FlowFrameworkMaxRequestRetrySetting maxRequestRetrySetting;
     private MachineLearningNodeClient mlClient;
     static final String NAME = "get_ml_task";
 
     /**
      * Instantiate this class
      * @param mlClient client to instantiate MLClient
+     * @param maxRequestRetrySetting the max request retry setting
      */
-    public GetMLTaskStep(MachineLearningNodeClient mlClient) {
+    public GetMLTaskStep(MachineLearningNodeClient mlClient, FlowFrameworkMaxRequestRetrySetting maxRequestRetrySetting) {
         this.mlClient = mlClient;
+        this.maxRequestRetrySetting = maxRequestRetrySetting;
     }
 
     @Override
     public CompletableFuture<WorkflowData> execute(List<WorkflowData> data) {
 
         CompletableFuture<WorkflowData> getMLTaskFuture = new CompletableFuture<>();
-
-        ActionListener<MLTask> actionListener = ActionListener.wrap(response -> {
-
-            // TODO : Add retry capability if response status is not COMPLETED :
-            // https://github.com/opensearch-project/opensearch-ai-flow-framework/issues/158
-
-            logger.info("ML Task retrieval successful");
-            getMLTaskFuture.complete(
-                new WorkflowData(
-                    Map.ofEntries(Map.entry(MODEL_ID, response.getModelId()), Map.entry(REGISTER_MODEL_STATUS, response.getState().name())),
-                    data.get(0).getWorkflowId()
-                )
-            );
-        }, exception -> {
-            logger.error("Failed to retrieve ML Task");
-            getMLTaskFuture.completeExceptionally(new FlowFrameworkException(exception.getMessage(), ExceptionsHelper.status(exception)));
-        });
 
         String taskId = null;
 
@@ -84,7 +71,7 @@ public class GetMLTaskStep implements WorkflowStep {
             logger.error("Failed to retrieve ML Task");
             getMLTaskFuture.completeExceptionally(new FlowFrameworkException("Required fields are not provided", RestStatus.BAD_REQUEST));
         } else {
-            mlClient.getTask(taskId, actionListener);
+            retryableGetMlTask(data, getMLTaskFuture, taskId, 0);
         }
 
         return getMLTaskFuture;
@@ -93,6 +80,44 @@ public class GetMLTaskStep implements WorkflowStep {
     @Override
     public String getName() {
         return NAME;
+    }
+
+    private void retryableGetMlTask(List<WorkflowData> data, CompletableFuture<WorkflowData> getMLTaskFuture, String taskId, int retries) {
+        mlClient.getTask(taskId, ActionListener.wrap(response -> {
+            if (response.getState() != MLTaskState.COMPLETED) {
+                throw new IllegalStateException("MLTask is not yet completed");
+            } else {
+                logger.info("ML Task retrieval successful");
+                getMLTaskFuture.complete(
+                    new WorkflowData(
+                        Map.ofEntries(
+                            Map.entry(MODEL_ID, response.getModelId()),
+                            Map.entry(REGISTER_MODEL_STATUS, response.getState().name())
+                        ),
+                        data.get(0).getWorkflowId()
+                    )
+                );
+            }
+        }, exception -> {
+            if (shouldRetry(getMLTaskFuture, retries)) {
+                final int retryAdd = retries + 1;
+                retryableGetMlTask(data, getMLTaskFuture, taskId, retryAdd);
+            } else {
+                logger.error("Failed to retrieve ML Task, maximum retries exceeded");
+                getMLTaskFuture.completeExceptionally(
+                    new FlowFrameworkException(exception.getMessage(), ExceptionsHelper.status(exception))
+                );
+            }
+        }));
+    }
+
+    private boolean shouldRetry(CompletableFuture<WorkflowData> getMLTaskFuture, int retries) {
+        try {
+            Thread.sleep(5000);
+        } catch (Exception e) {
+            getMLTaskFuture.completeExceptionally(new FlowFrameworkException(e.getMessage(), ExceptionsHelper.status(e)));
+        }
+        return retries < maxRequestRetrySetting.getMaxRetries();
     }
 
 }
