@@ -66,23 +66,23 @@ snapshots/
 └── org
     └── opensearch
         └── plugin
-            └── opensearch-ai-flow-framework
+            └── opensearch-flow-framework
                 ├── 3.0.0.0-SNAPSHOT
                 │   ├── maven-metadata.xml
                 │   ├── maven-metadata.xml.md5
                 │   ├── maven-metadata.xml.sha1
                 │   ├── maven-metadata.xml.sha256
                 │   ├── maven-metadata.xml.sha512
-                │   ├── opensearch-ai-flow-framework-3.0.0.0-20231005.170838-1.pom
-                │   ├── opensearch-ai-flow-framework-3.0.0.0-20231005.170838-1.pom.md5
-                │   ├── opensearch-ai-flow-framework-3.0.0.0-20231005.170838-1.pom.sha1
-                │   ├── opensearch-ai-flow-framework-3.0.0.0-20231005.170838-1.pom.sha256
-                │   ├── opensearch-ai-flow-framework-3.0.0.0-20231005.170838-1.pom.sha512
-                │   ├── opensearch-ai-flow-framework-3.0.0.0-20231005.170838-1.zip
-                │   ├── opensearch-ai-flow-framework-3.0.0.0-20231005.170838-1.zip.md5
-                │   ├── opensearch-ai-flow-framework-3.0.0.0-20231005.170838-1.zip.sha1
-                │   ├── opensearch-ai-flow-framework-3.0.0.0-20231005.170838-1.zip.sha256
-                │   └── opensearch-ai-flow-framework-3.0.0.0-20231005.170838-1.zip.sha512
+                │   ├── opensearch-flow-framework-3.0.0.0-20231005.170838-1.pom
+                │   ├── opensearch-flow-framework-3.0.0.0-20231005.170838-1.pom.md5
+                │   ├── opensearch-flow-framework-3.0.0.0-20231005.170838-1.pom.sha1
+                │   ├── opensearch-flow-framework-3.0.0.0-20231005.170838-1.pom.sha256
+                │   ├── opensearch-flow-framework-3.0.0.0-20231005.170838-1.pom.sha512
+                │   ├── opensearch-flow-framework-3.0.0.0-20231005.170838-1.zip
+                │   ├── opensearch-flow-framework-3.0.0.0-20231005.170838-1.zip.md5
+                │   ├── opensearch-flow-framework-3.0.0.0-20231005.170838-1.zip.sha1
+                │   ├── opensearch-flow-framework-3.0.0.0-20231005.170838-1.zip.sha256
+                │   └── opensearch-flow-framework-3.0.0.0-20231005.170838-1.zip.sha512
                 ├── maven-metadata.xml
                 ├── maven-metadata.xml.md5
                 ├── maven-metadata.xml.sha1

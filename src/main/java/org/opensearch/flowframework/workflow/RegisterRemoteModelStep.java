@@ -87,7 +87,7 @@ public class RegisterRemoteModelStep implements WorkflowStep {
         String description = null;
         String connectorId = null;
 
-        // TODO : Handle inline connector configuration : https://github.com/opensearch-project/opensearch-ai-flow-framework/issues/149
+        // TODO : Handle inline connector configuration : https://github.com/opensearch-project/flow-framework/issues/149
 
         for (WorkflowData workflowData : data) {
 
