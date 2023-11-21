@@ -180,7 +180,7 @@ public class ProcessNode {
                 this.future.completeExceptionally(e);
             }
             // TODO: improve use of thread pool beyond generic
-            // https://github.com/opensearch-project/opensearch-ai-flow-framework/issues/61
+            // https://github.com/opensearch-project/flow-framework/issues/61
         }, threadPool.generic());
         return this.future;
     }
