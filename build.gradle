@@ -90,8 +90,8 @@ publishing {
                 }
                 developers {
                     developer {
-                        name = "OpenSearch AI Flow Framework Plugin"
-                        url = "https://github.com/opensearch-project/opensearch-ai-flow-framework"
+                        name = "OpenSearch Flow Framework Plugin"
+                        url = "https://github.com/opensearch-project/flow-framework"
                     }
                 }
             }
