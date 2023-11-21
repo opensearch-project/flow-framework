@@ -120,7 +120,7 @@ public class CreateWorkflowTransportAction extends HandledTransportAction<Workfl
                     return;
                 } else {
                     // Initialize master key index and create new global context and state index entries
-                    flowFrameworkIndicesHandler.initMasterKeyIndexIfAbsent(ActionListener.wrap(isInitialized -> {
+                    flowFrameworkIndicesHandler.initializeMasterKeyIndex(ActionListener.wrap(isInitialized -> {
                         if (!isInitialized) {
                             listener.onFailure(
                                 new FlowFrameworkException("Failed to initalize master key index", RestStatus.INTERNAL_SERVER_ERROR)
