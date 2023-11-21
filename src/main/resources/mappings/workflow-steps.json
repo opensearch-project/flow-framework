@@ -67,17 +67,6 @@
             "register_model_status"
         ]
     },
-    "register_remote_model": {
-        "inputs": [
-            "name",
-            "function_name",
-            "connector_id"
-        ],
-        "outputs": [
-            "model_id",
-            "register_model_status"
-        ]
-    },
     "deploy_model": {
         "inputs":[
             "model_id"
