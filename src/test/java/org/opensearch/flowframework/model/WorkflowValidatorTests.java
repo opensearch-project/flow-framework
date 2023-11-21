@@ -16,7 +16,6 @@ import org.opensearch.common.settings.ClusterSettings;
 import org.opensearch.common.settings.Setting;
 import org.opensearch.common.settings.Settings;
 import org.opensearch.core.xcontent.XContentParser;
-import org.opensearch.flowframework.common.FlowFrameworkMaxRequestRetrySetting;
 import org.opensearch.flowframework.indices.FlowFrameworkIndicesHandler;
 import org.opensearch.flowframework.workflow.WorkflowStepFactory;
 import org.opensearch.ml.client.MachineLearningNodeClient;
@@ -88,17 +87,12 @@ public class WorkflowValidatorTests extends OpenSearchTestCase {
         ClusterSettings clusterSettings = new ClusterSettings(Settings.EMPTY, settingsSet);
         when(clusterService.getClusterSettings()).thenReturn(clusterSettings);
 
-        FlowFrameworkMaxRequestRetrySetting maxRequestRetrySetting = new FlowFrameworkMaxRequestRetrySetting(
-            clusterService,
-            Settings.EMPTY
-        );
-
         WorkflowStepFactory workflowStepFactory = new WorkflowStepFactory(
+            Settings.EMPTY,
             clusterService,
             client,
             mlClient,
-            flowFrameworkIndicesHandler,
-            maxRequestRetrySetting
+            flowFrameworkIndicesHandler
         );
 
         // Read in workflow-steps.json

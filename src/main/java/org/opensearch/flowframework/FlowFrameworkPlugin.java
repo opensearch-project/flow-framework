@@ -26,7 +26,6 @@ import org.opensearch.core.xcontent.NamedXContentRegistry;
 import org.opensearch.env.Environment;
 import org.opensearch.env.NodeEnvironment;
 import org.opensearch.flowframework.common.FlowFrameworkFeatureEnabledSetting;
-import org.opensearch.flowframework.common.FlowFrameworkMaxRequestRetrySetting;
 import org.opensearch.flowframework.indices.FlowFrameworkIndicesHandler;
 import org.opensearch.flowframework.rest.RestCreateWorkflowAction;
 import org.opensearch.flowframework.rest.RestGetWorkflowAction;
@@ -96,18 +95,14 @@ public class FlowFrameworkPlugin extends Plugin implements ActionPlugin {
         Settings settings = environment.settings();
         this.clusterService = clusterService;
         flowFrameworkFeatureEnabledSetting = new FlowFrameworkFeatureEnabledSetting(clusterService, settings);
-        FlowFrameworkMaxRequestRetrySetting flowFrameworkMaxRequestRetrySetting = new FlowFrameworkMaxRequestRetrySetting(
-            clusterService,
-            settings
-        );
         MachineLearningNodeClient mlClient = new MachineLearningNodeClient(client);
         FlowFrameworkIndicesHandler flowFrameworkIndicesHandler = new FlowFrameworkIndicesHandler(client, clusterService);
         WorkflowStepFactory workflowStepFactory = new WorkflowStepFactory(
+            settings,
             clusterService,
             client,
             mlClient,
-            flowFrameworkIndicesHandler,
-            flowFrameworkMaxRequestRetrySetting
+            flowFrameworkIndicesHandler
         );
         WorkflowProcessSorter workflowProcessSorter = new WorkflowProcessSorter(workflowStepFactory, threadPool);
 

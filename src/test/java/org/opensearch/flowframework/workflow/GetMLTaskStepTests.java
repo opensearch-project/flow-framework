@@ -15,7 +15,6 @@ import org.opensearch.common.settings.ClusterSettings;
 import org.opensearch.common.settings.Setting;
 import org.opensearch.common.settings.Settings;
 import org.opensearch.core.action.ActionListener;
-import org.opensearch.flowframework.common.FlowFrameworkMaxRequestRetrySetting;
 import org.opensearch.flowframework.exception.FlowFrameworkException;
 import org.opensearch.ml.client.MachineLearningNodeClient;
 import org.opensearch.ml.common.MLTask;
@@ -49,7 +48,6 @@ public class GetMLTaskStepTests extends OpenSearchTestCase {
 
     private GetMLTaskStep getMLTaskStep;
     private WorkflowData workflowData;
-    private FlowFrameworkMaxRequestRetrySetting maxRequestRetrySetting;
 
     @Mock
     MachineLearningNodeClient mlNodeClient;
@@ -65,9 +63,7 @@ public class GetMLTaskStepTests extends OpenSearchTestCase {
         ClusterSettings clusterSettings = new ClusterSettings(Settings.EMPTY, settingsSet);
         when(clusterService.getClusterSettings()).thenReturn(clusterSettings);
 
-        this.maxRequestRetrySetting = new FlowFrameworkMaxRequestRetrySetting(clusterService, Settings.EMPTY);
-
-        this.getMLTaskStep = new GetMLTaskStep(mlNodeClient, maxRequestRetrySetting);
+        this.getMLTaskStep = new GetMLTaskStep(Settings.EMPTY, clusterService, mlNodeClient);
         this.workflowData = new WorkflowData(Map.ofEntries(Map.entry(TASK_ID, "test")), "test-id");
     }
 

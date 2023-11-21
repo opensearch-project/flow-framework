@@ -16,7 +16,6 @@ import org.opensearch.common.settings.Setting;
 import org.opensearch.common.settings.Settings;
 import org.opensearch.core.rest.RestStatus;
 import org.opensearch.core.xcontent.XContentParser;
-import org.opensearch.flowframework.common.FlowFrameworkMaxRequestRetrySetting;
 import org.opensearch.flowframework.exception.FlowFrameworkException;
 import org.opensearch.flowframework.indices.FlowFrameworkIndicesHandler;
 import org.opensearch.flowframework.model.TemplateTestJsonUtil;
@@ -87,20 +86,15 @@ public class WorkflowProcessSorterTests extends OpenSearchTestCase {
         ClusterSettings clusterSettings = new ClusterSettings(Settings.EMPTY, settingsSet);
         when(clusterService.getClusterSettings()).thenReturn(clusterSettings);
 
-        FlowFrameworkMaxRequestRetrySetting maxRequestRetrySetting = new FlowFrameworkMaxRequestRetrySetting(
-            clusterService,
-            Settings.EMPTY
-        );
-
         when(client.admin()).thenReturn(adminClient);
 
         testThreadPool = new TestThreadPool(WorkflowProcessSorterTests.class.getName());
         WorkflowStepFactory factory = new WorkflowStepFactory(
+            Settings.EMPTY,
             clusterService,
             client,
             mlClient,
-            flowFrameworkIndicesHandler,
-            maxRequestRetrySetting
+            flowFrameworkIndicesHandler
         );
         workflowProcessSorter = new WorkflowProcessSorter(factory, testThreadPool);
     }

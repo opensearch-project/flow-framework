@@ -11,9 +11,10 @@ package org.opensearch.flowframework.workflow;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.opensearch.ExceptionsHelper;
+import org.opensearch.cluster.service.ClusterService;
+import org.opensearch.common.settings.Settings;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.core.rest.RestStatus;
-import org.opensearch.flowframework.common.FlowFrameworkMaxRequestRetrySetting;
 import org.opensearch.flowframework.exception.FlowFrameworkException;
 import org.opensearch.ml.client.MachineLearningNodeClient;
 import org.opensearch.ml.common.MLTaskState;
@@ -30,21 +31,21 @@ import static org.opensearch.flowframework.common.CommonValue.TASK_ID;
 /**
  * Step to retrieve an ML Task
  */
-public class GetMLTaskStep implements WorkflowStep {
+public class GetMLTaskStep extends RetryableWorkflowStep {
 
     private static final Logger logger = LogManager.getLogger(GetMLTaskStep.class);
-    private FlowFrameworkMaxRequestRetrySetting maxRequestRetrySetting;
     private MachineLearningNodeClient mlClient;
     static final String NAME = "get_ml_task";
 
     /**
      * Instantiate this class
+     * @param settings the Opensearch settings
+     * @param clusterService the OpenSearch cluster service
      * @param mlClient client to instantiate MLClient
-     * @param maxRequestRetrySetting the max request retry setting
      */
-    public GetMLTaskStep(MachineLearningNodeClient mlClient, FlowFrameworkMaxRequestRetrySetting maxRequestRetrySetting) {
+    public GetMLTaskStep(Settings settings, ClusterService clusterService, MachineLearningNodeClient mlClient) {
+        super(settings, clusterService);
         this.mlClient = mlClient;
-        this.maxRequestRetrySetting = maxRequestRetrySetting;
     }
 
     @Override
@@ -117,7 +118,7 @@ public class GetMLTaskStep implements WorkflowStep {
         } catch (Exception e) {
             getMLTaskFuture.completeExceptionally(new FlowFrameworkException(e.getMessage(), ExceptionsHelper.status(e)));
         }
-        return retries < maxRequestRetrySetting.getMaxRetries();
+        return retries < maxRetry;
     }
 
 }
