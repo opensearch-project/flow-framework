@@ -66,7 +66,8 @@ public class ModelGroupStep implements WorkflowStep {
                         Map.ofEntries(
                             Map.entry("model_group_id", mlRegisterModelGroupResponse.getModelGroupId()),
                             Map.entry("model_group_status", mlRegisterModelGroupResponse.getStatus())
-                        )
+                        ),
+                        data.get(0).getWorkflowId()
                     )
                 );
             }

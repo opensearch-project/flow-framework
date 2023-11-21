@@ -13,9 +13,8 @@ import com.carrotsearch.randomizedtesting.annotations.ThreadLeakScope;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.flowframework.exception.FlowFrameworkException;
 import org.opensearch.ml.client.MachineLearningNodeClient;
+import org.opensearch.ml.common.MLTask;
 import org.opensearch.ml.common.MLTaskState;
-import org.opensearch.ml.common.transport.register.MLRegisterModelInput;
-import org.opensearch.ml.common.transport.register.MLRegisterModelResponse;
 import org.opensearch.test.OpenSearchTestCase;
 
 import java.util.List;
@@ -28,15 +27,16 @@ import org.mockito.MockitoAnnotations;
 
 import static org.opensearch.flowframework.common.CommonValue.MODEL_ID;
 import static org.opensearch.flowframework.common.CommonValue.REGISTER_MODEL_STATUS;
+import static org.opensearch.flowframework.common.CommonValue.TASK_ID;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
 @ThreadLeakScope(ThreadLeakScope.Scope.NONE)
-public class RegisterRemoteModelStepTests extends OpenSearchTestCase {
+public class GetMLTaskStepTests extends OpenSearchTestCase {
 
-    private RegisterRemoteModelStep registerRemoteModelStep;
+    private GetMLTaskStep getMLTaskStep;
     private WorkflowData workflowData;
 
     @Mock
@@ -47,60 +47,49 @@ public class RegisterRemoteModelStepTests extends OpenSearchTestCase {
         super.setUp();
 
         MockitoAnnotations.openMocks(this);
-        this.registerRemoteModelStep = new RegisterRemoteModelStep(mlNodeClient);
-        this.workflowData = new WorkflowData(
-            Map.ofEntries(
-                Map.entry("function_name", "remote"),
-                Map.entry("name", "xyz"),
-                Map.entry("description", "description"),
-                Map.entry("connector_id", "abcdefg")
-            ),
-            "test-id"
-        );
+        this.getMLTaskStep = new GetMLTaskStep(mlNodeClient);
+        this.workflowData = new WorkflowData(Map.ofEntries(Map.entry(TASK_ID, "test")), "test-id");
     }
 
-    public void testRegisterRemoteModelSuccess() throws Exception {
-
-        String taskId = "abcd";
-        String modelId = "efgh";
-        String status = MLTaskState.CREATED.name();
+    public void testGetMLTaskSuccess() throws Exception {
+        String taskId = "test";
+        String modelId = "abcd";
+        MLTaskState status = MLTaskState.COMPLETED;
 
         doAnswer(invocation -> {
-            ActionListener<MLRegisterModelResponse> actionListener = invocation.getArgument(1);
-            MLRegisterModelResponse output = new MLRegisterModelResponse(taskId, status, modelId);
+            ActionListener<MLTask> actionListener = invocation.getArgument(1);
+            MLTask output = new MLTask(taskId, modelId, null, null, status, null, null, null, null, null, null, null, null, false);
             actionListener.onResponse(output);
             return null;
-        }).when(mlNodeClient).register(any(MLRegisterModelInput.class), any());
+        }).when(mlNodeClient).getTask(any(), any());
 
-        CompletableFuture<WorkflowData> future = this.registerRemoteModelStep.execute(List.of(workflowData));
+        CompletableFuture<WorkflowData> future = this.getMLTaskStep.execute(List.of(workflowData));
 
-        verify(mlNodeClient, times(1)).register(any(MLRegisterModelInput.class), any());
+        verify(mlNodeClient, times(1)).getTask(any(), any());
 
         assertTrue(future.isDone());
         assertTrue(!future.isCompletedExceptionally());
         assertEquals(modelId, future.get().getContent().get(MODEL_ID));
-        assertEquals(status, future.get().getContent().get(REGISTER_MODEL_STATUS));
-
+        assertEquals(status.name(), future.get().getContent().get(REGISTER_MODEL_STATUS));
     }
 
-    public void testRegisterRemoteModelFailure() {
+    public void testGetMLTaskFailure() {
         doAnswer(invocation -> {
-            ActionListener<MLRegisterModelResponse> actionListener = invocation.getArgument(1);
+            ActionListener<MLTask> actionListener = invocation.getArgument(1);
             actionListener.onFailure(new IllegalArgumentException("test"));
             return null;
-        }).when(mlNodeClient).register(any(MLRegisterModelInput.class), any());
+        }).when(mlNodeClient).getTask(any(), any());
 
-        CompletableFuture<WorkflowData> future = this.registerRemoteModelStep.execute(List.of(workflowData));
+        CompletableFuture<WorkflowData> future = this.getMLTaskStep.execute(List.of(workflowData));
         assertTrue(future.isDone());
         assertTrue(future.isCompletedExceptionally());
         ExecutionException ex = expectThrows(ExecutionException.class, () -> future.get().getClass());
         assertTrue(ex.getCause() instanceof FlowFrameworkException);
         assertEquals("test", ex.getCause().getMessage());
-
     }
 
     public void testMissingInputs() {
-        CompletableFuture<WorkflowData> future = this.registerRemoteModelStep.execute(List.of(WorkflowData.EMPTY));
+        CompletableFuture<WorkflowData> future = this.getMLTaskStep.execute(List.of(WorkflowData.EMPTY));
         assertTrue(future.isDone());
         assertTrue(future.isCompletedExceptionally());
         ExecutionException ex = assertThrows(ExecutionException.class, () -> future.get().getContent());

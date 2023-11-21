@@ -21,6 +21,7 @@ import org.opensearch.ml.common.model.TextEmbeddingModelConfig;
 import org.opensearch.ml.common.model.TextEmbeddingModelConfig.FrameworkType;
 import org.opensearch.ml.common.model.TextEmbeddingModelConfig.TextEmbeddingModelConfigBuilder;
 import org.opensearch.ml.common.transport.register.MLRegisterModelInput;
+import org.opensearch.ml.common.transport.register.MLRegisterModelInput.MLRegisterModelInputBuilder;
 import org.opensearch.ml.common.transport.register.MLRegisterModelResponse;
 
 import java.util.List;
@@ -36,10 +37,10 @@ import static org.opensearch.flowframework.common.CommonValue.FRAMEWORK_TYPE;
 import static org.opensearch.flowframework.common.CommonValue.MODEL_CONTENT_HASH_VALUE;
 import static org.opensearch.flowframework.common.CommonValue.MODEL_FORMAT;
 import static org.opensearch.flowframework.common.CommonValue.MODEL_GROUP_ID;
-import static org.opensearch.flowframework.common.CommonValue.MODEL_ID;
 import static org.opensearch.flowframework.common.CommonValue.MODEL_TYPE;
 import static org.opensearch.flowframework.common.CommonValue.NAME_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.REGISTER_MODEL_STATUS;
+import static org.opensearch.flowframework.common.CommonValue.TASK_ID;
 import static org.opensearch.flowframework.common.CommonValue.URL;
 import static org.opensearch.flowframework.common.CommonValue.VERSION_FIELD;
 
@@ -70,13 +71,14 @@ public class RegisterLocalModelStep implements WorkflowStep {
         ActionListener<MLRegisterModelResponse> actionListener = new ActionListener<>() {
             @Override
             public void onResponse(MLRegisterModelResponse mlRegisterModelResponse) {
-                logger.info("Local Model registration successful");
+                logger.info("Local Model registration task creation successful");
                 registerLocalModelFuture.complete(
                     new WorkflowData(
                         Map.ofEntries(
-                            Map.entry(MODEL_ID, mlRegisterModelResponse.getModelId()),
+                            Map.entry(TASK_ID, mlRegisterModelResponse.getTaskId()),
                             Map.entry(REGISTER_MODEL_STATUS, mlRegisterModelResponse.getStatus())
-                        )
+                        ),
+                        data.get(0).getWorkflowId()
                     )
                 );
             }
@@ -145,33 +147,42 @@ public class RegisterLocalModelStep implements WorkflowStep {
             }
         }
 
-        if (Stream.of(modelName, modelVersion, modelFormat, modelGroupId, embeddingDimension, frameworkType, modelContentHashValue, url)
-            .allMatch(x -> x != null)) {
+        if (Stream.of(
+            modelName,
+            modelVersion,
+            modelFormat,
+            modelGroupId,
+            modelType,
+            embeddingDimension,
+            frameworkType,
+            modelContentHashValue,
+            url
+        ).allMatch(x -> x != null)) {
 
-            // Create model configuration, assuming null pooling mode, null model max length, normalize results set to false
+            // Create Model configudation
             TextEmbeddingModelConfigBuilder modelConfigBuilder = TextEmbeddingModelConfig.builder()
                 .modelType(modelType)
                 .embeddingDimension(Integer.valueOf(embeddingDimension))
-                .frameworkType(frameworkType)
-                .poolingMode(null)
-                .modelMaxLength(null)
-                .normalizeResult(false);
-
+                .frameworkType(frameworkType);
             if (allConfig != null) {
                 modelConfigBuilder.allConfig(allConfig);
             }
-
             MLModelConfig modelConfig = modelConfigBuilder.build();
 
-            MLRegisterModelInput mlInput = MLRegisterModelInput.builder()
+            // Create register local model input
+            MLRegisterModelInputBuilder mlInputBuilder = MLRegisterModelInput.builder()
                 .modelName(modelName)
                 .version(modelVersion)
                 .modelFormat(modelFormat)
                 .modelGroupId(modelGroupId)
                 .hashValue(modelContentHashValue)
                 .modelConfig(modelConfig)
-                .url(url)
-                .build();
+                .url(url);
+            if (description != null) {
+                mlInputBuilder.description(description);
+            }
+
+            MLRegisterModelInput mlInput = mlInputBuilder.build();
 
             mlClient.register(mlInput, actionListener);
         } else {

@@ -10,7 +10,7 @@ on:
 jobs:
   validate:
     name: Validate
-    if: github.repository == 'opensearch-project/opensearch-ai-flow-framework'
+    if: github.repository == 'opensearch-project/flow-framework'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

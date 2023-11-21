@@ -30,7 +30,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import static org.opensearch.core.xcontent.ToXContent.EMPTY_PARAMS;
-import static org.opensearch.flowframework.common.FlowFrameworkFeatureEnabledSetting.FLOW_FRAMEWORK_ENABLED;
+import static org.opensearch.flowframework.common.FlowFrameworkSettings.FLOW_FRAMEWORK_ENABLED;
 import static org.opensearch.flowframework.util.RestHandlerUtils.getSourceContext;
 
 /**
@@ -38,15 +38,15 @@ import static org.opensearch.flowframework.util.RestHandlerUtils.getSourceContex
  */
 public abstract class AbstractSearchWorkflowAction<T extends ToXContentObject> extends BaseRestHandler {
 
-    /** List of paths to create routes */
+    /** Url Paths of the routes*/
     protected final List<String> urlPaths;
-    /** The index to search */
+    /** Index on search operation needs to be performed*/
     protected final String index;
-    /** The model class */
+    /** Search class name*/
     protected final Class<T> clazz;
-    /** Action Type */
+    /** Search action type*/
     protected final ActionType<SearchResponse> actionType;
-    /** Feature flag */
+    /** Settings to enable FlowFramework API*/
     protected final FlowFrameworkFeatureEnabledSetting flowFrameworkFeatureEnabledSetting;
 
     /**

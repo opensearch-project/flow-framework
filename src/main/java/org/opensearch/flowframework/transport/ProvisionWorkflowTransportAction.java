@@ -34,18 +34,21 @@ import org.opensearch.transport.TransportService;
 
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 
+import static org.opensearch.flowframework.common.CommonValue.ERROR_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.GLOBAL_CONTEXT_INDEX;
 import static org.opensearch.flowframework.common.CommonValue.PROVISIONING_PROGRESS_FIELD;
+import static org.opensearch.flowframework.common.CommonValue.PROVISION_END_TIME_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.PROVISION_START_TIME_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.PROVISION_THREAD_POOL;
 import static org.opensearch.flowframework.common.CommonValue.PROVISION_WORKFLOW;
+import static org.opensearch.flowframework.common.CommonValue.RESOURCES_CREATED_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.STATE_FIELD;
-import static org.opensearch.flowframework.common.CommonValue.WORKFLOW_STATE_INDEX;
 
 /**
  * Transport Action to provision a workflow from a stored use case template
@@ -107,14 +110,12 @@ public class ProvisionWorkflowTransportAction extends HandledTransportAction<Wor
 
                 // Parse template from document source
                 Template template = Template.parse(response.getSourceAsString());
-
                 // Sort and validate graph
                 Workflow provisionWorkflow = template.workflows().get(PROVISION_WORKFLOW);
-                List<ProcessNode> provisionProcessSequence = workflowProcessSorter.sortProcessNodes(provisionWorkflow);
+                List<ProcessNode> provisionProcessSequence = workflowProcessSorter.sortProcessNodes(provisionWorkflow, workflowId);
                 workflowProcessSorter.validateGraph(provisionProcessSequence);
 
                 flowFrameworkIndicesHandler.updateFlowFrameworkSystemIndexDoc(
-                    WORKFLOW_STATE_INDEX,
                     workflowId,
                     ImmutableMap.of(
                         STATE_FIELD,
@@ -122,7 +123,9 @@ public class ProvisionWorkflowTransportAction extends HandledTransportAction<Wor
                         PROVISIONING_PROGRESS_FIELD,
                         ProvisioningProgress.IN_PROGRESS,
                         PROVISION_START_TIME_FIELD,
-                        Instant.now().toEpochMilli()
+                        Instant.now().toEpochMilli(),
+                        RESOURCES_CREATED_FIELD,
+                        Collections.emptyList()
                     ),
                     ActionListener.wrap(updateResponse -> {
                         logger.info("updated workflow {} state to PROVISIONING", request.getWorkflowId());
@@ -131,7 +134,7 @@ public class ProvisionWorkflowTransportAction extends HandledTransportAction<Wor
 
                 // Respond to rest action then execute provisioning workflow async
                 listener.onResponse(new WorkflowResponse(workflowId));
-                executeWorkflowAsync(workflowId, provisionProcessSequence);
+                executeWorkflowAsync(workflowId, provisionProcessSequence, listener);
 
             }, exception -> {
                 if (exception instanceof FlowFrameworkException) {
@@ -152,31 +155,22 @@ public class ProvisionWorkflowTransportAction extends HandledTransportAction<Wor
      * Retrieves a thread from the provision thread pool to execute a workflow
      * @param workflowId The id of the workflow
      * @param workflowSequence The sorted workflow to execute
+     * @param listener ActionListener for any failures that don't get caught earlier in below step
      */
-    private void executeWorkflowAsync(String workflowId, List<ProcessNode> workflowSequence) {
-        // TODO : Update Action listener type to State index Request
-        ActionListener<String> provisionWorkflowListener = ActionListener.wrap(response -> {
-            logger.info("Provisioning completed successuflly for workflow {}", workflowId);
-
-            // TODO : Create State index request to update STATE entry status to READY
-        }, exception -> {
-            logger.error("Provisioning failed for workflow {} : {}", workflowId, exception);
-
-            // TODO : Create State index request to update STATE entry status to FAILED
-        });
+    private void executeWorkflowAsync(String workflowId, List<ProcessNode> workflowSequence, ActionListener<WorkflowResponse> listener) {
         try {
-            threadPool.executor(PROVISION_THREAD_POOL).execute(() -> { executeWorkflow(workflowSequence, provisionWorkflowListener); });
+            threadPool.executor(PROVISION_THREAD_POOL).execute(() -> { executeWorkflow(workflowSequence, workflowId); });
         } catch (Exception exception) {
-            provisionWorkflowListener.onFailure(new FlowFrameworkException(exception.getMessage(), ExceptionsHelper.status(exception)));
+            listener.onFailure(new FlowFrameworkException(exception.getMessage(), ExceptionsHelper.status(exception)));
         }
     }
 
     /**
      * Executes the given workflow sequence
      * @param workflowSequence The topologically sorted workflow to execute
-     * @param workflowListener The listener that updates the status of a workflow execution
+     * @param workflowId The workflowId associated with the workflow that is executing
      */
-    private void executeWorkflow(List<ProcessNode> workflowSequence, ActionListener<String> workflowListener) {
+    private void executeWorkflow(List<ProcessNode> workflowSequence, String workflowId) {
         try {
 
             List<CompletableFuture<?>> workflowFutureList = new ArrayList<>();
@@ -201,13 +195,39 @@ public class ProvisionWorkflowTransportAction extends HandledTransportAction<Wor
             // Attempt to join each workflow step future, may throw a CompletionException if any step completes exceptionally
             workflowFutureList.forEach(CompletableFuture::join);
 
-            // TODO : Create State Index request with provisioning state, start time, end time, etc, pending implementation. String for now
-            workflowListener.onResponse("READY");
-
-        } catch (IllegalArgumentException e) {
-            workflowListener.onFailure(new FlowFrameworkException(e.getMessage(), RestStatus.BAD_REQUEST));
+            logger.info("Provisioning completed successfully for workflow {}", workflowId);
+            flowFrameworkIndicesHandler.updateFlowFrameworkSystemIndexDoc(
+                workflowId,
+                ImmutableMap.of(
+                    STATE_FIELD,
+                    State.COMPLETED,
+                    PROVISIONING_PROGRESS_FIELD,
+                    ProvisioningProgress.DONE,
+                    PROVISION_END_TIME_FIELD,
+                    Instant.now().toEpochMilli()
+                ),
+                ActionListener.wrap(updateResponse -> {
+                    logger.info("updated workflow {} state to {}", workflowId, State.COMPLETED);
+                }, exception -> { logger.error("Failed to update workflow state : {}", exception.getMessage()); })
+            );
         } catch (Exception ex) {
-            workflowListener.onFailure(new FlowFrameworkException(ex.getMessage(), ExceptionsHelper.status(ex)));
+            logger.error("Provisioning failed for workflow {} : {}", workflowId, ex);
+            flowFrameworkIndicesHandler.updateFlowFrameworkSystemIndexDoc(
+                workflowId,
+                ImmutableMap.of(
+                    STATE_FIELD,
+                    State.FAILED,
+                    ERROR_FIELD,
+                    ex.getMessage(), // TODO: potentially improve the error message here
+                    PROVISIONING_PROGRESS_FIELD,
+                    ProvisioningProgress.FAILED,
+                    PROVISION_END_TIME_FIELD,
+                    Instant.now().toEpochMilli()
+                ),
+                ActionListener.wrap(updateResponse -> {
+                    logger.info("updated workflow {} state to {}", workflowId, State.COMPLETED);
+                }, exceptionState -> { logger.error("Failed to update workflow state : {}", exceptionState.getMessage()); })
+            );
         }
     }
 

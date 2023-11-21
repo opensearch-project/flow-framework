@@ -28,10 +28,13 @@ import org.opensearch.env.NodeEnvironment;
 import org.opensearch.flowframework.common.FlowFrameworkFeatureEnabledSetting;
 import org.opensearch.flowframework.indices.FlowFrameworkIndicesHandler;
 import org.opensearch.flowframework.rest.RestCreateWorkflowAction;
+import org.opensearch.flowframework.rest.RestGetWorkflowAction;
 import org.opensearch.flowframework.rest.RestProvisionWorkflowAction;
 import org.opensearch.flowframework.rest.RestSearchWorkflowAction;
 import org.opensearch.flowframework.transport.CreateWorkflowAction;
 import org.opensearch.flowframework.transport.CreateWorkflowTransportAction;
+import org.opensearch.flowframework.transport.GetWorkflowAction;
+import org.opensearch.flowframework.transport.GetWorkflowTransportAction;
 import org.opensearch.flowframework.transport.ProvisionWorkflowAction;
 import org.opensearch.flowframework.transport.ProvisionWorkflowTransportAction;
 import org.opensearch.flowframework.transport.SearchWorkflowAction;
@@ -56,6 +59,9 @@ import java.util.function.Supplier;
 
 import static org.opensearch.flowframework.common.CommonValue.FLOW_FRAMEWORK_THREAD_POOL_PREFIX;
 import static org.opensearch.flowframework.common.CommonValue.PROVISION_THREAD_POOL;
+import static org.opensearch.flowframework.common.FlowFrameworkSettings.FLOW_FRAMEWORK_ENABLED;
+import static org.opensearch.flowframework.common.FlowFrameworkSettings.MAX_WORKFLOWS;
+import static org.opensearch.flowframework.common.FlowFrameworkSettings.WORKFLOW_REQUEST_TIMEOUT;
 
 /**
  * An OpenSearch plugin that enables builders to innovate AI apps on OpenSearch.
@@ -63,6 +69,7 @@ import static org.opensearch.flowframework.common.CommonValue.PROVISION_THREAD_P
 public class FlowFrameworkPlugin extends Plugin implements ActionPlugin {
 
     private FlowFrameworkFeatureEnabledSetting flowFrameworkFeatureEnabledSetting;
+    private ClusterService clusterService;
 
     /**
      * Instantiate this plugin.
@@ -84,12 +91,13 @@ public class FlowFrameworkPlugin extends Plugin implements ActionPlugin {
         Supplier<RepositoriesService> repositoriesServiceSupplier
     ) {
         Settings settings = environment.settings();
+        this.clusterService = clusterService;
         flowFrameworkFeatureEnabledSetting = new FlowFrameworkFeatureEnabledSetting(clusterService, settings);
 
         MachineLearningNodeClient mlClient = new MachineLearningNodeClient(client);
-        WorkflowStepFactory workflowStepFactory = new WorkflowStepFactory(clusterService, client, mlClient);
-        WorkflowProcessSorter workflowProcessSorter = new WorkflowProcessSorter(workflowStepFactory, threadPool);
         FlowFrameworkIndicesHandler flowFrameworkIndicesHandler = new FlowFrameworkIndicesHandler(client, clusterService);
+        WorkflowStepFactory workflowStepFactory = new WorkflowStepFactory(clusterService, client, mlClient, flowFrameworkIndicesHandler);
+        WorkflowProcessSorter workflowProcessSorter = new WorkflowProcessSorter(workflowStepFactory, threadPool);
 
         return ImmutableList.of(workflowStepFactory, workflowProcessSorter, flowFrameworkIndicesHandler);
     }
@@ -105,9 +113,10 @@ public class FlowFrameworkPlugin extends Plugin implements ActionPlugin {
         Supplier<DiscoveryNodes> nodesInCluster
     ) {
         return ImmutableList.of(
-            new RestCreateWorkflowAction(flowFrameworkFeatureEnabledSetting),
+            new RestCreateWorkflowAction(flowFrameworkFeatureEnabledSetting, settings, clusterService),
             new RestProvisionWorkflowAction(flowFrameworkFeatureEnabledSetting),
-            new RestSearchWorkflowAction(flowFrameworkFeatureEnabledSetting)
+            new RestSearchWorkflowAction(flowFrameworkFeatureEnabledSetting),
+            new RestGetWorkflowAction(flowFrameworkFeatureEnabledSetting)
         );
     }
 
@@ -116,13 +125,14 @@ public class FlowFrameworkPlugin extends Plugin implements ActionPlugin {
         return ImmutableList.of(
             new ActionHandler<>(CreateWorkflowAction.INSTANCE, CreateWorkflowTransportAction.class),
             new ActionHandler<>(ProvisionWorkflowAction.INSTANCE, ProvisionWorkflowTransportAction.class),
-            new ActionHandler<>(SearchWorkflowAction.INSTANCE, SearchWorkflowTransportAction.class)
+            new ActionHandler<>(SearchWorkflowAction.INSTANCE, SearchWorkflowTransportAction.class),
+            new ActionHandler<>(GetWorkflowAction.INSTANCE, GetWorkflowTransportAction.class)
         );
     }
 
     @Override
     public List<Setting<?>> getSettings() {
-        List<Setting<?>> settings = ImmutableList.of(FlowFrameworkFeatureEnabledSetting.FLOW_FRAMEWORK_ENABLED);
+        List<Setting<?>> settings = ImmutableList.of(FLOW_FRAMEWORK_ENABLED, MAX_WORKFLOWS, WORKFLOW_REQUEST_TIMEOUT);
         return settings;
     }
 

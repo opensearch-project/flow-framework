@@ -10,6 +10,10 @@ package org.opensearch.flowframework.rest;
 
 import org.opensearch.Version;
 import org.opensearch.client.node.NodeClient;
+import org.opensearch.cluster.service.ClusterService;
+import org.opensearch.common.settings.ClusterSettings;
+import org.opensearch.common.settings.Settings;
+import org.opensearch.common.unit.TimeValue;
 import org.opensearch.core.common.bytes.BytesArray;
 import org.opensearch.core.rest.RestStatus;
 import org.opensearch.core.xcontent.MediaTypeRegistry;
@@ -30,7 +34,10 @@ import java.util.Locale;
 import java.util.Map;
 
 import static org.opensearch.flowframework.common.CommonValue.WORKFLOW_URI;
+import static org.opensearch.flowframework.common.FlowFrameworkSettings.MAX_WORKFLOWS;
+import static org.opensearch.flowframework.common.FlowFrameworkSettings.WORKFLOW_REQUEST_TIMEOUT;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.when;
 
 public class RestCreateWorkflowActionTests extends OpenSearchTestCase {
@@ -41,11 +48,21 @@ public class RestCreateWorkflowActionTests extends OpenSearchTestCase {
     private String updateWorkflowPath;
     private NodeClient nodeClient;
     private FlowFrameworkFeatureEnabledSetting flowFrameworkFeatureEnabledSetting;
+    private Settings settings;
+    private ClusterService clusterService;
 
     @Override
     public void setUp() throws Exception {
         super.setUp();
         flowFrameworkFeatureEnabledSetting = mock(FlowFrameworkFeatureEnabledSetting.class);
+        settings = Settings.builder()
+            .put(WORKFLOW_REQUEST_TIMEOUT.getKey(), TimeValue.timeValueMillis(10))
+            .put(MAX_WORKFLOWS.getKey(), 2)
+            .build();
+
+        ClusterSettings clusterSettings = TestHelpers.clusterSetting(settings, WORKFLOW_REQUEST_TIMEOUT, MAX_WORKFLOWS);
+        clusterService = spy(new ClusterService(settings, clusterSettings, null));
+
         when(flowFrameworkFeatureEnabledSetting.isFlowFrameworkEnabled()).thenReturn(true);
 
         Version templateVersion = Version.fromString("1.0.0");
@@ -64,12 +81,14 @@ public class RestCreateWorkflowActionTests extends OpenSearchTestCase {
             templateVersion,
             compatibilityVersions,
             Map.of("workflow", workflow),
+            Map.of(),
             TestHelpers.randomUser()
         );
 
         // Invalid template configuration, wrong field name
         this.invalidTemplate = template.toJson().replace("use_case", "invalid");
-        this.createWorkflowRestAction = new RestCreateWorkflowAction(flowFrameworkFeatureEnabledSetting);
+        when(clusterService.getClusterSettings()).thenReturn(clusterSettings);
+        this.createWorkflowRestAction = new RestCreateWorkflowAction(flowFrameworkFeatureEnabledSetting, settings, clusterService);
         this.createWorkflowPath = String.format(Locale.ROOT, "%s", WORKFLOW_URI);
         this.updateWorkflowPath = String.format(Locale.ROOT, "%s/{%s}", WORKFLOW_URI, "workflow_id");
         this.nodeClient = mock(NodeClient.class);

@@ -78,6 +78,10 @@ buildscript {
 publishing {
     publications {
         pluginZip(MavenPublication) { publication ->
+
+            artifact sourcesJar
+            artifact javadocJar
+
             pom {
                 name = pluginName
                 description = pluginDescription
@@ -90,8 +94,8 @@ publishing {
                 }
                 developers {
                     developer {
-                        name = "OpenSearch AI Flow Framework Plugin"
-                        url = "https://github.com/opensearch-project/opensearch-ai-flow-framework"
+                        name = "OpenSearch Flow Framework Plugin"
+                        url = "https://github.com/opensearch-project/flow-framework"
                     }
                 }
             }
@@ -144,6 +148,7 @@ dependencies {
     configurations.all {
         resolutionStrategy {
             force("com.google.guava:guava:32.1.3-jre") // CVE for 31.1
+            force("org.eclipse.platform:org.eclipse.core.runtime:3.29.0") // CVE for 3.26.100
         }
     }
 }
@@ -225,26 +230,23 @@ task updateVersion {
     }
 }
 
-// Get uncommitted files via git diff
-// https://github.com/form-com/diff-coverage-gradle/issues/73
-ext.createDiffFile = { ->
-    def file = Files.createTempFile(URLEncoder.encode(project.name, 'UTF-8'), '.diff').toFile()
-    def diffBase = 'refs/remotes/origin/main'
-    // Only run locally
-    if (!System.getenv('CI')) {
-        file.withOutputStream { out ->
-            exec {
-                commandLine 'git', 'diff', '--no-color', '--minimal', diffBase
-                standardOutput = out
-            }
-        }
-    }
-    return file
-}
-
 diffCoverageReport {
     afterEvaluate {
-        diffSource.file = createDiffFile()
+        // Get uncommitted files via git diff
+        // https://github.com/form-com/diff-coverage-gradle/issues/73
+        def file = Files.createTempFile(URLEncoder.encode(project.name, 'UTF-8'), '.diff').toFile()
+        def diffBase = 'refs/remotes/origin/main'
+        // Only run locally
+        if (!System.getenv('CI')) {
+            file.withOutputStream { out ->
+                exec {
+                    ignoreExitValue true
+                    commandLine 'git', 'diff', '--no-color', '--minimal', diffBase, '|| true'
+                    standardOutput = out
+                }
+            }
+        }
+        diffSource.file = file
     }
 
     // View report at build/reports/jacoco/diffCoverage/html/index.html

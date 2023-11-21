@@ -68,7 +68,8 @@ public class RegisterRemoteModelStep implements WorkflowStep {
                         Map.ofEntries(
                             Map.entry(MODEL_ID, mlRegisterModelResponse.getModelId()),
                             Map.entry(REGISTER_MODEL_STATUS, mlRegisterModelResponse.getStatus())
-                        )
+                        ),
+                        data.get(0).getWorkflowId()
                     )
                 );
             }
@@ -86,7 +87,7 @@ public class RegisterRemoteModelStep implements WorkflowStep {
         String description = null;
         String connectorId = null;
 
-        // TODO : Handle inline connector configuration : https://github.com/opensearch-project/opensearch-ai-flow-framework/issues/149
+        // TODO : Handle inline connector configuration : https://github.com/opensearch-project/flow-framework/issues/149
 
         for (WorkflowData workflowData : data) {
 
@@ -117,17 +118,19 @@ public class RegisterRemoteModelStep implements WorkflowStep {
 
         if (Stream.of(modelName, functionName, connectorId).allMatch(x -> x != null)) {
 
-            MLRegisterModelInputBuilder builder = MLRegisterModelInput.builder();
+            MLRegisterModelInputBuilder builder = MLRegisterModelInput.builder()
+                .functionName(functionName)
+                .modelName(modelName)
+                .connectorId(connectorId);
 
             if (modelGroupId != null) {
                 builder.modelGroupId(modelGroupId);
             }
+            if (description != null) {
+                builder.description(description);
+            }
+            MLRegisterModelInput mlInput = builder.build();
 
-            MLRegisterModelInput mlInput = builder.functionName(functionName)
-                .modelName(modelName)
-                .description(description)
-                .connectorId(connectorId)
-                .build();
             mlClient.register(mlInput, actionListener);
         } else {
             registerRemoteModelFuture.completeExceptionally(
