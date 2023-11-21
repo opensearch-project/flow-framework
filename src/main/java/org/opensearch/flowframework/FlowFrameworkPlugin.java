@@ -89,7 +89,6 @@ public class FlowFrameworkPlugin extends Plugin implements ActionPlugin {
         MachineLearningNodeClient mlClient = new MachineLearningNodeClient(client);
         WorkflowStepFactory workflowStepFactory = new WorkflowStepFactory(clusterService, client, mlClient);
         WorkflowProcessSorter workflowProcessSorter = new WorkflowProcessSorter(workflowStepFactory, threadPool);
-
         FlowFrameworkIndicesHandler flowFrameworkIndicesHandler = new FlowFrameworkIndicesHandler(client, clusterService);
 
         return ImmutableList.of(workflowStepFactory, workflowProcessSorter, flowFrameworkIndicesHandler);

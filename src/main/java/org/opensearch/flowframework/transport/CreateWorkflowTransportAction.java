@@ -99,31 +99,45 @@ public class CreateWorkflowTransportAction extends HandledTransportAction<Workfl
         }
 
         if (request.getWorkflowId() == null) {
-            // Create new global context and state index entries
-            flowFrameworkIndicesHandler.putTemplateToGlobalContext(templateWithUser, ActionListener.wrap(globalContextResponse -> {
-                flowFrameworkIndicesHandler.putInitialStateToWorkflowState(
-                    globalContextResponse.getId(),
-                    user,
-                    ActionListener.wrap(stateResponse -> {
-                        logger.info("create state workflow doc");
-                        listener.onResponse(new WorkflowResponse(globalContextResponse.getId()));
+            // Initialize master key index and create new global context and state index entries
+            flowFrameworkIndicesHandler.initializeMasterKeyIndex(ActionListener.wrap(isInitialized -> {
+                if (!isInitialized) {
+                    listener.onFailure(
+                        new FlowFrameworkException("Failed to initalize master key index", RestStatus.INTERNAL_SERVER_ERROR)
+                    );
+                } else {
+                    flowFrameworkIndicesHandler.putTemplateToGlobalContext(templateWithUser, ActionListener.wrap(globalContextResponse -> {
+                        flowFrameworkIndicesHandler.putInitialStateToWorkflowState(
+                            globalContextResponse.getId(),
+                            user,
+                            ActionListener.wrap(stateResponse -> {
+                                logger.info("create state workflow doc");
+                                listener.onResponse(new WorkflowResponse(globalContextResponse.getId()));
+                            }, exception -> {
+                                logger.error("Failed to save workflow state : {}", exception.getMessage());
+                                if (exception instanceof FlowFrameworkException) {
+                                    listener.onFailure(exception);
+                                } else {
+                                    listener.onFailure(new FlowFrameworkException(exception.getMessage(), RestStatus.BAD_REQUEST));
+                                }
+                            })
+                        );
                     }, exception -> {
-                        logger.error("Failed to save workflow state : {}", exception.getMessage());
+                        logger.error("Failed to save use case template : {}", exception.getMessage());
                         if (exception instanceof FlowFrameworkException) {
                             listener.onFailure(exception);
                         } else {
-                            listener.onFailure(new FlowFrameworkException(exception.getMessage(), RestStatus.BAD_REQUEST));
+                            listener.onFailure(new FlowFrameworkException(exception.getMessage(), ExceptionsHelper.status(exception)));
                         }
-                    })
-                );
+                    }));
+                }
             }, exception -> {
-                logger.error("Failed to save use case template : {}", exception.getMessage());
+                logger.error("Failed to initialize master key index : {}", exception.getMessage());
                 if (exception instanceof FlowFrameworkException) {
                     listener.onFailure(exception);
                 } else {
                     listener.onFailure(new FlowFrameworkException(exception.getMessage(), ExceptionsHelper.status(exception)));
                 }
-
             }));
         } else {
             // Update existing entry, full document replacement

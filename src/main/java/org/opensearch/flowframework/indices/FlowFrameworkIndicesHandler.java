@@ -9,6 +9,7 @@
 package org.opensearch.flowframework.indices;
 
 import com.google.common.base.Charsets;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.io.Resources;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -17,6 +18,7 @@ import org.opensearch.action.admin.indices.create.CreateIndexRequest;
 import org.opensearch.action.admin.indices.create.CreateIndexResponse;
 import org.opensearch.action.admin.indices.mapping.put.PutMappingRequest;
 import org.opensearch.action.admin.indices.settings.put.UpdateSettingsRequest;
+import org.opensearch.action.get.GetRequest;
 import org.opensearch.action.index.IndexRequest;
 import org.opensearch.action.index.IndexResponse;
 import org.opensearch.action.support.WriteRequest;
@@ -38,6 +40,7 @@ import org.opensearch.flowframework.model.ProvisioningProgress;
 import org.opensearch.flowframework.model.State;
 import org.opensearch.flowframework.model.Template;
 import org.opensearch.flowframework.model.WorkflowState;
+import org.opensearch.flowframework.util.EncryptorUtils;
 
 import java.io.IOException;
 import java.net.URL;
@@ -49,6 +52,9 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import static org.opensearch.core.rest.RestStatus.INTERNAL_SERVER_ERROR;
 import static org.opensearch.flowframework.common.CommonValue.GLOBAL_CONTEXT_INDEX;
 import static org.opensearch.flowframework.common.CommonValue.GLOBAL_CONTEXT_INDEX_MAPPING;
+import static org.opensearch.flowframework.common.CommonValue.MASTER_KEY;
+import static org.opensearch.flowframework.common.CommonValue.MASTER_KEY_INDEX;
+import static org.opensearch.flowframework.common.CommonValue.MASTER_KEY_INDEX_MAPPING;
 import static org.opensearch.flowframework.common.CommonValue.META;
 import static org.opensearch.flowframework.common.CommonValue.NO_SCHEMA_VERSION;
 import static org.opensearch.flowframework.common.CommonValue.SCHEMA_VERSION_FIELD;
@@ -63,6 +69,7 @@ public class FlowFrameworkIndicesHandler {
     private static final Logger logger = LogManager.getLogger(FlowFrameworkIndicesHandler.class);
     private final Client client;
     private final ClusterService clusterService;
+    private EncryptorUtils encryptorUtils;
     private static final Map<String, AtomicBoolean> indexMappingUpdated = new HashMap<>();
     private static final Map<String, Object> indexSettings = Map.of("index.auto_expand_replicas", "0-1");
 
@@ -74,6 +81,7 @@ public class FlowFrameworkIndicesHandler {
     public FlowFrameworkIndicesHandler(Client client, ClusterService clusterService) {
         this.client = client;
         this.clusterService = clusterService;
+        this.encryptorUtils = new EncryptorUtils(clusterService, client);
         for (FlowFrameworkIndex mlIndex : FlowFrameworkIndex.values()) {
             indexMappingUpdated.put(mlIndex.getIndexName(), new AtomicBoolean(false));
         }
@@ -104,6 +112,15 @@ public class FlowFrameworkIndicesHandler {
     }
 
     /**
+     * Get master-key index mapping
+     * @return master-key index mapping
+     * @throws IOException if mapping file cannot be read correctly
+     */
+    public static String getMasterKeyMappings() throws IOException {
+        return getIndexMappings(MASTER_KEY_INDEX_MAPPING);
+    }
+
+    /**
      * Create global context index if it's absent
      * @param listener The action listener
      */
@@ -117,6 +134,14 @@ public class FlowFrameworkIndicesHandler {
      */
     public void initWorkflowStateIndexIfAbsent(ActionListener<Boolean> listener) {
         initFlowFrameworkIndexIfAbsent(FlowFrameworkIndex.WORKFLOW_STATE, listener);
+    }
+
+    /**
+     * Create master key index if it's absent
+     * @param listener The action listener
+     */
+    public void initMasterKeyIndexIfAbsent(ActionListener<Boolean> listener) {
+        initFlowFrameworkIndexIfAbsent(FlowFrameworkIndex.MASTER_KEY, listener);
     }
 
     /**
@@ -286,7 +311,10 @@ public class FlowFrameworkIndicesHandler {
                 XContentBuilder builder = XContentFactory.jsonBuilder();
                 ThreadContext.StoredContext context = client.threadPool().getThreadContext().stashContext()
             ) {
-                request.source(template.toXContent(builder, ToXContent.EMPTY_PARAMS))
+                logger.info("TESTING : raw template : " + template.toJson());
+                Template templateWithEncryptedCredentials = encryptorUtils.encryptTemplateCredentials(template);
+                logger.info("TESTING : encrypted tempalte : " + templateWithEncryptedCredentials.toJson());
+                request.source(templateWithEncryptedCredentials.toXContent(builder, ToXContent.EMPTY_PARAMS))
                     .setRefreshPolicy(WriteRequest.RefreshPolicy.IMMEDIATE);
                 client.index(request, ActionListener.runBefore(listener, () -> context.restore()));
             } catch (Exception e) {
@@ -297,6 +325,67 @@ public class FlowFrameworkIndicesHandler {
         }, e -> {
             logger.error("Failed to create global_context index", e);
             listener.onFailure(e);
+        }));
+    }
+
+    /**
+     * Initializes master key index and EncryptorUtls
+     * @param listener action listener
+     */
+    public void initializeMasterKeyIndex(ActionListener<Boolean> listener) {
+        initMasterKeyIndexIfAbsent(ActionListener.wrap(indexCreated -> {
+            if (!indexCreated) {
+                listener.onFailure(new FlowFrameworkException("No response to create global_context index", INTERNAL_SERVER_ERROR));
+                return;
+            }
+
+            // Index has either been created or it already exists, need to check if master key has been initalized already, if not then
+            // generate
+            // This is necessary in case of global context index restoration from snapshot, will need to use the same master key to decrypt
+            // stored credentials
+            try (ThreadContext.StoredContext context = client.threadPool().getThreadContext().stashContext()) {
+
+                GetRequest getRequest = new GetRequest(MASTER_KEY_INDEX).id(MASTER_KEY);
+                client.get(getRequest, ActionListener.wrap(getResponse -> {
+
+                    if (!getResponse.isExists()) {
+
+                        // Generate new key and index
+                        final String masterKey = encryptorUtils.generateMasterKey();
+                        IndexRequest masterKeyIndexRequest = new IndexRequest(MASTER_KEY_INDEX).id(MASTER_KEY)
+                            .source(ImmutableMap.of(MASTER_KEY, masterKey))
+                            .setRefreshPolicy(WriteRequest.RefreshPolicy.IMMEDIATE);
+
+                        client.index(masterKeyIndexRequest, ActionListener.wrap(indexResponse -> {
+                            // Set generated key to master
+                            logger.info("Master key has been initialized successfully");
+                            encryptorUtils.setMasterKey(masterKey);
+                            listener.onResponse(true);
+                        }, indexException -> {
+                            logger.error("Failed to index master key", indexException);
+                            listener.onFailure(indexException);
+                        }));
+
+                    } else {
+                        // Set existing key to master
+                        logger.info("Master key has already been initialized");
+                        final String masterKey = (String) getResponse.getSourceAsMap().get(MASTER_KEY);
+                        this.encryptorUtils.setMasterKey(masterKey);
+                        listener.onResponse(true);
+                    }
+                }, getRequestException -> {
+                    logger.error("Failed to search for master key from master_key index", getRequestException);
+                    listener.onFailure(getRequestException);
+                }));
+
+            } catch (Exception e) {
+                logger.error("Failed to retrieve master key from master_key index", e);
+                listener.onFailure(e);
+            }
+
+        }, createIndexException -> {
+            logger.error("Failed to create master_key index", createIndexException);
+            listener.onFailure(createIndexException);
         }));
     }
 

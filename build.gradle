@@ -138,6 +138,8 @@ dependencies {
     api group: 'org.opensearch', name:'opensearch-ml-client', version: "${opensearch_build}"
     implementation group: 'org.apache.commons', name: 'commons-lang3', version: '3.13.0'
     implementation "org.opensearch:common-utils:${common_utils_version}"
+    implementation platform('software.amazon.awssdk:bom:2.21.15')
+    implementation 'com.amazonaws:aws-encryption-sdk-java:2.4.1'
 
     configurations.all {
         resolutionStrategy {
