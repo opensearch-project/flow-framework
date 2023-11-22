@@ -39,6 +39,7 @@ import static org.opensearch.flowframework.common.FlowFrameworkSettings.MAX_REQU
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -60,10 +61,13 @@ public class GetMLTaskStepTests extends OpenSearchTestCase {
         ClusterService clusterService = mock(ClusterService.class);
         final Set<Setting<?>> settingsSet = Stream.concat(ClusterSettings.BUILT_IN_CLUSTER_SETTINGS.stream(), Stream.of(MAX_REQUEST_RETRY))
             .collect(Collectors.toSet());
-        ClusterSettings clusterSettings = new ClusterSettings(Settings.EMPTY, settingsSet);
+
+        // Set max request retry setting to 0 to avoid sleeping the thread during unit test failure cases
+        Settings testMaxRetrySetting = Settings.builder().put(MAX_REQUEST_RETRY.getKey(), 0).build();
+        ClusterSettings clusterSettings = new ClusterSettings(testMaxRetrySetting, settingsSet);
         when(clusterService.getClusterSettings()).thenReturn(clusterSettings);
 
-        this.getMLTaskStep = new GetMLTaskStep(Settings.EMPTY, clusterService, mlNodeClient);
+        this.getMLTaskStep = spy(new GetMLTaskStep(testMaxRetrySetting, clusterService, mlNodeClient));
         this.workflowData = new WorkflowData(Map.ofEntries(Map.entry(TASK_ID, "test")), "test-id");
     }
 
