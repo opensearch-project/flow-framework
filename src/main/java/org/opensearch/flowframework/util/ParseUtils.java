@@ -129,4 +129,18 @@ public class ParseUtils {
         return XContentHelper.createParser(xContentRegistry, LoggingDeprecationHandler.INSTANCE, bytesReference, XContentType.JSON);
     }
 
+    /**
+     * Generates a string to string Map
+     * @param map content map
+     * @param fieldName fieldName
+     * @return instance of the map
+     */
+    @SuppressWarnings("unchecked")
+    public static Map<String, String> getStringToStringMap(Object map, String fieldName) {
+        if (map instanceof Map) {
+            return (Map<String, String>) map;
+        }
+        throw new IllegalArgumentException("[" + fieldName + "] must be a key-value map.");
+    }
+
 }

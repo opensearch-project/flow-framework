@@ -66,7 +66,7 @@ public class WorkflowData {
      */
     public Map<String, Object> getContent() {
         return this.content;
-    };
+    }
 
     /**
      * Returns a map represents the params associated with a Rest API request, parsed from the URI.
