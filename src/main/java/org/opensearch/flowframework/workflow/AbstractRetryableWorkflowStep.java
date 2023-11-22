@@ -16,7 +16,7 @@ import static org.opensearch.flowframework.common.FlowFrameworkSettings.MAX_REQU
 /**
  * Abstract retryable workflow step
  */
-public abstract class RetryableWorkflowStep implements WorkflowStep {
+public abstract class AbstractRetryableWorkflowStep implements WorkflowStep {
 
     /** The maximum number of transport request retries */
     protected volatile Integer maxRetry;
@@ -26,7 +26,7 @@ public abstract class RetryableWorkflowStep implements WorkflowStep {
      * @param settings Environment settings
      * @param clusterService the cluster service
      */
-    public RetryableWorkflowStep(Settings settings, ClusterService clusterService) {
+    public AbstractRetryableWorkflowStep(Settings settings, ClusterService clusterService) {
         this.maxRetry = MAX_REQUEST_RETRY.get(settings);
         clusterService.getClusterSettings().addSettingsUpdateConsumer(MAX_REQUEST_RETRY, it -> maxRetry = it);
     }

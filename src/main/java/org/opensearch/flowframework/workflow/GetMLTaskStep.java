@@ -27,11 +27,12 @@ import java.util.concurrent.CompletableFuture;
 import static org.opensearch.flowframework.common.CommonValue.MODEL_ID;
 import static org.opensearch.flowframework.common.CommonValue.REGISTER_MODEL_STATUS;
 import static org.opensearch.flowframework.common.CommonValue.TASK_ID;
+import static org.opensearch.flowframework.util.RetryUtils.shouldRetry;
 
 /**
  * Step to retrieve an ML Task
  */
-public class GetMLTaskStep extends RetryableWorkflowStep {
+public class GetMLTaskStep extends AbstractRetryableWorkflowStep {
 
     private static final Logger logger = LogManager.getLogger(GetMLTaskStep.class);
     private MachineLearningNodeClient mlClient;
@@ -100,7 +101,13 @@ public class GetMLTaskStep extends RetryableWorkflowStep {
                 );
             }
         }, exception -> {
-            if (shouldRetry(getMLTaskFuture, retries)) {
+            if (shouldRetry(retries, maxRetry)) {
+                // Sleep thread prior to retrying request
+                try {
+                    Thread.sleep(5000);
+                } catch (Exception e) {
+                    getMLTaskFuture.completeExceptionally(new FlowFrameworkException(e.getMessage(), ExceptionsHelper.status(e)));
+                }
                 final int retryAdd = retries + 1;
                 retryableGetMlTask(data, getMLTaskFuture, taskId, retryAdd);
             } else {
@@ -110,15 +117,6 @@ public class GetMLTaskStep extends RetryableWorkflowStep {
                 );
             }
         }));
-    }
-
-    private boolean shouldRetry(CompletableFuture<WorkflowData> getMLTaskFuture, int retries) {
-        try {
-            Thread.sleep(5000);
-        } catch (Exception e) {
-            getMLTaskFuture.completeExceptionally(new FlowFrameworkException(e.getMessage(), ExceptionsHelper.status(e)));
-        }
-        return retries < maxRetry;
     }
 
 }
