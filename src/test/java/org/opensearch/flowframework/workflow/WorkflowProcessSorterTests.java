@@ -241,6 +241,10 @@ public class WorkflowProcessSorterTests extends OpenSearchTestCase {
         );
         assertEquals("Workflow step type [unimplemented_step] is not implemented.", ex.getMessage());
         assertEquals(RestStatus.NOT_IMPLEMENTED, ((FlowFrameworkException) ex).getRestStatus());
+
+        ex = assertThrows(FlowFrameworkException.class, () -> parse(workflow(List.of(node("A"), node("A")), Collections.emptyList())));
+        assertEquals("Duplicate node id A.", ex.getMessage());
+        assertEquals(RestStatus.BAD_REQUEST, ((FlowFrameworkException) ex).getRestStatus());
     }
 
     public void testSuccessfulGraphValidation() throws Exception {
