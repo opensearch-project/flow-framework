@@ -240,7 +240,7 @@ diffCoverageReport {
             file.withOutputStream { out ->
                 exec {
                     ignoreExitValue true
-                    commandLine 'git', 'diff', '--no-color', '--minimal', diffBase, '|| true'
+                    commandLine 'git', 'diff', '--no-color', '--minimal', diffBase
                     standardOutput = out
                 }
             }
