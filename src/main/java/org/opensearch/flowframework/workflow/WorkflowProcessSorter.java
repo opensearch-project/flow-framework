@@ -29,7 +29,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Queue;
 import java.util.Set;
-import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -158,20 +157,20 @@ public class WorkflowProcessSorter {
 
     private static List<WorkflowNode> topologicalSort(List<WorkflowNode> workflowNodes, List<WorkflowEdge> workflowEdges) {
         // Basic validation
-        Set<String> nodeIds = new HashSet<>();
+        Map<String, WorkflowNode> nodeMap = new HashMap<>();
         for (WorkflowNode node : workflowNodes) {
-            if (nodeIds.contains(node.id())) {
+            if (nodeMap.containsKey(node.id())) {
                 throw new FlowFrameworkException("Duplicate node id " + node.id() + ".", RestStatus.BAD_REQUEST);
             }
-            nodeIds.add(node.id());
+            nodeMap.put(node.id(), node);
         }
         for (WorkflowEdge edge : workflowEdges) {
             String source = edge.source();
-            if (!nodeIds.contains(source)) {
+            if (!nodeMap.containsKey(source)) {
                 throw new FlowFrameworkException("Edge source " + source + " does not correspond to a node.", RestStatus.BAD_REQUEST);
             }
             String dest = edge.destination();
-            if (!nodeIds.contains(dest)) {
+            if (!nodeMap.containsKey(dest)) {
                 throw new FlowFrameworkException("Edge destination " + dest + " does not correspond to a node.", RestStatus.BAD_REQUEST);
             }
             if (source.equals(dest)) {
@@ -182,7 +181,6 @@ public class WorkflowProcessSorter {
         // Build predecessor and successor maps
         Map<WorkflowNode, Set<WorkflowEdge>> predecessorEdges = new HashMap<>();
         Map<WorkflowNode, Set<WorkflowEdge>> successorEdges = new HashMap<>();
-        Map<String, WorkflowNode> nodeMap = workflowNodes.stream().collect(Collectors.toMap(WorkflowNode::id, Function.identity()));
         for (WorkflowEdge edge : workflowEdges) {
             WorkflowNode source = nodeMap.get(edge.source());
             WorkflowNode dest = nodeMap.get(edge.destination());
