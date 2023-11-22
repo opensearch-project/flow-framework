@@ -27,7 +27,6 @@ import java.util.concurrent.CompletableFuture;
 import static org.opensearch.flowframework.common.CommonValue.MODEL_ID;
 import static org.opensearch.flowframework.common.CommonValue.REGISTER_MODEL_STATUS;
 import static org.opensearch.flowframework.common.CommonValue.TASK_ID;
-import static org.opensearch.flowframework.util.RetryUtils.shouldRetry;
 
 /**
  * Step to retrieve an ML Task
@@ -101,7 +100,7 @@ public class GetMLTaskStep extends AbstractRetryableWorkflowStep {
                 );
             }
         }, exception -> {
-            if (shouldRetry(retries, maxRetry)) {
+            if (retries < maxRetry) {
                 // Sleep thread prior to retrying request
                 try {
                     Thread.sleep(5000);
