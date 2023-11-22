@@ -158,7 +158,13 @@ public class WorkflowProcessSorter {
 
     private static List<WorkflowNode> topologicalSort(List<WorkflowNode> workflowNodes, List<WorkflowEdge> workflowEdges) {
         // Basic validation
-        Set<String> nodeIds = workflowNodes.stream().map(n -> n.id()).collect(Collectors.toSet());
+        Set<String> nodeIds = new HashSet<>();
+        for (WorkflowNode node : workflowNodes) {
+            if (nodeIds.contains(node.id())) {
+                throw new FlowFrameworkException("Duplicate node id " + node.id() + ".", RestStatus.BAD_REQUEST);
+            }
+            nodeIds.add(node.id());
+        }
         for (WorkflowEdge edge : workflowEdges) {
             String source = edge.source();
             if (!nodeIds.contains(source)) {
