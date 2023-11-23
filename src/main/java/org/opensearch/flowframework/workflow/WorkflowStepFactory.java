@@ -10,6 +10,7 @@ package org.opensearch.flowframework.workflow;
 
 import org.opensearch.client.Client;
 import org.opensearch.cluster.service.ClusterService;
+import org.opensearch.common.settings.Settings;
 import org.opensearch.core.rest.RestStatus;
 import org.opensearch.flowframework.exception.FlowFrameworkException;
 import org.opensearch.flowframework.indices.FlowFrameworkIndicesHandler;
@@ -29,22 +30,25 @@ public class WorkflowStepFactory {
     /**
      * Instantiate this class.
      *
+     * @param settings The OpenSearch settings
      * @param clusterService The OpenSearch cluster service
      * @param client The OpenSearch client steps can use
      * @param mlClient Machine Learning client to perform ml operations
      * @param flowFrameworkIndicesHandler FlowFrameworkIndicesHandler class to update system indices
      */
     public WorkflowStepFactory(
+        Settings settings,
         ClusterService clusterService,
         Client client,
         MachineLearningNodeClient mlClient,
         FlowFrameworkIndicesHandler flowFrameworkIndicesHandler
     ) {
         this.flowFrameworkIndicesHandler = flowFrameworkIndicesHandler;
-        populateMap(clusterService, client, mlClient, flowFrameworkIndicesHandler);
+        populateMap(settings, clusterService, client, mlClient, flowFrameworkIndicesHandler);
     }
 
     private void populateMap(
+        Settings settings,
         ClusterService clusterService,
         Client client,
         MachineLearningNodeClient mlClient,
@@ -58,7 +62,7 @@ public class WorkflowStepFactory {
         stepMap.put(DeployModelStep.NAME, new DeployModelStep(mlClient));
         stepMap.put(CreateConnectorStep.NAME, new CreateConnectorStep(mlClient, flowFrameworkIndicesHandler));
         stepMap.put(ModelGroupStep.NAME, new ModelGroupStep(mlClient));
-        stepMap.put(GetMLTaskStep.NAME, new GetMLTaskStep(mlClient));
+        stepMap.put(GetMLTaskStep.NAME, new GetMLTaskStep(settings, clusterService, mlClient));
     }
 
     /**
