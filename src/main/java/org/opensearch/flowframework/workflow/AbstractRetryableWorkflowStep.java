@@ -11,7 +11,7 @@ package org.opensearch.flowframework.workflow;
 import org.opensearch.cluster.service.ClusterService;
 import org.opensearch.common.settings.Settings;
 
-import static org.opensearch.flowframework.common.FlowFrameworkSettings.MAX_REQUEST_RETRY;
+import static org.opensearch.flowframework.common.FlowFrameworkSettings.MAX_GET_TASK_REQUEST_RETRY;
 
 /**
  * Abstract retryable workflow step
@@ -27,8 +27,8 @@ public abstract class AbstractRetryableWorkflowStep implements WorkflowStep {
      * @param clusterService the cluster service
      */
     public AbstractRetryableWorkflowStep(Settings settings, ClusterService clusterService) {
-        this.maxRetry = MAX_REQUEST_RETRY.get(settings);
-        clusterService.getClusterSettings().addSettingsUpdateConsumer(MAX_REQUEST_RETRY, it -> maxRetry = it);
+        this.maxRetry = MAX_GET_TASK_REQUEST_RETRY.get(settings);
+        clusterService.getClusterSettings().addSettingsUpdateConsumer(MAX_GET_TASK_REQUEST_RETRY, it -> maxRetry = it);
     }
 
 }

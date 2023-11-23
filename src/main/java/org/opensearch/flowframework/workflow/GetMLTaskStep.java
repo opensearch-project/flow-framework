@@ -13,6 +13,7 @@ import org.apache.logging.log4j.Logger;
 import org.opensearch.ExceptionsHelper;
 import org.opensearch.cluster.service.ClusterService;
 import org.opensearch.common.settings.Settings;
+import org.opensearch.common.util.concurrent.FutureUtils;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.core.rest.RestStatus;
 import org.opensearch.flowframework.exception.FlowFrameworkException;
@@ -112,7 +113,7 @@ public class GetMLTaskStep extends AbstractRetryableWorkflowStep {
                 try {
                     Thread.sleep(5000);
                 } catch (Exception e) {
-                    getMLTaskFuture.completeExceptionally(new FlowFrameworkException(e.getMessage(), ExceptionsHelper.status(e)));
+                    FutureUtils.cancel(getMLTaskFuture);
                 }
                 final int retryAdd = retries + 1;
                 retryableGetMlTask(workflowId, getMLTaskFuture, taskId, retryAdd);

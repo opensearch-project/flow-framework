@@ -45,12 +45,11 @@ public class FlowFrameworkSettings {
         Setting.Property.Dynamic
     );
 
-    /** This setting sets the maximum number of transport request retries */
-    public static final Setting<Integer> MAX_REQUEST_RETRY = Setting.intSetting(
-        "plugins.flow_framework.max_request_retry",
+    /** This setting sets the maximum number of get task request retries */
+    public static final Setting<Integer> MAX_GET_TASK_REQUEST_RETRY = Setting.intSetting(
+        "plugins.flow_framework.max_get_task_request_retry",
         5,
         0,
-        20,
         Setting.Property.NodeScope,
         Setting.Property.Dynamic
     );

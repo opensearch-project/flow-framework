@@ -35,7 +35,7 @@ import org.mockito.MockitoAnnotations;
 import static org.opensearch.flowframework.common.CommonValue.MODEL_ID;
 import static org.opensearch.flowframework.common.CommonValue.REGISTER_MODEL_STATUS;
 import static org.opensearch.flowframework.common.CommonValue.TASK_ID;
-import static org.opensearch.flowframework.common.FlowFrameworkSettings.MAX_REQUEST_RETRY;
+import static org.opensearch.flowframework.common.FlowFrameworkSettings.MAX_GET_TASK_REQUEST_RETRY;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
@@ -59,11 +59,13 @@ public class GetMLTaskStepTests extends OpenSearchTestCase {
 
         MockitoAnnotations.openMocks(this);
         ClusterService clusterService = mock(ClusterService.class);
-        final Set<Setting<?>> settingsSet = Stream.concat(ClusterSettings.BUILT_IN_CLUSTER_SETTINGS.stream(), Stream.of(MAX_REQUEST_RETRY))
-            .collect(Collectors.toSet());
+        final Set<Setting<?>> settingsSet = Stream.concat(
+            ClusterSettings.BUILT_IN_CLUSTER_SETTINGS.stream(),
+            Stream.of(MAX_GET_TASK_REQUEST_RETRY)
+        ).collect(Collectors.toSet());
 
         // Set max request retry setting to 0 to avoid sleeping the thread during unit test failure cases
-        Settings testMaxRetrySetting = Settings.builder().put(MAX_REQUEST_RETRY.getKey(), 0).build();
+        Settings testMaxRetrySetting = Settings.builder().put(MAX_GET_TASK_REQUEST_RETRY.getKey(), 0).build();
         ClusterSettings clusterSettings = new ClusterSettings(testMaxRetrySetting, settingsSet);
         when(clusterService.getClusterSettings()).thenReturn(clusterSettings);
 
