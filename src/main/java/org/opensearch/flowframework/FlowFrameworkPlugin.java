@@ -60,6 +60,7 @@ import java.util.function.Supplier;
 import static org.opensearch.flowframework.common.CommonValue.FLOW_FRAMEWORK_THREAD_POOL_PREFIX;
 import static org.opensearch.flowframework.common.CommonValue.PROVISION_THREAD_POOL;
 import static org.opensearch.flowframework.common.FlowFrameworkSettings.FLOW_FRAMEWORK_ENABLED;
+import static org.opensearch.flowframework.common.FlowFrameworkSettings.MAX_GET_TASK_REQUEST_RETRY;
 import static org.opensearch.flowframework.common.FlowFrameworkSettings.MAX_WORKFLOWS;
 import static org.opensearch.flowframework.common.FlowFrameworkSettings.WORKFLOW_REQUEST_TIMEOUT;
 
@@ -69,6 +70,7 @@ import static org.opensearch.flowframework.common.FlowFrameworkSettings.WORKFLOW
 public class FlowFrameworkPlugin extends Plugin implements ActionPlugin {
 
     private FlowFrameworkFeatureEnabledSetting flowFrameworkFeatureEnabledSetting;
+
     private ClusterService clusterService;
 
     /**
@@ -93,10 +95,15 @@ public class FlowFrameworkPlugin extends Plugin implements ActionPlugin {
         Settings settings = environment.settings();
         this.clusterService = clusterService;
         flowFrameworkFeatureEnabledSetting = new FlowFrameworkFeatureEnabledSetting(clusterService, settings);
-
         MachineLearningNodeClient mlClient = new MachineLearningNodeClient(client);
         FlowFrameworkIndicesHandler flowFrameworkIndicesHandler = new FlowFrameworkIndicesHandler(client, clusterService);
-        WorkflowStepFactory workflowStepFactory = new WorkflowStepFactory(clusterService, client, mlClient, flowFrameworkIndicesHandler);
+        WorkflowStepFactory workflowStepFactory = new WorkflowStepFactory(
+            settings,
+            clusterService,
+            client,
+            mlClient,
+            flowFrameworkIndicesHandler
+        );
         WorkflowProcessSorter workflowProcessSorter = new WorkflowProcessSorter(workflowStepFactory, threadPool);
 
         return ImmutableList.of(workflowStepFactory, workflowProcessSorter, flowFrameworkIndicesHandler);
@@ -132,7 +139,12 @@ public class FlowFrameworkPlugin extends Plugin implements ActionPlugin {
 
     @Override
     public List<Setting<?>> getSettings() {
-        List<Setting<?>> settings = ImmutableList.of(FLOW_FRAMEWORK_ENABLED, MAX_WORKFLOWS, WORKFLOW_REQUEST_TIMEOUT);
+        List<Setting<?>> settings = ImmutableList.of(
+            FLOW_FRAMEWORK_ENABLED,
+            MAX_WORKFLOWS,
+            WORKFLOW_REQUEST_TIMEOUT,
+            MAX_GET_TASK_REQUEST_RETRY
+        );
         return settings;
     }
 
