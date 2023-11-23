@@ -22,7 +22,9 @@ import java.io.IOException;
  */
 public class GetWorkflowResponse extends ActionResponse implements ToXContentObject {
 
+    /** The workflow state */
     public WorkflowState workflowState;
+    /** Flag to indicate if the entire state should be returned */
     public boolean allStatus;
 
     /**
