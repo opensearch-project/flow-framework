@@ -82,6 +82,11 @@ public class EncryptorUtils {
         return Base64.getEncoder().encodeToString(masterKeyBytes);
     }
 
+    /**
+     * Encrypts template credentials
+     * @param template the template to encrypt
+     * @return template with encrypted credentials
+     */
     public Template encryptTemplateCredentials(Template template) {
         for (Workflow workflow : template.workflows().values()) {
             for (WorkflowNode workflowNode : workflow.nodes()) {
@@ -127,7 +132,7 @@ public class EncryptorUtils {
             jceMasterKey,
             Base64.getDecoder().decode(encryptedCredential)
         );
-        return new String(decryptedResult.getResult());
+        return new String(decryptedResult.getResult(), StandardCharsets.UTF_8);
     }
 
     private void initializeMasterKey() {
