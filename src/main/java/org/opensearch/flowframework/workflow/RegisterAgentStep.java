@@ -24,10 +24,7 @@ import org.opensearch.ml.common.transport.agent.MLRegisterAgentResponse;
 
 import java.io.IOException;
 import java.time.Instant;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.Map.Entry;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Stream;
@@ -120,16 +117,16 @@ public class RegisterAgentStep implements WorkflowStep {
             for (Entry<String, Object> entry : content.entrySet()) {
                 switch (entry.getKey()) {
                     case NAME_FIELD:
-                        name = (String) content.get(NAME_FIELD);
+                        name = (String) entry.getValue();
                         break;
                     case DESCRIPTION_FIELD:
-                        description = (String) content.get(DESCRIPTION_FIELD);
+                        description = (String) entry.getValue();
                         break;
                     case TYPE:
-                        type = (String) content.get(TYPE);
+                        type = (String) entry.getValue();
                         break;
                     case LLM_FIELD:
-                        llm = (LLMSpec) content.get(LLM_FIELD);
+                        llm = getLLMSpec(entry.getValue());
                         break;
                     case TOOLS_FIELD:
                         tools = addTools(entry.getValue());
@@ -138,16 +135,16 @@ public class RegisterAgentStep implements WorkflowStep {
                         parameters = getStringToStringMap(entry.getValue(), PARAMETERS_FIELD);
                         break;
                     case MEMORY_FIELD:
-                        memory = (MLMemorySpec) content.get(MEMORY_FIELD);
+                        memory = getMLMemorySpec(entry.getValue());
                         break;
                     case CREATED_TIME:
-                        createdTime = (Instant) content.get(CREATED_TIME);
+                        createdTime = (Instant) entry.getValue();
                         break;
                     case LAST_UPDATED_TIME_FIELD:
-                        lastUpdateTime = (Instant) content.get(LAST_UPDATED_TIME_FIELD);
+                        lastUpdateTime = (Instant) entry.getValue();
                         break;
                     case APP_TYPE_FIELD:
-                        appType = (String) content.get(APP_TYPE_FIELD);
+                        appType = (String) entry.getValue();
                         break;
                     default:
                         break;
@@ -189,11 +186,86 @@ public class RegisterAgentStep implements WorkflowStep {
         return NAME;
     }
 
-    private List<MLToolSpec> addTools(Object tool) {
-        for (Map<?, ?> map : (Map<?, ?>[]) tool) {
+    private List<MLToolSpec> addTools(Object tools) {
+        for (Map<?, ?> map : (Map<?, ?>[]) tools) {
             MLToolSpec mlToolSpec = (MLToolSpec) map.get(TOOLS_FIELD);
             mlToolSpecList.add(mlToolSpec);
         }
         return mlToolSpecList;
     }
+
+    private LLMSpec getLLMSpec(Object llm) {
+        // if (!(array instanceof Map[])) {
+        // throw new IllegalArgumentException("[" + LLM_FIELD + "] must be an array of key-value maps.");
+        // }
+        if (llm instanceof LLMSpec) {
+            return (LLMSpec) llm;
+        }
+        throw new IllegalArgumentException("[" + LLM_FIELD + "] must be of type LLMSpec.");
+        // String modelId = null;
+        // Map<String, String> parameters = Collections.emptyMap();
+        //
+        // modelId = llm.getModelId();
+        // parameters = llm.getParameters();
+        //// for (Map<?, ?> map : (Map<?, ?>[]) array) {
+        //// modelId = (String) map.get(LLMSpec.MODEL_ID_FIELD);
+        //// parameters = (Map<String, String>) map.get(LLMSpec.PARAMETERS_FIELD);
+        //// }
+        //
+        // @SuppressWarnings("unchecked")
+        // LLMSpec.LLMSpecBuilder builder = LLMSpec.builder();
+        //
+        // builder.modelId(modelId);
+        // if (parameters != null) {
+        // builder.parameters(parameters);
+        // }
+        // LLMSpec llmSpec = builder.build();
+        // return llmSpec;
+    }
+
+    private MLMemorySpec getMLMemorySpec(Object mlMemory) {
+        // if (!(array instanceof Map[])) {
+        // throw new IllegalArgumentException("[" + MEMORY_FIELD + "] must be an array of key-value maps.");
+        // }
+
+        if (mlMemory instanceof MLMemorySpec) {
+            return (MLMemorySpec) mlMemory;
+        }
+        throw new IllegalArgumentException("[" + MEMORY_FIELD + "] must be of type MLMemorySpec.");
+        // String type = null;
+        // String sessionId = null;
+        // Integer windowSize = null;
+        //
+        // type = mlMemory.getType();
+        // if (type == null) {
+        // throw new IllegalArgumentException("agent name is null");
+        // }
+        // sessionId = mlMemory.getSessionId();
+        // windowSize = mlMemory.getWindowSize();
+
+        // for (Map<?, ?> map : (Map<?, ?>[]) array) {
+        // type = (String) map.get(MLMemorySpec.MEMORY_TYPE_FIELD);
+        // if (type == null) {
+        // throw new IllegalArgumentException("agent name is null");
+        // }
+        // sessionId = (String) map.get(MLMemorySpec.SESSION_ID_FIELD);
+        // windowSize = (Integer) map.get(MLMemorySpec.SESSION_ID_FIELD);
+        // }
+
+        // @SuppressWarnings("unchecked")
+        // MLMemorySpec.MLMemorySpecBuilder builder = MLMemorySpec.builder();
+        //
+        // builder.type(type);
+        // if (sessionId != null) {
+        // builder.sessionId(sessionId);
+        // }
+        // if (windowSize != null) {
+        // builder.windowSize(windowSize);
+        // }
+        //
+        // MLMemorySpec mlMemorySpec = builder.build();
+        // return mlMemorySpec;
+
+    }
+
 }

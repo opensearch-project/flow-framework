@@ -50,9 +50,20 @@ public class RegisterAgentTests extends OpenSearchTestCase {
 
         LLMSpec llmSpec = new LLMSpec("xyz", Collections.emptyMap());
 
-        MLToolSpec mlToolSpec1 = new MLToolSpec("tool1", "CatIndexTool", "desc", Collections.emptyMap(), false);
-        MLToolSpec mlToolSpec2 = new MLToolSpec("tool2", "MathTool", "desc", Collections.emptyMap(), false);
-        List<MLToolSpec> tools = List.of(mlToolSpec1, mlToolSpec2);
+        Map<?, ?>[] tools = new Map<?, ?>[] {
+            Map.ofEntries(
+                Map.entry(MLToolSpec.TOOL_TYPE_FIELD, "tool1"),
+                Map.entry(MLToolSpec.TOOL_NAME_FIELD, "CatIndexTool"),
+                Map.entry(MLToolSpec.DESCRIPTION_FIELD, "desc"),
+                Map.entry(MLToolSpec.PARAMETERS_FIELD, "test"),
+                Map.entry(MLToolSpec.INCLUDE_OUTPUT_IN_AGENT_RESPONSE, false)
+            ) };
+
+        // MLToolSpec mlToolSpec1 = new MLToolSpec("tool1", "CatIndexTool", "desc", Collections.emptyMap(), false);
+        // MLToolSpec mlToolSpec2 = new MLToolSpec("tool2", "MathTool", "desc", Collections.emptyMap(), false);
+        // List<MLToolSpec> tools = new ArrayList();
+        // tools.add(mlToolSpec1);
+        // tools.add(mlToolSpec2);
 
         MLMemorySpec mlMemorySpec = new MLMemorySpec("type", "memory", 2);
         inputData = new WorkflowData(
