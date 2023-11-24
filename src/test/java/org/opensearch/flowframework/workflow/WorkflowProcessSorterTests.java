@@ -11,6 +11,9 @@ package org.opensearch.flowframework.workflow;
 import org.opensearch.client.AdminClient;
 import org.opensearch.client.Client;
 import org.opensearch.cluster.service.ClusterService;
+import org.opensearch.common.settings.ClusterSettings;
+import org.opensearch.common.settings.Setting;
+import org.opensearch.common.settings.Settings;
 import org.opensearch.core.rest.RestStatus;
 import org.opensearch.core.xcontent.XContentParser;
 import org.opensearch.flowframework.exception.FlowFrameworkException;
@@ -30,9 +33,15 @@ import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
+import static org.opensearch.flowframework.common.FlowFrameworkSettings.FLOW_FRAMEWORK_ENABLED;
+import static org.opensearch.flowframework.common.FlowFrameworkSettings.MAX_GET_TASK_REQUEST_RETRY;
+import static org.opensearch.flowframework.common.FlowFrameworkSettings.MAX_WORKFLOWS;
+import static org.opensearch.flowframework.common.FlowFrameworkSettings.WORKFLOW_REQUEST_TIMEOUT;
 import static org.opensearch.flowframework.model.TemplateTestJsonUtil.edge;
 import static org.opensearch.flowframework.model.TemplateTestJsonUtil.node;
 import static org.opensearch.flowframework.model.TemplateTestJsonUtil.nodeWithType;
@@ -70,10 +79,23 @@ public class WorkflowProcessSorterTests extends OpenSearchTestCase {
         MachineLearningNodeClient mlClient = mock(MachineLearningNodeClient.class);
         FlowFrameworkIndicesHandler flowFrameworkIndicesHandler = mock(FlowFrameworkIndicesHandler.class);
 
+        final Set<Setting<?>> settingsSet = Stream.concat(
+            ClusterSettings.BUILT_IN_CLUSTER_SETTINGS.stream(),
+            Stream.of(FLOW_FRAMEWORK_ENABLED, MAX_WORKFLOWS, WORKFLOW_REQUEST_TIMEOUT, MAX_GET_TASK_REQUEST_RETRY)
+        ).collect(Collectors.toSet());
+        ClusterSettings clusterSettings = new ClusterSettings(Settings.EMPTY, settingsSet);
+        when(clusterService.getClusterSettings()).thenReturn(clusterSettings);
+
         when(client.admin()).thenReturn(adminClient);
 
         testThreadPool = new TestThreadPool(WorkflowProcessSorterTests.class.getName());
-        WorkflowStepFactory factory = new WorkflowStepFactory(clusterService, client, mlClient, flowFrameworkIndicesHandler);
+        WorkflowStepFactory factory = new WorkflowStepFactory(
+            Settings.EMPTY,
+            clusterService,
+            client,
+            mlClient,
+            flowFrameworkIndicesHandler
+        );
         workflowProcessSorter = new WorkflowProcessSorter(factory, testThreadPool);
     }
 
@@ -219,6 +241,10 @@ public class WorkflowProcessSorterTests extends OpenSearchTestCase {
         );
         assertEquals("Workflow step type [unimplemented_step] is not implemented.", ex.getMessage());
         assertEquals(RestStatus.NOT_IMPLEMENTED, ((FlowFrameworkException) ex).getRestStatus());
+
+        ex = assertThrows(FlowFrameworkException.class, () -> parse(workflow(List.of(node("A"), node("A")), Collections.emptyList())));
+        assertEquals("Duplicate node id A.", ex.getMessage());
+        assertEquals(RestStatus.BAD_REQUEST, ((FlowFrameworkException) ex).getRestStatus());
     }
 
     public void testSuccessfulGraphValidation() throws Exception {
