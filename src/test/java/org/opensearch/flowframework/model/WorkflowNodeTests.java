@@ -11,6 +11,7 @@ package org.opensearch.flowframework.model;
 import org.opensearch.test.OpenSearchTestCase;
 
 import java.io.IOException;
+import java.time.Instant;
 import java.util.Map;
 
 public class WorkflowNodeTests extends OpenSearchTestCase {
@@ -29,7 +30,8 @@ public class WorkflowNodeTests extends OpenSearchTestCase {
                 Map.entry("foo", "a string"),
                 Map.entry("bar", Map.of("key", "value")),
                 Map.entry("baz", new Map<?, ?>[] { Map.of("A", "a"), Map.of("B", "b") }),
-                Map.entry("processors", new PipelineProcessor[] { new PipelineProcessor("test-type", Map.of("key2", "value2")) })
+                Map.entry("processors", new PipelineProcessor[] { new PipelineProcessor("test-type", Map.of("key2", "value2")) }),
+                Map.entry("created_time", Instant.ofEpochSecond(1641600000))
             )
         );
         assertEquals("A", nodeA.id());
@@ -43,6 +45,7 @@ public class WorkflowNodeTests extends OpenSearchTestCase {
         assertEquals(1, pp.length);
         assertEquals("test-type", pp[0].type());
         assertEquals(Map.of("key2", "value2"), pp[0].params());
+        assertEquals(Instant.ofEpochSecond(1641600000), map.get("created_time"));
 
         // node equality is based only on ID
         WorkflowNode nodeA2 = new WorkflowNode("A", "a2-type", Map.of(), Map.of("bar", "baz"));
@@ -59,6 +62,7 @@ public class WorkflowNodeTests extends OpenSearchTestCase {
         assertTrue(json.contains("\"baz\":[{\"A\":\"a\"},{\"B\":\"b\"}]"));
         assertTrue(json.contains("\"bar\":{\"key\":\"value\"}"));
         assertTrue(json.contains("\"processors\":[{\"type\":\"test-type\",\"params\":{\"key2\":\"value2\"}}]"));
+        assertTrue(json.contains("\"created_time\":\"2022-01-08T00:00:00.000Z"));
 
         WorkflowNode nodeX = WorkflowNode.parse(TemplateTestJsonUtil.jsonToParser(json));
         assertEquals("A", nodeX.id());
