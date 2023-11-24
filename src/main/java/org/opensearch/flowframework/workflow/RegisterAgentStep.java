@@ -138,10 +138,10 @@ public class RegisterAgentStep implements WorkflowStep {
                         memory = getMLMemorySpec(entry.getValue());
                         break;
                     case CREATED_TIME:
-                        createdTime = (Instant) entry.getValue();
+                        createdTime = getInstant(entry.getValue(), CREATED_TIME);
                         break;
                     case LAST_UPDATED_TIME_FIELD:
-                        lastUpdateTime = (Instant) entry.getValue();
+                        lastUpdateTime = getInstant(entry.getValue(), LAST_UPDATED_TIME_FIELD);
                         break;
                     case APP_TYPE_FIELD:
                         appType = (String) entry.getValue();
@@ -266,6 +266,13 @@ public class RegisterAgentStep implements WorkflowStep {
         // MLMemorySpec mlMemorySpec = builder.build();
         // return mlMemorySpec;
 
+    }
+
+    private Instant getInstant(Object instant, String fieldName) {
+        if (instant instanceof Instant) {
+            return (Instant) instant;
+        }
+        throw new IllegalArgumentException("[" + fieldName + "] must be of type Instant.");
     }
 
 }
