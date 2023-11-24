@@ -20,7 +20,6 @@ import org.opensearch.ml.common.transport.agent.MLRegisterAgentResponse;
 import org.opensearch.test.OpenSearchTestCase;
 
 import java.io.IOException;
-import java.time.Instant;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -75,8 +74,6 @@ public class RegisterAgentTests extends OpenSearchTestCase {
                 Map.entry("tools", tools),
                 Map.entry("parameters", Collections.emptyMap()),
                 Map.entry("memory", mlMemorySpec),
-                Map.entry("created_time", Instant.now()),
-                Map.entry("last_updated_time", Instant.now()),
                 Map.entry("app_type", "app")
             )
         );

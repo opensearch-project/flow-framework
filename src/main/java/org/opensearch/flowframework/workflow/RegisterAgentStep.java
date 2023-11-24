@@ -31,9 +31,7 @@ import java.util.stream.Stream;
 
 import static org.opensearch.flowframework.common.CommonValue.AGENT_ID;
 import static org.opensearch.flowframework.common.CommonValue.APP_TYPE_FIELD;
-import static org.opensearch.flowframework.common.CommonValue.CREATED_TIME;
 import static org.opensearch.flowframework.common.CommonValue.DESCRIPTION_FIELD;
-import static org.opensearch.flowframework.common.CommonValue.LAST_UPDATED_TIME_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.LLM_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.MEMORY_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.NAME_FIELD;
@@ -137,12 +135,6 @@ public class RegisterAgentStep implements WorkflowStep {
                     case MEMORY_FIELD:
                         memory = getMLMemorySpec(entry.getValue());
                         break;
-                    case CREATED_TIME:
-                        createdTime = getInstant(entry.getValue(), CREATED_TIME);
-                        break;
-                    case LAST_UPDATED_TIME_FIELD:
-                        lastUpdateTime = getInstant(entry.getValue(), LAST_UPDATED_TIME_FIELD);
-                        break;
                     case APP_TYPE_FIELD:
                         appType = (String) entry.getValue();
                         break;
@@ -152,7 +144,7 @@ public class RegisterAgentStep implements WorkflowStep {
             }
         }
 
-        if (Stream.of(name, type, llm, tools, parameters, memory, createdTime, lastUpdateTime, appType).allMatch(x -> x != null)) {
+        if (Stream.of(name, type, llm, tools, parameters, memory, appType).allMatch(x -> x != null)) {
             MLAgentBuilder builder = MLAgent.builder().name(name);
 
             if (description != null) {

@@ -16,7 +16,6 @@ import org.opensearch.flowframework.workflow.WorkflowData;
 import org.opensearch.flowframework.workflow.WorkflowStep;
 
 import java.io.IOException;
-import java.time.Instant;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -25,8 +24,6 @@ import java.util.Map.Entry;
 import java.util.Objects;
 
 import static org.opensearch.core.xcontent.XContentParserUtils.ensureExpectedToken;
-import static org.opensearch.flowframework.common.CommonValue.CREATED_TIME;
-import static org.opensearch.flowframework.common.CommonValue.LAST_UPDATED_TIME_FIELD;
 import static org.opensearch.flowframework.util.ParseUtils.buildStringToStringMap;
 import static org.opensearch.flowframework.util.ParseUtils.parseStringToStringMap;
 
@@ -101,8 +98,6 @@ public class WorkflowNode implements ToXContentObject {
                     }
                 }
                 xContentBuilder.endArray();
-            } else {
-                xContentBuilder.value(e.getValue());
             }
         }
         xContentBuilder.endObject();
@@ -163,11 +158,6 @@ public class WorkflowNode implements ToXContentObject {
                                     userInputs.put(inputFieldName, mapList.toArray(new Map[0]));
                                 }
                                 break;
-                            case VALUE_NUMBER:
-                                if (CREATED_TIME.equals(inputFieldName) || LAST_UPDATED_TIME_FIELD.equals(inputFieldName)) {
-                                    parser.nextToken();
-                                    userInputs.put(inputFieldName, Instant.ofEpochMilli(parser.longValue()));
-                                }
                             default:
                                 throw new IOException("Unable to parse field [" + inputFieldName + "] in a node object.");
                         }
