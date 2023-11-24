@@ -135,7 +135,10 @@ public class EncryptorUtils {
         return new String(decryptedResult.getResult(), StandardCharsets.UTF_8);
     }
 
-    private void initializeMasterKey() {
+    /**
+     * Retrieves master key from system index if not yet initialized
+     */
+    public void initializeMasterKey() {
         if (masterKey != null) {
             return;
         }
