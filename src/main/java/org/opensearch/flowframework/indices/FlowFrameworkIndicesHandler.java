@@ -70,7 +70,7 @@ public class FlowFrameworkIndicesHandler {
     private static final Logger logger = LogManager.getLogger(FlowFrameworkIndicesHandler.class);
     private final Client client;
     private final ClusterService clusterService;
-    private EncryptorUtils encryptorUtils;
+    private final EncryptorUtils encryptorUtils;
     private static final Map<String, AtomicBoolean> indexMappingUpdated = new HashMap<>();
     private static final Map<String, Object> indexSettings = Map.of("index.auto_expand_replicas", "0-1");
 
@@ -78,11 +78,12 @@ public class FlowFrameworkIndicesHandler {
      * constructor
      * @param client the open search client
      * @param clusterService ClusterService
+     * @param encryptorUtils encryption utility
      */
-    public FlowFrameworkIndicesHandler(Client client, ClusterService clusterService) {
+    public FlowFrameworkIndicesHandler(Client client, ClusterService clusterService, EncryptorUtils encryptorUtils) {
         this.client = client;
         this.clusterService = clusterService;
-        this.encryptorUtils = new EncryptorUtils(clusterService, client);
+        this.encryptorUtils = encryptorUtils;
         for (FlowFrameworkIndex mlIndex : FlowFrameworkIndex.values()) {
             indexMappingUpdated.put(mlIndex.getIndexName(), new AtomicBoolean(false));
         }
@@ -312,9 +313,7 @@ public class FlowFrameworkIndicesHandler {
                 XContentBuilder builder = XContentFactory.jsonBuilder();
                 ThreadContext.StoredContext context = client.threadPool().getThreadContext().stashContext()
             ) {
-                logger.info("TESTING : raw template : " + template.toJson());
                 Template templateWithEncryptedCredentials = encryptorUtils.encryptTemplateCredentials(template);
-                logger.info("TESTING : encrypted tempalte : " + templateWithEncryptedCredentials.toJson());
                 request.source(templateWithEncryptedCredentials.toXContent(builder, ToXContent.EMPTY_PARAMS))
                     .setRefreshPolicy(WriteRequest.RefreshPolicy.IMMEDIATE);
                 client.index(request, ActionListener.runBefore(listener, () -> context.restore()));

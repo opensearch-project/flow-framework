@@ -24,7 +24,10 @@ import javax.crypto.spec.SecretKeySpec;
 
 import java.nio.charset.StandardCharsets;
 import java.security.SecureRandom;
+import java.util.ArrayList;
 import java.util.Base64;
+import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import com.amazonaws.encryptionsdk.AwsCrypto;
@@ -88,16 +91,104 @@ public class EncryptorUtils {
      * @return template with encrypted credentials
      */
     public Template encryptTemplateCredentials(Template template) {
-        for (Workflow workflow : template.workflows().values()) {
-            for (WorkflowNode workflowNode : workflow.nodes()) {
-                if (workflowNode.userInputs().containsKey(CREDENTIAL_FIELD)) {
-                    Map<String, String> credentials = (Map<String, String>) workflowNode.userInputs().get(CREDENTIAL_FIELD);
+        Template.Builder encryptedTemplateBuilder = new Template.Builder();
+
+        Map<String, Workflow> encryptedWorkflows = new HashMap<>();
+        for (Map.Entry<String, Workflow> entry : template.workflows().entrySet()) {
+
+            List<WorkflowNode> processedNodes = new ArrayList<>();
+            for (WorkflowNode node : entry.getValue().nodes()) {
+                if (!node.userInputs().containsKey(CREDENTIAL_FIELD)) {
+                    processedNodes.add(node);
+                } else {
+                    // Encrypt all values within credential field
+                    Map<String, String> credentials = (Map<String, String>) node.userInputs().get(CREDENTIAL_FIELD);
                     credentials.replaceAll((key, cred) -> encrypt(cred));
-                    workflowNode.userInputs().replace(CREDENTIAL_FIELD, credentials);
+
+                    // Replace credentials field in node user inputs
+                    Map<String, Object> encryptedUserInputs = new HashMap<>();
+                    encryptedUserInputs.putAll(node.userInputs());
+                    encryptedUserInputs.replace(CREDENTIAL_FIELD, credentials);
+
+                    // build new node to add to processed nodes
+                    WorkflowNode encryptedWorkflowNode = new WorkflowNode(
+                        node.id(),
+                        node.type(),
+                        node.previousNodeInputs(),
+                        encryptedUserInputs
+                    );
+                    processedNodes.add(encryptedWorkflowNode);
                 }
             }
+
+            // Add encrypted workflow nodes to encrypted workflows
+            encryptedWorkflows.put(entry.getKey(), new Workflow(entry.getValue().userParams(), processedNodes, entry.getValue().edges()));
         }
-        return template;
+
+        Template encryptedTemplate = encryptedTemplateBuilder.name(template.name())
+            .description(template.description())
+            .useCase(template.useCase())
+            .templateVersion(template.templateVersion())
+            .compatibilityVersion(template.compatibilityVersion())
+            .workflows(encryptedWorkflows)
+            .uiMetadata(template.getUiMetadata())
+            .user(template.getUser())
+            .build();
+
+        return encryptedTemplate;
+    }
+
+    /**
+     * Decrypts template credentials
+     * @param template the template to decrypt
+     * @return template with decrypted credentials
+     */
+    public Template decryptTemplateCredentials(Template template) {
+        Template.Builder decryptedTemplateBuilder = new Template.Builder();
+
+        Map<String, Workflow> decryptedWorkflows = new HashMap<>();
+        for (Map.Entry<String, Workflow> entry : template.workflows().entrySet()) {
+
+            List<WorkflowNode> processedNodes = new ArrayList<>();
+            for (WorkflowNode node : entry.getValue().nodes()) {
+                if (!node.userInputs().containsKey(CREDENTIAL_FIELD)) {
+                    processedNodes.add(node);
+                } else {
+                    // Decrypt all values within credential field
+                    Map<String, String> credentials = (Map<String, String>) node.userInputs().get(CREDENTIAL_FIELD);
+                    credentials.replaceAll((key, cred) -> decrypt(cred));
+
+                    // Replace credentials field in node user inputs
+                    Map<String, Object> decryptedUserInputs = new HashMap<>();
+                    decryptedUserInputs.putAll(node.userInputs());
+                    decryptedUserInputs.replace(CREDENTIAL_FIELD, credentials);
+
+                    // build new node to add to processed nodes
+                    WorkflowNode encryptedWorkflowNode = new WorkflowNode(
+                        node.id(),
+                        node.type(),
+                        node.previousNodeInputs(),
+                        decryptedUserInputs
+                    );
+                    processedNodes.add(encryptedWorkflowNode);
+                }
+            }
+
+            // Add decrypted workflow nodes to decrypted workflows
+            decryptedWorkflows.put(entry.getKey(), new Workflow(entry.getValue().userParams(), processedNodes, entry.getValue().edges()));
+        }
+
+        Template decryptedTemplate = decryptedTemplateBuilder.name(template.name())
+            .description(template.description())
+            .useCase(template.useCase())
+            .templateVersion(template.templateVersion())
+            .compatibilityVersion(template.compatibilityVersion())
+            .workflows(decryptedWorkflows)
+            .uiMetadata(template.getUiMetadata())
+            .user(template.getUser())
+            .build();
+
+        return decryptedTemplate;
     }
 
     /**
