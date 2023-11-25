@@ -179,84 +179,58 @@ public class RegisterAgentStep implements WorkflowStep {
     }
 
     private List<MLToolSpec> addTools(Object tools) {
-        for (Map<?, ?> map : (Map<?, ?>[]) tools) {
-            MLToolSpec mlToolSpec = (MLToolSpec) map.get(TOOLS_FIELD);
-            mlToolSpecList.add(mlToolSpec);
-        }
+        MLToolSpec mlToolSpec = (MLToolSpec) tools;
+        mlToolSpecList.add(mlToolSpec);
         return mlToolSpecList;
     }
 
     private LLMSpec getLLMSpec(Object llm) {
-        // if (!(array instanceof Map[])) {
-        // throw new IllegalArgumentException("[" + LLM_FIELD + "] must be an array of key-value maps.");
-        // }
-        if (llm instanceof LLMSpec) {
-            return (LLMSpec) llm;
+        Map<?, ?> map = (Map<?, ?>) llm;
+        String modelId = null;
+        Map<String, String> parameters = Collections.emptyMap();
+        modelId = (String) map.get(LLMSpec.MODEL_ID_FIELD);
+
+        if (map.get(PARAMETERS_FIELD) != null) {
+            parameters = getStringToStringMap(map.get(PARAMETERS_FIELD), PARAMETERS_FIELD);
         }
-        throw new IllegalArgumentException("[" + LLM_FIELD + "] must be of type LLMSpec.");
-        // String modelId = null;
-        // Map<String, String> parameters = Collections.emptyMap();
-        //
-        // modelId = llm.getModelId();
-        // parameters = llm.getParameters();
-        //// for (Map<?, ?> map : (Map<?, ?>[]) array) {
-        //// modelId = (String) map.get(LLMSpec.MODEL_ID_FIELD);
-        //// parameters = (Map<String, String>) map.get(LLMSpec.PARAMETERS_FIELD);
-        //// }
-        //
-        // @SuppressWarnings("unchecked")
-        // LLMSpec.LLMSpecBuilder builder = LLMSpec.builder();
-        //
-        // builder.modelId(modelId);
-        // if (parameters != null) {
-        // builder.parameters(parameters);
-        // }
-        // LLMSpec llmSpec = builder.build();
-        // return llmSpec;
+
+        @SuppressWarnings("unchecked")
+        LLMSpec.LLMSpecBuilder builder = LLMSpec.builder();
+
+        builder.modelId(modelId);
+        if (parameters != null) {
+            builder.parameters(parameters);
+        }
+        LLMSpec llmSpec = builder.build();
+        return llmSpec;
     }
 
     private MLMemorySpec getMLMemorySpec(Object mlMemory) {
-        // if (!(array instanceof Map[])) {
-        // throw new IllegalArgumentException("[" + MEMORY_FIELD + "] must be an array of key-value maps.");
-        // }
 
-        if (mlMemory instanceof MLMemorySpec) {
-            return (MLMemorySpec) mlMemory;
+        Map<?, ?> map = (Map<?, ?>) mlMemory;
+        String type = null;
+        String sessionId = null;
+        Integer windowSize = null;
+        type = (String) map.get(MLMemorySpec.MEMORY_TYPE_FIELD);
+        if (type == null) {
+            throw new IllegalArgumentException("agent name is null");
         }
-        throw new IllegalArgumentException("[" + MEMORY_FIELD + "] must be of type MLMemorySpec.");
-        // String type = null;
-        // String sessionId = null;
-        // Integer windowSize = null;
-        //
-        // type = mlMemory.getType();
-        // if (type == null) {
-        // throw new IllegalArgumentException("agent name is null");
-        // }
-        // sessionId = mlMemory.getSessionId();
-        // windowSize = mlMemory.getWindowSize();
+        sessionId = (String) map.get(MLMemorySpec.SESSION_ID_FIELD);
+        windowSize = (Integer) map.get(MLMemorySpec.SESSION_ID_FIELD);
 
-        // for (Map<?, ?> map : (Map<?, ?>[]) array) {
-        // type = (String) map.get(MLMemorySpec.MEMORY_TYPE_FIELD);
-        // if (type == null) {
-        // throw new IllegalArgumentException("agent name is null");
-        // }
-        // sessionId = (String) map.get(MLMemorySpec.SESSION_ID_FIELD);
-        // windowSize = (Integer) map.get(MLMemorySpec.SESSION_ID_FIELD);
-        // }
+        @SuppressWarnings("unchecked")
+        MLMemorySpec.MLMemorySpecBuilder builder = MLMemorySpec.builder();
 
-        // @SuppressWarnings("unchecked")
-        // MLMemorySpec.MLMemorySpecBuilder builder = MLMemorySpec.builder();
-        //
-        // builder.type(type);
-        // if (sessionId != null) {
-        // builder.sessionId(sessionId);
-        // }
-        // if (windowSize != null) {
-        // builder.windowSize(windowSize);
-        // }
-        //
-        // MLMemorySpec mlMemorySpec = builder.build();
-        // return mlMemorySpec;
+        builder.type(type);
+        if (sessionId != null) {
+            builder.sessionId(sessionId);
+        }
+        if (windowSize != null) {
+            builder.windowSize(windowSize);
+        }
+
+        MLMemorySpec mlMemorySpec = builder.build();
+        return mlMemorySpec;
 
     }
 
