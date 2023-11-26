@@ -91,7 +91,7 @@ public class ParseUtils {
      * @throws IOException on a build failure
      */
     public static void buildLLMMap(XContentBuilder xContentBuilder, Map<?, ?> map) throws IOException {
-        xContentBuilder.startObject(LLM_FIELD);
+        xContentBuilder.startObject();
 
         for (Entry<?, ?> e : map.entrySet()) {
             if (MODEL_ID.equals(e.getKey())) {
@@ -99,10 +99,18 @@ public class ParseUtils {
             }
             if (PARAMETERS_FIELD.equals(e.getKey())) {
                 Map<String, String> params = (Map<String, String>) e.getValue();
-                xContentBuilder.field(PARAMETERS_FIELD, getParameterMap(params));
+                buildLLMParameterMap(xContentBuilder, params);
             }
         }
 
+        xContentBuilder.endObject();
+    }
+
+    private static void buildLLMParameterMap(XContentBuilder xContentBuilder, Map<String, String> params) throws IOException {
+        xContentBuilder.startObject(PARAMETERS_FIELD);
+        for (Entry<String, String> e : params.entrySet()) {
+            xContentBuilder.field(e.getKey(), e.getValue());
+        }
         xContentBuilder.endObject();
     }
 

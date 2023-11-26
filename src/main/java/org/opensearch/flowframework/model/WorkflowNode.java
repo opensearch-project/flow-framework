@@ -14,15 +14,21 @@ import org.opensearch.core.xcontent.XContentParser;
 import org.opensearch.flowframework.workflow.ProcessNode;
 import org.opensearch.flowframework.workflow.WorkflowData;
 import org.opensearch.flowframework.workflow.WorkflowStep;
-import org.opensearch.ml.common.agent.LLMSpec;
 
 import java.io.IOException;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Objects;
 
 import static org.opensearch.core.xcontent.XContentParserUtils.ensureExpectedToken;
 import static org.opensearch.flowframework.common.CommonValue.LLM_FIELD;
-import static org.opensearch.flowframework.util.ParseUtils.*;
+import static org.opensearch.flowframework.util.ParseUtils.buildLLMMap;
+import static org.opensearch.flowframework.util.ParseUtils.buildStringToStringMap;
+import static org.opensearch.flowframework.util.ParseUtils.parseLLM;
+import static org.opensearch.flowframework.util.ParseUtils.parseStringToStringMap;
 
 /**
  * This represents a process node (step) in a workflow graph in the {@link Template}.
@@ -31,7 +37,6 @@ import static org.opensearch.flowframework.util.ParseUtils.*;
  * and its inputs are used to populate the {@link WorkflowData} input.
  */
 public class WorkflowNode implements ToXContentObject {
-
     /** The template field name for node id */
     public static final String ID_FIELD = "id";
     /** The template field name for node type */
@@ -143,8 +148,7 @@ public class WorkflowNode implements ToXContentObject {
                                 break;
                             case START_OBJECT:
                                 if (LLM_FIELD.equals(inputFieldName)) {
-                                    LLMSpec llmSpec = parseLLM(parser);
-                                    userInputs.put(inputFieldName, llmSpec);
+                                    userInputs.put(inputFieldName, parseLLM(parser));
                                 } else {
                                     userInputs.put(inputFieldName, parseStringToStringMap(parser));
                                 }
