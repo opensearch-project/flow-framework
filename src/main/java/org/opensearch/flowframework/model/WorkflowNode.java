@@ -82,7 +82,12 @@ public class WorkflowNode implements ToXContentObject {
             if (e.getValue() instanceof String || e.getValue() instanceof Number) {
                 xContentBuilder.value(e.getValue());
             } else if (e.getValue() instanceof Map<?, ?>) {
-                buildStringToStringMap(xContentBuilder, (Map<?, ?>) e.getValue());
+                if (LLM_FIELD.equals(e.getKey())) {
+                    buildLLMMap(xContentBuilder, (Map<String, ?>) e.getValue());
+                } else {
+                    buildStringToStringMap(xContentBuilder, (Map<?, ?>) e.getValue());
+                }
+
             } else if (e.getValue() instanceof Object[]) {
                 xContentBuilder.startArray();
                 if (PROCESSORS_FIELD.equals(e.getKey())) {
@@ -95,12 +100,6 @@ public class WorkflowNode implements ToXContentObject {
                     }
                 }
                 xContentBuilder.endArray();
-            } else if (e.getValue() instanceof Object) {
-                xContentBuilder.startObject();
-                if (LLM_FIELD.equals(e.getKey())) {
-                    buildLLMMap(xContentBuilder, (LLMSpec) e.getValue());
-                }
-                xContentBuilder.endObject();
             }
         }
         xContentBuilder.endObject();

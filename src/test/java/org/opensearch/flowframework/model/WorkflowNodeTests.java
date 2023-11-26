@@ -23,10 +23,13 @@ public class WorkflowNodeTests extends OpenSearchTestCase {
     }
 
     public void testNode() throws IOException {
-
         Map<String, String> parameters = new HashMap<>();
-        parameters.put("key1", "value1");
-        parameters.put("key2", "value2");
+        parameters.put("stop", "true");
+        parameters.put("max", "5");
+
+        Map llmSpec = new HashMap<>();
+        llmSpec.put("model_id", "modelId");
+        llmSpec.put("parameters", parameters);
 
         WorkflowNode nodeA = new WorkflowNode(
             "A",
@@ -37,7 +40,7 @@ public class WorkflowNodeTests extends OpenSearchTestCase {
                 Map.entry("bar", Map.of("key", "value")),
                 Map.entry("baz", new Map<?, ?>[] { Map.of("A", "a"), Map.of("B", "b") }),
                 Map.entry("processors", new PipelineProcessor[] { new PipelineProcessor("test-type", Map.of("key2", "value2")) }),
-                Map.entry("llm", new LLMSpec("modelId", parameters)),
+                Map.entry("llm", llmSpec),
                 Map.entry("created_time", 1689793598499L)
             )
         );
@@ -70,7 +73,9 @@ public class WorkflowNodeTests extends OpenSearchTestCase {
         assertTrue(json.contains("\"bar\":{\"key\":\"value\"}"));
         assertTrue(json.contains("\"processors\":[{\"type\":\"test-type\",\"params\":{\"key2\":\"value2\"}}]"));
         assertTrue(json.contains("\"created_time\":1689793598499"));
-        assertTrue(json.contains("\"llm\":{\"model_id\":\"modelId\",\"parameters\":{\"key1\":\"value1\",\"key2\":\"value2\"}}"));
+        assertTrue(json.contains("llm\":{"));
+        assertTrue(json.contains("\"parameters\":{\"stop\":\"true\",\"max\":\"5\""));
+        assertTrue(json.contains("\"model_id\":\"modelId\""));
 
         WorkflowNode nodeX = WorkflowNode.parse(TemplateTestJsonUtil.jsonToParser(json));
         assertEquals("A", nodeX.id());
@@ -85,9 +90,9 @@ public class WorkflowNodeTests extends OpenSearchTestCase {
         assertEquals(1, ppX.length);
         assertEquals("test-type", ppX[0].type());
         assertEquals(Map.of("key2", "value2"), ppX[0].params());
-        LLMSpec llmSpec = (LLMSpec) mapX.get("llm");
-        assertEquals("modelId", llmSpec.getModelId());
-        assertEquals(parameters, llmSpec.getParameters());
+        LLMSpec llm = (LLMSpec) mapX.get("llm");
+        assertEquals("modelId", llm.getModelId());
+        assertEquals(parameters, llm.getParameters());
     }
 
     public void testExceptions() throws IOException {
