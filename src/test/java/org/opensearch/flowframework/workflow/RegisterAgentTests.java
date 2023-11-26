@@ -47,24 +47,19 @@ public class RegisterAgentTests extends OpenSearchTestCase {
 
         MockitoAnnotations.openMocks(this);
 
-        LLMSpec llmSpec = new LLMSpec("xyz", Collections.emptyMap());
+        MLToolSpec tools = new MLToolSpec("tool1", "CatIndexTool", "desc", Collections.emptyMap(), false);
 
-        Map<?, ?>[] tools = new Map<?, ?>[] {
-            Map.ofEntries(
-                Map.entry(MLToolSpec.TOOL_TYPE_FIELD, "tool1"),
-                Map.entry(MLToolSpec.TOOL_NAME_FIELD, "CatIndexTool"),
-                Map.entry(MLToolSpec.DESCRIPTION_FIELD, "desc"),
-                Map.entry(MLToolSpec.PARAMETERS_FIELD, "test"),
-                Map.entry(MLToolSpec.INCLUDE_OUTPUT_IN_AGENT_RESPONSE, false)
-            ) };
+        Map<?, ?> llmSpec = Map.ofEntries(
+            Map.entry(LLMSpec.MODEL_ID_FIELD, "xyz"),
+            Map.entry(LLMSpec.PARAMETERS_FIELD, Collections.emptyMap())
+        );
 
-        // MLToolSpec mlToolSpec1 = new MLToolSpec("tool1", "CatIndexTool", "desc", Collections.emptyMap(), false);
-        // MLToolSpec mlToolSpec2 = new MLToolSpec("tool2", "MathTool", "desc", Collections.emptyMap(), false);
-        // List<MLToolSpec> tools = new ArrayList();
-        // tools.add(mlToolSpec1);
-        // tools.add(mlToolSpec2);
+        Map<?, ?> mlMemorySpec = Map.ofEntries(
+            Map.entry(MLMemorySpec.MEMORY_TYPE_FIELD, "type"),
+            Map.entry(MLMemorySpec.SESSION_ID_FIELD, "abc"),
+            Map.entry(MLMemorySpec.WINDOW_SIZE_FIELD, 2)
+        );
 
-        MLMemorySpec mlMemorySpec = new MLMemorySpec("type", "memory", 2);
         inputData = new WorkflowData(
             Map.ofEntries(
                 Map.entry("name", "test"),
@@ -74,6 +69,8 @@ public class RegisterAgentTests extends OpenSearchTestCase {
                 Map.entry("tools", tools),
                 Map.entry("parameters", Collections.emptyMap()),
                 Map.entry("memory", mlMemorySpec),
+                Map.entry("created_time", 1689793598499L),
+                Map.entry("last_updated_time", 1689793598499L),
                 Map.entry("app_type", "app")
             )
         );

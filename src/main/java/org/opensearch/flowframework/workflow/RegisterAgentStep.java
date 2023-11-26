@@ -29,15 +29,7 @@ import java.util.Map.Entry;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Stream;
 
-import static org.opensearch.flowframework.common.CommonValue.AGENT_ID;
-import static org.opensearch.flowframework.common.CommonValue.APP_TYPE_FIELD;
-import static org.opensearch.flowframework.common.CommonValue.DESCRIPTION_FIELD;
-import static org.opensearch.flowframework.common.CommonValue.LLM_FIELD;
-import static org.opensearch.flowframework.common.CommonValue.MEMORY_FIELD;
-import static org.opensearch.flowframework.common.CommonValue.NAME_FIELD;
-import static org.opensearch.flowframework.common.CommonValue.PARAMETERS_FIELD;
-import static org.opensearch.flowframework.common.CommonValue.TOOLS_FIELD;
-import static org.opensearch.flowframework.common.CommonValue.TYPE;
+import static org.opensearch.flowframework.common.CommonValue.*;
 import static org.opensearch.flowframework.util.ParseUtils.getStringToStringMap;
 
 /**
@@ -135,6 +127,12 @@ public class RegisterAgentStep implements WorkflowStep {
                     case MEMORY_FIELD:
                         memory = getMLMemorySpec(entry.getValue());
                         break;
+                    case CREATED_TIME:
+                        createdTime = Instant.ofEpochMilli((Long) entry.getValue());
+                        break;
+                    case LAST_UPDATED_TIME_FIELD:
+                        lastUpdateTime = Instant.ofEpochMilli((Long) entry.getValue());
+                        break;
                     case APP_TYPE_FIELD:
                         appType = (String) entry.getValue();
                         break;
@@ -216,7 +214,7 @@ public class RegisterAgentStep implements WorkflowStep {
             throw new IllegalArgumentException("agent name is null");
         }
         sessionId = (String) map.get(MLMemorySpec.SESSION_ID_FIELD);
-        windowSize = (Integer) map.get(MLMemorySpec.SESSION_ID_FIELD);
+        windowSize = (Integer) map.get(MLMemorySpec.WINDOW_SIZE_FIELD);
 
         @SuppressWarnings("unchecked")
         MLMemorySpec.MLMemorySpecBuilder builder = MLMemorySpec.builder();

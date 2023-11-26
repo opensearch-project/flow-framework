@@ -82,7 +82,7 @@ public class WorkflowNode implements ToXContentObject {
         xContentBuilder.startObject(USER_INPUTS_FIELD);
         for (Entry<String, Object> e : userInputs.entrySet()) {
             xContentBuilder.field(e.getKey());
-            if (e.getValue() instanceof String) {
+            if (e.getValue() instanceof String || e.getValue() instanceof Number) {
                 xContentBuilder.value(e.getValue());
             } else if (e.getValue() instanceof Map<?, ?>) {
                 buildStringToStringMap(xContentBuilder, (Map<?, ?>) e.getValue());
@@ -156,6 +156,22 @@ public class WorkflowNode implements ToXContentObject {
                                         mapList.add(parseStringToStringMap(parser));
                                     }
                                     userInputs.put(inputFieldName, mapList.toArray(new Map[0]));
+                                }
+                                break;
+                            case VALUE_NUMBER:
+                                switch (parser.numberType()) {
+                                    case INT:
+                                        userInputs.put(inputFieldName, parser.intValue());
+                                        break;
+                                    case LONG:
+                                        userInputs.put(inputFieldName, parser.longValue());
+                                        break;
+                                    case FLOAT:
+                                        userInputs.put(inputFieldName, parser.floatValue());
+                                        break;
+                                    case DOUBLE:
+                                        userInputs.put(inputFieldName, parser.doubleValue());
+                                        break;
                                 }
                                 break;
                             default:
