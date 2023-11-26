@@ -34,8 +34,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 
 import static org.opensearch.core.xcontent.XContentParserUtils.ensureExpectedToken;
-import static org.opensearch.flowframework.common.CommonValue.MODEL_ID;
-import static org.opensearch.flowframework.common.CommonValue.PARAMETERS_FIELD;
+import static org.opensearch.flowframework.common.CommonValue.*;
 import static org.opensearch.ml.common.utils.StringUtils.getParameterMap;
 
 /**
@@ -91,15 +90,15 @@ public class ParseUtils {
      * @param map A map as key value pair
      * @throws IOException on a build failure
      */
-    public static void buildLLMMap(XContentBuilder xContentBuilder, Map<String, ?> map) throws IOException {
-        xContentBuilder.startObject();
+    public static void buildLLMMap(XContentBuilder xContentBuilder, Map<?, ?> map) throws IOException {
+        xContentBuilder.startObject(LLM_FIELD);
 
-        for (Entry<String, ?> e : map.entrySet()) {
+        for (Entry<?, ?> e : map.entrySet()) {
             if (MODEL_ID.equals(e.getKey())) {
-                xContentBuilder.field(e.getKey(), (String) e.getValue());
+                xContentBuilder.field((String) e.getKey(), (String) e.getValue());
             }
             if (PARAMETERS_FIELD.equals(e.getKey())) {
-                Map<String, ?> params = (Map<String, ?>) e.getValue();
+                Map<String, String> params = (Map<String, String>) e.getValue();
                 xContentBuilder.field(PARAMETERS_FIELD, getParameterMap(params));
             }
         }

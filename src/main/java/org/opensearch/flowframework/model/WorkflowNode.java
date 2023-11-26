@@ -83,11 +83,10 @@ public class WorkflowNode implements ToXContentObject {
                 xContentBuilder.value(e.getValue());
             } else if (e.getValue() instanceof Map<?, ?>) {
                 if (LLM_FIELD.equals(e.getKey())) {
-                    buildLLMMap(xContentBuilder, (Map<String, ?>) e.getValue());
+                    buildLLMMap(xContentBuilder, (Map<?, ?>) e.getValue());
                 } else {
                     buildStringToStringMap(xContentBuilder, (Map<?, ?>) e.getValue());
                 }
-
             } else if (e.getValue() instanceof Object[]) {
                 xContentBuilder.startArray();
                 if (PROCESSORS_FIELD.equals(e.getKey())) {

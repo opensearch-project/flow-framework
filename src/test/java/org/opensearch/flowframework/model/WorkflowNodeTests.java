@@ -27,7 +27,7 @@ public class WorkflowNodeTests extends OpenSearchTestCase {
         parameters.put("stop", "true");
         parameters.put("max", "5");
 
-        Map llmSpec = new HashMap<>();
+        Map<String, Object> llmSpec = new HashMap<>();
         llmSpec.put("model_id", "modelId");
         llmSpec.put("parameters", parameters);
 
@@ -65,7 +65,7 @@ public class WorkflowNodeTests extends OpenSearchTestCase {
         assertNotEquals(nodeA, nodeB);
 
         String json = TemplateTestJsonUtil.parseToJson(nodeA);
-        logger.info("TESTING : " + json);
+        logger.info("JSON : " + json);
         assertTrue(json.startsWith("{\"id\":\"A\",\"type\":\"a-type\",\"previous_node_inputs\":{\"foo\":\"field\"},"));
         assertTrue(json.contains("\"user_inputs\":{"));
         assertTrue(json.contains("\"foo\":\"a string\""));
