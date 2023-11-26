@@ -34,7 +34,8 @@ import java.util.Map;
 import java.util.Map.Entry;
 
 import static org.opensearch.core.xcontent.XContentParserUtils.ensureExpectedToken;
-import static org.opensearch.flowframework.common.CommonValue.*;
+import static org.opensearch.flowframework.common.CommonValue.MODEL_ID;
+import static org.opensearch.flowframework.common.CommonValue.PARAMETERS_FIELD;
 import static org.opensearch.ml.common.utils.StringUtils.getParameterMap;
 
 /**
@@ -116,6 +117,12 @@ public class ParseUtils {
         return map;
     }
 
+    /**
+     * Parses an XContent object representing the object of LLMSpec
+     * @param parser An XContent parser whose position is at the start of the map object to parse
+     * @return instance of {@link org.opensearch.ml.common.agent.LLMSpec}
+     * @throws IOException parsing error
+     */
     public static LLMSpec parseLLM(XContentParser parser) throws IOException {
         String modelId = null;
         Map<String, String> parameters = null;
@@ -168,6 +175,11 @@ public class ParseUtils {
         return User.parse(userStr);
     }
 
+    /**
+     * Generates a parameter map required when the parameter is nested within an object
+     * @param parameterObjs parameters
+     * @return a parameters map of type String,String
+     */
     public static Map<String, String> getParameterMap(Map<String, ?> parameterObjs) {
         Map<String, String> parameters = new HashMap<>();
         for (String key : parameterObjs.keySet()) {

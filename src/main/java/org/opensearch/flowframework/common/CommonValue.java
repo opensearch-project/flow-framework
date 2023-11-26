@@ -164,11 +164,18 @@ public class CommonValue {
     public static final String WORKFLOW_STEP_NAME = "workflow_step_name";
     /** LLM Name for registering an agent */
     public static final String LLM_FIELD = "llm";
+    /** The tools' field for an agent */
     public static final String TOOLS_FIELD = "tools";
+    /** The memory field for an agent */
     public static final String MEMORY_FIELD = "memory";
+    /** The app type field for an agent */
     public static final String APP_TYPE_FIELD = "app_type";
+    /** The agent id of an agent */
     public static final String AGENT_ID = "agent_id";
+    /** To include field for an agent response */
     public static final String INCLUDE_OUTPUT_IN_AGENT_RESPONSE = "include_output_in_agent_response";
+    /** The created time field for an agent */
     public static final String CREATED_TIME = "created_time";
+    /** The last updated time field for an agent */
     public static final String LAST_UPDATED_TIME_FIELD = "last_updated_time";
 }

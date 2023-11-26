@@ -8,6 +8,8 @@
  */
 package org.opensearch.flowframework.workflow;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.opensearch.core.rest.RestStatus;
 import org.opensearch.flowframework.exception.FlowFrameworkException;
 import org.opensearch.ml.common.agent.MLToolSpec;
@@ -19,11 +21,20 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.concurrent.CompletableFuture;
 
-import static org.opensearch.flowframework.common.CommonValue.*;
+import static org.opensearch.flowframework.common.CommonValue.DESCRIPTION_FIELD;
+import static org.opensearch.flowframework.common.CommonValue.INCLUDE_OUTPUT_IN_AGENT_RESPONSE;
+import static org.opensearch.flowframework.common.CommonValue.NAME_FIELD;
+import static org.opensearch.flowframework.common.CommonValue.PARAMETERS_FIELD;
+import static org.opensearch.flowframework.common.CommonValue.TOOLS_FIELD;
+import static org.opensearch.flowframework.common.CommonValue.TYPE;
 import static org.opensearch.flowframework.util.ParseUtils.getStringToStringMap;
 
+/**
+ * Step to register a tool for an agent
+ */
 public class ToolStep implements WorkflowStep {
 
+    private static final Logger logger = LogManager.getLogger(ToolStep.class);
     CompletableFuture<WorkflowData> toolFuture = new CompletableFuture<>();
     static final String NAME = "tool";
 
@@ -83,9 +94,11 @@ public class ToolStep implements WorkflowStep {
             }
 
             MLToolSpec mlToolSpec = builder.build();
+
             toolFuture.complete(new WorkflowData(Map.ofEntries(Map.entry(TOOLS_FIELD, mlToolSpec))));
         }
 
+        logger.info("Tool registered successfully {}", type);
         return toolFuture;
     }
 
