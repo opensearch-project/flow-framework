@@ -8,9 +8,11 @@
  */
 package org.opensearch.flowframework.model;
 
+import org.opensearch.ml.common.agent.LLMSpec;
 import org.opensearch.test.OpenSearchTestCase;
 
 import java.io.IOException;
+import java.util.HashMap;
 import java.util.Map;
 
 public class WorkflowNodeTests extends OpenSearchTestCase {
@@ -21,6 +23,11 @@ public class WorkflowNodeTests extends OpenSearchTestCase {
     }
 
     public void testNode() throws IOException {
+
+        Map<String, String> parameters = new HashMap<>();
+        parameters.put("key1", "value1");
+        parameters.put("key2", "value2");
+
         WorkflowNode nodeA = new WorkflowNode(
             "A",
             "a-type",
@@ -30,6 +37,7 @@ public class WorkflowNodeTests extends OpenSearchTestCase {
                 Map.entry("bar", Map.of("key", "value")),
                 Map.entry("baz", new Map<?, ?>[] { Map.of("A", "a"), Map.of("B", "b") }),
                 Map.entry("processors", new PipelineProcessor[] { new PipelineProcessor("test-type", Map.of("key2", "value2")) }),
+                Map.entry("llm", new LLMSpec("modelId", parameters)),
                 Map.entry("created_time", 1689793598499L)
             )
         );
@@ -62,6 +70,7 @@ public class WorkflowNodeTests extends OpenSearchTestCase {
         assertTrue(json.contains("\"bar\":{\"key\":\"value\"}"));
         assertTrue(json.contains("\"processors\":[{\"type\":\"test-type\",\"params\":{\"key2\":\"value2\"}}]"));
         assertTrue(json.contains("\"created_time\":1689793598499"));
+        assertTrue(json.contains("\"llm\":{\"model_id\":\"modelId\",\"parameters\":{\"key1\":\"value1\",\"key2\":\"value2\"}}"));
 
         WorkflowNode nodeX = WorkflowNode.parse(TemplateTestJsonUtil.jsonToParser(json));
         assertEquals("A", nodeX.id());
@@ -76,6 +85,9 @@ public class WorkflowNodeTests extends OpenSearchTestCase {
         assertEquals(1, ppX.length);
         assertEquals("test-type", ppX[0].type());
         assertEquals(Map.of("key2", "value2"), ppX[0].params());
+        LLMSpec llmSpec = (LLMSpec) mapX.get("llm");
+        assertEquals("modelId", llmSpec.getModelId());
+        assertEquals(parameters, llmSpec.getParameters());
     }
 
     public void testExceptions() throws IOException {

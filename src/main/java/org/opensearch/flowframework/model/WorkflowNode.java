@@ -14,18 +14,15 @@ import org.opensearch.core.xcontent.XContentParser;
 import org.opensearch.flowframework.workflow.ProcessNode;
 import org.opensearch.flowframework.workflow.WorkflowData;
 import org.opensearch.flowframework.workflow.WorkflowStep;
+import org.opensearch.ml.common.agent.LLMSpec;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.Map.Entry;
-import java.util.Objects;
 
 import static org.opensearch.core.xcontent.XContentParserUtils.ensureExpectedToken;
-import static org.opensearch.flowframework.util.ParseUtils.buildStringToStringMap;
-import static org.opensearch.flowframework.util.ParseUtils.parseStringToStringMap;
+import static org.opensearch.flowframework.common.CommonValue.LLM_FIELD;
+import static org.opensearch.flowframework.util.ParseUtils.*;
 
 /**
  * This represents a process node (step) in a workflow graph in the {@link Template}.
@@ -98,6 +95,12 @@ public class WorkflowNode implements ToXContentObject {
                     }
                 }
                 xContentBuilder.endArray();
+            } else if (e.getValue() instanceof Object) {
+                xContentBuilder.startObject();
+                if (LLM_FIELD.equals(e.getKey())) {
+                    buildLLMMap(xContentBuilder, (LLMSpec) e.getValue());
+                }
+                xContentBuilder.endObject();
             }
         }
         xContentBuilder.endObject();
@@ -141,7 +144,12 @@ public class WorkflowNode implements ToXContentObject {
                                 userInputs.put(inputFieldName, parser.text());
                                 break;
                             case START_OBJECT:
-                                userInputs.put(inputFieldName, parseStringToStringMap(parser));
+                                if (LLM_FIELD.equals(inputFieldName)) {
+                                    LLMSpec llmSpec = parseLLM(parser);
+                                    userInputs.put(inputFieldName, llmSpec);
+                                } else {
+                                    userInputs.put(inputFieldName, parseStringToStringMap(parser));
+                                }
                                 break;
                             case START_ARRAY:
                                 if (PROCESSORS_FIELD.equals(inputFieldName)) {
