@@ -49,10 +49,11 @@ public class RegisterAgentTests extends OpenSearchTestCase {
 
         MLToolSpec tools = new MLToolSpec("tool1", "CatIndexTool", "desc", Collections.emptyMap(), false);
 
-        Map<?, ?> llmSpec = Map.ofEntries(
-            Map.entry(LLMSpec.MODEL_ID_FIELD, "xyz"),
-            Map.entry(LLMSpec.PARAMETERS_FIELD, Collections.emptyMap())
-        );
+        LLMSpec llmSpec = new LLMSpec("xyz", Collections.emptyMap());
+        // Map<?, ?> llmSpec = Map.ofEntries(
+        // Map.entry(LLMSpec.MODEL_ID_FIELD, "xyz"),
+        // Map.entry(LLMSpec.PARAMETERS_FIELD, Collections.emptyMap())
+        // );
 
         Map<?, ?> mlMemorySpec = Map.ofEntries(
             Map.entry(MLMemorySpec.MEMORY_TYPE_FIELD, "type"),

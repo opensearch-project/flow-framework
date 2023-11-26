@@ -14,6 +14,7 @@ import org.opensearch.core.xcontent.XContentParser;
 import org.opensearch.flowframework.workflow.ProcessNode;
 import org.opensearch.flowframework.workflow.WorkflowData;
 import org.opensearch.flowframework.workflow.WorkflowStep;
+import org.opensearch.ml.common.agent.LLMSpec;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -87,11 +88,7 @@ public class WorkflowNode implements ToXContentObject {
             if (e.getValue() instanceof String || e.getValue() instanceof Number) {
                 xContentBuilder.value(e.getValue());
             } else if (e.getValue() instanceof Map<?, ?>) {
-                if (LLM_FIELD.equals(e.getKey())) {
-                    buildLLMMap(xContentBuilder, (Map<?, ?>) e.getValue());
-                } else {
-                    buildStringToStringMap(xContentBuilder, (Map<?, ?>) e.getValue());
-                }
+                buildStringToStringMap(xContentBuilder, (Map<?, ?>) e.getValue());
             } else if (e.getValue() instanceof Object[]) {
                 xContentBuilder.startArray();
                 if (PROCESSORS_FIELD.equals(e.getKey())) {
@@ -104,6 +101,12 @@ public class WorkflowNode implements ToXContentObject {
                     }
                 }
                 xContentBuilder.endArray();
+            } else if (e.getValue() instanceof Object) {
+                if (LLM_FIELD.equals(e.getKey())) {
+                    xContentBuilder.startObject();
+                    buildLLMMap(xContentBuilder, (LLMSpec) e.getValue());
+                    xContentBuilder.endObject();
+                }
             }
         }
         xContentBuilder.endObject();

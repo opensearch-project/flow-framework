@@ -27,9 +27,7 @@ public class WorkflowNodeTests extends OpenSearchTestCase {
         parameters.put("stop", "true");
         parameters.put("max", "5");
 
-        Map<String, Object> llmSpec = new HashMap<>();
-        llmSpec.put("model_id", "modelId");
-        llmSpec.put("parameters", parameters);
+        LLMSpec llmSpec = new LLMSpec("modelId", parameters);
 
         WorkflowNode nodeA = new WorkflowNode(
             "A",

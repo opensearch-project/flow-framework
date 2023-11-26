@@ -183,24 +183,10 @@ public class RegisterAgentStep implements WorkflowStep {
     }
 
     private LLMSpec getLLMSpec(Object llm) {
-        Map<?, ?> map = (Map<?, ?>) llm;
-        String modelId = null;
-        Map<String, String> parameters = Collections.emptyMap();
-        modelId = (String) map.get(LLMSpec.MODEL_ID_FIELD);
-
-        if (map.get(PARAMETERS_FIELD) != null) {
-            parameters = getStringToStringMap(map.get(PARAMETERS_FIELD), PARAMETERS_FIELD);
+        if (llm instanceof LLMSpec) {
+            return (LLMSpec) llm;
         }
-
-        @SuppressWarnings("unchecked")
-        LLMSpec.LLMSpecBuilder builder = LLMSpec.builder();
-
-        builder.modelId(modelId);
-        if (parameters != null) {
-            builder.parameters(parameters);
-        }
-        LLMSpec llmSpec = builder.build();
-        return llmSpec;
+        throw new IllegalArgumentException("[" + LLM_FIELD + "] must be of type LLMSpec.");
     }
 
     private MLMemorySpec getMLMemorySpec(Object mlMemory) {

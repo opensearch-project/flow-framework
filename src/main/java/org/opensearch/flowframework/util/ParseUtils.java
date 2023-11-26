@@ -87,31 +87,15 @@ public class ParseUtils {
      * Builds an XContent object representing a LLMSpec.
      *
      * @param xContentBuilder An XContent builder whose position is at the start of the map object to build
-     * @param map A map as key value pair
+     * @param llm LLMSpec
      * @throws IOException on a build failure
      */
-    public static void buildLLMMap(XContentBuilder xContentBuilder, Map<?, ?> map) throws IOException {
-        xContentBuilder.startObject();
-
-        for (Entry<?, ?> e : map.entrySet()) {
-            if (MODEL_ID.equals(e.getKey())) {
-                xContentBuilder.field((String) e.getKey(), (String) e.getValue());
-            }
-            if (PARAMETERS_FIELD.equals(e.getKey())) {
-                Map<String, String> params = (Map<String, String>) e.getValue();
-                buildLLMParameterMap(xContentBuilder, params);
-            }
-        }
-
-        xContentBuilder.endObject();
-    }
-
-    private static void buildLLMParameterMap(XContentBuilder xContentBuilder, Map<String, String> params) throws IOException {
-        xContentBuilder.startObject(PARAMETERS_FIELD);
-        for (Entry<String, String> e : params.entrySet()) {
-            xContentBuilder.field(e.getKey(), e.getValue());
-        }
-        xContentBuilder.endObject();
+    public static void buildLLMMap(XContentBuilder xContentBuilder, LLMSpec llm) throws IOException {
+        String modelId = llm.getModelId();
+        Map<String, String> parameters = llm.getParameters();
+        xContentBuilder.field(MODEL_ID, modelId);
+        xContentBuilder.field(PARAMETERS_FIELD);
+        buildStringToStringMap(xContentBuilder, parameters);
     }
 
     /**
