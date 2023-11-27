@@ -9,7 +9,6 @@
 package org.opensearch.flowframework.indices;
 
 import com.google.common.base.Charsets;
-import com.google.common.collect.ImmutableMap;
 import com.google.common.io.Resources;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -18,7 +17,6 @@ import org.opensearch.action.admin.indices.create.CreateIndexRequest;
 import org.opensearch.action.admin.indices.create.CreateIndexResponse;
 import org.opensearch.action.admin.indices.mapping.put.PutMappingRequest;
 import org.opensearch.action.admin.indices.settings.put.UpdateSettingsRequest;
-import org.opensearch.action.get.GetRequest;
 import org.opensearch.action.index.IndexRequest;
 import org.opensearch.action.index.IndexResponse;
 import org.opensearch.action.support.WriteRequest;
@@ -53,8 +51,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import static org.opensearch.core.rest.RestStatus.INTERNAL_SERVER_ERROR;
 import static org.opensearch.flowframework.common.CommonValue.GLOBAL_CONTEXT_INDEX;
 import static org.opensearch.flowframework.common.CommonValue.GLOBAL_CONTEXT_INDEX_MAPPING;
-import static org.opensearch.flowframework.common.CommonValue.MASTER_KEY;
-import static org.opensearch.flowframework.common.CommonValue.MASTER_KEY_INDEX;
 import static org.opensearch.flowframework.common.CommonValue.MASTER_KEY_INDEX_MAPPING;
 import static org.opensearch.flowframework.common.CommonValue.META;
 import static org.opensearch.flowframework.common.CommonValue.NO_SCHEMA_VERSION;
@@ -329,7 +325,7 @@ public class FlowFrameworkIndicesHandler {
     }
 
     /**
-     * Initializes master key index and EncryptorUtls
+     * Initializes master key index and EncryptorUtils
      * @param listener action listener
      */
     public void initializeMasterKeyIndex(ActionListener<Boolean> listener) {
@@ -338,51 +334,7 @@ public class FlowFrameworkIndicesHandler {
                 listener.onFailure(new FlowFrameworkException("No response to create global_context index", INTERNAL_SERVER_ERROR));
                 return;
             }
-
-            // Index has either been created or it already exists, need to check if master key has been initalized already, if not then
-            // generate
-            // This is necessary in case of global context index restoration from snapshot, will need to use the same master key to decrypt
-            // stored credentials
-            try (ThreadContext.StoredContext context = client.threadPool().getThreadContext().stashContext()) {
-
-                GetRequest getRequest = new GetRequest(MASTER_KEY_INDEX).id(MASTER_KEY);
-                client.get(getRequest, ActionListener.wrap(getResponse -> {
-
-                    if (!getResponse.isExists()) {
-
-                        // Generate new key and index
-                        final String masterKey = encryptorUtils.generateMasterKey();
-                        IndexRequest masterKeyIndexRequest = new IndexRequest(MASTER_KEY_INDEX).id(MASTER_KEY)
-                            .source(ImmutableMap.of(MASTER_KEY, masterKey))
-                            .setRefreshPolicy(WriteRequest.RefreshPolicy.IMMEDIATE);
-
-                        client.index(masterKeyIndexRequest, ActionListener.wrap(indexResponse -> {
-                            // Set generated key to master
-                            logger.info("Master key has been initialized successfully");
-                            encryptorUtils.setMasterKey(masterKey);
-                            listener.onResponse(true);
-                        }, indexException -> {
-                            logger.error("Failed to index master key", indexException);
-                            listener.onFailure(indexException);
-                        }));
-
-                    } else {
-                        // Set existing key to master
-                        logger.info("Master key has already been initialized");
-                        final String masterKey = (String) getResponse.getSourceAsMap().get(MASTER_KEY);
-                        this.encryptorUtils.setMasterKey(masterKey);
-                        listener.onResponse(true);
-                    }
-                }, getRequestException -> {
-                    logger.error("Failed to search for master key from master_key index", getRequestException);
-                    listener.onFailure(getRequestException);
-                }));
-
-            } catch (Exception e) {
-                logger.error("Failed to retrieve master key from master_key index", e);
-                listener.onFailure(e);
-            }
-
+            encryptorUtils.initializeMasterKey(listener);
         }, createIndexException -> {
             logger.error("Failed to create master_key index", createIndexException);
             listener.onFailure(createIndexException);

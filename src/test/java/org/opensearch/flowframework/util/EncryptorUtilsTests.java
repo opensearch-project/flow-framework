@@ -6,7 +6,7 @@
  * this file be licensed under the Apache-2.0 license or a
  * compatible open source license.
  */
-package org.opensearch.flowframework.common;
+package org.opensearch.flowframework.util;
 
 import com.google.common.collect.ImmutableMap;
 import org.opensearch.action.get.GetRequest;
@@ -19,7 +19,6 @@ import org.opensearch.common.settings.Settings;
 import org.opensearch.common.util.concurrent.ThreadContext;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.flowframework.exception.FlowFrameworkException;
-import org.opensearch.flowframework.util.EncryptorUtils;
 import org.opensearch.test.OpenSearchTestCase;
 import org.opensearch.threadpool.ThreadPool;
 
@@ -103,7 +102,7 @@ public class EncryptorUtilsTests extends OpenSearchTestCase {
             return null;
         }).when(client).get(any(GetRequest.class), any());
 
-        encryptorUtils.initializeMasterKey();
+        encryptorUtils.initializeMasterKeyIfAbsent();
         assertEquals(masterKey, encryptorUtils.getMasterKey());
     }
 
@@ -120,7 +119,7 @@ public class EncryptorUtilsTests extends OpenSearchTestCase {
             return null;
         }).when(client).get(any(GetRequest.class), any());
 
-        FlowFrameworkException ex = expectThrows(FlowFrameworkException.class, () -> encryptorUtils.initializeMasterKey());
+        FlowFrameworkException ex = expectThrows(FlowFrameworkException.class, () -> encryptorUtils.initializeMasterKeyIfAbsent());
         assertEquals("Encryption key has not been initialized", ex.getMessage());
     }
 
