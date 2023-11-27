@@ -128,22 +128,22 @@ public class EncryptorUtils {
                 if (node.userInputs().containsKey(CREDENTIAL_FIELD)) {
                     // Apply the cipher funcion on all values within credential field
                     @SuppressWarnings("unchecked")
-                    Map<String, String> credentials = (Map<String, String>) node.userInputs().get(CREDENTIAL_FIELD);
+                    Map<String, String> credentials = new HashMap<>((Map<String, String>) node.userInputs().get(CREDENTIAL_FIELD));
                     credentials.replaceAll((key, cred) -> cipherFunction.apply(cred));
 
                     // Replace credentials field in node user inputs
-                    Map<String, Object> encryptedUserInputs = new HashMap<>();
-                    encryptedUserInputs.putAll(node.userInputs());
-                    encryptedUserInputs.replace(CREDENTIAL_FIELD, credentials);
+                    Map<String, Object> processedUserInputs = new HashMap<>();
+                    processedUserInputs.putAll(node.userInputs());
+                    processedUserInputs.replace(CREDENTIAL_FIELD, credentials);
 
                     // build new node to add to processed nodes
-                    WorkflowNode encryptedWorkflowNode = new WorkflowNode(
+                    WorkflowNode processedWorkflowNode = new WorkflowNode(
                         node.id(),
                         node.type(),
                         node.previousNodeInputs(),
-                        encryptedUserInputs
+                        processedUserInputs
                     );
-                    processedNodes.add(encryptedWorkflowNode);
+                    processedNodes.add(processedWorkflowNode);
                 } else {
                     processedNodes.add(node);
                 }
