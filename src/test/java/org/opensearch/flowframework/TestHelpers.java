@@ -13,8 +13,14 @@ import com.google.common.collect.Sets;
 import org.opensearch.common.settings.ClusterSettings;
 import org.opensearch.common.settings.Setting;
 import org.opensearch.common.settings.Settings;
+import org.opensearch.common.xcontent.XContentHelper;
+import org.opensearch.common.xcontent.XContentType;
 import org.opensearch.commons.authuser.User;
+import org.opensearch.core.common.bytes.BytesReference;
+import org.opensearch.core.xcontent.XContentBuilder;
 
+import java.io.IOException;
+import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -39,5 +45,13 @@ public class TestHelpers {
         ).collect(Collectors.toSet());
         ClusterSettings clusterSettings = new ClusterSettings(settings, settingsSet);
         return clusterSettings;
+    }
+
+    public static XContentBuilder builder() throws IOException {
+        return XContentBuilder.builder(XContentType.JSON.xContent());
+    }
+
+    public static Map<String, Object> XContentBuilderToMap(XContentBuilder builder) {
+        return XContentHelper.convertToMap(BytesReference.bytes(builder), false, builder.contentType()).v2();
     }
 }

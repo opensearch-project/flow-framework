@@ -68,7 +68,8 @@ public class RegisterRemoteModelStep implements WorkflowStep {
                         Map.ofEntries(
                             Map.entry(MODEL_ID, mlRegisterModelResponse.getModelId()),
                             Map.entry(REGISTER_MODEL_STATUS, mlRegisterModelResponse.getStatus())
-                        )
+                        ),
+                        data.get(0).getWorkflowId()
                     )
                 );
             }

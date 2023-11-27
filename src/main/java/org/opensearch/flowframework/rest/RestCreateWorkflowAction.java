@@ -47,7 +47,6 @@ public class RestCreateWorkflowAction extends AbstractWorkflowAction {
 
     /**
      * Instantiates a new RestCreateWorkflowAction
-     *
      * @param flowFrameworkFeatureEnabledSetting Whether this API is enabled
      * @param settings Environment settings
      * @param clusterService clusterService

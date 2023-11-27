@@ -46,7 +46,7 @@ public class CommonValue {
     public static final String USER_FIELD = "user";
 
     /** The transport action name prefix */
-    public static final String TRANSPORT_ACION_NAME_PREFIX = "cluster:admin/opensearch/flow_framework/";
+    public static final String TRANSPORT_ACTION_NAME_PREFIX = "cluster:admin/opensearch/flow_framework/";
     /** The base URI for this plugin's rest actions */
     public static final String FLOW_FRAMEWORK_BASE_URI = "/_plugins/_flow_framework";
     /** The URI for this plugin's workflow rest actions */
@@ -148,4 +148,9 @@ public class CommonValue {
     public static final String USER_OUTPUTS_FIELD = "user_outputs";
     /** The template field name for template resources created */
     public static final String RESOURCES_CREATED_FIELD = "resources_created";
+    /** The field name for the ResourceCreated's resource ID */
+    public static final String RESOURCE_ID_FIELD = "resource_id";
+    /** The field name for the ResourceCreated's resource name */
+    public static final String WORKFLOW_STEP_NAME = "workflow_step_name";
+
 }

@@ -53,7 +53,8 @@ public class ModelGroupStepTests extends OpenSearchTestCase {
                 Map.entry("backend_roles", ImmutableList.of("role-1")),
                 Map.entry("access_mode", AccessMode.PUBLIC),
                 Map.entry("add_all_backend_roles", false)
-            )
+            ),
+            "test-id"
         );
 
     }
