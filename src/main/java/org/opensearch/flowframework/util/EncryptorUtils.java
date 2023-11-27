@@ -127,6 +127,7 @@ public class EncryptorUtils {
             for (WorkflowNode node : entry.getValue().nodes()) {
                 if (node.userInputs().containsKey(CREDENTIAL_FIELD)) {
                     // Apply the cipher funcion on all values within credential field
+                    @SuppressWarnings("unchecked")
                     Map<String, String> credentials = (Map<String, String>) node.userInputs().get(CREDENTIAL_FIELD);
                     credentials.replaceAll((key, cred) -> cipherFunction.apply(cred));
 
@@ -170,7 +171,7 @@ public class EncryptorUtils {
      * @param credential the credential to encrypt
      * @return the encrypted credential
      */
-    protected String encrypt(String credential) {
+    protected String encrypt(final String credential) {
         initializeMasterKeyIfAbsent();
         final AwsCrypto crypto = AwsCrypto.builder().withCommitmentPolicy(CommitmentPolicy.RequireEncryptRequireDecrypt).build();
         byte[] bytes = Base64.getDecoder().decode(masterKey);
@@ -187,7 +188,7 @@ public class EncryptorUtils {
      * @param encryptedCredential the credential to decrypt
      * @return the decrypted credential
      */
-    protected String decrypt(String encryptedCredential) {
+    protected String decrypt(final String encryptedCredential) {
         initializeMasterKeyIfAbsent();
         final AwsCrypto crypto = AwsCrypto.builder().withCommitmentPolicy(CommitmentPolicy.RequireEncryptRequireDecrypt).build();
 
