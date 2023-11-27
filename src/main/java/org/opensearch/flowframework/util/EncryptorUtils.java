@@ -227,7 +227,7 @@ public class EncryptorUtils {
                     client.index(masterKeyIndexRequest, ActionListener.wrap(indexResponse -> {
                         // Set generated key to master
                         logger.info("Master key has been initialized successfully");
-                        this.setMasterKey(masterKey);
+                        this.masterKey = masterKey;
                         listener.onResponse(true);
                     }, indexException -> {
                         logger.error("Failed to index master key", indexException);
@@ -238,7 +238,7 @@ public class EncryptorUtils {
                     // Set existing key to master
                     logger.info("Master key has already been initialized");
                     final String masterKey = (String) getResponse.getSourceAsMap().get(MASTER_KEY);
-                    this.setMasterKey(masterKey);
+                    this.masterKey = masterKey;
                     listener.onResponse(true);
                 }
             }, getRequestException -> {
