@@ -50,7 +50,10 @@ public class DeployModelStep implements WorkflowStep {
             public void onResponse(MLDeployModelResponse mlDeployModelResponse) {
                 logger.info("Model deployment state {}", mlDeployModelResponse.getStatus());
                 deployModelFuture.complete(
-                    new WorkflowData(Map.ofEntries(Map.entry("deploy_model_status", mlDeployModelResponse.getStatus())))
+                    new WorkflowData(
+                        Map.ofEntries(Map.entry("deploy_model_status", mlDeployModelResponse.getStatus())),
+                        data.get(0).getWorkflowId()
+                    )
                 );
             }
 

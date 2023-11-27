@@ -58,7 +58,7 @@ public class ProcessNodeTests extends OpenSearchTestCase {
             @Override
             public CompletableFuture<WorkflowData> execute(List<WorkflowData> data) {
                 CompletableFuture<WorkflowData> f = new CompletableFuture<>();
-                f.complete(new WorkflowData(Map.of("test", "output")));
+                f.complete(new WorkflowData(Map.of("test", "output"), "test-id"));
                 return f;
             }
 
@@ -68,7 +68,7 @@ public class ProcessNodeTests extends OpenSearchTestCase {
             }
         },
             Map.of(),
-            new WorkflowData(Map.of("test", "input"), Map.of("foo", "bar")),
+            new WorkflowData(Map.of("test", "input"), Map.of("foo", "bar"), "test-id"),
             List.of(successfulNode),
             testThreadPool,
             TimeValue.timeValueMillis(50)
@@ -77,6 +77,7 @@ public class ProcessNodeTests extends OpenSearchTestCase {
         assertEquals("test", nodeA.workflowStep().getName());
         assertEquals("input", nodeA.input().getContent().get("test"));
         assertEquals("bar", nodeA.input().getParams().get("foo"));
+        assertEquals("test-id", nodeA.input().getWorkflowId());
         assertEquals(1, nodeA.predecessors().size());
         assertEquals(50, nodeA.nodeTimeout().millis());
         assertEquals("A", nodeA.toString());
