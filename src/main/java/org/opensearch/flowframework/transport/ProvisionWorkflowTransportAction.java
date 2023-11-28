@@ -208,7 +208,7 @@ public class ProvisionWorkflowTransportAction extends HandledTransportAction<Wor
                 ),
                 ActionListener.wrap(updateResponse -> {
                     logger.info("updated workflow {} state to {}", workflowId, State.COMPLETED);
-                }, exception -> { logger.error("Failed to update workflow state : {}", exception.getMessage()); })
+                }, exception -> { logger.error("Failed to update workflow state : {}", exception.getMessage(), exception); })
             );
         } catch (Exception ex) {
             logger.error("Provisioning failed for workflow {} : {}", workflowId, ex);
@@ -226,7 +226,7 @@ public class ProvisionWorkflowTransportAction extends HandledTransportAction<Wor
                 ),
                 ActionListener.wrap(updateResponse -> {
                     logger.info("updated workflow {} state to {}", workflowId, State.COMPLETED);
-                }, exceptionState -> { logger.error("Failed to update workflow state : {}", exceptionState.getMessage()); })
+                }, exceptionState -> { logger.error("Failed to update workflow state : {}", exceptionState.getMessage(), exceptionState); })
             );
         }
     }

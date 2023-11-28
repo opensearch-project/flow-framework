@@ -12,6 +12,7 @@ import com.carrotsearch.randomizedtesting.annotations.ThreadLeakScope;
 
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.flowframework.exception.FlowFrameworkException;
+import org.opensearch.flowframework.indices.FlowFrameworkIndicesHandler;
 import org.opensearch.ml.client.MachineLearningNodeClient;
 import org.opensearch.ml.common.MLTaskState;
 import org.opensearch.ml.common.model.MLModelConfig;
@@ -32,6 +33,7 @@ import static org.opensearch.flowframework.common.CommonValue.REGISTER_MODEL_STA
 import static org.opensearch.flowframework.common.CommonValue.TASK_ID;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 
 @ThreadLeakScope(ThreadLeakScope.Scope.NONE)
@@ -43,12 +45,15 @@ public class RegisterLocalModelStepTests extends OpenSearchTestCase {
     @Mock
     MachineLearningNodeClient machineLearningNodeClient;
 
+    private FlowFrameworkIndicesHandler flowFrameworkIndicesHandler;
+
     @Override
     public void setUp() throws Exception {
         super.setUp();
+        this.flowFrameworkIndicesHandler = mock(FlowFrameworkIndicesHandler.class);
 
         MockitoAnnotations.openMocks(this);
-        this.registerLocalModelStep = new RegisterLocalModelStep(machineLearningNodeClient);
+        this.registerLocalModelStep = new RegisterLocalModelStep(machineLearningNodeClient, flowFrameworkIndicesHandler);
 
         MLModelConfig config = TextEmbeddingModelConfig.builder()
             .modelType("testModelType")

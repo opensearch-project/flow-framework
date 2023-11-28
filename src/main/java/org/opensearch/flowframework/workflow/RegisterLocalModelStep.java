@@ -13,7 +13,9 @@ import org.apache.logging.log4j.Logger;
 import org.opensearch.ExceptionsHelper;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.core.rest.RestStatus;
+import org.opensearch.flowframework.common.WorkflowResources;
 import org.opensearch.flowframework.exception.FlowFrameworkException;
+import org.opensearch.flowframework.indices.FlowFrameworkIndicesHandler;
 import org.opensearch.ml.client.MachineLearningNodeClient;
 import org.opensearch.ml.common.model.MLModelConfig;
 import org.opensearch.ml.common.model.MLModelFormat;
@@ -40,7 +42,6 @@ import static org.opensearch.flowframework.common.CommonValue.MODEL_GROUP_ID;
 import static org.opensearch.flowframework.common.CommonValue.MODEL_TYPE;
 import static org.opensearch.flowframework.common.CommonValue.NAME_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.REGISTER_MODEL_STATUS;
-import static org.opensearch.flowframework.common.CommonValue.TASK_ID;
 import static org.opensearch.flowframework.common.CommonValue.URL;
 import static org.opensearch.flowframework.common.CommonValue.VERSION_FIELD;
 
@@ -52,15 +53,18 @@ public class RegisterLocalModelStep implements WorkflowStep {
     private static final Logger logger = LogManager.getLogger(RegisterLocalModelStep.class);
 
     private MachineLearningNodeClient mlClient;
+    private final FlowFrameworkIndicesHandler flowFrameworkIndicesHandler;
 
-    static final String NAME = "register_local_model";
+    static final String NAME = WorkflowResources.REGISTER_LOCAL_MODEL.getWorkflowStep();
 
     /**
      * Instantiate this class
      * @param mlClient client to instantiate MLClient
+     * @param flowFrameworkIndicesHandler FlowFrameworkIndicesHandler class to update system indices
      */
-    public RegisterLocalModelStep(MachineLearningNodeClient mlClient) {
+    public RegisterLocalModelStep(MachineLearningNodeClient mlClient, FlowFrameworkIndicesHandler flowFrameworkIndicesHandler) {
         this.mlClient = mlClient;
+        this.flowFrameworkIndicesHandler = flowFrameworkIndicesHandler;
     }
 
     @Override
@@ -71,16 +75,32 @@ public class RegisterLocalModelStep implements WorkflowStep {
         ActionListener<MLRegisterModelResponse> actionListener = new ActionListener<>() {
             @Override
             public void onResponse(MLRegisterModelResponse mlRegisterModelResponse) {
-                logger.info("Local Model registration task creation successful");
-                registerLocalModelFuture.complete(
-                    new WorkflowData(
-                        Map.ofEntries(
-                            Map.entry(TASK_ID, mlRegisterModelResponse.getTaskId()),
-                            Map.entry(REGISTER_MODEL_STATUS, mlRegisterModelResponse.getStatus())
-                        ),
-                        data.get(0).getWorkflowId()
-                    )
-                );
+
+                try {
+                    logger.info("Local Model registration task creation successful");
+                    String resourceName = WorkflowResources.getResourceByWorkflowStep(getName());
+
+                    registerLocalModelFuture.complete(
+                        new WorkflowData(
+                            Map.ofEntries(
+                                Map.entry(resourceName, mlRegisterModelResponse.getTaskId()),
+                                Map.entry(REGISTER_MODEL_STATUS, mlRegisterModelResponse.getStatus())
+                            ),
+                            data.get(0).getWorkflowId()
+                        )
+                    );
+                    flowFrameworkIndicesHandler.updateResourceInStateIndex(
+                        data.get(0),
+                        getName(),
+                        mlRegisterModelResponse.getTaskId(),
+                        registerLocalModelFuture
+                    );
+
+                } catch (Exception e) {
+                    logger.error("Failed to parse and update new created resource", e);
+                    registerLocalModelFuture.completeExceptionally(new FlowFrameworkException(e.getMessage(), ExceptionsHelper.status(e)));
+                }
+
             }
 
             @Override

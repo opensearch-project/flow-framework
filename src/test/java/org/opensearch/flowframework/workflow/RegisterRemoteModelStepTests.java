@@ -12,6 +12,7 @@ import com.carrotsearch.randomizedtesting.annotations.ThreadLeakScope;
 
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.flowframework.exception.FlowFrameworkException;
+import org.opensearch.flowframework.indices.FlowFrameworkIndicesHandler;
 import org.opensearch.ml.client.MachineLearningNodeClient;
 import org.opensearch.ml.common.MLTaskState;
 import org.opensearch.ml.common.transport.register.MLRegisterModelInput;
@@ -30,6 +31,7 @@ import static org.opensearch.flowframework.common.CommonValue.MODEL_ID;
 import static org.opensearch.flowframework.common.CommonValue.REGISTER_MODEL_STATUS;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
@@ -38,6 +40,7 @@ public class RegisterRemoteModelStepTests extends OpenSearchTestCase {
 
     private RegisterRemoteModelStep registerRemoteModelStep;
     private WorkflowData workflowData;
+    private FlowFrameworkIndicesHandler flowFrameworkIndicesHandler;
 
     @Mock
     MachineLearningNodeClient mlNodeClient;
@@ -45,9 +48,10 @@ public class RegisterRemoteModelStepTests extends OpenSearchTestCase {
     @Override
     public void setUp() throws Exception {
         super.setUp();
+        this.flowFrameworkIndicesHandler = mock(FlowFrameworkIndicesHandler.class);
 
         MockitoAnnotations.openMocks(this);
-        this.registerRemoteModelStep = new RegisterRemoteModelStep(mlNodeClient);
+        this.registerRemoteModelStep = new RegisterRemoteModelStep(mlNodeClient, flowFrameworkIndicesHandler);
         this.workflowData = new WorkflowData(
             Map.ofEntries(
                 Map.entry("function_name", "remote"),

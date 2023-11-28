@@ -29,8 +29,11 @@ public class WorkflowData {
     @Nullable
     private String workflowId;
 
+    @Nullable
+    private String nodeId;
+
     private WorkflowData() {
-        this(Collections.emptyMap(), Collections.emptyMap(), "");
+        this(Collections.emptyMap(), Collections.emptyMap(), "", "");
     }
 
     /**
@@ -39,7 +42,7 @@ public class WorkflowData {
      * @param workflowId The workflow ID associated with this step
      */
     public WorkflowData(Map<String, Object> content, @Nullable String workflowId) {
-        this(content, Collections.emptyMap(), workflowId);
+        this(content, Collections.emptyMap(), workflowId, "");
     }
 
     /**
@@ -49,9 +52,21 @@ public class WorkflowData {
      * @param workflowId The workflow ID associated with this step
      */
     public WorkflowData(Map<String, Object> content, Map<String, String> params, @Nullable String workflowId) {
+        this(Map.copyOf(content), Map.copyOf(params), workflowId, null);
+    }
+
+    /**
+     * Instantiate this object with content and params.
+     * @param content The content map
+     * @param params The params map
+     * @param workflowId The workflow ID associated with this step
+     * @param nodeId the node ID associated with this step
+     */
+    public WorkflowData(Map<String, Object> content, Map<String, String> params, @Nullable String workflowId, @Nullable String nodeId) {
         this.content = Map.copyOf(content);
         this.params = Map.copyOf(params);
         this.workflowId = workflowId;
+        this.nodeId = nodeId;
     }
 
     /**
@@ -78,5 +93,14 @@ public class WorkflowData {
     @Nullable
     public String getWorkflowId() {
         return this.workflowId;
+    };
+
+    /**
+     * Returns the nodeId associated with this workflowData.
+     * @return the nodeId of this data.
+     */
+    @Nullable
+    public String getNodeId() {
+        return this.nodeId;
     };
 }
