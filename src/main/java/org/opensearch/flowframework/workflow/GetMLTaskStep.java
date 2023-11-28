@@ -51,7 +51,7 @@ public class GetMLTaskStep implements WorkflowStep {
         ActionListener<MLTask> actionListener = ActionListener.wrap(response -> {
 
             // TODO : Add retry capability if response status is not COMPLETED :
-            // https://github.com/opensearch-project/opensearch-ai-flow-framework/issues/158
+            // https://github.com/opensearch-project/flow-framework/issues/158
 
             logger.info("ML Task retrieval successful");
             getMLTaskFuture.complete(
