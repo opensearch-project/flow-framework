@@ -10,6 +10,10 @@ package org.opensearch.flowframework.workflow;
 
 import com.carrotsearch.randomizedtesting.annotations.ThreadLeakScope;
 
+import org.opensearch.cluster.service.ClusterService;
+import org.opensearch.common.settings.ClusterSettings;
+import org.opensearch.common.settings.Setting;
+import org.opensearch.common.settings.Settings;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.flowframework.exception.FlowFrameworkException;
 import org.opensearch.ml.client.MachineLearningNodeClient;
@@ -19,8 +23,11 @@ import org.opensearch.test.OpenSearchTestCase;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
@@ -28,10 +35,14 @@ import org.mockito.MockitoAnnotations;
 import static org.opensearch.flowframework.common.CommonValue.MODEL_ID;
 import static org.opensearch.flowframework.common.CommonValue.REGISTER_MODEL_STATUS;
 import static org.opensearch.flowframework.common.CommonValue.TASK_ID;
+import static org.opensearch.flowframework.common.FlowFrameworkSettings.MAX_GET_TASK_REQUEST_RETRY;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 @ThreadLeakScope(ThreadLeakScope.Scope.NONE)
 public class GetMLTaskStepTests extends OpenSearchTestCase {
@@ -47,7 +58,18 @@ public class GetMLTaskStepTests extends OpenSearchTestCase {
         super.setUp();
 
         MockitoAnnotations.openMocks(this);
-        this.getMLTaskStep = new GetMLTaskStep(mlNodeClient);
+        ClusterService clusterService = mock(ClusterService.class);
+        final Set<Setting<?>> settingsSet = Stream.concat(
+            ClusterSettings.BUILT_IN_CLUSTER_SETTINGS.stream(),
+            Stream.of(MAX_GET_TASK_REQUEST_RETRY)
+        ).collect(Collectors.toSet());
+
+        // Set max request retry setting to 0 to avoid sleeping the thread during unit test failure cases
+        Settings testMaxRetrySetting = Settings.builder().put(MAX_GET_TASK_REQUEST_RETRY.getKey(), 0).build();
+        ClusterSettings clusterSettings = new ClusterSettings(testMaxRetrySetting, settingsSet);
+        when(clusterService.getClusterSettings()).thenReturn(clusterSettings);
+
+        this.getMLTaskStep = spy(new GetMLTaskStep(testMaxRetrySetting, clusterService, mlNodeClient));
         this.workflowData = new WorkflowData(Map.ofEntries(Map.entry(TASK_ID, "test")), "test-id");
     }
 
