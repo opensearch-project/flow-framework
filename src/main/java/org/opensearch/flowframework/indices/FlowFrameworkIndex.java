@@ -44,7 +44,7 @@ public enum FlowFrameworkIndex {
      */
     CONFIG(
         CONFIG_INDEX,
-        ThrowingSupplierWrapper.throwingSupplierWrapper(FlowFrameworkIndicesHandler::getMasterKeyMappings),
+        ThrowingSupplierWrapper.throwingSupplierWrapper(FlowFrameworkIndicesHandler::getConfigIndexMappings),
         CONFIG_INDEX_VERSION
     );
 

@@ -110,11 +110,11 @@ public class FlowFrameworkIndicesHandler {
     }
 
     /**
-     * Get master-key index mapping
-     * @return master-key index mapping
+     * Get config index mapping
+     * @return config index mapping
      * @throws IOException if mapping file cannot be read correctly
      */
-    public static String getMasterKeyMappings() throws IOException {
+    public static String getConfigIndexMappings() throws IOException {
         return getIndexMappings(CONFIG_INDEX_MAPPING);
     }
 
