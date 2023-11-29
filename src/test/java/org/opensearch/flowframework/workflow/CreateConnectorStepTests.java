@@ -20,7 +20,7 @@ import org.opensearch.ml.common.transport.connector.MLCreateConnectorResponse;
 import org.opensearch.test.OpenSearchTestCase;
 
 import java.io.IOException;
-import java.util.List;
+import java.util.Collections;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
@@ -71,7 +71,8 @@ public class CreateConnectorStepTests extends OpenSearchTestCase {
                 Map.entry(CommonValue.CREDENTIALS_FIELD, credentials),
                 Map.entry(CommonValue.ACTIONS_FIELD, actions)
             ),
-            "test-id"
+            "test-id",
+            "test-node-id"
         );
     }
 
@@ -90,7 +91,12 @@ public class CreateConnectorStepTests extends OpenSearchTestCase {
             return null;
         }).when(machineLearningNodeClient).createConnector(any(MLCreateConnectorInput.class), actionListenerCaptor.capture());
 
-        CompletableFuture<WorkflowData> future = createConnectorStep.execute(List.of(inputData));
+        CompletableFuture<WorkflowData> future = createConnectorStep.execute(
+            inputData.getNodeId(),
+            inputData,
+            Collections.emptyMap(),
+            Collections.emptyMap()
+        );
 
         verify(machineLearningNodeClient).createConnector(any(MLCreateConnectorInput.class), actionListenerCaptor.capture());
 
@@ -111,7 +117,12 @@ public class CreateConnectorStepTests extends OpenSearchTestCase {
             return null;
         }).when(machineLearningNodeClient).createConnector(any(MLCreateConnectorInput.class), actionListenerCaptor.capture());
 
-        CompletableFuture<WorkflowData> future = createConnectorStep.execute(List.of(inputData));
+        CompletableFuture<WorkflowData> future = createConnectorStep.execute(
+            inputData.getNodeId(),
+            inputData,
+            Collections.emptyMap(),
+            Collections.emptyMap()
+        );
 
         verify(machineLearningNodeClient).createConnector(any(MLCreateConnectorInput.class), actionListenerCaptor.capture());
 

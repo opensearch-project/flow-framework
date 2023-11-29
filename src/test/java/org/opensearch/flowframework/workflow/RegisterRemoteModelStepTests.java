@@ -18,7 +18,7 @@ import org.opensearch.ml.common.transport.register.MLRegisterModelInput;
 import org.opensearch.ml.common.transport.register.MLRegisterModelResponse;
 import org.opensearch.test.OpenSearchTestCase;
 
-import java.util.List;
+import java.util.Collections;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
@@ -55,7 +55,8 @@ public class RegisterRemoteModelStepTests extends OpenSearchTestCase {
                 Map.entry("description", "description"),
                 Map.entry("connector_id", "abcdefg")
             ),
-            "test-id"
+            "test-id",
+            "test-node-id"
         );
     }
 
@@ -72,7 +73,12 @@ public class RegisterRemoteModelStepTests extends OpenSearchTestCase {
             return null;
         }).when(mlNodeClient).register(any(MLRegisterModelInput.class), any());
 
-        CompletableFuture<WorkflowData> future = this.registerRemoteModelStep.execute(List.of(workflowData));
+        CompletableFuture<WorkflowData> future = this.registerRemoteModelStep.execute(
+            workflowData.getNodeId(),
+            workflowData,
+            Collections.emptyMap(),
+            Collections.emptyMap()
+        );
 
         verify(mlNodeClient, times(1)).register(any(MLRegisterModelInput.class), any());
 
@@ -90,7 +96,12 @@ public class RegisterRemoteModelStepTests extends OpenSearchTestCase {
             return null;
         }).when(mlNodeClient).register(any(MLRegisterModelInput.class), any());
 
-        CompletableFuture<WorkflowData> future = this.registerRemoteModelStep.execute(List.of(workflowData));
+        CompletableFuture<WorkflowData> future = this.registerRemoteModelStep.execute(
+            workflowData.getNodeId(),
+            workflowData,
+            Collections.emptyMap(),
+            Collections.emptyMap()
+        );
         assertTrue(future.isDone());
         assertTrue(future.isCompletedExceptionally());
         ExecutionException ex = expectThrows(ExecutionException.class, () -> future.get().getClass());
@@ -100,7 +111,12 @@ public class RegisterRemoteModelStepTests extends OpenSearchTestCase {
     }
 
     public void testMissingInputs() {
-        CompletableFuture<WorkflowData> future = this.registerRemoteModelStep.execute(List.of(WorkflowData.EMPTY));
+        CompletableFuture<WorkflowData> future = this.registerRemoteModelStep.execute(
+            "nodeId",
+            WorkflowData.EMPTY,
+            Collections.emptyMap(),
+            Collections.emptyMap()
+        );
         assertTrue(future.isDone());
         assertTrue(future.isCompletedExceptionally());
         ExecutionException ex = assertThrows(ExecutionException.class, () -> future.get().getContent());

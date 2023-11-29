@@ -74,22 +74,28 @@ public class CreateConnectorStep implements WorkflowStep {
 
     // TODO: need to add retry conflicts here
     @Override
-    public CompletableFuture<WorkflowData> execute(List<WorkflowData> data) throws IOException {
+    public CompletableFuture<WorkflowData> execute(
+        String currentNodeId,
+        WorkflowData currentNodeInputs,
+        Map<String, WorkflowData> outputs,
+        Map<String, String> previousNodeInputs
+    ) throws IOException {
         CompletableFuture<WorkflowData> createConnectorFuture = new CompletableFuture<>();
 
         ActionListener<MLCreateConnectorResponse> actionListener = new ActionListener<>() {
 
             @Override
             public void onResponse(MLCreateConnectorResponse mlCreateConnectorResponse) {
+                String workflowId = currentNodeInputs.getWorkflowId();
                 createConnectorFuture.complete(
                     new WorkflowData(
                         Map.ofEntries(Map.entry("connector_id", mlCreateConnectorResponse.getConnectorId())),
-                        data.get(0).getWorkflowId()
+                        workflowId,
+                        currentNodeInputs.getNodeId()
                     )
                 );
                 try {
                     logger.info("Created connector successfully");
-                    String workflowId = data.get(0).getWorkflowId();
                     String workflowStepName = getName();
                     ResourceCreated newResource = new ResourceCreated(workflowStepName, mlCreateConnectorResponse.getConnectorId());
                     XContentBuilder builder = XContentBuilder.builder(XContentType.JSON.xContent());
@@ -135,6 +141,12 @@ public class CreateConnectorStep implements WorkflowStep {
         Map<String, String> parameters = Collections.emptyMap();
         Map<String, String> credentials = Collections.emptyMap();
         List<ConnectorAction> actions = Collections.emptyList();
+
+        // TODO: Recreating the list to get this compiling
+        // Need to refactor the below iteration to pull directly from the maps
+        List<WorkflowData> data = new ArrayList<>();
+        data.add(currentNodeInputs);
+        data.addAll(outputs.values());
 
         try {
             for (WorkflowData workflowData : data) {
