@@ -39,6 +39,14 @@
             "connector_id"
         ]
     },
+    "delete_connector": {
+        "inputs": [
+            "connector_id"
+        ],
+        "outputs":[
+            "connector_id"
+        ]
+    },
     "register_local_model": {
         "inputs":[
             "name",
