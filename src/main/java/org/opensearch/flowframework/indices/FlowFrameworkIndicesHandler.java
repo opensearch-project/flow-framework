@@ -38,6 +38,7 @@ import org.opensearch.flowframework.model.ProvisioningProgress;
 import org.opensearch.flowframework.model.State;
 import org.opensearch.flowframework.model.Template;
 import org.opensearch.flowframework.model.WorkflowState;
+import org.opensearch.flowframework.util.EncryptorUtils;
 import org.opensearch.script.Script;
 
 import java.io.IOException;
@@ -48,6 +49,7 @@ import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import static org.opensearch.core.rest.RestStatus.INTERNAL_SERVER_ERROR;
+import static org.opensearch.flowframework.common.CommonValue.CONFIG_INDEX_MAPPING;
 import static org.opensearch.flowframework.common.CommonValue.GLOBAL_CONTEXT_INDEX;
 import static org.opensearch.flowframework.common.CommonValue.GLOBAL_CONTEXT_INDEX_MAPPING;
 import static org.opensearch.flowframework.common.CommonValue.META;
@@ -64,6 +66,7 @@ public class FlowFrameworkIndicesHandler {
     private static final Logger logger = LogManager.getLogger(FlowFrameworkIndicesHandler.class);
     private final Client client;
     private final ClusterService clusterService;
+    private final EncryptorUtils encryptorUtils;
     private static final Map<String, AtomicBoolean> indexMappingUpdated = new HashMap<>();
     private static final Map<String, Object> indexSettings = Map.of("index.auto_expand_replicas", "0-1");
 
@@ -71,10 +74,12 @@ public class FlowFrameworkIndicesHandler {
      * constructor
      * @param client the open search client
      * @param clusterService ClusterService
+     * @param encryptorUtils encryption utility
      */
-    public FlowFrameworkIndicesHandler(Client client, ClusterService clusterService) {
+    public FlowFrameworkIndicesHandler(Client client, ClusterService clusterService, EncryptorUtils encryptorUtils) {
         this.client = client;
         this.clusterService = clusterService;
+        this.encryptorUtils = encryptorUtils;
         for (FlowFrameworkIndex mlIndex : FlowFrameworkIndex.values()) {
             indexMappingUpdated.put(mlIndex.getIndexName(), new AtomicBoolean(false));
         }
@@ -105,6 +110,15 @@ public class FlowFrameworkIndicesHandler {
     }
 
     /**
+     * Get config index mapping
+     * @return config index mapping
+     * @throws IOException if mapping file cannot be read correctly
+     */
+    public static String getConfigIndexMappings() throws IOException {
+        return getIndexMappings(CONFIG_INDEX_MAPPING);
+    }
+
+    /**
      * Create global context index if it's absent
      * @param listener The action listener
      */
@@ -118,6 +132,14 @@ public class FlowFrameworkIndicesHandler {
      */
     public void initWorkflowStateIndexIfAbsent(ActionListener<Boolean> listener) {
         initFlowFrameworkIndexIfAbsent(FlowFrameworkIndex.WORKFLOW_STATE, listener);
+    }
+
+    /**
+     * Create config index if it's absent
+     * @param listener The action listener
+     */
+    public void initConfigIndexIfAbsent(ActionListener<Boolean> listener) {
+        initFlowFrameworkIndexIfAbsent(FlowFrameworkIndex.CONFIG, listener);
     }
 
     /**
@@ -287,7 +309,8 @@ public class FlowFrameworkIndicesHandler {
                 XContentBuilder builder = XContentFactory.jsonBuilder();
                 ThreadContext.StoredContext context = client.threadPool().getThreadContext().stashContext()
             ) {
-                request.source(template.toXContent(builder, ToXContent.EMPTY_PARAMS))
+                Template templateWithEncryptedCredentials = encryptorUtils.encryptTemplateCredentials(template);
+                request.source(templateWithEncryptedCredentials.toXContent(builder, ToXContent.EMPTY_PARAMS))
                     .setRefreshPolicy(WriteRequest.RefreshPolicy.IMMEDIATE);
                 client.index(request, ActionListener.runBefore(listener, () -> context.restore()));
             } catch (Exception e) {
@@ -298,6 +321,23 @@ public class FlowFrameworkIndicesHandler {
         }, e -> {
             logger.error("Failed to create global_context index", e);
             listener.onFailure(e);
+        }));
+    }
+
+    /**
+     * Initializes config index and EncryptorUtils
+     * @param listener action listener
+     */
+    public void initializeConfigIndex(ActionListener<Boolean> listener) {
+        initConfigIndexIfAbsent(ActionListener.wrap(indexCreated -> {
+            if (!indexCreated) {
+                listener.onFailure(new FlowFrameworkException("No response to create config index", INTERNAL_SERVER_ERROR));
+                return;
+            }
+            encryptorUtils.initializeMasterKey(listener);
+        }, createIndexException -> {
+            logger.error("Failed to create config index", createIndexException);
+            listener.onFailure(createIndexException);
         }));
     }
 
@@ -361,7 +401,8 @@ public class FlowFrameworkIndicesHandler {
                 XContentBuilder builder = XContentFactory.jsonBuilder();
                 ThreadContext.StoredContext context = client.threadPool().getThreadContext().stashContext()
             ) {
-                request.source(template.toXContent(builder, ToXContent.EMPTY_PARAMS))
+                Template encryptedTemplate = encryptorUtils.encryptTemplateCredentials(template);
+                request.source(encryptedTemplate.toXContent(builder, ToXContent.EMPTY_PARAMS))
                     .setRefreshPolicy(WriteRequest.RefreshPolicy.IMMEDIATE);
                 client.index(request, ActionListener.runBefore(listener, () -> context.restore()));
             } catch (Exception e) {

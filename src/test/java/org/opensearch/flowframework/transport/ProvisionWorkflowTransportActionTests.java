@@ -25,6 +25,7 @@ import org.opensearch.flowframework.model.Template;
 import org.opensearch.flowframework.model.Workflow;
 import org.opensearch.flowframework.model.WorkflowEdge;
 import org.opensearch.flowframework.model.WorkflowNode;
+import org.opensearch.flowframework.util.EncryptorUtils;
 import org.opensearch.flowframework.workflow.WorkflowProcessSorter;
 import org.opensearch.index.get.GetResult;
 import org.opensearch.tasks.Task;
@@ -53,6 +54,7 @@ public class ProvisionWorkflowTransportActionTests extends OpenSearchTestCase {
     private ProvisionWorkflowTransportAction provisionWorkflowTransportAction;
     private Template template;
     private FlowFrameworkIndicesHandler flowFrameworkIndicesHandler;
+    private EncryptorUtils encryptorUtils;
 
     @Override
     public void setUp() throws Exception {
@@ -61,6 +63,7 @@ public class ProvisionWorkflowTransportActionTests extends OpenSearchTestCase {
         this.client = mock(Client.class);
         this.workflowProcessSorter = mock(WorkflowProcessSorter.class);
         this.flowFrameworkIndicesHandler = mock(FlowFrameworkIndicesHandler.class);
+        this.encryptorUtils = mock(EncryptorUtils.class);
 
         this.provisionWorkflowTransportAction = new ProvisionWorkflowTransportAction(
             mock(TransportService.class),
@@ -68,7 +71,8 @@ public class ProvisionWorkflowTransportActionTests extends OpenSearchTestCase {
             threadPool,
             client,
             workflowProcessSorter,
-            flowFrameworkIndicesHandler
+            flowFrameworkIndicesHandler,
+            encryptorUtils
         );
 
         Version templateVersion = Version.fromString("1.0.0");
@@ -115,6 +119,8 @@ public class ProvisionWorkflowTransportActionTests extends OpenSearchTestCase {
             responseListener.onResponse(new GetResponse(getResult));
             return null;
         }).when(client).get(any(GetRequest.class), any());
+
+        when(encryptorUtils.decryptTemplateCredentials(any())).thenReturn(template);
 
         provisionWorkflowTransportAction.doExecute(mock(Task.class), workflowRequest, listener);
         ArgumentCaptor<WorkflowResponse> responseCaptor = ArgumentCaptor.forClass(WorkflowResponse.class);
