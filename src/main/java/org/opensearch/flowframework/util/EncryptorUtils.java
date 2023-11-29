@@ -117,6 +117,7 @@ public class EncryptorUtils {
         return processTemplateCredentials(template, this::decrypt);
     }
 
+    // TODO : Improve processTemplateCredentials to encrypt different fields based on the WorkflowStep type
     /**
      * Applies the given cipher function on template credentials
      * @param template the template to process
