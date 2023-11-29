@@ -12,6 +12,8 @@ import org.opensearch.flowframework.common.ThrowingSupplierWrapper;
 
 import java.util.function.Supplier;
 
+import static org.opensearch.flowframework.common.CommonValue.CONFIG_INDEX;
+import static org.opensearch.flowframework.common.CommonValue.CONFIG_INDEX_VERSION;
 import static org.opensearch.flowframework.common.CommonValue.GLOBAL_CONTEXT_INDEX;
 import static org.opensearch.flowframework.common.CommonValue.GLOBAL_CONTEXT_INDEX_VERSION;
 import static org.opensearch.flowframework.common.CommonValue.WORKFLOW_STATE_INDEX;
@@ -36,6 +38,14 @@ public enum FlowFrameworkIndex {
         WORKFLOW_STATE_INDEX,
         ThrowingSupplierWrapper.throwingSupplierWrapper(FlowFrameworkIndicesHandler::getWorkflowStateMappings),
         WORKFLOW_STATE_INDEX_VERSION
+    ),
+    /**
+     * Config Index
+     */
+    CONFIG(
+        CONFIG_INDEX,
+        ThrowingSupplierWrapper.throwingSupplierWrapper(FlowFrameworkIndicesHandler::getConfigIndexMappings),
+        CONFIG_INDEX_VERSION
     );
 
     private final String indexName;
