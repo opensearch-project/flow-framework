@@ -42,7 +42,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.stream.Stream;
 
 import static org.opensearch.flowframework.common.CommonValue.ACTIONS_FIELD;
-import static org.opensearch.flowframework.common.CommonValue.CREDENTIALS_FIELD;
+import static org.opensearch.flowframework.common.CommonValue.CREDENTIAL_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.DESCRIPTION_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.NAME_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.PARAMETERS_FIELD;
@@ -155,8 +155,8 @@ public class CreateConnectorStep implements WorkflowStep {
                         case PARAMETERS_FIELD:
                             parameters = getParameterMap(entry.getValue());
                             break;
-                        case CREDENTIALS_FIELD:
-                            credentials = getStringToStringMap(entry.getValue(), CREDENTIALS_FIELD);
+                        case CREDENTIAL_FIELD:
+                            credentials = getStringToStringMap(entry.getValue(), CREDENTIAL_FIELD);
                             break;
                         case ACTIONS_FIELD:
                             actions = getConnectorActionList(entry.getValue());
