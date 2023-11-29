@@ -68,7 +68,8 @@ public class RegisterAgentTests extends OpenSearchTestCase {
                 Map.entry("created_time", 1689793598499L),
                 Map.entry("last_updated_time", 1689793598499L),
                 Map.entry("app_type", "app")
-            )
+            ),
+            "test-id"
         );
     }
 

@@ -100,7 +100,7 @@
             "agent_id"
         ]
     },
-    "tool": {
+    "create_tool": {
         "inputs": [
             "type"
         ],

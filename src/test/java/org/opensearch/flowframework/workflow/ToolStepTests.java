@@ -32,7 +32,8 @@ public class ToolStepTests extends OpenSearchTestCase {
                 Map.entry("description", "description"),
                 Map.entry("parameters", Collections.emptyMap()),
                 Map.entry("include_output_in_agent_response", false)
-            )
+            ),
+            "test-id"
         );
     }
 

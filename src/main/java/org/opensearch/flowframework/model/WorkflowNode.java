@@ -26,9 +26,7 @@ import java.util.Objects;
 
 import static org.opensearch.core.xcontent.XContentParserUtils.ensureExpectedToken;
 import static org.opensearch.flowframework.common.CommonValue.LLM_FIELD;
-import static org.opensearch.flowframework.util.ParseUtils.buildLLMMap;
-import static org.opensearch.flowframework.util.ParseUtils.buildStringToStringMap;
-import static org.opensearch.flowframework.util.ParseUtils.parseStringToStringMap;
+import static org.opensearch.flowframework.util.ParseUtils.*;
 
 /**
  * This represents a process node (step) in a workflow graph in the {@link Template}.
@@ -100,7 +98,7 @@ public class WorkflowNode implements ToXContentObject {
                     }
                 }
                 xContentBuilder.endArray();
-            } else if (e.getValue() instanceof Object) {
+            } else if (e.getValue() instanceof LLMSpec) {
                 if (LLM_FIELD.equals(e.getKey())) {
                     xContentBuilder.startObject();
                     buildLLMMap(xContentBuilder, (LLMSpec) e.getValue());
@@ -150,7 +148,7 @@ public class WorkflowNode implements ToXContentObject {
                                 break;
                             case START_OBJECT:
                                 if (LLM_FIELD.equals(inputFieldName)) {
-                                    userInputs.put(inputFieldName, LLMSpec.parse(parser));
+                                    userInputs.put(inputFieldName, parseLLM(parser));
                                 } else {
                                     userInputs.put(inputFieldName, parseStringToStringMap(parser));
                                 }

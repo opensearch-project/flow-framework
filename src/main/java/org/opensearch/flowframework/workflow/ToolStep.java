@@ -95,7 +95,7 @@ public class ToolStep implements WorkflowStep {
 
             MLToolSpec mlToolSpec = builder.build();
 
-            toolFuture.complete(new WorkflowData(Map.ofEntries(Map.entry(TOOLS_FIELD, mlToolSpec))));
+            toolFuture.complete(new WorkflowData(Map.ofEntries(Map.entry(TOOLS_FIELD, mlToolSpec)), data.get(0).getWorkflowId()));
         }
 
         logger.info("Tool registered successfully {}", type);
