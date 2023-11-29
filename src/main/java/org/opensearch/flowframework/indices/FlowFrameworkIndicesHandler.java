@@ -399,6 +399,7 @@ public class FlowFrameworkIndicesHandler {
                 updatedContent.putAll(updatedFields);
                 updateRequest.doc(updatedContent);
                 updateRequest.setRefreshPolicy(WriteRequest.RefreshPolicy.IMMEDIATE);
+                updateRequest.retryOnConflict(3);
                 // TODO: decide what condition can be considered as an update conflict and add retry strategy
                 client.update(updateRequest, ActionListener.runBefore(listener, () -> context.restore()));
             } catch (Exception e) {
@@ -468,6 +469,7 @@ public class FlowFrameworkIndicesHandler {
                 // TODO: Also add ability to change other fields at the same time when adding detailed provision progress
                 updateRequest.script(script);
                 updateRequest.setRefreshPolicy(WriteRequest.RefreshPolicy.IMMEDIATE);
+                updateRequest.retryOnConflict(5);
                 // TODO: decide what condition can be considered as an update conflict and add retry strategy
                 client.update(updateRequest, ActionListener.runBefore(listener, () -> context.restore()));
             } catch (Exception e) {
