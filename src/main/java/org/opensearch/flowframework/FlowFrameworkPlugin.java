@@ -39,6 +39,7 @@ import org.opensearch.flowframework.transport.ProvisionWorkflowAction;
 import org.opensearch.flowframework.transport.ProvisionWorkflowTransportAction;
 import org.opensearch.flowframework.transport.SearchWorkflowAction;
 import org.opensearch.flowframework.transport.SearchWorkflowTransportAction;
+import org.opensearch.flowframework.util.EncryptorUtils;
 import org.opensearch.flowframework.workflow.WorkflowProcessSorter;
 import org.opensearch.flowframework.workflow.WorkflowStepFactory;
 import org.opensearch.ml.client.MachineLearningNodeClient;
@@ -96,7 +97,8 @@ public class FlowFrameworkPlugin extends Plugin implements ActionPlugin {
         this.clusterService = clusterService;
         flowFrameworkFeatureEnabledSetting = new FlowFrameworkFeatureEnabledSetting(clusterService, settings);
         MachineLearningNodeClient mlClient = new MachineLearningNodeClient(client);
-        FlowFrameworkIndicesHandler flowFrameworkIndicesHandler = new FlowFrameworkIndicesHandler(client, clusterService);
+        EncryptorUtils encryptorUtils = new EncryptorUtils(clusterService, client);
+        FlowFrameworkIndicesHandler flowFrameworkIndicesHandler = new FlowFrameworkIndicesHandler(client, clusterService, encryptorUtils);
         WorkflowStepFactory workflowStepFactory = new WorkflowStepFactory(
             settings,
             clusterService,
@@ -106,7 +108,7 @@ public class FlowFrameworkPlugin extends Plugin implements ActionPlugin {
         );
         WorkflowProcessSorter workflowProcessSorter = new WorkflowProcessSorter(workflowStepFactory, threadPool);
 
-        return ImmutableList.of(workflowStepFactory, workflowProcessSorter, flowFrameworkIndicesHandler);
+        return ImmutableList.of(workflowStepFactory, workflowProcessSorter, encryptorUtils, flowFrameworkIndicesHandler);
     }
 
     @Override

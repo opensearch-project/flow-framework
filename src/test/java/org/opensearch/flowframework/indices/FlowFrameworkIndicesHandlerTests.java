@@ -25,6 +25,7 @@ import org.opensearch.common.settings.Settings;
 import org.opensearch.common.util.concurrent.ThreadContext;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.flowframework.model.Template;
+import org.opensearch.flowframework.util.EncryptorUtils;
 import org.opensearch.flowframework.workflow.CreateIndexStep;
 import org.opensearch.test.OpenSearchTestCase;
 import org.opensearch.threadpool.ThreadPool;
@@ -53,6 +54,8 @@ public class FlowFrameworkIndicesHandlerTests extends OpenSearchTestCase {
     private CreateIndexStep createIndexStep;
     @Mock
     private ThreadPool threadPool;
+    @Mock
+    private EncryptorUtils encryptorUtils;
     private FlowFrameworkIndicesHandler flowFrameworkIndicesHandler;
     private AdminClient adminClient;
     private IndicesAdminClient indicesAdminClient;
@@ -77,7 +80,7 @@ public class FlowFrameworkIndicesHandlerTests extends OpenSearchTestCase {
         threadContext = new ThreadContext(settings);
         when(client.threadPool()).thenReturn(threadPool);
         when(threadPool.getThreadContext()).thenReturn(threadContext);
-        flowFrameworkIndicesHandler = new FlowFrameworkIndicesHandler(client, clusterService);
+        flowFrameworkIndicesHandler = new FlowFrameworkIndicesHandler(client, clusterService, encryptorUtils);
         adminClient = mock(AdminClient.class);
         indicesAdminClient = mock(IndicesAdminClient.class);
         metadata = mock(Metadata.class);
