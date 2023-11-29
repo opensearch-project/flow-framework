@@ -231,12 +231,12 @@ public class CreateWorkflowTransportActionTests extends OpenSearchTestCase {
             return null;
         }).when(createWorkflowTransportAction).checkMaxWorkflows(any(TimeValue.class), anyInt(), any());
 
-        // Bypass initializeMasterKeyIndex and force onResponse
+        // Bypass initializeConfigIndex and force onResponse
         doAnswer(invocation -> {
             ActionListener<Boolean> initalizeMasterKeyIndexListener = invocation.getArgument(0);
             initalizeMasterKeyIndexListener.onResponse(true);
             return null;
-        }).when(flowFrameworkIndicesHandler).initializeMasterKeyIndex(any());
+        }).when(flowFrameworkIndicesHandler).initializeConfigIndex(any());
 
         doAnswer(invocation -> {
             ActionListener<IndexResponse> responseListener = invocation.getArgument(1);
@@ -268,12 +268,12 @@ public class CreateWorkflowTransportActionTests extends OpenSearchTestCase {
             return null;
         }).when(createWorkflowTransportAction).checkMaxWorkflows(any(TimeValue.class), anyInt(), any());
 
-        // Bypass initializeMasterKeyIndex and force onResponse
+        // Bypass initializeConfigIndex and force onResponse
         doAnswer(invocation -> {
             ActionListener<Boolean> initalizeMasterKeyIndexListener = invocation.getArgument(0);
             initalizeMasterKeyIndexListener.onResponse(true);
             return null;
-        }).when(flowFrameworkIndicesHandler).initializeMasterKeyIndex(any());
+        }).when(flowFrameworkIndicesHandler).initializeConfigIndex(any());
 
         // Bypass putTemplateToGlobalContext and force onResponse
         doAnswer(invocation -> {

@@ -33,14 +33,16 @@ public class CommonValue {
     public static final String WORKFLOW_STATE_INDEX_MAPPING = "mappings/workflow-state.json";
     /** Workflow State index mapping version */
     public static final Integer WORKFLOW_STATE_INDEX_VERSION = 1;
-    /** Master Key Index Name */
-    public static final String MASTER_KEY_INDEX = ".plugins-master-key";
-    /** Master Key index mapping file path */
-    public static final String MASTER_KEY_INDEX_MAPPING = "mappings/master-key.json";
-    /** Master key index mapping version */
-    public static final Integer MASTER_KEY_INDEX_VERSION = 1;
+    /** Config Index Name */
+    public static final String CONFIG_INDEX = ".plugins-flow-framework-config";
+    /** Config index mapping file path */
+    public static final String CONFIG_INDEX_MAPPING = "mappings/config.json";
+    /** Config index mapping version */
+    public static final Integer CONFIG_INDEX_VERSION = 1;
     /** Master key field name */
     public static final String MASTER_KEY = "master_key";
+    /** Create Time field  name */
+    public static final String CREATE_TIME = "create_time";
 
     /** The template field name for template use case */
     public static final String USE_CASE_FIELD = "use_case";

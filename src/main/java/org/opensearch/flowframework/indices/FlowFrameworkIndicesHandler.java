@@ -49,9 +49,9 @@ import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import static org.opensearch.core.rest.RestStatus.INTERNAL_SERVER_ERROR;
+import static org.opensearch.flowframework.common.CommonValue.CONFIG_INDEX_MAPPING;
 import static org.opensearch.flowframework.common.CommonValue.GLOBAL_CONTEXT_INDEX;
 import static org.opensearch.flowframework.common.CommonValue.GLOBAL_CONTEXT_INDEX_MAPPING;
-import static org.opensearch.flowframework.common.CommonValue.MASTER_KEY_INDEX_MAPPING;
 import static org.opensearch.flowframework.common.CommonValue.META;
 import static org.opensearch.flowframework.common.CommonValue.NO_SCHEMA_VERSION;
 import static org.opensearch.flowframework.common.CommonValue.SCHEMA_VERSION_FIELD;
@@ -115,7 +115,7 @@ public class FlowFrameworkIndicesHandler {
      * @throws IOException if mapping file cannot be read correctly
      */
     public static String getMasterKeyMappings() throws IOException {
-        return getIndexMappings(MASTER_KEY_INDEX_MAPPING);
+        return getIndexMappings(CONFIG_INDEX_MAPPING);
     }
 
     /**
@@ -135,11 +135,11 @@ public class FlowFrameworkIndicesHandler {
     }
 
     /**
-     * Create master key index if it's absent
+     * Create config index if it's absent
      * @param listener The action listener
      */
-    public void initMasterKeyIndexIfAbsent(ActionListener<Boolean> listener) {
-        initFlowFrameworkIndexIfAbsent(FlowFrameworkIndex.MASTER_KEY, listener);
+    public void initConfigIndexIfAbsent(ActionListener<Boolean> listener) {
+        initFlowFrameworkIndexIfAbsent(FlowFrameworkIndex.CONFIG, listener);
     }
 
     /**
@@ -325,18 +325,18 @@ public class FlowFrameworkIndicesHandler {
     }
 
     /**
-     * Initializes master key index and EncryptorUtils
+     * Initializes config index and EncryptorUtils
      * @param listener action listener
      */
-    public void initializeMasterKeyIndex(ActionListener<Boolean> listener) {
-        initMasterKeyIndexIfAbsent(ActionListener.wrap(indexCreated -> {
+    public void initializeConfigIndex(ActionListener<Boolean> listener) {
+        initConfigIndexIfAbsent(ActionListener.wrap(indexCreated -> {
             if (!indexCreated) {
-                listener.onFailure(new FlowFrameworkException("No response to create global_context index", INTERNAL_SERVER_ERROR));
+                listener.onFailure(new FlowFrameworkException("No response to create config index", INTERNAL_SERVER_ERROR));
                 return;
             }
             encryptorUtils.initializeMasterKey(listener);
         }, createIndexException -> {
-            logger.error("Failed to create master_key index", createIndexException);
+            logger.error("Failed to create config index", createIndexException);
             listener.onFailure(createIndexException);
         }));
     }
@@ -401,7 +401,8 @@ public class FlowFrameworkIndicesHandler {
                 XContentBuilder builder = XContentFactory.jsonBuilder();
                 ThreadContext.StoredContext context = client.threadPool().getThreadContext().stashContext()
             ) {
-                request.source(template.toXContent(builder, ToXContent.EMPTY_PARAMS))
+                Template encryptedTemplate = encryptorUtils.encryptTemplateCredentials(template);
+                request.source(encryptedTemplate.toXContent(builder, ToXContent.EMPTY_PARAMS))
                     .setRefreshPolicy(WriteRequest.RefreshPolicy.IMMEDIATE);
                 client.index(request, ActionListener.runBefore(listener, () -> context.restore()));
             } catch (Exception e) {

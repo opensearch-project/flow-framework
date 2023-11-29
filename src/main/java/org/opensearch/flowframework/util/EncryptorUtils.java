@@ -29,6 +29,7 @@ import javax.crypto.spec.SecretKeySpec;
 
 import java.nio.charset.StandardCharsets;
 import java.security.SecureRandom;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Base64;
 import java.util.HashMap;
@@ -41,9 +42,10 @@ import com.amazonaws.encryptionsdk.CommitmentPolicy;
 import com.amazonaws.encryptionsdk.CryptoResult;
 import com.amazonaws.encryptionsdk.jce.JceMasterKey;
 
+import static org.opensearch.flowframework.common.CommonValue.CONFIG_INDEX;
+import static org.opensearch.flowframework.common.CommonValue.CREATE_TIME;
 import static org.opensearch.flowframework.common.CommonValue.CREDENTIAL_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.MASTER_KEY;
-import static org.opensearch.flowframework.common.CommonValue.MASTER_KEY_INDEX;
 
 /**
  * Encryption utility class
@@ -51,6 +53,10 @@ import static org.opensearch.flowframework.common.CommonValue.MASTER_KEY_INDEX;
 public class EncryptorUtils {
 
     private static final Logger logger = LogManager.getLogger(EncryptorUtils.class);
+
+    private static final String ALGORITHM = "AES";
+    private static final String PROVIDER = "Custom";
+    private static final String WRAPPING_ALGORITHM = "AES/GCM/NoPadding";
 
     private ClusterService clusterService;
     private Client client;
@@ -71,7 +77,7 @@ public class EncryptorUtils {
      * Sets the master key
      * @param masterKey the master key
      */
-    protected void setMasterKey(String masterKey) {
+    void setMasterKey(String masterKey) {
         this.masterKey = masterKey;
     }
 
@@ -79,7 +85,7 @@ public class EncryptorUtils {
      * Returns the master key
      * @return the master key
      */
-    protected String getMasterKey() {
+    String getMasterKey() {
         return this.masterKey;
     }
 
@@ -87,7 +93,7 @@ public class EncryptorUtils {
      * Randomly generate a master key
      * @return the master key string
      */
-    protected String generateMasterKey() {
+    String generateMasterKey() {
         byte[] masterKeyBytes = new byte[32];
         new SecureRandom().nextBytes(masterKeyBytes);
         return Base64.getEncoder().encodeToString(masterKeyBytes);
@@ -171,11 +177,11 @@ public class EncryptorUtils {
      * @param credential the credential to encrypt
      * @return the encrypted credential
      */
-    protected String encrypt(final String credential) {
+    String encrypt(final String credential) {
         initializeMasterKeyIfAbsent();
         final AwsCrypto crypto = AwsCrypto.builder().withCommitmentPolicy(CommitmentPolicy.RequireEncryptRequireDecrypt).build();
         byte[] bytes = Base64.getDecoder().decode(masterKey);
-        JceMasterKey jceMasterKey = JceMasterKey.getInstance(new SecretKeySpec(bytes, "AES"), "Custom", "", "AES/GCM/NoPadding");
+        JceMasterKey jceMasterKey = JceMasterKey.getInstance(new SecretKeySpec(bytes, ALGORITHM), PROVIDER, "", WRAPPING_ALGORITHM);
         final CryptoResult<byte[], JceMasterKey> encryptResult = crypto.encryptData(
             jceMasterKey,
             credential.getBytes(StandardCharsets.UTF_8)
@@ -188,12 +194,12 @@ public class EncryptorUtils {
      * @param encryptedCredential the credential to decrypt
      * @return the decrypted credential
      */
-    protected String decrypt(final String encryptedCredential) {
+    String decrypt(final String encryptedCredential) {
         initializeMasterKeyIfAbsent();
         final AwsCrypto crypto = AwsCrypto.builder().withCommitmentPolicy(CommitmentPolicy.RequireEncryptRequireDecrypt).build();
 
         byte[] bytes = Base64.getDecoder().decode(masterKey);
-        JceMasterKey jceMasterKey = JceMasterKey.getInstance(new SecretKeySpec(bytes, "AES"), "Custom", "", "AES/GCM/NoPadding");
+        JceMasterKey jceMasterKey = JceMasterKey.getInstance(new SecretKeySpec(bytes, ALGORITHM), PROVIDER, "", WRAPPING_ALGORITHM);
 
         final CryptoResult<byte[], JceMasterKey> decryptedResult = crypto.decryptData(
             jceMasterKey,
@@ -213,41 +219,41 @@ public class EncryptorUtils {
         // stored credentials
         try (ThreadContext.StoredContext context = client.threadPool().getThreadContext().stashContext()) {
 
-            GetRequest getRequest = new GetRequest(MASTER_KEY_INDEX).id(MASTER_KEY);
+            GetRequest getRequest = new GetRequest(CONFIG_INDEX).id(MASTER_KEY);
             client.get(getRequest, ActionListener.wrap(getResponse -> {
 
                 if (!getResponse.isExists()) {
 
                     // Generate new key and index
                     final String masterKey = generateMasterKey();
-                    IndexRequest masterKeyIndexRequest = new IndexRequest(MASTER_KEY_INDEX).id(MASTER_KEY)
-                        .source(ImmutableMap.of(MASTER_KEY, masterKey))
+                    IndexRequest masterKeyIndexRequest = new IndexRequest(CONFIG_INDEX).id(MASTER_KEY)
+                        .source(ImmutableMap.of(MASTER_KEY, masterKey, CREATE_TIME, Instant.now().toEpochMilli()))
                         .setRefreshPolicy(WriteRequest.RefreshPolicy.IMMEDIATE);
 
                     client.index(masterKeyIndexRequest, ActionListener.wrap(indexResponse -> {
                         // Set generated key to master
-                        logger.info("Master key has been initialized successfully");
+                        logger.info("Config has been initialized successfully");
                         this.masterKey = masterKey;
                         listener.onResponse(true);
                     }, indexException -> {
-                        logger.error("Failed to index master key", indexException);
+                        logger.error("Failed to index config", indexException);
                         listener.onFailure(indexException);
                     }));
 
                 } else {
                     // Set existing key to master
-                    logger.info("Master key has already been initialized");
+                    logger.info("Config has already been initialized");
                     final String masterKey = (String) getResponse.getSourceAsMap().get(MASTER_KEY);
                     this.masterKey = masterKey;
                     listener.onResponse(true);
                 }
             }, getRequestException -> {
-                logger.error("Failed to search for master key from master_key index", getRequestException);
+                logger.error("Failed to search for config from config index", getRequestException);
                 listener.onFailure(getRequestException);
             }));
 
         } catch (Exception e) {
-            logger.error("Failed to retrieve master key from master_key index", e);
+            logger.error("Failed to retrieve config from config index", e);
             listener.onFailure(e);
         }
     }
@@ -255,21 +261,21 @@ public class EncryptorUtils {
     /**
      * Retrieves master key from system index if not yet set
      */
-    protected void initializeMasterKeyIfAbsent() {
+    void initializeMasterKeyIfAbsent() {
         if (masterKey != null) {
             return;
         }
 
-        if (!clusterService.state().metadata().hasIndex(MASTER_KEY_INDEX)) {
-            throw new FlowFrameworkException("Master Key Index has not been initialized", RestStatus.INTERNAL_SERVER_ERROR);
+        if (!clusterService.state().metadata().hasIndex(CONFIG_INDEX)) {
+            throw new FlowFrameworkException("Config Index has not been initialized", RestStatus.INTERNAL_SERVER_ERROR);
         } else {
             try (ThreadContext.StoredContext context = client.threadPool().getThreadContext().stashContext()) {
-                GetRequest getRequest = new GetRequest(MASTER_KEY_INDEX).id(MASTER_KEY);
+                GetRequest getRequest = new GetRequest(CONFIG_INDEX).id(MASTER_KEY);
                 client.get(getRequest, ActionListener.wrap(response -> {
                     if (response.isExists()) {
                         this.masterKey = (String) response.getSourceAsMap().get(MASTER_KEY);
                     } else {
-                        throw new FlowFrameworkException("Encryption key has not been initialized", RestStatus.NOT_FOUND);
+                        throw new FlowFrameworkException("Config has not been initialized", RestStatus.NOT_FOUND);
                     }
                 }, exception -> { throw new FlowFrameworkException(exception.getMessage(), ExceptionsHelper.status(exception)); }));
             }

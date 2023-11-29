@@ -119,11 +119,11 @@ public class CreateWorkflowTransportAction extends HandledTransportAction<Workfl
                     listener.onFailure(ffe);
                     return;
                 } else {
-                    // Initialize master key index and create new global context and state index entries
-                    flowFrameworkIndicesHandler.initializeMasterKeyIndex(ActionListener.wrap(isInitialized -> {
+                    // Initialize config index and create new global context and state index entries
+                    flowFrameworkIndicesHandler.initializeConfigIndex(ActionListener.wrap(isInitialized -> {
                         if (!isInitialized) {
                             listener.onFailure(
-                                new FlowFrameworkException("Failed to initalize master key index", RestStatus.INTERNAL_SERVER_ERROR)
+                                new FlowFrameworkException("Failed to initalize config index", RestStatus.INTERNAL_SERVER_ERROR)
                             );
                         } else {
                             // Create new global context and state index entries
@@ -161,12 +161,11 @@ public class CreateWorkflowTransportAction extends HandledTransportAction<Workfl
                             );
                         }
                     }, exception -> {
-                        logger.error("Failed to initialize master key index : {}", exception.getMessage());
+                        logger.error("Failed to initialize config index : {}", exception.getMessage());
                         if (exception instanceof FlowFrameworkException) {
                             listener.onFailure(exception);
                         } else {
                             listener.onFailure(new FlowFrameworkException(exception.getMessage(), ExceptionsHelper.status(exception)));
-
                         }
 
                     }));

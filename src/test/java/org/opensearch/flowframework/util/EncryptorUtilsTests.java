@@ -156,7 +156,7 @@ public class EncryptorUtilsTests extends OpenSearchTestCase {
         }).when(client).get(any(GetRequest.class), any());
 
         FlowFrameworkException ex = expectThrows(FlowFrameworkException.class, () -> encryptorUtils.initializeMasterKeyIfAbsent());
-        assertEquals("Encryption key has not been initialized", ex.getMessage());
+        assertEquals("Config has not been initialized", ex.getMessage());
     }
 
     public void testEncryptDecryptTemplateCredential() {
