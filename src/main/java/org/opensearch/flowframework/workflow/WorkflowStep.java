@@ -22,7 +22,7 @@ public interface WorkflowStep {
      * @param currentNodeId The id of the node executing this step
      * @param currentNodeInputs Input params and content for this node, from workflow parsing
      * @param previousNodeInputs Input params for this node that come from previous steps
-     * @param output WorkflowData content of previous steps.
+     * @param outputs WorkflowData content of previous steps.
      * @return A CompletableFuture of the building block. This block should return immediately, but not be completed until the step executes, containing either the step's output data or {@link WorkflowData#EMPTY} which may be passed to follow-on steps.
      * @throws IOException on a failure.
      */
