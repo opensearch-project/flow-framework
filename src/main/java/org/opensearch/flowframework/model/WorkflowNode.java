@@ -28,7 +28,6 @@ import static org.opensearch.core.xcontent.XContentParserUtils.ensureExpectedTok
 import static org.opensearch.flowframework.common.CommonValue.LLM_FIELD;
 import static org.opensearch.flowframework.util.ParseUtils.buildLLMMap;
 import static org.opensearch.flowframework.util.ParseUtils.buildStringToStringMap;
-import static org.opensearch.flowframework.util.ParseUtils.parseLLM;
 import static org.opensearch.flowframework.util.ParseUtils.parseStringToStringMap;
 
 /**
@@ -151,7 +150,7 @@ public class WorkflowNode implements ToXContentObject {
                                 break;
                             case START_OBJECT:
                                 if (LLM_FIELD.equals(inputFieldName)) {
-                                    userInputs.put(inputFieldName, parseLLM(parser));
+                                    userInputs.put(inputFieldName, LLMSpec.parse(parser));
                                 } else {
                                     userInputs.put(inputFieldName, parseStringToStringMap(parser));
                                 }

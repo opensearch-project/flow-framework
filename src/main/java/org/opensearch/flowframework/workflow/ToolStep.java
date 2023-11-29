@@ -36,7 +36,7 @@ public class ToolStep implements WorkflowStep {
 
     private static final Logger logger = LogManager.getLogger(ToolStep.class);
     CompletableFuture<WorkflowData> toolFuture = new CompletableFuture<>();
-    static final String NAME = "tool";
+    static final String NAME = "create_tool";
 
     @Override
     public CompletableFuture<WorkflowData> execute(List<WorkflowData> data) throws IOException {
