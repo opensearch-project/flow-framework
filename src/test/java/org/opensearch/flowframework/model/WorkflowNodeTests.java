@@ -8,9 +8,11 @@
  */
 package org.opensearch.flowframework.model;
 
+import org.opensearch.ml.common.agent.LLMSpec;
 import org.opensearch.test.OpenSearchTestCase;
 
 import java.io.IOException;
+import java.util.HashMap;
 import java.util.Map;
 
 public class WorkflowNodeTests extends OpenSearchTestCase {
@@ -21,6 +23,12 @@ public class WorkflowNodeTests extends OpenSearchTestCase {
     }
 
     public void testNode() throws IOException {
+        Map<String, String> parameters = new HashMap<>();
+        parameters.put("stop", "true");
+        parameters.put("max", "5");
+
+        LLMSpec llmSpec = new LLMSpec("modelId", parameters);
+
         WorkflowNode nodeA = new WorkflowNode(
             "A",
             "a-type",
@@ -29,7 +37,9 @@ public class WorkflowNodeTests extends OpenSearchTestCase {
                 Map.entry("foo", "a string"),
                 Map.entry("bar", Map.of("key", "value")),
                 Map.entry("baz", new Map<?, ?>[] { Map.of("A", "a"), Map.of("B", "b") }),
-                Map.entry("processors", new PipelineProcessor[] { new PipelineProcessor("test-type", Map.of("key2", "value2")) })
+                Map.entry("processors", new PipelineProcessor[] { new PipelineProcessor("test-type", Map.of("key2", "value2")) }),
+                Map.entry("llm", llmSpec),
+                Map.entry("created_time", 1689793598499L)
             )
         );
         assertEquals("A", nodeA.id());
@@ -43,6 +53,7 @@ public class WorkflowNodeTests extends OpenSearchTestCase {
         assertEquals(1, pp.length);
         assertEquals("test-type", pp[0].type());
         assertEquals(Map.of("key2", "value2"), pp[0].params());
+        assertEquals(1689793598499L, map.get("created_time"));
 
         // node equality is based only on ID
         WorkflowNode nodeA2 = new WorkflowNode("A", "a2-type", Map.of(), Map.of("bar", "baz"));
@@ -52,13 +63,17 @@ public class WorkflowNodeTests extends OpenSearchTestCase {
         assertNotEquals(nodeA, nodeB);
 
         String json = TemplateTestJsonUtil.parseToJson(nodeA);
-        logger.info("TESTING : " + json);
+        logger.info("JSON : " + json);
         assertTrue(json.startsWith("{\"id\":\"A\",\"type\":\"a-type\",\"previous_node_inputs\":{\"foo\":\"field\"},"));
         assertTrue(json.contains("\"user_inputs\":{"));
         assertTrue(json.contains("\"foo\":\"a string\""));
         assertTrue(json.contains("\"baz\":[{\"A\":\"a\"},{\"B\":\"b\"}]"));
         assertTrue(json.contains("\"bar\":{\"key\":\"value\"}"));
         assertTrue(json.contains("\"processors\":[{\"type\":\"test-type\",\"params\":{\"key2\":\"value2\"}}]"));
+        assertTrue(json.contains("\"created_time\":1689793598499"));
+        assertTrue(json.contains("llm\":{"));
+        assertTrue(json.contains("\"parameters\":{\"stop\":\"true\",\"max\":\"5\""));
+        assertTrue(json.contains("\"model_id\":\"modelId\""));
 
         WorkflowNode nodeX = WorkflowNode.parse(TemplateTestJsonUtil.jsonToParser(json));
         assertEquals("A", nodeX.id());
@@ -73,6 +88,9 @@ public class WorkflowNodeTests extends OpenSearchTestCase {
         assertEquals(1, ppX.length);
         assertEquals("test-type", ppX[0].type());
         assertEquals(Map.of("key2", "value2"), ppX[0].params());
+        LLMSpec llm = (LLMSpec) mapX.get("llm");
+        assertEquals("modelId", llm.getModelId());
+        assertEquals(parameters, llm.getParameters());
     }
 
     public void testExceptions() throws IOException {
