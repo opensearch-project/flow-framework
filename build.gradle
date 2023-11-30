@@ -35,6 +35,9 @@ dependencyLicenses.enabled = false
 loggerUsageCheck.enabled = false
 thirdPartyAudit.enabled = false
 
+// No need to validate pom, as we do not upload to maven/sonatype
+validateNebulaPom.enabled = false
+
 buildscript {
     ext {
         opensearch_version = System.getProperty("opensearch.version", "3.0.0-SNAPSHOT")
