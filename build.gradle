@@ -74,6 +74,11 @@ buildscript {
     }
 }
 
+allprojects {
+    // Default to the apache license
+    project.ext.licenseName = 'The Apache Software License, Version 2.0'
+    project.ext.licenseUrl = 'http://www.apache.org/licenses/LICENSE-2.0.txt'
+}
 
 publishing {
     publications {
@@ -86,23 +91,28 @@ publishing {
                 name = pluginName
                 description = pluginDescription
                 groupId = "org.opensearch.plugin"
-                licenses {
-                    license {
-                        name = "The Apache License, Version 2.0"
-                        url = "http://www.apache.org/licenses/LICENSE-2.0.txt"
-                    }
-                }
-                developers {
-                    developer {
-                        name = "OpenSearch Flow Framework Plugin"
-                        url = "https://github.com/opensearch-project/flow-framework"
-                    }
+
+                withXml { XmlProvider xml ->
+                    Node node = xml.asNode()
+                    node.appendNode('inceptionYear', '2021')
+
+                    Node license = node.appendNode('licenses').appendNode('license')
+                    license.appendNode('name', project.licenseName)
+                    license.appendNode('url', project.licenseUrl)
+
+                    Node developer = node.appendNode('developers').appendNode('developer')
+                    developer.appendNode('name', 'OpenSearch')
+                    developer.appendNode('url', 'https://github.com/opensearch-project/flow-framework')
                 }
             }
         }
     }
 
     repositories {
+        maven {
+            name = 'staging'
+            url = "${rootProject.buildDir}/local-staging-repo"
+        }
         maven {
             name = "Snapshots"
             url = "https://aws.oss.sonatype.org/content/repositories/snapshots"
@@ -259,5 +269,15 @@ diffCoverageReport {
         minBranches = 0.60
         minLines = 0.75
         failOnViolation = true
+    }
+}
+
+
+tasks.withType(AbstractPublishToMaven) {
+    def predicate = provider {
+        publication.name == "pluginZip"
+    }
+    onlyIf("Publishing only ZIP distributions") {
+        predicate.get()
     }
 }
