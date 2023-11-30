@@ -121,10 +121,10 @@ public class RegisterAgentStep implements WorkflowStep {
                         type = (String) entry.getValue();
                         break;
                     case LLM_MODEL_ID:
-                        llmModelId = (String) entry.getValue();
+                        llmModelId = getLlmModelId((String) entry.getValue(), previousNodeInputs, outputs);
                         break;
                     case LLM_PARAMETERS:
-                        llmParameters = getLLMParameters(entry.getValue(), previousNodeInputs, outputs);
+                        llmParameters = getStringToStringMap(entry.getValue(), LLM_PARAMETERS);
                         break;
                     case TOOLS_FIELD:
                         tools = addTools(entry.getValue());
@@ -192,12 +192,11 @@ public class RegisterAgentStep implements WorkflowStep {
         return mlToolSpecList;
     }
 
-    private Map<String, String> getLLMParameters(
-        Object parameters,
-        Map<String, String> previousNodeInputs,
-        Map<String, WorkflowData> outputs
-    ) {
-        Map<String, String> parametersMap = (Map<String, String>) parameters;
+    private String getLlmModelId(String llmModelId, Map<String, String> previousNodeInputs, Map<String, WorkflowData> outputs) {
+        // Case when modelId is already pass in the template
+        if (llmModelId != null) {
+            return llmModelId;
+        }
 
         // Case when modelId is passed through previousSteps
         Optional<String> previousNode = previousNodeInputs.entrySet()
@@ -205,15 +204,14 @@ public class RegisterAgentStep implements WorkflowStep {
             .filter(e -> MODEL_ID.equals(e.getValue()))
             .map(Map.Entry::getKey)
             .findFirst();
-        if (previousNode.isPresent() && !parametersMap.containsKey(MODEL_ID)) {
+
+        if (previousNode.isPresent()) {
             WorkflowData previousNodeOutput = outputs.get(previousNode.get());
             if (previousNodeOutput != null && previousNodeOutput.getContent().containsKey(MODEL_ID)) {
-                parametersMap.put(MODEL_ID, previousNodeOutput.getContent().get(MODEL_ID).toString());
-                return parametersMap;
+                llmModelId = previousNodeOutput.getContent().get(MODEL_ID).toString();
             }
         }
-        // For other cases where modelId is already present in the parameters or not return the parametersMap
-        return parametersMap;
+        return llmModelId;
     }
 
     private LLMSpec getLLMSpec(String llmModelId, Map<String, String> llmParameters) {
