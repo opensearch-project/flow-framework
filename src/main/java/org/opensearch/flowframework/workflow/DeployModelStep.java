@@ -17,6 +17,7 @@ import org.opensearch.flowframework.exception.FlowFrameworkException;
 import org.opensearch.ml.client.MachineLearningNodeClient;
 import org.opensearch.ml.common.transport.deploy.MLDeployModelResponse;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
@@ -41,7 +42,12 @@ public class DeployModelStep implements WorkflowStep {
     }
 
     @Override
-    public CompletableFuture<WorkflowData> execute(List<WorkflowData> data) {
+    public CompletableFuture<WorkflowData> execute(
+        String currentNodeId,
+        WorkflowData currentNodeInputs,
+        Map<String, WorkflowData> outputs,
+        Map<String, String> previousNodeInputs
+    ) {
 
         CompletableFuture<WorkflowData> deployModelFuture = new CompletableFuture<>();
 
@@ -52,7 +58,8 @@ public class DeployModelStep implements WorkflowStep {
                 deployModelFuture.complete(
                     new WorkflowData(
                         Map.ofEntries(Map.entry("deploy_model_status", mlDeployModelResponse.getStatus())),
-                        data.get(0).getWorkflowId()
+                        currentNodeInputs.getWorkflowId(),
+                        currentNodeInputs.getNodeId()
                     )
                 );
             }
@@ -65,6 +72,12 @@ public class DeployModelStep implements WorkflowStep {
         };
 
         String modelId = null;
+
+        // TODO: Recreating the list to get this compiling
+        // Need to refactor the below iteration to pull directly from the maps
+        List<WorkflowData> data = new ArrayList<>();
+        data.add(currentNodeInputs);
+        data.addAll(outputs.values());
 
         for (WorkflowData workflowData : data) {
             if (workflowData.getContent().containsKey(MODEL_ID)) {

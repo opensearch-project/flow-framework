@@ -14,7 +14,7 @@ import org.opensearch.common.unit.TimeValue;
 import org.opensearch.threadpool.Scheduler.ScheduledCancellable;
 import org.opensearch.threadpool.ThreadPool;
 
-import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
@@ -152,10 +152,10 @@ public class ProcessNode {
 
                 logger.info("Starting {}.", this.id);
                 // get the input data from predecessor(s)
-                List<WorkflowData> input = new ArrayList<WorkflowData>();
-                input.add(this.input);
+                Map<String, WorkflowData> inputMap = new HashMap<>();
                 for (CompletableFuture<WorkflowData> cf : predFutures) {
-                    input.add(cf.get());
+                    WorkflowData wd = cf.get();
+                    inputMap.put(wd.getNodeId(), wd);
                 }
 
                 ScheduledCancellable delayExec = null;
@@ -167,7 +167,12 @@ public class ProcessNode {
                     }, this.nodeTimeout, ThreadPool.Names.SAME);
                 }
                 // record start time for this step.
-                CompletableFuture<WorkflowData> stepFuture = this.workflowStep.execute(input);
+                CompletableFuture<WorkflowData> stepFuture = this.workflowStep.execute(
+                    this.id,
+                    this.input,
+                    inputMap,
+                    this.previousNodeInputs
+                );
                 // If completed exceptionally, this is a no-op
                 future.complete(stepFuture.get());
                 // record end time passing workflow steps

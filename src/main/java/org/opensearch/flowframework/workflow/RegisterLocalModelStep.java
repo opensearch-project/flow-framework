@@ -28,6 +28,7 @@ import org.opensearch.ml.common.transport.register.MLRegisterModelInput;
 import org.opensearch.ml.common.transport.register.MLRegisterModelInput.MLRegisterModelInputBuilder;
 import org.opensearch.ml.common.transport.register.MLRegisterModelResponse;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -71,20 +72,30 @@ public class RegisterLocalModelStep extends AbstractRetryableWorkflowStep {
     }
 
     @Override
-    public CompletableFuture<WorkflowData> execute(List<WorkflowData> data) {
+    public CompletableFuture<WorkflowData> execute(
+        String currentNodeId,
+        WorkflowData currentNodeInputs,
+        Map<String, WorkflowData> outputs,
+        Map<String, String> previousNodeInputs
+    ) {
 
         CompletableFuture<WorkflowData> registerLocalModelFuture = new CompletableFuture<>();
+
+        // TODO: Recreating the list to get this compiling
+        // Need to refactor the below iteration to pull directly from the maps
+        List<WorkflowData> data = new ArrayList<>();
+        data.add(currentNodeInputs);
+        data.addAll(outputs.values());
 
         ActionListener<MLRegisterModelResponse> actionListener = new ActionListener<>() {
             @Override
             public void onResponse(MLRegisterModelResponse mlRegisterModelResponse) {
                 logger.info("Local Model registration task creation successful");
 
-                String workflowId = data.get(0).getWorkflowId();
                 String taskId = mlRegisterModelResponse.getTaskId();
 
                 // Attempt to retrieve the model ID
-                retryableGetMlTask(workflowId, registerLocalModelFuture, taskId, 0);
+                retryableGetMlTask(currentNodeInputs.getWorkflowId(), currentNodeId, registerLocalModelFuture, taskId, 0);
             }
 
             @Override
@@ -206,11 +217,18 @@ public class RegisterLocalModelStep extends AbstractRetryableWorkflowStep {
     /**
      * Retryable get ml task
      * @param workflowId the workflow id
+     * @param nodeId the workflow node id
      * @param getMLTaskFuture the workflow step future
      * @param taskId the ml task id
      * @param retries the current number of request retries
      */
-    void retryableGetMlTask(String workflowId, CompletableFuture<WorkflowData> registerLocalModelFuture, String taskId, int retries) {
+    void retryableGetMlTask(
+        String workflowId,
+        String nodeId,
+        CompletableFuture<WorkflowData> registerLocalModelFuture,
+        String taskId,
+        int retries
+    ) {
         mlClient.getTask(taskId, ActionListener.wrap(response -> {
             MLTaskState currentState = response.getState();
             if (currentState != MLTaskState.COMPLETED) {
@@ -231,7 +249,8 @@ public class RegisterLocalModelStep extends AbstractRetryableWorkflowStep {
                             Map.entry(MODEL_ID, response.getModelId()),
                             Map.entry(REGISTER_MODEL_STATUS, response.getState().name())
                         ),
-                        workflowId
+                        workflowId,
+                        nodeId
                     )
                 );
             }
@@ -244,7 +263,7 @@ public class RegisterLocalModelStep extends AbstractRetryableWorkflowStep {
                     FutureUtils.cancel(registerLocalModelFuture);
                 }
                 final int retryAdd = retries + 1;
-                retryableGetMlTask(workflowId, registerLocalModelFuture, taskId, retryAdd);
+                retryableGetMlTask(workflowId, nodeId, registerLocalModelFuture, taskId, retryAdd);
             } else {
                 logger.error("Failed to retrieve local model registration task, maximum retries exceeded");
                 registerLocalModelFuture.completeExceptionally(
