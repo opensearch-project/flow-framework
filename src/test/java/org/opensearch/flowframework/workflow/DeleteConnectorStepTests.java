@@ -67,15 +67,30 @@ public class DeleteConnectorStepTests extends OpenSearchTestCase {
         CompletableFuture<WorkflowData> future = deleteConnectorStep.execute(
             inputData.getNodeId(),
             inputData,
-            Collections.emptyMap(),
-            Collections.emptyMap()
+            Map.of("step_1", new WorkflowData(Map.of("connector_id", "test"), "workflowId", "nodeId")),
+            Map.of("step_1", "connector_id")
         );
-
         verify(machineLearningNodeClient).deleteConnector(any(String.class), actionListenerCaptor.capture());
 
         assertTrue(future.isDone());
         assertEquals(connectorId, future.get().getContent().get("connector_id"));
 
+    }
+
+    public void testNoConnectorIdInOutput() throws IOException {
+        DeleteConnectorStep deleteConnectorStep = new DeleteConnectorStep(machineLearningNodeClient);
+
+        CompletableFuture<WorkflowData> future = deleteConnectorStep.execute(
+            inputData.getNodeId(),
+            inputData,
+            Collections.emptyMap(),
+            Collections.emptyMap()
+        );
+
+        assertTrue(future.isCompletedExceptionally());
+        ExecutionException ex = assertThrows(ExecutionException.class, () -> future.get().getContent());
+        assertTrue(ex.getCause() instanceof FlowFrameworkException);
+        assertEquals("Required field connector_id is not provided", ex.getCause().getMessage());
     }
 
     public void testDeleteConnectorFailure() throws IOException {
@@ -86,15 +101,15 @@ public class DeleteConnectorStepTests extends OpenSearchTestCase {
 
         doAnswer(invocation -> {
             ActionListener<MLCreateConnectorResponse> actionListener = invocation.getArgument(1);
-            actionListener.onFailure(new FlowFrameworkException("Failed to create connector", RestStatus.INTERNAL_SERVER_ERROR));
+            actionListener.onFailure(new FlowFrameworkException("Failed to delete connector", RestStatus.INTERNAL_SERVER_ERROR));
             return null;
         }).when(machineLearningNodeClient).deleteConnector(any(String.class), actionListenerCaptor.capture());
 
         CompletableFuture<WorkflowData> future = deleteConnectorStep.execute(
             inputData.getNodeId(),
             inputData,
-            Collections.emptyMap(),
-            Collections.emptyMap()
+            Map.of("step_1", new WorkflowData(Map.of("connector_id", "test"), "workflowId", "nodeId")),
+            Map.of("step_1", "connector_id")
         );
 
         verify(machineLearningNodeClient).deleteConnector(any(String.class), actionListenerCaptor.capture());
@@ -102,6 +117,6 @@ public class DeleteConnectorStepTests extends OpenSearchTestCase {
         assertTrue(future.isCompletedExceptionally());
         ExecutionException ex = assertThrows(ExecutionException.class, () -> future.get().getContent());
         assertTrue(ex.getCause() instanceof FlowFrameworkException);
-        assertEquals("Failed to create connector", ex.getCause().getMessage());
+        assertEquals("Failed to delete connector", ex.getCause().getMessage());
     }
 }
