@@ -16,7 +16,7 @@ import org.opensearch.client.ClusterAdminClient;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.test.OpenSearchTestCase;
 
-import java.util.List;
+import java.util.Collections;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
@@ -51,11 +51,12 @@ public class CreateIngestPipelineStepTests extends OpenSearchTestCase {
                 Map.entry("input_field_name", "inputField"),
                 Map.entry("output_field_name", "outputField")
             ),
-            "test-id"
+            "test-id",
+            "test-node-id"
         );
 
         // Set output data to returned pipelineId
-        outpuData = new WorkflowData(Map.ofEntries(Map.entry("pipeline_id", "pipelineId")), "test-id");
+        outpuData = new WorkflowData(Map.ofEntries(Map.entry("pipeline_id", "pipelineId")), "test-id", "test-node-id");
 
         client = mock(Client.class);
         adminClient = mock(AdminClient.class);
@@ -71,7 +72,12 @@ public class CreateIngestPipelineStepTests extends OpenSearchTestCase {
 
         @SuppressWarnings("unchecked")
         ArgumentCaptor<ActionListener<AcknowledgedResponse>> actionListenerCaptor = ArgumentCaptor.forClass(ActionListener.class);
-        CompletableFuture<WorkflowData> future = createIngestPipelineStep.execute(List.of(inputData));
+        CompletableFuture<WorkflowData> future = createIngestPipelineStep.execute(
+            inputData.getNodeId(),
+            inputData,
+            Collections.emptyMap(),
+            Collections.emptyMap()
+        );
 
         assertFalse(future.isDone());
 
@@ -89,7 +95,12 @@ public class CreateIngestPipelineStepTests extends OpenSearchTestCase {
 
         @SuppressWarnings("unchecked")
         ArgumentCaptor<ActionListener<AcknowledgedResponse>> actionListenerCaptor = ArgumentCaptor.forClass(ActionListener.class);
-        CompletableFuture<WorkflowData> future = createIngestPipelineStep.execute(List.of(inputData));
+        CompletableFuture<WorkflowData> future = createIngestPipelineStep.execute(
+            inputData.getNodeId(),
+            inputData,
+            Collections.emptyMap(),
+            Collections.emptyMap()
+        );
 
         assertFalse(future.isDone());
 
@@ -115,10 +126,16 @@ public class CreateIngestPipelineStepTests extends OpenSearchTestCase {
                 Map.entry("type", "text_embedding"),
                 Map.entry("model_id", "model_id")
             ),
-            "test-id"
+            "test-id",
+            "test-node-id"
         );
 
-        CompletableFuture<WorkflowData> future = createIngestPipelineStep.execute(List.of(incorrectData));
+        CompletableFuture<WorkflowData> future = createIngestPipelineStep.execute(
+            incorrectData.getNodeId(),
+            incorrectData,
+            Collections.emptyMap(),
+            Collections.emptyMap()
+        );
         assertTrue(future.isDone() && future.isCompletedExceptionally());
 
         ExecutionException exception = assertThrows(ExecutionException.class, () -> future.get());

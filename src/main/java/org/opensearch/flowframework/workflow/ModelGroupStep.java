@@ -53,7 +53,12 @@ public class ModelGroupStep implements WorkflowStep {
     }
 
     @Override
-    public CompletableFuture<WorkflowData> execute(List<WorkflowData> data) throws IOException {
+    public CompletableFuture<WorkflowData> execute(
+        String currentNodeId,
+        WorkflowData currentNodeInputs,
+        Map<String, WorkflowData> outputs,
+        Map<String, String> previousNodeInputs
+    ) throws IOException {
 
         CompletableFuture<WorkflowData> registerModelGroupFuture = new CompletableFuture<>();
 
@@ -67,7 +72,8 @@ public class ModelGroupStep implements WorkflowStep {
                             Map.entry("model_group_id", mlRegisterModelGroupResponse.getModelGroupId()),
                             Map.entry("model_group_status", mlRegisterModelGroupResponse.getStatus())
                         ),
-                        data.get(0).getWorkflowId()
+                        currentNodeInputs.getWorkflowId(),
+                        currentNodeInputs.getNodeId()
                     )
                 );
             }
@@ -84,6 +90,12 @@ public class ModelGroupStep implements WorkflowStep {
         List<String> backendRoles = new ArrayList<>();
         AccessMode modelAccessMode = null;
         Boolean isAddAllBackendRoles = null;
+
+        // TODO: Recreating the list to get this compiling
+        // Need to refactor the below iteration to pull directly from the maps
+        List<WorkflowData> data = new ArrayList<>();
+        data.add(currentNodeInputs);
+        data.addAll(outputs.values());
 
         for (WorkflowData workflowData : data) {
             Map<String, Object> content = workflowData.getContent();
