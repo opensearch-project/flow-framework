@@ -20,6 +20,7 @@ import org.opensearch.flowframework.exception.FlowFrameworkException;
 import org.opensearch.ml.client.MachineLearningNodeClient;
 import org.opensearch.ml.common.MLTaskState;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -50,11 +51,22 @@ public class GetMLTaskStep extends AbstractRetryableWorkflowStep {
     }
 
     @Override
-    public CompletableFuture<WorkflowData> execute(List<WorkflowData> data) {
+    public CompletableFuture<WorkflowData> execute(
+        String currentNodeId,
+        WorkflowData currentNodeInputs,
+        Map<String, WorkflowData> outputs,
+        Map<String, String> previousNodeInputs
+    ) {
 
         CompletableFuture<WorkflowData> getMLTaskFuture = new CompletableFuture<>();
 
         String taskId = null;
+
+        // TODO: Recreating the list to get this compiling
+        // Need to refactor the below iteration to pull directly from the maps
+        List<WorkflowData> data = new ArrayList<>();
+        data.add(currentNodeInputs);
+        data.addAll(outputs.values());
 
         for (WorkflowData workflowData : data) {
             Map<String, Object> content = workflowData.getContent();
@@ -73,7 +85,7 @@ public class GetMLTaskStep extends AbstractRetryableWorkflowStep {
             logger.error("Failed to retrieve ML Task");
             getMLTaskFuture.completeExceptionally(new FlowFrameworkException("Required fields are not provided", RestStatus.BAD_REQUEST));
         } else {
-            retryableGetMlTask(data.get(0).getWorkflowId(), getMLTaskFuture, taskId, 0);
+            retryableGetMlTask(currentNodeInputs.getWorkflowId(), currentNodeInputs.getNodeId(), getMLTaskFuture, taskId, 0);
         }
 
         return getMLTaskFuture;
@@ -87,11 +99,18 @@ public class GetMLTaskStep extends AbstractRetryableWorkflowStep {
     /**
      * Retryable GetMLTask
      * @param workflowId the workflow id
+     * @param nodeId the node id
      * @param getMLTaskFuture the workflow step future
      * @param taskId the ml task id
      * @param retries the current number of request retries
      */
-    protected void retryableGetMlTask(String workflowId, CompletableFuture<WorkflowData> getMLTaskFuture, String taskId, int retries) {
+    protected void retryableGetMlTask(
+        String workflowId,
+        String nodeId,
+        CompletableFuture<WorkflowData> getMLTaskFuture,
+        String taskId,
+        int retries
+    ) {
         mlClient.getTask(taskId, ActionListener.wrap(response -> {
             if (response.getState() != MLTaskState.COMPLETED) {
                 throw new IllegalStateException("MLTask is not yet completed");
@@ -103,7 +122,8 @@ public class GetMLTaskStep extends AbstractRetryableWorkflowStep {
                             Map.entry(MODEL_ID, response.getModelId()),
                             Map.entry(REGISTER_MODEL_STATUS, response.getState().name())
                         ),
-                        workflowId
+                        workflowId,
+                        nodeId
                     )
                 );
             }
@@ -116,7 +136,7 @@ public class GetMLTaskStep extends AbstractRetryableWorkflowStep {
                     FutureUtils.cancel(getMLTaskFuture);
                 }
                 final int retryAdd = retries + 1;
-                retryableGetMlTask(workflowId, getMLTaskFuture, taskId, retryAdd);
+                retryableGetMlTask(workflowId, nodeId, getMLTaskFuture, taskId, retryAdd);
             } else {
                 logger.error("Failed to retrieve ML Task, maximum retries exceeded");
                 getMLTaskFuture.completeExceptionally(

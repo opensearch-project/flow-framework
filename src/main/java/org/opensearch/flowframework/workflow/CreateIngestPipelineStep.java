@@ -20,6 +20,7 @@ import org.opensearch.core.common.bytes.BytesReference;
 import org.opensearch.core.xcontent.XContentBuilder;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -59,7 +60,12 @@ public class CreateIngestPipelineStep implements WorkflowStep {
     }
 
     @Override
-    public CompletableFuture<WorkflowData> execute(List<WorkflowData> data) {
+    public CompletableFuture<WorkflowData> execute(
+        String currentNodeId,
+        WorkflowData currentNodeInputs,
+        Map<String, WorkflowData> outputs,
+        Map<String, String> previousNodeInputs
+    ) {
 
         CompletableFuture<WorkflowData> createIngestPipelineFuture = new CompletableFuture<>();
 
@@ -70,6 +76,12 @@ public class CreateIngestPipelineStep implements WorkflowStep {
         String inputFieldName = null;
         String outputFieldName = null;
         BytesReference configuration = null;
+
+        // TODO: Recreating the list to get this compiling
+        // Need to refactor the below iteration to pull directly from the maps
+        List<WorkflowData> data = new ArrayList<>();
+        data.add(currentNodeInputs);
+        data.addAll(outputs.values());
 
         // Extract required content from workflow data and generate the ingest pipeline configuration
         for (WorkflowData workflowData : data) {
@@ -126,7 +138,11 @@ public class CreateIngestPipelineStep implements WorkflowStep {
 
                 // PutPipelineRequest returns only an AcknowledgeResponse, returning pipelineId instead
                 createIngestPipelineFuture.complete(
-                    new WorkflowData(Map.of(PIPELINE_ID, putPipelineRequest.getId()), data.get(0).getWorkflowId())
+                    new WorkflowData(
+                        Map.of(PIPELINE_ID, putPipelineRequest.getId()),
+                        currentNodeInputs.getWorkflowId(),
+                        currentNodeInputs.getNodeId()
+                    )
                 );
 
                 // TODO : Use node client to index response data to global context (pending global context index implementation)

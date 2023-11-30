@@ -24,6 +24,7 @@ import org.opensearch.ml.common.transport.register.MLRegisterModelInput;
 import org.opensearch.ml.common.transport.register.MLRegisterModelInput.MLRegisterModelInputBuilder;
 import org.opensearch.ml.common.transport.register.MLRegisterModelResponse;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -64,7 +65,12 @@ public class RegisterLocalModelStep implements WorkflowStep {
     }
 
     @Override
-    public CompletableFuture<WorkflowData> execute(List<WorkflowData> data) {
+    public CompletableFuture<WorkflowData> execute(
+        String currentNodeId,
+        WorkflowData currentNodeInputs,
+        Map<String, WorkflowData> outputs,
+        Map<String, String> previousNodeInputs
+    ) {
 
         CompletableFuture<WorkflowData> registerLocalModelFuture = new CompletableFuture<>();
 
@@ -78,7 +84,8 @@ public class RegisterLocalModelStep implements WorkflowStep {
                             Map.entry(TASK_ID, mlRegisterModelResponse.getTaskId()),
                             Map.entry(REGISTER_MODEL_STATUS, mlRegisterModelResponse.getStatus())
                         ),
-                        data.get(0).getWorkflowId()
+                        currentNodeInputs.getWorkflowId(),
+                        currentNodeInputs.getNodeId()
                     )
                 );
             }
@@ -101,6 +108,12 @@ public class RegisterLocalModelStep implements WorkflowStep {
         FrameworkType frameworkType = null;
         String allConfig = null;
         String url = null;
+
+        // TODO: Recreating the list to get this compiling
+        // Need to refactor the below iteration to pull directly from the maps
+        List<WorkflowData> data = new ArrayList<>();
+        data.add(currentNodeInputs);
+        data.addAll(outputs.values());
 
         for (WorkflowData workflowData : data) {
             Map<String, Object> content = workflowData.getContent();
