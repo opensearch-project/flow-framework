@@ -12,11 +12,7 @@ jobs:
   build-and-publish-snapshots:
     strategy:
       fail-fast: false
-<<<<<<< HEAD
     if: github.repository == 'opensearch-project/flow-framework'
-=======
-    if: github.repository == 'opensearch-project/opensearch-ai-flow-framework'
->>>>>>> bc6b6a5 (Undo CI changes)
     runs-on: ubuntu-latest
 
     permissions:

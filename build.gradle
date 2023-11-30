@@ -144,7 +144,6 @@ dependencies {
     implementation "org.opensearch:common-utils:${common_utils_version}"
     implementation 'com.amazonaws:aws-encryption-sdk-java:2.4.1'
     implementation 'org.bouncycastle:bcprov-jdk18on:1.77'
-    compileOnly group: 'com.google.code.gson', name: 'gson', version: '2.10.1'
     implementation "com.google.code.gson:gson:2.10.1"
 
     configurations.all {
