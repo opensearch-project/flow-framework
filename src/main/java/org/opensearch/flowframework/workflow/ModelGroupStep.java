@@ -13,7 +13,9 @@ import org.apache.logging.log4j.Logger;
 import org.opensearch.ExceptionsHelper;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.core.rest.RestStatus;
+import org.opensearch.flowframework.common.WorkflowResources;
 import org.opensearch.flowframework.exception.FlowFrameworkException;
+import org.opensearch.flowframework.indices.FlowFrameworkIndicesHandler;
 import org.opensearch.ml.client.MachineLearningNodeClient;
 import org.opensearch.ml.common.AccessMode;
 import org.opensearch.ml.common.transport.model_group.MLRegisterModelGroupInput;
@@ -31,6 +33,7 @@ import static org.opensearch.flowframework.common.CommonValue.ADD_ALL_BACKEND_RO
 import static org.opensearch.flowframework.common.CommonValue.BACKEND_ROLES_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.DESCRIPTION_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.MODEL_ACCESS_MODE;
+import static org.opensearch.flowframework.common.CommonValue.MODEL_GROUP_STATUS;
 import static org.opensearch.flowframework.common.CommonValue.NAME_FIELD;
 
 /**
@@ -42,14 +45,18 @@ public class ModelGroupStep implements WorkflowStep {
 
     private final MachineLearningNodeClient mlClient;
 
-    static final String NAME = "model_group";
+    private final FlowFrameworkIndicesHandler flowFrameworkIndicesHandler;
+
+    static final String NAME = WorkflowResources.REGISTER_MODEL_GROUP.getWorkflowStep();
 
     /**
      * Instantiate this class
      * @param mlClient client to instantiate MLClient
+     * @param flowFrameworkIndicesHandler FlowFrameworkIndicesHandler class to update system indices
      */
-    public ModelGroupStep(MachineLearningNodeClient mlClient) {
+    public ModelGroupStep(MachineLearningNodeClient mlClient, FlowFrameworkIndicesHandler flowFrameworkIndicesHandler) {
         this.mlClient = mlClient;
+        this.flowFrameworkIndicesHandler = flowFrameworkIndicesHandler;
     }
 
     @Override
@@ -65,17 +72,31 @@ public class ModelGroupStep implements WorkflowStep {
         ActionListener<MLRegisterModelGroupResponse> actionListener = new ActionListener<>() {
             @Override
             public void onResponse(MLRegisterModelGroupResponse mlRegisterModelGroupResponse) {
-                logger.info("Model group registration successful");
-                registerModelGroupFuture.complete(
-                    new WorkflowData(
-                        Map.ofEntries(
-                            Map.entry("model_group_id", mlRegisterModelGroupResponse.getModelGroupId()),
-                            Map.entry("model_group_status", mlRegisterModelGroupResponse.getStatus())
-                        ),
+                try {
+                    logger.info("Remote Model registration successful");
+                    String resourceName = WorkflowResources.getResourceByWorkflowStep(getName());
+                    registerModelGroupFuture.complete(
+                        new WorkflowData(
+                            Map.ofEntries(
+                                Map.entry(resourceName, mlRegisterModelGroupResponse.getModelGroupId()),
+                                Map.entry(MODEL_GROUP_STATUS, mlRegisterModelGroupResponse.getStatus())
+                            ),
+                            currentNodeInputs.getWorkflowId(),
+                            currentNodeId
+                        )
+                    );
+                    flowFrameworkIndicesHandler.updateResourceInStateIndex(
                         currentNodeInputs.getWorkflowId(),
-                        currentNodeInputs.getNodeId()
-                    )
-                );
+                        currentNodeId,
+                        getName(),
+                        mlRegisterModelGroupResponse.getModelGroupId(),
+                        registerModelGroupFuture
+                    );
+
+                } catch (Exception e) {
+                    logger.error("Failed to parse and update new created resource", e);
+                    registerModelGroupFuture.completeExceptionally(new FlowFrameworkException(e.getMessage(), ExceptionsHelper.status(e)));
+                }
             }
 
             @Override

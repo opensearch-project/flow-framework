@@ -13,7 +13,9 @@ import org.apache.logging.log4j.Logger;
 import org.opensearch.ExceptionsHelper;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.core.rest.RestStatus;
+import org.opensearch.flowframework.common.WorkflowResources;
 import org.opensearch.flowframework.exception.FlowFrameworkException;
+import org.opensearch.flowframework.indices.FlowFrameworkIndicesHandler;
 import org.opensearch.ml.client.MachineLearningNodeClient;
 import org.opensearch.ml.common.FunctionName;
 import org.opensearch.ml.common.transport.register.MLRegisterModelInput;
@@ -32,7 +34,6 @@ import static org.opensearch.flowframework.common.CommonValue.CONNECTOR_ID;
 import static org.opensearch.flowframework.common.CommonValue.DESCRIPTION_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.FUNCTION_NAME;
 import static org.opensearch.flowframework.common.CommonValue.MODEL_GROUP_ID;
-import static org.opensearch.flowframework.common.CommonValue.MODEL_ID;
 import static org.opensearch.flowframework.common.CommonValue.NAME_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.REGISTER_MODEL_STATUS;
 
@@ -45,14 +46,18 @@ public class RegisterRemoteModelStep implements WorkflowStep {
 
     private final MachineLearningNodeClient mlClient;
 
-    static final String NAME = "register_remote_model";
+    private final FlowFrameworkIndicesHandler flowFrameworkIndicesHandler;
+
+    static final String NAME = WorkflowResources.REGISTER_REMOTE_MODEL.getWorkflowStep();
 
     /**
      * Instantiate this class
      * @param mlClient client to instantiate MLClient
+     * @param flowFrameworkIndicesHandler FlowFrameworkIndicesHandler class to update system indices
      */
-    public RegisterRemoteModelStep(MachineLearningNodeClient mlClient) {
+    public RegisterRemoteModelStep(MachineLearningNodeClient mlClient, FlowFrameworkIndicesHandler flowFrameworkIndicesHandler) {
         this.mlClient = mlClient;
+        this.flowFrameworkIndicesHandler = flowFrameworkIndicesHandler;
     }
 
     @Override
@@ -68,17 +73,32 @@ public class RegisterRemoteModelStep implements WorkflowStep {
         ActionListener<MLRegisterModelResponse> actionListener = new ActionListener<>() {
             @Override
             public void onResponse(MLRegisterModelResponse mlRegisterModelResponse) {
-                logger.info("Remote Model registration successful");
-                registerRemoteModelFuture.complete(
-                    new WorkflowData(
-                        Map.ofEntries(
-                            Map.entry(MODEL_ID, mlRegisterModelResponse.getModelId()),
-                            Map.entry(REGISTER_MODEL_STATUS, mlRegisterModelResponse.getStatus())
-                        ),
+
+                try {
+                    logger.info("Remote Model registration successful");
+                    String resourceName = WorkflowResources.getResourceByWorkflowStep(getName());
+                    registerRemoteModelFuture.complete(
+                        new WorkflowData(
+                            Map.ofEntries(
+                                Map.entry(resourceName, mlRegisterModelResponse.getModelId()),
+                                Map.entry(REGISTER_MODEL_STATUS, mlRegisterModelResponse.getStatus())
+                            ),
+                            currentNodeInputs.getWorkflowId(),
+                            currentNodeInputs.getNodeId()
+                        )
+                    );
+                    flowFrameworkIndicesHandler.updateResourceInStateIndex(
                         currentNodeInputs.getWorkflowId(),
-                        currentNodeInputs.getNodeId()
-                    )
-                );
+                        currentNodeId,
+                        getName(),
+                        mlRegisterModelResponse.getModelId(),
+                        registerRemoteModelFuture
+                    );
+
+                } catch (Exception e) {
+                    logger.error("Failed to parse and update new created resource", e);
+                    registerRemoteModelFuture.completeExceptionally(new FlowFrameworkException(e.getMessage(), ExceptionsHelper.status(e)));
+                }
             }
 
             @Override

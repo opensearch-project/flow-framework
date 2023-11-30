@@ -10,6 +10,7 @@ package org.opensearch.flowframework.workflow;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.opensearch.ExceptionsHelper;
 import org.opensearch.action.ingest.PutPipelineRequest;
 import org.opensearch.client.Client;
 import org.opensearch.client.ClusterAdminClient;
@@ -18,6 +19,9 @@ import org.opensearch.common.xcontent.XContentType;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.core.common.bytes.BytesReference;
 import org.opensearch.core.xcontent.XContentBuilder;
+import org.opensearch.flowframework.common.WorkflowResources;
+import org.opensearch.flowframework.exception.FlowFrameworkException;
+import org.opensearch.flowframework.indices.FlowFrameworkIndicesHandler;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -33,7 +37,6 @@ import static org.opensearch.flowframework.common.CommonValue.ID;
 import static org.opensearch.flowframework.common.CommonValue.INPUT_FIELD_NAME;
 import static org.opensearch.flowframework.common.CommonValue.MODEL_ID;
 import static org.opensearch.flowframework.common.CommonValue.OUTPUT_FIELD_NAME;
-import static org.opensearch.flowframework.common.CommonValue.PIPELINE_ID;
 import static org.opensearch.flowframework.common.CommonValue.PROCESSORS;
 import static org.opensearch.flowframework.common.CommonValue.TYPE;
 
@@ -45,18 +48,21 @@ public class CreateIngestPipelineStep implements WorkflowStep {
     private static final Logger logger = LogManager.getLogger(CreateIngestPipelineStep.class);
 
     /** The name of this step, used as a key in the template and the {@link WorkflowStepFactory} */
-    static final String NAME = "create_ingest_pipeline";
+    static final String NAME = WorkflowResources.CREATE_INGEST_PIPELINE.getWorkflowStep();
 
     // Client to store a pipeline in the cluster state
     private final ClusterAdminClient clusterAdminClient;
 
+    private final FlowFrameworkIndicesHandler flowFrameworkIndicesHandler;
+
     /**
      * Instantiates a new CreateIngestPipelineStep
-     *
      * @param client The client to create a pipeline and store workflow data into the global context index
+     * @param flowFrameworkIndicesHandler FlowFrameworkIndicesHandler class to update system indices
      */
-    public CreateIngestPipelineStep(Client client) {
+    public CreateIngestPipelineStep(Client client, FlowFrameworkIndicesHandler flowFrameworkIndicesHandler) {
         this.clusterAdminClient = client.admin().cluster();
+        this.flowFrameworkIndicesHandler = flowFrameworkIndicesHandler;
     }
 
     @Override
@@ -136,16 +142,31 @@ public class CreateIngestPipelineStep implements WorkflowStep {
             clusterAdminClient.putPipeline(putPipelineRequest, ActionListener.wrap(response -> {
                 logger.info("Created ingest pipeline : " + putPipelineRequest.getId());
 
-                // PutPipelineRequest returns only an AcknowledgeResponse, returning pipelineId instead
-                createIngestPipelineFuture.complete(
-                    new WorkflowData(
-                        Map.of(PIPELINE_ID, putPipelineRequest.getId()),
+                try {
+                    String resourceName = WorkflowResources.getResourceByWorkflowStep(getName());
+                    // PutPipelineRequest returns only an AcknowledgeResponse, returning pipelineId instead
+                    // TODO: revisit this concept of pipeline_id to be consistent with what makes most sense to end user here
+                    createIngestPipelineFuture.complete(
+                        new WorkflowData(
+                            Map.of(resourceName, putPipelineRequest.getId()),
+                            currentNodeInputs.getWorkflowId(),
+                            currentNodeInputs.getNodeId()
+                        )
+                    );
+                    flowFrameworkIndicesHandler.updateResourceInStateIndex(
                         currentNodeInputs.getWorkflowId(),
-                        currentNodeInputs.getNodeId()
-                    )
-                );
+                        currentNodeId,
+                        getName(),
+                        putPipelineRequest.getId(),
+                        createIngestPipelineFuture
+                    );
 
-                // TODO : Use node client to index response data to global context (pending global context index implementation)
+                } catch (Exception e) {
+                    logger.error("Failed to parse and update new created resource", e);
+                    createIngestPipelineFuture.completeExceptionally(
+                        new FlowFrameworkException(e.getMessage(), ExceptionsHelper.status(e))
+                    );
+                }
 
             }, exception -> {
                 logger.error("Failed to create ingest pipeline : " + exception.getMessage());

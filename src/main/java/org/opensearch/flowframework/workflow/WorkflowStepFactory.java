@@ -43,14 +43,17 @@ public class WorkflowStepFactory {
         FlowFrameworkIndicesHandler flowFrameworkIndicesHandler
     ) {
         stepMap.put(NoOpStep.NAME, new NoOpStep());
-        stepMap.put(CreateIndexStep.NAME, new CreateIndexStep(clusterService, client));
-        stepMap.put(CreateIngestPipelineStep.NAME, new CreateIngestPipelineStep(client));
-        stepMap.put(RegisterLocalModelStep.NAME, new RegisterLocalModelStep(settings, clusterService, mlClient));
-        stepMap.put(RegisterRemoteModelStep.NAME, new RegisterRemoteModelStep(mlClient));
+        stepMap.put(CreateIndexStep.NAME, new CreateIndexStep(clusterService, client, flowFrameworkIndicesHandler));
+        stepMap.put(CreateIngestPipelineStep.NAME, new CreateIngestPipelineStep(client, flowFrameworkIndicesHandler));
+        stepMap.put(
+            RegisterLocalModelStep.NAME,
+            new RegisterLocalModelStep(settings, clusterService, mlClient, flowFrameworkIndicesHandler)
+        );
+        stepMap.put(RegisterRemoteModelStep.NAME, new RegisterRemoteModelStep(mlClient, flowFrameworkIndicesHandler));
         stepMap.put(DeployModelStep.NAME, new DeployModelStep(mlClient));
         stepMap.put(CreateConnectorStep.NAME, new CreateConnectorStep(mlClient, flowFrameworkIndicesHandler));
         stepMap.put(DeleteConnectorStep.NAME, new DeleteConnectorStep(mlClient));
-        stepMap.put(ModelGroupStep.NAME, new ModelGroupStep(mlClient));
+        stepMap.put(ModelGroupStep.NAME, new ModelGroupStep(mlClient, flowFrameworkIndicesHandler));
         stepMap.put(ToolStep.NAME, new ToolStep());
         stepMap.put(RegisterAgentStep.NAME, new RegisterAgentStep(mlClient));
     }

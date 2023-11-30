@@ -14,6 +14,7 @@ import org.opensearch.client.AdminClient;
 import org.opensearch.client.Client;
 import org.opensearch.client.ClusterAdminClient;
 import org.opensearch.core.action.ActionListener;
+import org.opensearch.flowframework.indices.FlowFrameworkIndicesHandler;
 import org.opensearch.test.OpenSearchTestCase;
 
 import java.util.Collections;
@@ -37,10 +38,12 @@ public class CreateIngestPipelineStepTests extends OpenSearchTestCase {
     private Client client;
     private AdminClient adminClient;
     private ClusterAdminClient clusterAdminClient;
+    private FlowFrameworkIndicesHandler flowFrameworkIndicesHandler;
 
     @Override
     public void setUp() throws Exception {
         super.setUp();
+        this.flowFrameworkIndicesHandler = mock(FlowFrameworkIndicesHandler.class);
 
         inputData = new WorkflowData(
             Map.ofEntries(
@@ -68,7 +71,7 @@ public class CreateIngestPipelineStepTests extends OpenSearchTestCase {
 
     public void testCreateIngestPipelineStep() throws InterruptedException, ExecutionException {
 
-        CreateIngestPipelineStep createIngestPipelineStep = new CreateIngestPipelineStep(client);
+        CreateIngestPipelineStep createIngestPipelineStep = new CreateIngestPipelineStep(client, flowFrameworkIndicesHandler);
 
         @SuppressWarnings("unchecked")
         ArgumentCaptor<ActionListener<AcknowledgedResponse>> actionListenerCaptor = ArgumentCaptor.forClass(ActionListener.class);
@@ -91,7 +94,7 @@ public class CreateIngestPipelineStepTests extends OpenSearchTestCase {
 
     public void testCreateIngestPipelineStepFailure() throws InterruptedException {
 
-        CreateIngestPipelineStep createIngestPipelineStep = new CreateIngestPipelineStep(client);
+        CreateIngestPipelineStep createIngestPipelineStep = new CreateIngestPipelineStep(client, flowFrameworkIndicesHandler);
 
         @SuppressWarnings("unchecked")
         ArgumentCaptor<ActionListener<AcknowledgedResponse>> actionListenerCaptor = ArgumentCaptor.forClass(ActionListener.class);
@@ -116,7 +119,7 @@ public class CreateIngestPipelineStepTests extends OpenSearchTestCase {
     }
 
     public void testMissingData() throws InterruptedException {
-        CreateIngestPipelineStep createIngestPipelineStep = new CreateIngestPipelineStep(client);
+        CreateIngestPipelineStep createIngestPipelineStep = new CreateIngestPipelineStep(client, flowFrameworkIndicesHandler);
 
         // Data with missing input and output fields
         WorkflowData incorrectData = new WorkflowData(

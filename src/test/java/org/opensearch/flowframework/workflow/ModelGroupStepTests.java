@@ -12,6 +12,7 @@ import com.google.common.collect.ImmutableList;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.core.rest.RestStatus;
 import org.opensearch.flowframework.exception.FlowFrameworkException;
+import org.opensearch.flowframework.indices.FlowFrameworkIndicesHandler;
 import org.opensearch.ml.client.MachineLearningNodeClient;
 import org.opensearch.ml.common.AccessMode;
 import org.opensearch.ml.common.MLTaskState;
@@ -31,6 +32,7 @@ import org.mockito.MockitoAnnotations;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 
 public class ModelGroupStepTests extends OpenSearchTestCase {
@@ -40,10 +42,12 @@ public class ModelGroupStepTests extends OpenSearchTestCase {
     @Mock
     MachineLearningNodeClient machineLearningNodeClient;
 
+    FlowFrameworkIndicesHandler flowFrameworkIndicesHandler;
+
     @Override
     public void setUp() throws Exception {
         super.setUp();
-
+        this.flowFrameworkIndicesHandler = mock(FlowFrameworkIndicesHandler.class);
         MockitoAnnotations.openMocks(this);
         inputData = new WorkflowData(
             Map.ofEntries(
@@ -63,7 +67,7 @@ public class ModelGroupStepTests extends OpenSearchTestCase {
         String modelGroupId = "model_group_id";
         String status = MLTaskState.CREATED.name();
 
-        ModelGroupStep modelGroupStep = new ModelGroupStep(machineLearningNodeClient);
+        ModelGroupStep modelGroupStep = new ModelGroupStep(machineLearningNodeClient, flowFrameworkIndicesHandler);
 
         @SuppressWarnings("unchecked")
         ArgumentCaptor<ActionListener<MLRegisterModelGroupResponse>> actionListenerCaptor = ArgumentCaptor.forClass(ActionListener.class);
@@ -90,8 +94,8 @@ public class ModelGroupStepTests extends OpenSearchTestCase {
 
     }
 
-    public void testRegisterModelGroupFailure() throws ExecutionException, InterruptedException, IOException {
-        ModelGroupStep modelGroupStep = new ModelGroupStep(machineLearningNodeClient);
+    public void testRegisterModelGroupFailure() throws IOException {
+        ModelGroupStep modelGroupStep = new ModelGroupStep(machineLearningNodeClient, flowFrameworkIndicesHandler);
 
         @SuppressWarnings("unchecked")
         ArgumentCaptor<ActionListener<MLRegisterModelGroupResponse>> actionListenerCaptor = ArgumentCaptor.forClass(ActionListener.class);
@@ -119,7 +123,7 @@ public class ModelGroupStepTests extends OpenSearchTestCase {
     }
 
     public void testRegisterModelGroupWithNoName() throws IOException {
-        ModelGroupStep modelGroupStep = new ModelGroupStep(machineLearningNodeClient);
+        ModelGroupStep modelGroupStep = new ModelGroupStep(machineLearningNodeClient, flowFrameworkIndicesHandler);
 
         CompletableFuture<WorkflowData> future = modelGroupStep.execute(
             inputDataWithNoName.getNodeId(),
