@@ -35,8 +35,8 @@ import static org.opensearch.flowframework.common.CommonValue.TYPE;
 public class CreateIndexStep implements WorkflowStep {
 
     private static final Logger logger = LogManager.getLogger(CreateIndexStep.class);
-    private ClusterService clusterService;
-    private Client client;
+    private final ClusterService clusterService;
+    private final Client client;
 
     /** The name of this step, used as a key in the template and the {@link WorkflowStepFactory} */
     static final String NAME = "create_index";

@@ -49,6 +49,7 @@ import static org.opensearch.flowframework.common.CommonValue.PARAMETERS_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.PROTOCOL_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.VERSION_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.WORKFLOW_STATE_INDEX;
+import static org.opensearch.flowframework.util.ParseUtils.getStringToStringMap;
 
 /**
  * Step to create a connector for a remote model
@@ -208,14 +209,6 @@ public class CreateConnectorStep implements WorkflowStep {
     @Override
     public String getName() {
         return NAME;
-    }
-
-    @SuppressWarnings("unchecked")
-    private static Map<String, String> getStringToStringMap(Object map, String fieldName) {
-        if (map instanceof Map) {
-            return (Map<String, String>) map;
-        }
-        throw new IllegalArgumentException("[" + fieldName + "] must be a key-value map.");
     }
 
     private static Map<String, String> getParameterMap(Object parameterMap) throws PrivilegedActionException {
