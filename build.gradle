@@ -1,5 +1,6 @@
 import java.nio.file.Files
 import org.opensearch.gradle.test.RestIntegTestTask
+import java.util.concurrent.Callable
 
 apply plugin: 'java'
 apply plugin: 'idea'
@@ -145,6 +146,9 @@ dependencies {
     implementation 'com.amazonaws:aws-encryption-sdk-java:2.4.1'
     implementation 'org.bouncycastle:bcprov-jdk18on:1.77'
 
+    // ZipArchive dependencies used for integration tests
+    zipArchive group: 'org.opensearch.plugin', name:'opensearch-ml-plugin', version: "${opensearch_build}"
+
     configurations.all {
         resolutionStrategy {
             force("com.google.guava:guava:32.1.3-jre") // CVE for 31.1
@@ -153,6 +157,11 @@ dependencies {
         }
     }
 }
+
+
+def opensearch_tmp_dir = rootProject.file('build/private/opensearch_tmp').absoluteFile
+opensearch_tmp_dir.mkdirs()
+def _numNodes = findProperty('numNodes') as Integer ?: 1
 
 test {
     include '**/*Tests.class'
@@ -166,6 +175,8 @@ jacocoTestReport {
 }
 tasks.named("check").configure { dependsOn(jacocoTestReport) }
 
+
+// Set up integration tests
 task integTest(type: RestIntegTestTask) {
     description = "Run tests against a cluster"
     testClassesDirs = sourceSets.test.output.classesDirs
@@ -173,10 +184,18 @@ task integTest(type: RestIntegTestTask) {
 }
 tasks.named("check").configure { dependsOn(integTest) }
 
-def _numNodes = findProperty('numNodes') as Integer ?: 1
-
 integTest {
 
+    dependsOn "bundlePlugin"
+    systemProperty 'tests.security.manager', 'false'
+    systemProperty 'java.io.tmpdir', opensearch_tmp_dir.absolutePath
+    systemProperty('project.root', project.rootDir.absolutePath)
+    systemProperty "https", System.getProperty("https")
+    systemProperty "user", System.getProperty("user")
+    systemProperty "password", System.getProperty("password")
+
+
+    // doFirst delays this block until execution time
     doFirst {
         // Tell the test JVM if the cluster JVM is running under a debugger so that tests can
         // use longer timeouts for requests.
@@ -197,10 +216,31 @@ integTest {
     }
 }
 
+// Set up integration test clusters, installs all zipArchive dependencies and Flow Framework
 testClusters.integTest {
     testDistribution = "ARCHIVE"
+    
+    // Installs all registered zipArchive dependencies on integTest cluster nodes
+    configurations.zipArchive.asFileTree.each {
+        plugin(provider(new Callable<RegularFile>(){
+            @Override
+            RegularFile call() throws Exception {
+                return new RegularFile() {
+                    @Override
+                    File getAsFile() {
+                        return it
+                    }
+                }
+            }
+        }))
+    }
+
+    // Install Flow Framwork Plugin on integTest cluster nodes
+    plugin(project.tasks.bundlePlugin.archiveFile)
+
     // Cluster shrink exception thrown if we try to set numberOfNodes to 1, so only apply if > 1
     if (_numNodes > 1) numberOfNodes = _numNodes
+
     // When running integration tests it doesn't forward the --debug-jvm to the cluster anymore
     // i.e. we have to use a custom property to flag when we want to debug OpenSearch JVM
     // since we also support multi node integration tests we increase debugPort per node
@@ -211,11 +251,9 @@ testClusters.integTest {
             debugPort += 1
         }
     }
-
-    // This installs our plugin into the testClusters
-    plugin(project.tasks.bundlePlugin.archiveFile)
 }
 
+// Automatically sets up the integration test cluster locally
 run {
     useCluster testClusters.integTest
 }
