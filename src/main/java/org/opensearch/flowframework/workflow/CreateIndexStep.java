@@ -19,6 +19,7 @@ import org.opensearch.common.xcontent.json.JsonXContent;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.flowframework.indices.FlowFrameworkIndicesHandler;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -54,14 +55,25 @@ public class CreateIndexStep implements WorkflowStep {
     }
 
     @Override
-    public CompletableFuture<WorkflowData> execute(List<WorkflowData> data) {
+    public CompletableFuture<WorkflowData> execute(
+        String currentNodeId,
+        WorkflowData currentNodeInputs,
+        Map<String, WorkflowData> outputs,
+        Map<String, String> previousNodeInputs
+    ) {
         CompletableFuture<WorkflowData> future = new CompletableFuture<>();
         ActionListener<CreateIndexResponse> actionListener = new ActionListener<>() {
 
             @Override
             public void onResponse(CreateIndexResponse createIndexResponse) {
                 logger.info("created index: {}", createIndexResponse.index());
-                future.complete(new WorkflowData(Map.of(INDEX_NAME, createIndexResponse.index()), data.get(0).getWorkflowId()));
+                future.complete(
+                    new WorkflowData(
+                        Map.of(INDEX_NAME, createIndexResponse.index()),
+                        currentNodeInputs.getWorkflowId(),
+                        currentNodeInputs.getNodeId()
+                    )
+                );
             }
 
             @Override
@@ -74,6 +86,12 @@ public class CreateIndexStep implements WorkflowStep {
         String index = null;
         String type = null;
         Settings settings = null;
+
+        // TODO: Recreating the list to get this compiling
+        // Need to refactor the below iteration to pull directly from the maps
+        List<WorkflowData> data = new ArrayList<>();
+        data.add(currentNodeInputs);
+        data.addAll(outputs.values());
 
         for (WorkflowData workflowData : data) {
             Map<String, Object> content = workflowData.getContent();

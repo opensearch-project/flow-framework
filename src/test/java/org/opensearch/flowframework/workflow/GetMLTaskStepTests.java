@@ -21,7 +21,7 @@ import org.opensearch.ml.common.MLTask;
 import org.opensearch.ml.common.MLTaskState;
 import org.opensearch.test.OpenSearchTestCase;
 
-import java.util.List;
+import java.util.Collections;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
@@ -70,7 +70,7 @@ public class GetMLTaskStepTests extends OpenSearchTestCase {
         when(clusterService.getClusterSettings()).thenReturn(clusterSettings);
 
         this.getMLTaskStep = spy(new GetMLTaskStep(testMaxRetrySetting, clusterService, mlNodeClient));
-        this.workflowData = new WorkflowData(Map.ofEntries(Map.entry(TASK_ID, "test")), "test-id");
+        this.workflowData = new WorkflowData(Map.ofEntries(Map.entry(TASK_ID, "test")), "test-id", "test-node-id");
     }
 
     public void testGetMLTaskSuccess() throws Exception {
@@ -85,7 +85,12 @@ public class GetMLTaskStepTests extends OpenSearchTestCase {
             return null;
         }).when(mlNodeClient).getTask(any(), any());
 
-        CompletableFuture<WorkflowData> future = this.getMLTaskStep.execute(List.of(workflowData));
+        CompletableFuture<WorkflowData> future = this.getMLTaskStep.execute(
+            workflowData.getNodeId(),
+            workflowData,
+            Collections.emptyMap(),
+            Collections.emptyMap()
+        );
 
         verify(mlNodeClient, times(1)).getTask(any(), any());
 
@@ -102,7 +107,12 @@ public class GetMLTaskStepTests extends OpenSearchTestCase {
             return null;
         }).when(mlNodeClient).getTask(any(), any());
 
-        CompletableFuture<WorkflowData> future = this.getMLTaskStep.execute(List.of(workflowData));
+        CompletableFuture<WorkflowData> future = this.getMLTaskStep.execute(
+            workflowData.getNodeId(),
+            workflowData,
+            Collections.emptyMap(),
+            Collections.emptyMap()
+        );
         assertTrue(future.isDone());
         assertTrue(future.isCompletedExceptionally());
         ExecutionException ex = expectThrows(ExecutionException.class, () -> future.get().getClass());
@@ -111,7 +121,12 @@ public class GetMLTaskStepTests extends OpenSearchTestCase {
     }
 
     public void testMissingInputs() {
-        CompletableFuture<WorkflowData> future = this.getMLTaskStep.execute(List.of(WorkflowData.EMPTY));
+        CompletableFuture<WorkflowData> future = this.getMLTaskStep.execute(
+            "nodeID",
+            WorkflowData.EMPTY,
+            Collections.emptyMap(),
+            Collections.emptyMap()
+        );
         assertTrue(future.isDone());
         assertTrue(future.isCompletedExceptionally());
         ExecutionException ex = assertThrows(ExecutionException.class, () -> future.get().getContent());

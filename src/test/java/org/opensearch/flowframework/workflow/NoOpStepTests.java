@@ -19,7 +19,12 @@ public class NoOpStepTests extends OpenSearchTestCase {
     public void testNoOpStep() throws IOException {
         NoOpStep noopStep = new NoOpStep();
         assertEquals(NoOpStep.NAME, noopStep.getName());
-        CompletableFuture<WorkflowData> future = noopStep.execute(Collections.emptyList());
+        CompletableFuture<WorkflowData> future = noopStep.execute(
+            "nodeId",
+            WorkflowData.EMPTY,
+            Collections.emptyMap(),
+            Collections.emptyMap()
+        );
         assertTrue(future.isDone());
         assertFalse(future.isCompletedExceptionally());
     }

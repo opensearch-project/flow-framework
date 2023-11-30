@@ -19,7 +19,7 @@ import org.opensearch.ml.common.MLTaskType;
 import org.opensearch.ml.common.transport.deploy.MLDeployModelResponse;
 import org.opensearch.test.OpenSearchTestCase;
 
-import java.util.List;
+import java.util.Collections;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
@@ -44,7 +44,7 @@ public class DeployModelStepTests extends OpenSearchTestCase {
     public void setUp() throws Exception {
         super.setUp();
 
-        inputData = new WorkflowData(Map.ofEntries(Map.entry("model_id", "modelId")), "test-id");
+        inputData = new WorkflowData(Map.ofEntries(Map.entry("model_id", "modelId")), "test-id", "test-node-id");
 
         MockitoAnnotations.openMocks(this);
 
@@ -67,7 +67,12 @@ public class DeployModelStepTests extends OpenSearchTestCase {
             return null;
         }).when(machineLearningNodeClient).deploy(eq("modelId"), actionListenerCaptor.capture());
 
-        CompletableFuture<WorkflowData> future = deployModel.execute(List.of(inputData));
+        CompletableFuture<WorkflowData> future = deployModel.execute(
+            inputData.getNodeId(),
+            inputData,
+            Collections.emptyMap(),
+            Collections.emptyMap()
+        );
 
         verify(machineLearningNodeClient).deploy(eq("modelId"), actionListenerCaptor.capture());
 
@@ -87,7 +92,12 @@ public class DeployModelStepTests extends OpenSearchTestCase {
             return null;
         }).when(machineLearningNodeClient).deploy(eq("modelId"), actionListenerCaptor.capture());
 
-        CompletableFuture<WorkflowData> future = deployModel.execute(List.of(inputData));
+        CompletableFuture<WorkflowData> future = deployModel.execute(
+            inputData.getNodeId(),
+            inputData,
+            Collections.emptyMap(),
+            Collections.emptyMap()
+        );
 
         verify(machineLearningNodeClient).deploy(eq("modelId"), actionListenerCaptor.capture());
 

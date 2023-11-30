@@ -20,6 +20,7 @@ import org.opensearch.ml.common.transport.register.MLRegisterModelInput;
 import org.opensearch.ml.common.transport.register.MLRegisterModelInput.MLRegisterModelInputBuilder;
 import org.opensearch.ml.common.transport.register.MLRegisterModelResponse;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -55,7 +56,12 @@ public class RegisterRemoteModelStep implements WorkflowStep {
     }
 
     @Override
-    public CompletableFuture<WorkflowData> execute(List<WorkflowData> data) {
+    public CompletableFuture<WorkflowData> execute(
+        String currentNodeId,
+        WorkflowData currentNodeInputs,
+        Map<String, WorkflowData> outputs,
+        Map<String, String> previousNodeInputs
+    ) {
 
         CompletableFuture<WorkflowData> registerRemoteModelFuture = new CompletableFuture<>();
 
@@ -69,7 +75,8 @@ public class RegisterRemoteModelStep implements WorkflowStep {
                             Map.entry(MODEL_ID, mlRegisterModelResponse.getModelId()),
                             Map.entry(REGISTER_MODEL_STATUS, mlRegisterModelResponse.getStatus())
                         ),
-                        data.get(0).getWorkflowId()
+                        currentNodeInputs.getWorkflowId(),
+                        currentNodeInputs.getNodeId()
                     )
                 );
             }
@@ -86,6 +93,12 @@ public class RegisterRemoteModelStep implements WorkflowStep {
         String modelGroupId = null;
         String description = null;
         String connectorId = null;
+
+        // TODO: Recreating the list to get this compiling
+        // Need to refactor the below iteration to pull directly from the maps
+        List<WorkflowData> data = new ArrayList<>();
+        data.add(currentNodeInputs);
+        data.addAll(outputs.values());
 
         // TODO : Handle inline connector configuration : https://github.com/opensearch-project/flow-framework/issues/149
 
