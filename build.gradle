@@ -229,7 +229,7 @@ integTest {
 // Set up integration test clusters, installs all zipArchive dependencies and Flow Framework
 testClusters.integTest {
     testDistribution = "ARCHIVE"
-    
+
     // Installs all registered zipArchive dependencies on integTest cluster nodes
     configurations.zipArchive.asFileTree.each {
         plugin(provider(new Callable<RegularFile>(){
