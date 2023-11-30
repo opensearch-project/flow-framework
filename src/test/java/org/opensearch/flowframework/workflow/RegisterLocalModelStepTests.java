@@ -163,6 +163,52 @@ public class RegisterLocalModelStepTests extends OpenSearchTestCase {
         assertEquals("test", ex.getCause().getMessage());
     }
 
+    public void testRegisterLocalModelTaskFailure() {
+
+        String taskId = "abcd";
+        String modelId = "model-id";
+        String testErrorMessage = "error";
+
+        // Stub register for success case
+        doAnswer(invocation -> {
+            ActionListener<MLRegisterModelResponse> actionListener = invocation.getArgument(1);
+            MLRegisterModelResponse output = new MLRegisterModelResponse(taskId, MLTaskState.RUNNING.name(), null);
+            actionListener.onResponse(output);
+            return null;
+        }).when(machineLearningNodeClient).register(any(MLRegisterModelInput.class), any());
+
+        // Stub get ml task for failure case
+        doAnswer(invocation -> {
+            ActionListener<MLTask> actionListener = invocation.getArgument(1);
+            MLTask output = new MLTask(
+                taskId,
+                modelId,
+                null,
+                null,
+                MLTaskState.FAILED,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                testErrorMessage,
+                null,
+                false
+            );
+            actionListener.onResponse(output);
+            return null;
+        }).when(machineLearningNodeClient).getTask(any(), any());
+
+        CompletableFuture<WorkflowData> future = this.registerLocalModelStep.execute(List.of(workflowData));
+        assertTrue(future.isDone());
+        assertTrue(future.isCompletedExceptionally());
+        ExecutionException ex = expectThrows(ExecutionException.class, () -> future.get().getClass());
+        assertTrue(ex.getCause() instanceof FlowFrameworkException);
+        assertEquals("Local model registration failed with error : " + testErrorMessage, ex.getCause().getMessage());
+
+    }
+
     public void testMissingInputs() {
         CompletableFuture<WorkflowData> future = registerLocalModelStep.execute(List.of(WorkflowData.EMPTY));
         assertTrue(future.isDone());

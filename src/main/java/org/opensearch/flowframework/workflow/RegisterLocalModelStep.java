@@ -212,8 +212,17 @@ public class RegisterLocalModelStep extends AbstractRetryableWorkflowStep {
      */
     void retryableGetMlTask(String workflowId, CompletableFuture<WorkflowData> registerLocalModelFuture, String taskId, int retries) {
         mlClient.getTask(taskId, ActionListener.wrap(response -> {
-            if (response.getState() != MLTaskState.COMPLETED) {
-                throw new IllegalStateException("Local model registration is not yet completed");
+            MLTaskState currentState = response.getState();
+            if (currentState != MLTaskState.COMPLETED) {
+                if (Stream.of(MLTaskState.FAILED, MLTaskState.COMPLETED_WITH_ERROR).anyMatch(x -> x == currentState)) {
+                    // Model registration failed or completed with errors
+                    String errorMessage = "Local model registration failed with error : " + response.getError();
+                    logger.error(errorMessage);
+                    registerLocalModelFuture.completeExceptionally(new FlowFrameworkException(errorMessage, RestStatus.BAD_REQUEST));
+                } else {
+                    // Task still in progress, attempt retry
+                    throw new IllegalStateException("Local model registration is not yet completed");
+                }
             } else {
                 logger.info("Local model registeration successful");
                 registerLocalModelFuture.complete(
