@@ -9,7 +9,7 @@
 package org.opensearch.flowframework.workflow;
 
 import java.io.IOException;
-import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
 /**
@@ -21,7 +21,12 @@ public class NoOpStep implements WorkflowStep {
     public static final String NAME = "noop";
 
     @Override
-    public CompletableFuture<WorkflowData> execute(List<WorkflowData> data) throws IOException {
+    public CompletableFuture<WorkflowData> execute(
+        String currentNodeId,
+        WorkflowData currentNodeInputs,
+        Map<String, WorkflowData> outputs,
+        Map<String, String> previousNodeInputs
+    ) throws IOException {
         return CompletableFuture.completedFuture(WorkflowData.EMPTY);
     }
 
