@@ -21,7 +21,6 @@ import org.opensearch.test.OpenSearchTestCase;
 
 import java.io.IOException;
 import java.util.Collections;
-import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
@@ -69,7 +68,8 @@ public class RegisterAgentTests extends OpenSearchTestCase {
                 Map.entry("last_updated_time", 1689793598499L),
                 Map.entry("app_type", "app")
             ),
-            "test-id"
+            "test-id",
+            "test-node-id"
         );
     }
 
@@ -87,7 +87,12 @@ public class RegisterAgentTests extends OpenSearchTestCase {
             return null;
         }).when(machineLearningNodeClient).registerAgent(any(MLAgent.class), actionListenerCaptor.capture());
 
-        CompletableFuture<WorkflowData> future = registerAgentStep.execute(List.of(inputData));
+        CompletableFuture<WorkflowData> future = registerAgentStep.execute(
+            inputData.getNodeId(),
+            inputData,
+            Collections.emptyMap(),
+            Collections.emptyMap()
+        );
 
         verify(machineLearningNodeClient).registerAgent(any(MLAgent.class), actionListenerCaptor.capture());
 
@@ -108,7 +113,12 @@ public class RegisterAgentTests extends OpenSearchTestCase {
             return null;
         }).when(machineLearningNodeClient).registerAgent(any(MLAgent.class), actionListenerCaptor.capture());
 
-        CompletableFuture<WorkflowData> future = registerAgentStep.execute(List.of(inputData));
+        CompletableFuture<WorkflowData> future = registerAgentStep.execute(
+            inputData.getNodeId(),
+            inputData,
+            Collections.emptyMap(),
+            Collections.emptyMap()
+        );
 
         verify(machineLearningNodeClient).registerAgent(any(MLAgent.class), actionListenerCaptor.capture());
 

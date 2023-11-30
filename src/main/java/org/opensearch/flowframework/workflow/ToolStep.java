@@ -15,6 +15,7 @@ import org.opensearch.flowframework.exception.FlowFrameworkException;
 import org.opensearch.ml.common.agent.MLToolSpec;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -39,12 +40,23 @@ public class ToolStep implements WorkflowStep {
     static final String NAME = "create_tool";
 
     @Override
-    public CompletableFuture<WorkflowData> execute(List<WorkflowData> data) throws IOException {
+    public CompletableFuture<WorkflowData> execute(
+        String currentNodeId,
+        WorkflowData currentNodeInputs,
+        Map<String, WorkflowData> outputs,
+        Map<String, String> previousNodeInputs
+    ) throws IOException {
         String type = null;
         String name = null;
         String description = null;
         Map<String, String> parameters = Collections.emptyMap();
         Boolean includeOutputInAgentResponse = null;
+
+        // TODO: Recreating the list to get this compiling
+        // Need to refactor the below iteration to pull directly from the maps
+        List<WorkflowData> data = new ArrayList<>();
+        data.add(currentNodeInputs);
+        data.addAll(outputs.values());
 
         for (WorkflowData workflowData : data) {
             Map<String, Object> content = workflowData.getContent();
@@ -95,7 +107,13 @@ public class ToolStep implements WorkflowStep {
 
             MLToolSpec mlToolSpec = builder.build();
 
-            toolFuture.complete(new WorkflowData(Map.ofEntries(Map.entry(TOOLS_FIELD, mlToolSpec)), data.get(0).getWorkflowId()));
+            toolFuture.complete(
+                new WorkflowData(
+                    Map.ofEntries(Map.entry(TOOLS_FIELD, mlToolSpec)),
+                    currentNodeInputs.getWorkflowId(),
+                    currentNodeInputs.getNodeId()
+                )
+            );
         }
 
         logger.info("Tool registered successfully {}", type);
