@@ -14,6 +14,7 @@ import org.opensearch.core.xcontent.XContentParser;
 import org.opensearch.flowframework.workflow.ProcessNode;
 import org.opensearch.flowframework.workflow.WorkflowData;
 import org.opensearch.flowframework.workflow.WorkflowStep;
+import org.opensearch.ml.common.agent.LLMSpec;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -24,7 +25,10 @@ import java.util.Map.Entry;
 import java.util.Objects;
 
 import static org.opensearch.core.xcontent.XContentParserUtils.ensureExpectedToken;
+import static org.opensearch.flowframework.common.CommonValue.LLM_FIELD;
+import static org.opensearch.flowframework.util.ParseUtils.buildLLMMap;
 import static org.opensearch.flowframework.util.ParseUtils.buildStringToStringMap;
+import static org.opensearch.flowframework.util.ParseUtils.parseLLM;
 import static org.opensearch.flowframework.util.ParseUtils.parseStringToStringMap;
 
 /**
@@ -34,7 +38,6 @@ import static org.opensearch.flowframework.util.ParseUtils.parseStringToStringMa
  * and its inputs are used to populate the {@link WorkflowData} input.
  */
 public class WorkflowNode implements ToXContentObject {
-
     /** The template field name for node id */
     public static final String ID_FIELD = "id";
     /** The template field name for node type */
@@ -82,7 +85,7 @@ public class WorkflowNode implements ToXContentObject {
         xContentBuilder.startObject(USER_INPUTS_FIELD);
         for (Entry<String, Object> e : userInputs.entrySet()) {
             xContentBuilder.field(e.getKey());
-            if (e.getValue() instanceof String) {
+            if (e.getValue() instanceof String || e.getValue() instanceof Number) {
                 xContentBuilder.value(e.getValue());
             } else if (e.getValue() instanceof Map<?, ?>) {
                 buildStringToStringMap(xContentBuilder, (Map<?, ?>) e.getValue());
@@ -98,6 +101,12 @@ public class WorkflowNode implements ToXContentObject {
                     }
                 }
                 xContentBuilder.endArray();
+            } else if (e.getValue() instanceof LLMSpec) {
+                if (LLM_FIELD.equals(e.getKey())) {
+                    xContentBuilder.startObject();
+                    buildLLMMap(xContentBuilder, (LLMSpec) e.getValue());
+                    xContentBuilder.endObject();
+                }
             }
         }
         xContentBuilder.endObject();
@@ -141,7 +150,11 @@ public class WorkflowNode implements ToXContentObject {
                                 userInputs.put(inputFieldName, parser.text());
                                 break;
                             case START_OBJECT:
-                                userInputs.put(inputFieldName, parseStringToStringMap(parser));
+                                if (LLM_FIELD.equals(inputFieldName)) {
+                                    userInputs.put(inputFieldName, parseLLM(parser));
+                                } else {
+                                    userInputs.put(inputFieldName, parseStringToStringMap(parser));
+                                }
                                 break;
                             case START_ARRAY:
                                 if (PROCESSORS_FIELD.equals(inputFieldName)) {
@@ -156,6 +169,22 @@ public class WorkflowNode implements ToXContentObject {
                                         mapList.add(parseStringToStringMap(parser));
                                     }
                                     userInputs.put(inputFieldName, mapList.toArray(new Map[0]));
+                                }
+                                break;
+                            case VALUE_NUMBER:
+                                switch (parser.numberType()) {
+                                    case INT:
+                                        userInputs.put(inputFieldName, parser.intValue());
+                                        break;
+                                    case LONG:
+                                        userInputs.put(inputFieldName, parser.longValue());
+                                        break;
+                                    case FLOAT:
+                                        userInputs.put(inputFieldName, parser.floatValue());
+                                        break;
+                                    case DOUBLE:
+                                        userInputs.put(inputFieldName, parser.doubleValue());
+                                        break;
                                 }
                                 break;
                             default:

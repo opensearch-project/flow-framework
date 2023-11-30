@@ -229,12 +229,12 @@ public class Template implements ToXContentObject, Writeable {
         for (Entry<String, Workflow> e : workflows.entrySet()) {
             xContentBuilder.field(e.getKey(), e.getValue(), params);
         }
+        xContentBuilder.endObject();
 
         if (uiMetadata != null && !uiMetadata.isEmpty()) {
             xContentBuilder.field(UI_METADATA_FIELD, uiMetadata);
         }
 
-        xContentBuilder.endObject();
         if (user != null) {
             xContentBuilder.field(USER_FIELD, user);
         }

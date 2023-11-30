@@ -40,7 +40,7 @@ public class ModelGroupStep implements WorkflowStep {
 
     private static final Logger logger = LogManager.getLogger(ModelGroupStep.class);
 
-    private MachineLearningNodeClient mlClient;
+    private final MachineLearningNodeClient mlClient;
 
     static final String NAME = "model_group";
 

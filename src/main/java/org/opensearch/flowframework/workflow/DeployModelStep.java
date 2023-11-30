@@ -30,7 +30,7 @@ import static org.opensearch.flowframework.common.CommonValue.MODEL_ID;
 public class DeployModelStep implements WorkflowStep {
     private static final Logger logger = LogManager.getLogger(DeployModelStep.class);
 
-    private MachineLearningNodeClient mlClient;
+    private final MachineLearningNodeClient mlClient;
     static final String NAME = "deploy_model";
 
     /**
