@@ -42,7 +42,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.stream.Stream;
 
 import static org.opensearch.flowframework.common.CommonValue.ACTIONS_FIELD;
-import static org.opensearch.flowframework.common.CommonValue.CREDENTIALS_FIELD;
+import static org.opensearch.flowframework.common.CommonValue.CREDENTIAL_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.DESCRIPTION_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.NAME_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.PARAMETERS_FIELD;
@@ -74,22 +74,28 @@ public class CreateConnectorStep implements WorkflowStep {
 
     // TODO: need to add retry conflicts here
     @Override
-    public CompletableFuture<WorkflowData> execute(List<WorkflowData> data) throws IOException {
+    public CompletableFuture<WorkflowData> execute(
+        String currentNodeId,
+        WorkflowData currentNodeInputs,
+        Map<String, WorkflowData> outputs,
+        Map<String, String> previousNodeInputs
+    ) throws IOException {
         CompletableFuture<WorkflowData> createConnectorFuture = new CompletableFuture<>();
 
         ActionListener<MLCreateConnectorResponse> actionListener = new ActionListener<>() {
 
             @Override
             public void onResponse(MLCreateConnectorResponse mlCreateConnectorResponse) {
+                String workflowId = currentNodeInputs.getWorkflowId();
                 createConnectorFuture.complete(
                     new WorkflowData(
                         Map.ofEntries(Map.entry("connector_id", mlCreateConnectorResponse.getConnectorId())),
-                        data.get(0).getWorkflowId()
+                        workflowId,
+                        currentNodeInputs.getNodeId()
                     )
                 );
                 try {
                     logger.info("Created connector successfully");
-                    String workflowId = data.get(0).getWorkflowId();
                     String workflowStepName = getName();
                     ResourceCreated newResource = new ResourceCreated(workflowStepName, mlCreateConnectorResponse.getConnectorId());
                     XContentBuilder builder = XContentBuilder.builder(XContentType.JSON.xContent());
@@ -136,6 +142,12 @@ public class CreateConnectorStep implements WorkflowStep {
         Map<String, String> credentials = Collections.emptyMap();
         List<ConnectorAction> actions = Collections.emptyList();
 
+        // TODO: Recreating the list to get this compiling
+        // Need to refactor the below iteration to pull directly from the maps
+        List<WorkflowData> data = new ArrayList<>();
+        data.add(currentNodeInputs);
+        data.addAll(outputs.values());
+
         try {
             for (WorkflowData workflowData : data) {
                 for (Entry<String, Object> entry : workflowData.getContent().entrySet()) {
@@ -155,8 +167,8 @@ public class CreateConnectorStep implements WorkflowStep {
                         case PARAMETERS_FIELD:
                             parameters = getParameterMap(entry.getValue());
                             break;
-                        case CREDENTIALS_FIELD:
-                            credentials = getStringToStringMap(entry.getValue(), CREDENTIALS_FIELD);
+                        case CREDENTIAL_FIELD:
+                            credentials = getStringToStringMap(entry.getValue(), CREDENTIAL_FIELD);
                             break;
                         case ACTIONS_FIELD:
                             actions = getConnectorActionList(entry.getValue());

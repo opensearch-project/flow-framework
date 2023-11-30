@@ -33,6 +33,16 @@ public class CommonValue {
     public static final String WORKFLOW_STATE_INDEX_MAPPING = "mappings/workflow-state.json";
     /** Workflow State index mapping version */
     public static final Integer WORKFLOW_STATE_INDEX_VERSION = 1;
+    /** Config Index Name */
+    public static final String CONFIG_INDEX = ".plugins-flow-framework-config";
+    /** Config index mapping file path */
+    public static final String CONFIG_INDEX_MAPPING = "mappings/config.json";
+    /** Config index mapping version */
+    public static final Integer CONFIG_INDEX_VERSION = 1;
+    /** Master key field name */
+    public static final String MASTER_KEY = "master_key";
+    /** Create Time field  name */
+    public static final String CREATE_TIME = "create_time";
 
     /** The template field name for template use case */
     public static final String USE_CASE_FIELD = "use_case";
@@ -119,8 +129,8 @@ public class CommonValue {
     public static final String PROTOCOL_FIELD = "protocol";
     /** Connector parameters field */
     public static final String PARAMETERS_FIELD = "parameters";
-    /** Connector credentials field */
-    public static final String CREDENTIALS_FIELD = "credentials";
+    /** Connector credential field */
+    public static final String CREDENTIAL_FIELD = "credential";
     /** Connector actions field */
     public static final String ACTIONS_FIELD = "actions";
     /** Backend roles for the model */

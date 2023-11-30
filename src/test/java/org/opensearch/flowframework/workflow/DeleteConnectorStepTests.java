@@ -20,7 +20,7 @@ import org.opensearch.ml.common.transport.connector.MLCreateConnectorResponse;
 import org.opensearch.test.OpenSearchTestCase;
 
 import java.io.IOException;
-import java.util.List;
+import java.util.Collections;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
@@ -45,7 +45,7 @@ public class DeleteConnectorStepTests extends OpenSearchTestCase {
 
         MockitoAnnotations.openMocks(this);
 
-        inputData = new WorkflowData(Map.of(CommonValue.CONNECTOR_ID, "test"), "test-id");
+        inputData = new WorkflowData(Map.of(CommonValue.CONNECTOR_ID, "test"), "test-id", "test-node-id");
     }
 
     public void testDeleteConnector() throws IOException, ExecutionException, InterruptedException {
@@ -64,7 +64,12 @@ public class DeleteConnectorStepTests extends OpenSearchTestCase {
             return null;
         }).when(machineLearningNodeClient).deleteConnector(any(String.class), actionListenerCaptor.capture());
 
-        CompletableFuture<WorkflowData> future = deleteConnectorStep.execute(List.of(inputData));
+        CompletableFuture<WorkflowData> future = deleteConnectorStep.execute(
+            inputData.getNodeId(),
+            inputData,
+            Collections.emptyMap(),
+            Collections.emptyMap()
+        );
 
         verify(machineLearningNodeClient).deleteConnector(any(String.class), actionListenerCaptor.capture());
 
@@ -85,7 +90,12 @@ public class DeleteConnectorStepTests extends OpenSearchTestCase {
             return null;
         }).when(machineLearningNodeClient).deleteConnector(any(String.class), actionListenerCaptor.capture());
 
-        CompletableFuture<WorkflowData> future = deleteConnectorStep.execute(List.of(inputData));
+        CompletableFuture<WorkflowData> future = deleteConnectorStep.execute(
+            inputData.getNodeId(),
+            inputData,
+            Collections.emptyMap(),
+            Collections.emptyMap()
+        );
 
         verify(machineLearningNodeClient).deleteConnector(any(String.class), actionListenerCaptor.capture());
 

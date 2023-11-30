@@ -18,6 +18,7 @@ import org.opensearch.flowframework.exception.FlowFrameworkException;
 import org.opensearch.ml.client.MachineLearningNodeClient;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -45,7 +46,12 @@ public class DeleteConnectorStep implements WorkflowStep {
     }
 
     @Override
-    public CompletableFuture<WorkflowData> execute(List<WorkflowData> data) throws IOException {
+    public CompletableFuture<WorkflowData> execute(
+        String currentNodeId,
+        WorkflowData currentNodeInputs,
+        Map<String, WorkflowData> outputs,
+        Map<String, String> previousNodeInputs
+    ) throws IOException {
         CompletableFuture<WorkflowData> deleteConnectorFuture = new CompletableFuture<>();
 
         ActionListener<DeleteResponse> actionListener = new ActionListener<>() {
@@ -53,7 +59,11 @@ public class DeleteConnectorStep implements WorkflowStep {
             @Override
             public void onResponse(DeleteResponse deleteResponse) {
                 deleteConnectorFuture.complete(
-                    new WorkflowData(Map.ofEntries(Map.entry("connector_id", deleteResponse.getId())), data.get(0).getWorkflowId())
+                    new WorkflowData(
+                        Map.ofEntries(Map.entry("connector_id", deleteResponse.getId())),
+                        currentNodeInputs.getWorkflowId(),
+                        currentNodeInputs.getNodeId()
+                    )
                 );
             }
 
@@ -63,6 +73,12 @@ public class DeleteConnectorStep implements WorkflowStep {
                 deleteConnectorFuture.completeExceptionally(new FlowFrameworkException(e.getMessage(), ExceptionsHelper.status(e)));
             }
         };
+
+        // TODO: Recreating the list to get this compiling
+        // Need to refactor the below iteration to pull directly from the maps
+        List<WorkflowData> data = new ArrayList<>();
+        data.add(currentNodeInputs);
+        data.addAll(outputs.values());
 
         Optional<String> connectorId = data.stream()
             .map(WorkflowData::getContent)

@@ -70,7 +70,7 @@ public class WorkflowProcessSorter {
         Map<String, ProcessNode> idToNodeMap = new HashMap<>();
         for (WorkflowNode node : sortedNodes) {
             WorkflowStep step = workflowStepFactory.createStep(node.type());
-            WorkflowData data = new WorkflowData(node.userInputs(), workflow.userParams(), workflowId);
+            WorkflowData data = new WorkflowData(node.userInputs(), workflow.userParams(), workflowId, node.id());
             List<ProcessNode> predecessorNodes = workflow.edges()
                 .stream()
                 .filter(e -> e.destination().equals(node.id()))
