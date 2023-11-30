@@ -50,16 +50,17 @@ public class DeleteConnectorStepTests extends OpenSearchTestCase {
 
     public void testDeleteConnector() throws IOException, ExecutionException, InterruptedException {
 
-        String connectorId = "connectorId";
+        String connectorId = randomAlphaOfLength(5);
         DeleteConnectorStep deleteConnectorStep = new DeleteConnectorStep(machineLearningNodeClient);
 
         @SuppressWarnings("unchecked")
         ArgumentCaptor<ActionListener<DeleteResponse>> actionListenerCaptor = ArgumentCaptor.forClass(ActionListener.class);
 
         doAnswer(invocation -> {
+            String connectorIdArg = invocation.getArgument(0);
             ActionListener<DeleteResponse> actionListener = invocation.getArgument(1);
             ShardId shardId = new ShardId(new Index("indexName", "uuid"), 1);
-            DeleteResponse output = new DeleteResponse(shardId, connectorId, 1, 1, 1, true);
+            DeleteResponse output = new DeleteResponse(shardId, connectorIdArg, 1, 1, 1, true);
             actionListener.onResponse(output);
             return null;
         }).when(machineLearningNodeClient).deleteConnector(any(String.class), actionListenerCaptor.capture());
@@ -67,14 +68,13 @@ public class DeleteConnectorStepTests extends OpenSearchTestCase {
         CompletableFuture<WorkflowData> future = deleteConnectorStep.execute(
             inputData.getNodeId(),
             inputData,
-            Map.of("step_1", new WorkflowData(Map.of("connector_id", "test"), "workflowId", "nodeId")),
+            Map.of("step_1", new WorkflowData(Map.of("connector_id", connectorId), "workflowId", "nodeId")),
             Map.of("step_1", "connector_id")
         );
         verify(machineLearningNodeClient).deleteConnector(any(String.class), actionListenerCaptor.capture());
 
         assertTrue(future.isDone());
         assertEquals(connectorId, future.get().getContent().get("connector_id"));
-
     }
 
     public void testNoConnectorIdInOutput() throws IOException {
