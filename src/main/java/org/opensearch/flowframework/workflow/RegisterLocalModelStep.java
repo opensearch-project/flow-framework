@@ -11,10 +11,14 @@ package org.opensearch.flowframework.workflow;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.opensearch.ExceptionsHelper;
+import org.opensearch.cluster.service.ClusterService;
+import org.opensearch.common.settings.Settings;
+import org.opensearch.common.util.concurrent.FutureUtils;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.core.rest.RestStatus;
 import org.opensearch.flowframework.exception.FlowFrameworkException;
 import org.opensearch.ml.client.MachineLearningNodeClient;
+import org.opensearch.ml.common.MLTaskState;
 import org.opensearch.ml.common.model.MLModelConfig;
 import org.opensearch.ml.common.model.MLModelFormat;
 import org.opensearch.ml.common.model.TextEmbeddingModelConfig;
@@ -37,17 +41,17 @@ import static org.opensearch.flowframework.common.CommonValue.FRAMEWORK_TYPE;
 import static org.opensearch.flowframework.common.CommonValue.MODEL_CONTENT_HASH_VALUE;
 import static org.opensearch.flowframework.common.CommonValue.MODEL_FORMAT;
 import static org.opensearch.flowframework.common.CommonValue.MODEL_GROUP_ID;
+import static org.opensearch.flowframework.common.CommonValue.MODEL_ID;
 import static org.opensearch.flowframework.common.CommonValue.MODEL_TYPE;
 import static org.opensearch.flowframework.common.CommonValue.NAME_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.REGISTER_MODEL_STATUS;
-import static org.opensearch.flowframework.common.CommonValue.TASK_ID;
 import static org.opensearch.flowframework.common.CommonValue.URL;
 import static org.opensearch.flowframework.common.CommonValue.VERSION_FIELD;
 
 /**
  * Step to register a local model
  */
-public class RegisterLocalModelStep implements WorkflowStep {
+public class RegisterLocalModelStep extends AbstractRetryableWorkflowStep {
 
     private static final Logger logger = LogManager.getLogger(RegisterLocalModelStep.class);
 
@@ -57,9 +61,12 @@ public class RegisterLocalModelStep implements WorkflowStep {
 
     /**
      * Instantiate this class
+     * @param settings The OpenSearch settings
+     * @param clusterService The cluster service
      * @param mlClient client to instantiate MLClient
      */
-    public RegisterLocalModelStep(MachineLearningNodeClient mlClient) {
+    public RegisterLocalModelStep(Settings settings, ClusterService clusterService, MachineLearningNodeClient mlClient) {
+        super(settings, clusterService);
         this.mlClient = mlClient;
     }
 
@@ -72,15 +79,12 @@ public class RegisterLocalModelStep implements WorkflowStep {
             @Override
             public void onResponse(MLRegisterModelResponse mlRegisterModelResponse) {
                 logger.info("Local Model registration task creation successful");
-                registerLocalModelFuture.complete(
-                    new WorkflowData(
-                        Map.ofEntries(
-                            Map.entry(TASK_ID, mlRegisterModelResponse.getTaskId()),
-                            Map.entry(REGISTER_MODEL_STATUS, mlRegisterModelResponse.getStatus())
-                        ),
-                        data.get(0).getWorkflowId()
-                    )
-                );
+
+                String workflowId = data.get(0).getWorkflowId();
+                String taskId = mlRegisterModelResponse.getTaskId();
+
+                // Attempt to retrieve the model ID
+                retryableGetMlTask(workflowId, registerLocalModelFuture, taskId, 0);
             }
 
             @Override
@@ -197,5 +201,47 @@ public class RegisterLocalModelStep implements WorkflowStep {
     @Override
     public String getName() {
         return NAME;
+    }
+
+    /**
+     * Retryable get ml task
+     * @param workflowId the workflow id
+     * @param getMLTaskFuture the workflow step future
+     * @param taskId the ml task id
+     * @param retries the current number of request retries
+     */
+    void retryableGetMlTask(String workflowId, CompletableFuture<WorkflowData> registerLocalModelFuture, String taskId, int retries) {
+        mlClient.getTask(taskId, ActionListener.wrap(response -> {
+            if (response.getState() != MLTaskState.COMPLETED) {
+                throw new IllegalStateException("Local model registration is not yet completed");
+            } else {
+                logger.info("Local model registeration successful");
+                registerLocalModelFuture.complete(
+                    new WorkflowData(
+                        Map.ofEntries(
+                            Map.entry(MODEL_ID, response.getModelId()),
+                            Map.entry(REGISTER_MODEL_STATUS, response.getState().name())
+                        ),
+                        workflowId
+                    )
+                );
+            }
+        }, exception -> {
+            if (retries < maxRetry) {
+                // Sleep thread prior to retrying request
+                try {
+                    Thread.sleep(5000);
+                } catch (Exception e) {
+                    FutureUtils.cancel(registerLocalModelFuture);
+                }
+                final int retryAdd = retries + 1;
+                retryableGetMlTask(workflowId, registerLocalModelFuture, taskId, retryAdd);
+            } else {
+                logger.error("Failed to retrieve local model registration task, maximum retries exceeded");
+                registerLocalModelFuture.completeExceptionally(
+                    new FlowFrameworkException(exception.getMessage(), ExceptionsHelper.status(exception))
+                );
+            }
+        }));
     }
 }

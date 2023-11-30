@@ -10,9 +10,14 @@ package org.opensearch.flowframework.workflow;
 
 import com.carrotsearch.randomizedtesting.annotations.ThreadLeakScope;
 
+import org.opensearch.cluster.service.ClusterService;
+import org.opensearch.common.settings.ClusterSettings;
+import org.opensearch.common.settings.Setting;
+import org.opensearch.common.settings.Settings;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.flowframework.exception.FlowFrameworkException;
 import org.opensearch.ml.client.MachineLearningNodeClient;
+import org.opensearch.ml.common.MLTask;
 import org.opensearch.ml.common.MLTaskState;
 import org.opensearch.ml.common.model.MLModelConfig;
 import org.opensearch.ml.common.model.TextEmbeddingModelConfig;
@@ -22,17 +27,25 @@ import org.opensearch.test.OpenSearchTestCase;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
+import static org.opensearch.flowframework.common.CommonValue.MODEL_ID;
 import static org.opensearch.flowframework.common.CommonValue.REGISTER_MODEL_STATUS;
-import static org.opensearch.flowframework.common.CommonValue.TASK_ID;
+import static org.opensearch.flowframework.common.FlowFrameworkSettings.MAX_GET_TASK_REQUEST_RETRY;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 @ThreadLeakScope(ThreadLeakScope.Scope.NONE)
 public class RegisterLocalModelStepTests extends OpenSearchTestCase {
@@ -48,7 +61,18 @@ public class RegisterLocalModelStepTests extends OpenSearchTestCase {
         super.setUp();
 
         MockitoAnnotations.openMocks(this);
-        this.registerLocalModelStep = new RegisterLocalModelStep(machineLearningNodeClient);
+        ClusterService clusterService = mock(ClusterService.class);
+        final Set<Setting<?>> settingsSet = Stream.concat(
+            ClusterSettings.BUILT_IN_CLUSTER_SETTINGS.stream(),
+            Stream.of(MAX_GET_TASK_REQUEST_RETRY)
+        ).collect(Collectors.toSet());
+
+        // Set max request retry setting to 0 to avoid sleeping the thread during unit test failure cases
+        Settings testMaxRetrySetting = Settings.builder().put(MAX_GET_TASK_REQUEST_RETRY.getKey(), 0).build();
+        ClusterSettings clusterSettings = new ClusterSettings(testMaxRetrySetting, settingsSet);
+        when(clusterService.getClusterSettings()).thenReturn(clusterSettings);
+
+        this.registerLocalModelStep = spy(new RegisterLocalModelStep(testMaxRetrySetting, clusterService, machineLearningNodeClient));
 
         MLModelConfig config = TextEmbeddingModelConfig.builder()
             .modelType("testModelType")
@@ -78,8 +102,10 @@ public class RegisterLocalModelStepTests extends OpenSearchTestCase {
     public void testRegisterLocalModelSuccess() throws Exception {
 
         String taskId = "abcd";
-        String status = MLTaskState.CREATED.name();
+        String modelId = "model-id";
+        String status = MLTaskState.COMPLETED.name();
 
+        // Stub register for success case
         doAnswer(invocation -> {
             ActionListener<MLRegisterModelResponse> actionListener = invocation.getArgument(1);
             MLRegisterModelResponse output = new MLRegisterModelResponse(taskId, status, null);
@@ -87,12 +113,36 @@ public class RegisterLocalModelStepTests extends OpenSearchTestCase {
             return null;
         }).when(machineLearningNodeClient).register(any(MLRegisterModelInput.class), any());
 
+        // Stub getTask for success case
+        doAnswer(invocation -> {
+            ActionListener<MLTask> actionListener = invocation.getArgument(1);
+            MLTask output = new MLTask(
+                taskId,
+                modelId,
+                null,
+                null,
+                MLTaskState.COMPLETED,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                false
+            );
+            actionListener.onResponse(output);
+            return null;
+        }).when(machineLearningNodeClient).getTask(any(), any());
+
         CompletableFuture<WorkflowData> future = registerLocalModelStep.execute(List.of(workflowData));
-        verify(machineLearningNodeClient).register(any(MLRegisterModelInput.class), any());
+        verify(machineLearningNodeClient, times(1)).register(any(MLRegisterModelInput.class), any());
+        verify(machineLearningNodeClient, times(1)).getTask(any(), any());
 
         assertTrue(future.isDone());
         assertTrue(!future.isCompletedExceptionally());
-        assertEquals(taskId, future.get().getContent().get(TASK_ID));
+        assertEquals(modelId, future.get().getContent().get(MODEL_ID));
         assertEquals(status, future.get().getContent().get(REGISTER_MODEL_STATUS));
 
     }
