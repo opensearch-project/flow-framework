@@ -69,10 +69,10 @@ public class RegisterAgentStep implements WorkflowStep {
 
     @Override
     public CompletableFuture<WorkflowData> execute(
-            String currentNodeId,
-            WorkflowData currentNodeInputs,
-            Map<String, WorkflowData> outputs,
-            Map<String, String> previousNodeInputs
+        String currentNodeId,
+        WorkflowData currentNodeInputs,
+        Map<String, WorkflowData> outputs,
+        Map<String, String> previousNodeInputs
     ) throws IOException {
 
         CompletableFuture<WorkflowData> registerAgentModelFuture = new CompletableFuture<>();
@@ -82,11 +82,11 @@ public class RegisterAgentStep implements WorkflowStep {
             public void onResponse(MLRegisterAgentResponse mlRegisterAgentResponse) {
                 logger.info("Remote Agent registration successful");
                 registerAgentModelFuture.complete(
-                        new WorkflowData(
-                                Map.ofEntries(Map.entry(AGENT_ID, mlRegisterAgentResponse.getAgentId())),
-                                currentNodeInputs.getWorkflowId(),
-                                currentNodeInputs.getNodeId()
-                        )
+                    new WorkflowData(
+                        Map.ofEntries(Map.entry(AGENT_ID, mlRegisterAgentResponse.getAgentId())),
+                        currentNodeInputs.getWorkflowId(),
+                        currentNodeInputs.getNodeId()
+                    )
                 );
             }
 
