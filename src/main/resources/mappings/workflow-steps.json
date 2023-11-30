@@ -52,7 +52,7 @@
             "url"
         ],
         "outputs":[
-            "task_id",
+            "model_id",
             "register_model_status"
         ]
     },
@@ -82,15 +82,6 @@
         "outputs":[
             "model_group_id",
             "model_group_status"
-        ]
-    },
-    "get_ml_task": {
-        "inputs":[
-            "task_id"
-        ],
-        "outputs":[
-            "model_id",
-            "register_model_status"
         ]
     }
 }
