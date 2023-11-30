@@ -18,8 +18,6 @@ import org.opensearch.flowframework.exception.FlowFrameworkException;
 import org.opensearch.ml.client.MachineLearningNodeClient;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
@@ -74,20 +72,23 @@ public class DeleteConnectorStep implements WorkflowStep {
             }
         };
 
-        // TODO: Recreating the list to get this compiling
-        // Need to refactor the below iteration to pull directly from the maps
-        List<WorkflowData> data = new ArrayList<>();
-        data.add(currentNodeInputs);
-        data.addAll(outputs.values());
+        String connectorId = null;
 
-        Optional<String> connectorId = data.stream()
-            .map(WorkflowData::getContent)
-            .filter(m -> m.containsKey(CONNECTOR_ID))
-            .map(m -> m.get(CONNECTOR_ID).toString())
+        // Previous Node inputs defines which step the connector ID came from
+        Optional<String> previousNode = previousNodeInputs.entrySet()
+            .stream()
+            .filter(e -> CONNECTOR_ID.equals(e.getValue()))
+            .map(Map.Entry::getKey)
             .findFirst();
+        if (previousNode.isPresent()) {
+            WorkflowData previousNodeOutput = outputs.get(previousNode.get());
+            if (previousNodeOutput != null && previousNodeOutput.getContent().containsKey(CONNECTOR_ID)) {
+                connectorId = previousNodeOutput.getContent().get(CONNECTOR_ID).toString();
+            }
+        }
 
-        if (connectorId.isPresent()) {
-            mlClient.deleteConnector(connectorId.get(), actionListener);
+        if (connectorId != null) {
+            mlClient.deleteConnector(connectorId, actionListener);
         } else {
             deleteConnectorFuture.completeExceptionally(
                 new FlowFrameworkException("Required field " + CONNECTOR_ID + " is not provided", RestStatus.BAD_REQUEST)
