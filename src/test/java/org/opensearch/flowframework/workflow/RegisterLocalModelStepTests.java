@@ -19,8 +19,6 @@ import org.opensearch.flowframework.exception.FlowFrameworkException;
 import org.opensearch.ml.client.MachineLearningNodeClient;
 import org.opensearch.ml.common.MLTask;
 import org.opensearch.ml.common.MLTaskState;
-import org.opensearch.ml.common.model.MLModelConfig;
-import org.opensearch.ml.common.model.TextEmbeddingModelConfig;
 import org.opensearch.ml.common.transport.register.MLRegisterModelInput;
 import org.opensearch.ml.common.transport.register.MLRegisterModelResponse;
 import org.opensearch.test.OpenSearchTestCase;
@@ -42,7 +40,6 @@ import static org.opensearch.flowframework.common.FlowFrameworkSettings.MAX_GET_
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -72,14 +69,7 @@ public class RegisterLocalModelStepTests extends OpenSearchTestCase {
         ClusterSettings clusterSettings = new ClusterSettings(testMaxRetrySetting, settingsSet);
         when(clusterService.getClusterSettings()).thenReturn(clusterSettings);
 
-        this.registerLocalModelStep = spy(new RegisterLocalModelStep(testMaxRetrySetting, clusterService, machineLearningNodeClient));
-
-        MLModelConfig config = TextEmbeddingModelConfig.builder()
-            .modelType("testModelType")
-            .allConfig("{\"field1\":\"value1\",\"field2\":\"value2\"}")
-            .frameworkType(TextEmbeddingModelConfig.FrameworkType.SENTENCE_TRANSFORMERS)
-            .embeddingDimension(100)
-            .build();
+        this.registerLocalModelStep = new RegisterLocalModelStep(testMaxRetrySetting, clusterService, machineLearningNodeClient);
 
         this.workflowData = new WorkflowData(
             Map.ofEntries(
