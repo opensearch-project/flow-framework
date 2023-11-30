@@ -24,25 +24,12 @@ import org.opensearch.ml.common.transport.agent.MLRegisterAgentResponse;
 
 import java.io.IOException;
 import java.time.Instant;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.Map.Entry;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Stream;
 
-import static org.opensearch.flowframework.common.CommonValue.AGENT_ID;
-import static org.opensearch.flowframework.common.CommonValue.APP_TYPE_FIELD;
-import static org.opensearch.flowframework.common.CommonValue.CREATED_TIME;
-import static org.opensearch.flowframework.common.CommonValue.DESCRIPTION_FIELD;
-import static org.opensearch.flowframework.common.CommonValue.LAST_UPDATED_TIME_FIELD;
-import static org.opensearch.flowframework.common.CommonValue.LLM_FIELD;
-import static org.opensearch.flowframework.common.CommonValue.MEMORY_FIELD;
-import static org.opensearch.flowframework.common.CommonValue.NAME_FIELD;
-import static org.opensearch.flowframework.common.CommonValue.PARAMETERS_FIELD;
-import static org.opensearch.flowframework.common.CommonValue.TOOLS_FIELD;
-import static org.opensearch.flowframework.common.CommonValue.TYPE;
+import static org.opensearch.flowframework.common.CommonValue.*;
 import static org.opensearch.flowframework.util.ParseUtils.getStringToStringMap;
 
 /**
@@ -55,6 +42,9 @@ public class RegisterAgentStep implements WorkflowStep {
     private MachineLearningNodeClient mlClient;
 
     static final String NAME = "register_agent";
+
+    private static final String LLM_MODEL_ID = "llm.model_id";
+    private static final String LLM_PARAMETERS = "llm.parameters";
 
     private List<MLToolSpec> mlToolSpecList;
 
@@ -101,6 +91,8 @@ public class RegisterAgentStep implements WorkflowStep {
         String type = null;
         String description = null;
         LLMSpec llm = null;
+        String llmModelId = null;
+        Map<String, String> llmParameters = Collections.emptyMap();
         List<MLToolSpec> tools = new ArrayList<>();
         Map<String, String> parameters = Collections.emptyMap();
         MLMemorySpec memory = null;
@@ -128,8 +120,11 @@ public class RegisterAgentStep implements WorkflowStep {
                     case TYPE:
                         type = (String) entry.getValue();
                         break;
-                    case LLM_FIELD:
-                        llm = getLLMSpec(entry.getValue());
+                    case LLM_MODEL_ID:
+                        llmModelId = (String) entry.getValue();
+                        break;
+                    case LLM_PARAMETERS:
+                        llmParameters = getLLMParameters(entry.getValue(), previousNodeInputs, outputs);
                         break;
                     case TOOLS_FIELD:
                         tools = addTools(entry.getValue());
@@ -155,7 +150,9 @@ public class RegisterAgentStep implements WorkflowStep {
             }
         }
 
-        if (Stream.of(name, type, llm, tools, parameters, memory, appType).allMatch(x -> x != null)) {
+        LLMSpec llmSpec = getLLMSpec(llmModelId, llmParameters);
+
+        if (Stream.of(name, type, llmSpec).allMatch(x -> x != null)) {
             MLAgentBuilder builder = MLAgent.builder().name(name);
 
             if (description != null) {
@@ -163,7 +160,7 @@ public class RegisterAgentStep implements WorkflowStep {
             }
 
             builder.type(type)
-                .llm(llm)
+                .llm(llmSpec)
                 .tools(tools)
                 .parameters(parameters)
                 .memory(memory)
@@ -195,11 +192,42 @@ public class RegisterAgentStep implements WorkflowStep {
         return mlToolSpecList;
     }
 
-    private LLMSpec getLLMSpec(Object llm) {
-        if (llm instanceof LLMSpec) {
-            return (LLMSpec) llm;
+    private Map<String, String> getLLMParameters(
+        Object parameters,
+        Map<String, String> previousNodeInputs,
+        Map<String, WorkflowData> outputs
+    ) {
+        Map<String, String> parametersMap = (Map<String, String>) parameters;
+
+        // Case when modelId is passed through previousSteps
+        Optional<String> previousNode = previousNodeInputs.entrySet()
+            .stream()
+            .filter(e -> MODEL_ID.equals(e.getValue()))
+            .map(Map.Entry::getKey)
+            .findFirst();
+        if (previousNode.isPresent() && !parametersMap.containsKey(MODEL_ID)) {
+            WorkflowData previousNodeOutput = outputs.get(previousNode.get());
+            if (previousNodeOutput != null && previousNodeOutput.getContent().containsKey(MODEL_ID)) {
+                parametersMap.put(MODEL_ID, previousNodeOutput.getContent().get(MODEL_ID).toString());
+                return parametersMap;
+            }
         }
-        throw new IllegalArgumentException("[" + LLM_FIELD + "] must be of type LLMSpec.");
+        // For other cases where modelId is already present in the parameters or not return the parametersMap
+        return parametersMap;
+    }
+
+    private LLMSpec getLLMSpec(String llmModelId, Map<String, String> llmParameters) {
+        if (llmModelId == null) {
+            throw new IllegalArgumentException("model id for llm is null");
+        }
+        LLMSpec.LLMSpecBuilder builder = LLMSpec.builder();
+        builder.modelId(llmModelId);
+        if (llmParameters != null) {
+            builder.parameters(llmParameters);
+        }
+
+        LLMSpec llmSpec = builder.build();
+        return llmSpec;
     }
 
     private MLMemorySpec getMLMemorySpec(Object mlMemory) {
