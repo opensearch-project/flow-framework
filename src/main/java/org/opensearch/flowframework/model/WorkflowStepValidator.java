@@ -17,7 +17,7 @@ import java.util.List;
 import static org.opensearch.core.xcontent.XContentParserUtils.ensureExpectedToken;
 
 /**
- * This represents the an object of workflow steps json which maps each step to expected inputs and outputs
+ * This represents an object of workflow steps json which maps each step to expected inputs and outputs
  */
 public class WorkflowStepValidator {
 
