@@ -25,7 +25,6 @@ import java.util.Map;
 public class WorkflowStepFactory {
 
     private final Map<String, WorkflowStep> stepMap = new HashMap<>();
-    private final FlowFrameworkIndicesHandler flowFrameworkIndicesHandler;
 
     /**
      * Instantiate this class.
@@ -43,17 +42,6 @@ public class WorkflowStepFactory {
         MachineLearningNodeClient mlClient,
         FlowFrameworkIndicesHandler flowFrameworkIndicesHandler
     ) {
-        this.flowFrameworkIndicesHandler = flowFrameworkIndicesHandler;
-        populateMap(settings, clusterService, client, mlClient, flowFrameworkIndicesHandler);
-    }
-
-    private void populateMap(
-        Settings settings,
-        ClusterService clusterService,
-        Client client,
-        MachineLearningNodeClient mlClient,
-        FlowFrameworkIndicesHandler flowFrameworkIndicesHandler
-    ) {
         stepMap.put(NoOpStep.NAME, new NoOpStep());
         stepMap.put(CreateIndexStep.NAME, new CreateIndexStep(clusterService, client));
         stepMap.put(CreateIngestPipelineStep.NAME, new CreateIngestPipelineStep(client));
@@ -61,6 +49,7 @@ public class WorkflowStepFactory {
         stepMap.put(RegisterRemoteModelStep.NAME, new RegisterRemoteModelStep(mlClient));
         stepMap.put(DeployModelStep.NAME, new DeployModelStep(mlClient));
         stepMap.put(CreateConnectorStep.NAME, new CreateConnectorStep(mlClient, flowFrameworkIndicesHandler));
+        stepMap.put(DeleteConnectorStep.NAME, new DeleteConnectorStep(mlClient));
         stepMap.put(ModelGroupStep.NAME, new ModelGroupStep(mlClient));
         stepMap.put(ToolStep.NAME, new ToolStep());
         stepMap.put(RegisterAgentStep.NAME, new RegisterAgentStep(mlClient));
@@ -80,7 +69,7 @@ public class WorkflowStepFactory {
 
     /**
      * Gets the step map
-     * @return the step map
+     * @return a read-only copy of the step map
      */
     public Map<String, WorkflowStep> getStepMap() {
         return Map.copyOf(this.stepMap);
