@@ -73,6 +73,8 @@ public class CommonValue {
     /** The provision workflow thread pool name */
     public static final String PROVISION_THREAD_POOL = "opensearch_workflow_provision";
 
+    /** Success name field */
+    public static final String SUCCESS = "success";
     /** Index name field */
     public static final String INDEX_NAME = "index_name";
     /** Type field */

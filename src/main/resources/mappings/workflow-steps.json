@@ -83,6 +83,14 @@
             "deploy_model_status"
         ]
     },
+    "undeploy_model": {
+        "inputs":[
+            "model_id"
+        ],
+        "outputs":[
+            "success"
+        ]
+    },
     "register_model_group": {
         "inputs":[
             "name"
