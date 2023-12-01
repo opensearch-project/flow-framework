@@ -70,7 +70,7 @@ public class RegisterAgentStep implements WorkflowStep {
         ActionListener<MLRegisterAgentResponse> actionListener = new ActionListener<>() {
             @Override
             public void onResponse(MLRegisterAgentResponse mlRegisterAgentResponse) {
-                logger.info("Remote Agent registration successful");
+                logger.info("Agent registration successful");
                 registerAgentModelFuture.complete(
                     new WorkflowData(
                         Map.ofEntries(Map.entry(AGENT_ID, mlRegisterAgentResponse.getAgentId())),
@@ -90,7 +90,6 @@ public class RegisterAgentStep implements WorkflowStep {
         String name = null;
         String type = null;
         String description = null;
-        LLMSpec llm = null;
         String llmModelId = null;
         Map<String, String> llmParameters = Collections.emptyMap();
         List<MLToolSpec> tools = new ArrayList<>();
@@ -121,7 +120,7 @@ public class RegisterAgentStep implements WorkflowStep {
                         type = (String) entry.getValue();
                         break;
                     case LLM_MODEL_ID:
-                        llmModelId = getLlmModelId((String) entry.getValue(), previousNodeInputs, outputs);
+                        llmModelId = (String) entry.getValue();
                         break;
                     case LLM_PARAMETERS:
                         llmParameters = getStringToStringMap(entry.getValue(), LLM_PARAMETERS);
@@ -148,6 +147,15 @@ public class RegisterAgentStep implements WorkflowStep {
                         break;
                 }
             }
+        }
+
+        // Case when modelId can is present in previous node inputs
+        if (llmModelId == null) {
+            llmModelId = getLlmModelId(previousNodeInputs, outputs);
+        } else {
+            registerAgentModelFuture.completeExceptionally(
+                new FlowFrameworkException("llm model id is not provided", RestStatus.BAD_REQUEST)
+            );
         }
 
         LLMSpec llmSpec = getLLMSpec(llmModelId, llmParameters);
@@ -192,11 +200,9 @@ public class RegisterAgentStep implements WorkflowStep {
         return mlToolSpecList;
     }
 
-    private String getLlmModelId(String llmModelId, Map<String, String> previousNodeInputs, Map<String, WorkflowData> outputs) {
+    private String getLlmModelId(Map<String, String> previousNodeInputs, Map<String, WorkflowData> outputs) {
         // Case when modelId is already pass in the template
-        if (llmModelId != null) {
-            return llmModelId;
-        }
+        String llmModelId = null;
 
         // Case when modelId is passed through previousSteps
         Optional<String> previousNode = previousNodeInputs.entrySet()
