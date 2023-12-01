@@ -154,11 +154,9 @@ public class CreateConnectorStep implements WorkflowStep {
                 credentials = getStringToStringMap(inputs.get(CREDENTIAL_FIELD), CREDENTIAL_FIELD);
                 actions = getConnectorActionList(inputs.get(ACTIONS_FIELD));
             } catch (IllegalArgumentException iae) {
-                createConnectorFuture.completeExceptionally(new FlowFrameworkException(iae.getMessage(), RestStatus.BAD_REQUEST));
-                return createConnectorFuture;
+                throw new FlowFrameworkException(iae.getMessage(), RestStatus.BAD_REQUEST);
             } catch (PrivilegedActionException pae) {
-                createConnectorFuture.completeExceptionally(new FlowFrameworkException(pae.getMessage(), RestStatus.UNAUTHORIZED));
-                return createConnectorFuture;
+                throw new FlowFrameworkException(pae.getMessage(), RestStatus.UNAUTHORIZED);
             }
 
             MLCreateConnectorInput mlInput = MLCreateConnectorInput.builder()
