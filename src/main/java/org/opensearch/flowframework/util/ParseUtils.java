@@ -8,6 +8,21 @@
  */
 package org.opensearch.flowframework.util;
 
+import static org.opensearch.core.xcontent.XContentParserUtils.ensureExpectedToken;
+import static org.opensearch.flowframework.common.CommonValue.MODEL_ID;
+import static org.opensearch.flowframework.common.CommonValue.PARAMETERS_FIELD;
+
+import java.io.IOException;
+import java.time.Instant;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Map.Entry;
+import java.util.Optional;
+import java.util.Set;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.opensearch.client.Client;
@@ -18,26 +33,22 @@ import org.opensearch.common.xcontent.json.JsonXContent;
 import org.opensearch.commons.ConfigConstants;
 import org.opensearch.commons.authuser.User;
 import org.opensearch.core.common.bytes.BytesReference;
+import org.opensearch.core.rest.RestStatus;
 import org.opensearch.core.xcontent.NamedXContentRegistry;
 import org.opensearch.core.xcontent.XContentBuilder;
 import org.opensearch.core.xcontent.XContentParser;
+import org.opensearch.flowframework.exception.FlowFrameworkException;
+import org.opensearch.flowframework.workflow.WorkflowData;
 import org.opensearch.ml.common.agent.LLMSpec;
-
-import java.io.IOException;
-import java.time.Instant;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Map.Entry;
-
-import static org.opensearch.core.xcontent.XContentParserUtils.ensureExpectedToken;
-import static org.opensearch.flowframework.common.CommonValue.MODEL_ID;
-import static org.opensearch.flowframework.common.CommonValue.PARAMETERS_FIELD;
 
 /**
  * Utility methods for Template parsing
  */
 public class ParseUtils {
     private static final Logger logger = LogManager.getLogger(ParseUtils.class);
+
+    // Matches ${{ foo.bar }} (whitespace optional) with capturing groups 1=foo, 2=bar
+    private static final Pattern SUBSTITUTION_PATTERN = Pattern.compile("\\$\\{\\{\\s*(.+)\\.(.+?)\\s*\\}\\}");
 
     private ParseUtils() {}
 
@@ -161,4 +172,95 @@ public class ParseUtils {
         throw new IllegalArgumentException("[" + fieldName + "] must be a key-value map.");
     }
 
+    /**
+     * Creates a map containing the specified input keys, with values derived from template data or previous node
+     * output.
+     *
+     * @param requiredInputKeys A set of keys that must be present, or will cause an exception to be thrown
+     * @param optionalInputKeys A set of keys that may be present, or will be absent in the returned map
+     * @param currentNodeInputs Input params and content for this node, from workflow parsing
+     * @param outputs WorkflowData content of previous steps
+     * @param previousNodeInputs Input params for this node that come from previous steps
+     * @return A map containing the requiredInputKeys with their corresponding values,
+     *         and optionalInputKeys with their corresponding values if present.
+     *         Throws a {@link FlowFrameworkException} if a required key is not present.
+     */
+    public static Map<String, Object> getInputsFromPreviousSteps(
+        Set<String> requiredInputKeys,
+        Set<String> optionalInputKeys,
+        WorkflowData currentNodeInputs,
+        Map<String, WorkflowData> outputs,
+        Map<String, String> previousNodeInputs
+    ) {
+        // Mutable set to ensure all required keys are used
+        Set<String> requiredKeys = new HashSet<>(requiredInputKeys);
+        // Merge input sets to add all requested keys
+        Set<String> keys = new HashSet<>(requiredInputKeys);
+        keys.addAll(optionalInputKeys);
+        // Initialize return map
+        Map<String, Object> inputs = new HashMap<>();
+        for (String key : keys) {
+            Object value = null;
+            // Priority 1: specifically named prior step inputs
+            // ... parse the previousNodeInputs map and fill in the specified keys
+            Optional<String> previousNodeForKey = previousNodeInputs.entrySet()
+                .stream()
+                .filter(e -> key.equals(e.getValue()))
+                .map(Map.Entry::getKey)
+                .findAny();
+            if (previousNodeForKey.isPresent()) {
+                WorkflowData previousNodeOutput = outputs.get(previousNodeForKey.get());
+                if (previousNodeOutput != null) {
+                    value = previousNodeOutput.getContent().get(key);
+                }
+            }
+            // Priority 2: inputs specified in template
+            // ... fetch from currentNodeInputs (params take precedence)
+            if (value == null) {
+                value = currentNodeInputs.getParams().get(key);
+            }
+            if (value == null) {
+                value = currentNodeInputs.getContent().get(key);
+            }
+            // Priority 3: other inputs
+            if (value == null) {
+                Optional<Object> matchedValue = outputs.values()
+                    .stream()
+                    .map(WorkflowData::getContent)
+                    .filter(m -> m.containsKey(key))
+                    .map(m -> m.get(key))
+                    .findAny();
+                if (matchedValue.isPresent()) {
+                    value = matchedValue.get();
+                }
+            }
+            // Check for substitution
+            if (value != null) {
+                Matcher m = SUBSTITUTION_PATTERN.matcher(value.toString());
+                if (m.matches()) {
+                    WorkflowData data = outputs.get(m.group(1));
+                    if (data != null && data.getContent().containsKey(m.group(2))) {
+                        value = data.getContent().get(m.group(2));
+                    }
+                }
+                inputs.put(key, value);
+                requiredKeys.remove(key);
+            }
+        }
+        // After iterating is complete, throw exception if requiredKeys is not empty
+        if (!requiredKeys.isEmpty()) {
+            throw new FlowFrameworkException(
+                "Missing required inputs "
+                    + requiredKeys
+                    + " in workflow ["
+                    + currentNodeInputs.getWorkflowId()
+                    + "] node ["
+                    + currentNodeInputs.getNodeId()
+                    + "]",
+                RestStatus.BAD_REQUEST
+            );
+        }
+        // Finally return the map
+        return inputs;
+    }
 }
