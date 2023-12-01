@@ -127,7 +127,7 @@ public class RegisterRemoteModelStepTests extends OpenSearchTestCase {
     public void testMissingInputs() {
         CompletableFuture<WorkflowData> future = this.registerRemoteModelStep.execute(
             "nodeId",
-            WorkflowData.EMPTY,
+            new WorkflowData(Collections.emptyMap(), "test-id", "test-node-id"),
             Collections.emptyMap(),
             Collections.emptyMap()
         );
@@ -135,7 +135,11 @@ public class RegisterRemoteModelStepTests extends OpenSearchTestCase {
         assertTrue(future.isCompletedExceptionally());
         ExecutionException ex = assertThrows(ExecutionException.class, () -> future.get().getContent());
         assertTrue(ex.getCause() instanceof FlowFrameworkException);
-        assertEquals("Required fields are not provided", ex.getCause().getMessage());
+        assertTrue(ex.getCause().getMessage().startsWith("Missing required inputs ["));
+        for (String s : new String[] { "name", "function_name", "connector_id" }) {
+            assertTrue(ex.getCause().getMessage().contains(s));
+        }
+        assertTrue(ex.getCause().getMessage().endsWith("] in workflow [test-id] node [test-node-id]"));
     }
 
 }

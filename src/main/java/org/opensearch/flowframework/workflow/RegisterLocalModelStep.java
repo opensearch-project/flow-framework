@@ -8,35 +8,6 @@
  */
 package org.opensearch.flowframework.workflow;
 
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
-import org.opensearch.ExceptionsHelper;
-import org.opensearch.cluster.service.ClusterService;
-import org.opensearch.common.settings.Settings;
-import org.opensearch.common.util.concurrent.FutureUtils;
-import org.opensearch.core.action.ActionListener;
-import org.opensearch.core.rest.RestStatus;
-import org.opensearch.flowframework.common.WorkflowResources;
-import org.opensearch.flowframework.exception.FlowFrameworkException;
-import org.opensearch.flowframework.indices.FlowFrameworkIndicesHandler;
-import org.opensearch.ml.client.MachineLearningNodeClient;
-import org.opensearch.ml.common.MLTaskState;
-import org.opensearch.ml.common.model.MLModelConfig;
-import org.opensearch.ml.common.model.MLModelFormat;
-import org.opensearch.ml.common.model.TextEmbeddingModelConfig;
-import org.opensearch.ml.common.model.TextEmbeddingModelConfig.FrameworkType;
-import org.opensearch.ml.common.model.TextEmbeddingModelConfig.TextEmbeddingModelConfigBuilder;
-import org.opensearch.ml.common.transport.register.MLRegisterModelInput;
-import org.opensearch.ml.common.transport.register.MLRegisterModelInput.MLRegisterModelInputBuilder;
-import org.opensearch.ml.common.transport.register.MLRegisterModelResponse;
-
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.Map.Entry;
-import java.util.concurrent.CompletableFuture;
-import java.util.stream.Stream;
-
 import static org.opensearch.flowframework.common.CommonValue.ALL_CONFIG;
 import static org.opensearch.flowframework.common.CommonValue.DESCRIPTION_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.EMBEDDING_DIMENSION;
@@ -49,6 +20,34 @@ import static org.opensearch.flowframework.common.CommonValue.NAME_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.REGISTER_MODEL_STATUS;
 import static org.opensearch.flowframework.common.CommonValue.URL;
 import static org.opensearch.flowframework.common.CommonValue.VERSION_FIELD;
+
+import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.CompletableFuture;
+import java.util.stream.Stream;
+
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import org.opensearch.ExceptionsHelper;
+import org.opensearch.cluster.service.ClusterService;
+import org.opensearch.common.settings.Settings;
+import org.opensearch.common.util.concurrent.FutureUtils;
+import org.opensearch.core.action.ActionListener;
+import org.opensearch.core.rest.RestStatus;
+import org.opensearch.flowframework.common.WorkflowResources;
+import org.opensearch.flowframework.exception.FlowFrameworkException;
+import org.opensearch.flowframework.indices.FlowFrameworkIndicesHandler;
+import org.opensearch.flowframework.util.ParseUtils;
+import org.opensearch.ml.client.MachineLearningNodeClient;
+import org.opensearch.ml.common.MLTaskState;
+import org.opensearch.ml.common.model.MLModelConfig;
+import org.opensearch.ml.common.model.MLModelFormat;
+import org.opensearch.ml.common.model.TextEmbeddingModelConfig;
+import org.opensearch.ml.common.model.TextEmbeddingModelConfig.FrameworkType;
+import org.opensearch.ml.common.model.TextEmbeddingModelConfig.TextEmbeddingModelConfigBuilder;
+import org.opensearch.ml.common.transport.register.MLRegisterModelInput;
+import org.opensearch.ml.common.transport.register.MLRegisterModelInput.MLRegisterModelInputBuilder;
+import org.opensearch.ml.common.transport.register.MLRegisterModelResponse;
 
 /**
  * Step to register a local model
@@ -91,12 +90,6 @@ public class RegisterLocalModelStep extends AbstractRetryableWorkflowStep {
 
         CompletableFuture<WorkflowData> registerLocalModelFuture = new CompletableFuture<>();
 
-        // TODO: Recreating the list to get this compiling
-        // Need to refactor the below iteration to pull directly from the maps
-        List<WorkflowData> data = new ArrayList<>();
-        data.add(currentNodeInputs);
-        data.addAll(outputs.values());
-
         ActionListener<MLRegisterModelResponse> actionListener = new ActionListener<>() {
             @Override
             public void onResponse(MLRegisterModelResponse mlRegisterModelResponse) {
@@ -115,76 +108,41 @@ public class RegisterLocalModelStep extends AbstractRetryableWorkflowStep {
             }
         };
 
-        String modelName = null;
-        String modelVersion = null;
-        String description = null;
-        MLModelFormat modelFormat = null;
-        String modelGroupId = null;
-        String modelContentHashValue = null;
-        String modelType = null;
-        String embeddingDimension = null;
-        FrameworkType frameworkType = null;
-        String allConfig = null;
-        String url = null;
+        Set<String> requiredKeys = Set.of(
+            NAME_FIELD,
+            VERSION_FIELD,
+            MODEL_FORMAT,
+            MODEL_GROUP_ID,
+            MODEL_TYPE,
+            EMBEDDING_DIMENSION,
+            FRAMEWORK_TYPE,
+            MODEL_CONTENT_HASH_VALUE,
+            URL
+        );
+        Set<String> optionalKeys = Set.of(DESCRIPTION_FIELD, ALL_CONFIG);
 
-        for (WorkflowData workflowData : data) {
-            Map<String, Object> content = workflowData.getContent();
+        try {
+            Map<String, Object> inputs = ParseUtils.getInputsFromPreviousSteps(
+                requiredKeys,
+                optionalKeys,
+                currentNodeInputs,
+                outputs,
+                previousNodeInputs
+            );
 
-            for (Entry<String, Object> entry : content.entrySet()) {
-                switch (entry.getKey()) {
-                    case NAME_FIELD:
-                        modelName = (String) content.get(NAME_FIELD);
-                        break;
-                    case VERSION_FIELD:
-                        modelVersion = (String) content.get(VERSION_FIELD);
-                        break;
-                    case DESCRIPTION_FIELD:
-                        description = (String) content.get(DESCRIPTION_FIELD);
-                        break;
-                    case MODEL_FORMAT:
-                        modelFormat = MLModelFormat.from((String) content.get(MODEL_FORMAT));
-                        break;
-                    case MODEL_GROUP_ID:
-                        modelGroupId = (String) content.get(MODEL_GROUP_ID);
-                        break;
-                    case MODEL_TYPE:
-                        modelType = (String) content.get(MODEL_TYPE);
-                        break;
-                    case EMBEDDING_DIMENSION:
-                        embeddingDimension = (String) content.get(EMBEDDING_DIMENSION);
-                        break;
-                    case FRAMEWORK_TYPE:
-                        frameworkType = FrameworkType.from((String) content.get(FRAMEWORK_TYPE));
-                        break;
-                    case ALL_CONFIG:
-                        allConfig = (String) content.get(ALL_CONFIG);
-                        break;
-                    case MODEL_CONTENT_HASH_VALUE:
-                        modelContentHashValue = (String) content.get(MODEL_CONTENT_HASH_VALUE);
-                        break;
-                    case URL:
-                        url = (String) content.get(URL);
-                        break;
-                    default:
-                        break;
+            String modelName = (String) inputs.get(NAME_FIELD);
+            String modelVersion = (String) inputs.get(VERSION_FIELD);
+            String description = (String) inputs.get(DESCRIPTION_FIELD);
+            MLModelFormat modelFormat = MLModelFormat.from((String) inputs.get(MODEL_FORMAT));
+            String modelGroupId = (String) inputs.get(MODEL_GROUP_ID);
+            String modelContentHashValue = (String) inputs.get(MODEL_CONTENT_HASH_VALUE);
+            String modelType = (String) inputs.get(MODEL_TYPE);
+            String embeddingDimension = (String) inputs.get(EMBEDDING_DIMENSION);
+            FrameworkType frameworkType = FrameworkType.from((String) inputs.get(FRAMEWORK_TYPE));
+            String allConfig = (String) inputs.get(ALL_CONFIG);
+            String url = (String) inputs.get(URL);
 
-                }
-            }
-        }
-
-        if (Stream.of(
-            modelName,
-            modelVersion,
-            modelFormat,
-            modelGroupId,
-            modelType,
-            embeddingDimension,
-            frameworkType,
-            modelContentHashValue,
-            url
-        ).allMatch(x -> x != null)) {
-
-            // Create Model configudation
+            // Create Model configuration
             TextEmbeddingModelConfigBuilder modelConfigBuilder = TextEmbeddingModelConfig.builder()
                 .modelType(modelType)
                 .embeddingDimension(Integer.valueOf(embeddingDimension))
@@ -210,12 +168,9 @@ public class RegisterLocalModelStep extends AbstractRetryableWorkflowStep {
             MLRegisterModelInput mlInput = mlInputBuilder.build();
 
             mlClient.register(mlInput, actionListener);
-        } else {
-            registerLocalModelFuture.completeExceptionally(
-                new FlowFrameworkException("Required fields are not provided", RestStatus.BAD_REQUEST)
-            );
+        } catch (FlowFrameworkException e) {
+            registerLocalModelFuture.completeExceptionally(e);
         }
-
         return registerLocalModelFuture;
     }
 
