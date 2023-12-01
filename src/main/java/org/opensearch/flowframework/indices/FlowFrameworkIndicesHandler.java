@@ -32,14 +32,17 @@ import org.opensearch.commons.authuser.User;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.core.rest.RestStatus;
 import org.opensearch.core.xcontent.ToXContent;
+import org.opensearch.core.xcontent.ToXContentObject;
 import org.opensearch.core.xcontent.XContentBuilder;
 import org.opensearch.flowframework.exception.FlowFrameworkException;
 import org.opensearch.flowframework.model.ProvisioningProgress;
+import org.opensearch.flowframework.model.ResourceCreated;
 import org.opensearch.flowframework.model.State;
 import org.opensearch.flowframework.model.Template;
 import org.opensearch.flowframework.model.WorkflowState;
 import org.opensearch.flowframework.util.EncryptorUtils;
 import org.opensearch.script.Script;
+import org.opensearch.script.ScriptType;
 
 import java.io.IOException;
 import java.net.URL;
@@ -435,6 +438,7 @@ public class FlowFrameworkIndicesHandler {
                 updatedContent.putAll(updatedFields);
                 updateRequest.doc(updatedContent);
                 updateRequest.setRefreshPolicy(WriteRequest.RefreshPolicy.IMMEDIATE);
+                updateRequest.retryOnConflict(3);
                 // TODO: decide what condition can be considered as an update conflict and add retry strategy
                 client.update(updateRequest, ActionListener.runBefore(listener, () -> context.restore()));
             } catch (Exception e) {
@@ -468,7 +472,8 @@ public class FlowFrameworkIndicesHandler {
                 // TODO: Also add ability to change other fields at the same time when adding detailed provision progress
                 updateRequest.script(script);
                 updateRequest.setRefreshPolicy(WriteRequest.RefreshPolicy.IMMEDIATE);
-                // TODO: decide what condition can be considered as an update conflict and add retry strategy
+                updateRequest.retryOnConflict(3);
+                // TODO: Implement our own concurrency control to improve on retry mechanism
                 client.update(updateRequest, ActionListener.runBefore(listener, () -> context.restore()));
             } catch (Exception e) {
                 logger.error("Failed to update {} entry : {}. {}", indexName, documentId, e.getMessage());
@@ -477,5 +482,39 @@ public class FlowFrameworkIndicesHandler {
                 );
             }
         }
+    }
+
+    /**
+     * Creates a new ResourceCreated object and a script to update the state index
+     * @param workflowId workflowId for the relevant step
+     * @param nodeId WorkflowData object with relevent step information
+     * @param workflowStepName the workflowstep name that created the resource
+     * @param resourceId the id of the newly created resource
+     * @param listener the ActionListener for this step to handle completing the future after update
+     * @throws IOException if parsing fails on new resource
+     */
+    public void updateResourceInStateIndex(
+        String workflowId,
+        String nodeId,
+        String workflowStepName,
+        String resourceId,
+        ActionListener<UpdateResponse> listener
+    ) throws IOException {
+        ResourceCreated newResource = new ResourceCreated(workflowStepName, nodeId, resourceId);
+        XContentBuilder builder = XContentBuilder.builder(XContentType.JSON.xContent());
+        newResource.toXContent(builder, ToXContentObject.EMPTY_PARAMS);
+
+        // The script to append a new object to the resources_created array
+        Script script = new Script(
+            ScriptType.INLINE,
+            "painless",
+            "ctx._source.resources_created.add(params.newResource)",
+            Collections.singletonMap("newResource", newResource)
+        );
+
+        updateFlowFrameworkSystemIndexDocWithScript(WORKFLOW_STATE_INDEX, workflowId, script, ActionListener.wrap(updateResponse -> {
+            logger.info("updated resources created of {}", workflowId);
+            listener.onResponse(updateResponse);
+        }, exception -> { listener.onFailure(exception); }));
     }
 }

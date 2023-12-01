@@ -16,7 +16,9 @@ import org.opensearch.common.settings.Settings;
 import org.opensearch.common.util.concurrent.FutureUtils;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.core.rest.RestStatus;
+import org.opensearch.flowframework.common.WorkflowResources;
 import org.opensearch.flowframework.exception.FlowFrameworkException;
+import org.opensearch.flowframework.indices.FlowFrameworkIndicesHandler;
 import org.opensearch.ml.client.MachineLearningNodeClient;
 import org.opensearch.ml.common.MLTaskState;
 import org.opensearch.ml.common.model.MLModelConfig;
@@ -42,7 +44,6 @@ import static org.opensearch.flowframework.common.CommonValue.FRAMEWORK_TYPE;
 import static org.opensearch.flowframework.common.CommonValue.MODEL_CONTENT_HASH_VALUE;
 import static org.opensearch.flowframework.common.CommonValue.MODEL_FORMAT;
 import static org.opensearch.flowframework.common.CommonValue.MODEL_GROUP_ID;
-import static org.opensearch.flowframework.common.CommonValue.MODEL_ID;
 import static org.opensearch.flowframework.common.CommonValue.MODEL_TYPE;
 import static org.opensearch.flowframework.common.CommonValue.NAME_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.REGISTER_MODEL_STATUS;
@@ -58,17 +59,26 @@ public class RegisterLocalModelStep extends AbstractRetryableWorkflowStep {
 
     private final MachineLearningNodeClient mlClient;
 
-    static final String NAME = "register_local_model";
+    private final FlowFrameworkIndicesHandler flowFrameworkIndicesHandler;
+
+    static final String NAME = WorkflowResources.REGISTER_LOCAL_MODEL.getWorkflowStep();
 
     /**
      * Instantiate this class
      * @param settings The OpenSearch settings
      * @param clusterService The cluster service
      * @param mlClient client to instantiate MLClient
+     * @param flowFrameworkIndicesHandler FlowFrameworkIndicesHandler class to update system indices
      */
-    public RegisterLocalModelStep(Settings settings, ClusterService clusterService, MachineLearningNodeClient mlClient) {
+    public RegisterLocalModelStep(
+        Settings settings,
+        ClusterService clusterService,
+        MachineLearningNodeClient mlClient,
+        FlowFrameworkIndicesHandler flowFrameworkIndicesHandler
+    ) {
         super(settings, clusterService);
         this.mlClient = mlClient;
+        this.flowFrameworkIndicesHandler = flowFrameworkIndicesHandler;
     }
 
     @Override
@@ -218,7 +228,7 @@ public class RegisterLocalModelStep extends AbstractRetryableWorkflowStep {
      * Retryable get ml task
      * @param workflowId the workflow id
      * @param nodeId the workflow node id
-     * @param getMLTaskFuture the workflow step future
+     * @param registerLocalModelFuture the workflow step future
      * @param taskId the ml task id
      * @param retries the current number of request retries
      */
@@ -242,17 +252,38 @@ public class RegisterLocalModelStep extends AbstractRetryableWorkflowStep {
                     throw new IllegalStateException("Local model registration is not yet completed");
                 }
             } else {
-                logger.info("Local model registeration successful");
-                registerLocalModelFuture.complete(
-                    new WorkflowData(
-                        Map.ofEntries(
-                            Map.entry(MODEL_ID, response.getModelId()),
-                            Map.entry(REGISTER_MODEL_STATUS, response.getState().name())
-                        ),
+                try {
+                    logger.info("Local Model registration successful");
+                    String resourceName = WorkflowResources.getResourceByWorkflowStep(getName());
+                    flowFrameworkIndicesHandler.updateResourceInStateIndex(
                         workflowId,
-                        nodeId
-                    )
-                );
+                        nodeId,
+                        getName(),
+                        response.getTaskId(),
+                        ActionListener.wrap(updateResponse -> {
+                            logger.info("successfully updated resources created in state index: {}", updateResponse.getIndex());
+                            registerLocalModelFuture.complete(
+                                new WorkflowData(
+                                    Map.ofEntries(
+                                        Map.entry(resourceName, response.getModelId()),
+                                        Map.entry(REGISTER_MODEL_STATUS, response.getState().name())
+                                    ),
+                                    workflowId,
+                                    nodeId
+                                )
+                            );
+                        }, exception -> {
+                            logger.error("Failed to update new created resource", exception);
+                            registerLocalModelFuture.completeExceptionally(
+                                new FlowFrameworkException(exception.getMessage(), ExceptionsHelper.status(exception))
+                            );
+                        })
+                    );
+
+                } catch (Exception e) {
+                    logger.error("Failed to parse and update new created resource", e);
+                    registerLocalModelFuture.completeExceptionally(new FlowFrameworkException(e.getMessage(), ExceptionsHelper.status(e)));
+                }
             }
         }, exception -> {
             if (retries < maxRetry) {
