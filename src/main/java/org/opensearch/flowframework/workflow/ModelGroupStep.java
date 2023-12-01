@@ -75,22 +75,29 @@ public class ModelGroupStep implements WorkflowStep {
                 try {
                     logger.info("Remote Model registration successful");
                     String resourceName = WorkflowResources.getResourceByWorkflowStep(getName());
-                    registerModelGroupFuture.complete(
-                        new WorkflowData(
-                            Map.ofEntries(
-                                Map.entry(resourceName, mlRegisterModelGroupResponse.getModelGroupId()),
-                                Map.entry(MODEL_GROUP_STATUS, mlRegisterModelGroupResponse.getStatus())
-                            ),
-                            currentNodeInputs.getWorkflowId(),
-                            currentNodeId
-                        )
-                    );
                     flowFrameworkIndicesHandler.updateResourceInStateIndex(
                         currentNodeInputs.getWorkflowId(),
                         currentNodeId,
                         getName(),
                         mlRegisterModelGroupResponse.getModelGroupId(),
-                        registerModelGroupFuture
+                        ActionListener.wrap(updateResponse -> {
+                            logger.info("successfully updated resources created in state index: {}", updateResponse.getIndex());
+                            registerModelGroupFuture.complete(
+                                new WorkflowData(
+                                    Map.ofEntries(
+                                        Map.entry(resourceName, mlRegisterModelGroupResponse.getModelGroupId()),
+                                        Map.entry(MODEL_GROUP_STATUS, mlRegisterModelGroupResponse.getStatus())
+                                    ),
+                                    currentNodeInputs.getWorkflowId(),
+                                    currentNodeId
+                                )
+                            );
+                        }, exception -> {
+                            logger.error("Failed to update new created resource", exception);
+                            registerModelGroupFuture.completeExceptionally(
+                                new FlowFrameworkException(exception.getMessage(), ExceptionsHelper.status(exception))
+                            );
+                        })
                     );
 
                 } catch (Exception e) {

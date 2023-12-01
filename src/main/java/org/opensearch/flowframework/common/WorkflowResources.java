@@ -37,6 +37,9 @@ public enum WorkflowResources {
     private final String workflowStep;
     private final String resourceCreated;
     private static final Logger logger = LogManager.getLogger(WorkflowResources.class);
+    private static final Set<String> allResources = Stream.of(values())
+        .map(WorkflowResources::getResourceCreated)
+        .collect(Collectors.toSet());
 
     WorkflowResources(String workflowStep, String resourceCreated) {
         this.workflowStep = workflowStep;
@@ -82,6 +85,6 @@ public enum WorkflowResources {
      * @return a set of all the resource created types
      */
     public static Set<String> getAllResourcesCreated() {
-        return Stream.of(values()).map(WorkflowResources::getResourceCreated).collect(Collectors.toSet());
+        return allResources;
     }
 }

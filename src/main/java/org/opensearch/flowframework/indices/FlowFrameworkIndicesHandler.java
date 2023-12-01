@@ -41,7 +41,6 @@ import org.opensearch.flowframework.model.State;
 import org.opensearch.flowframework.model.Template;
 import org.opensearch.flowframework.model.WorkflowState;
 import org.opensearch.flowframework.util.EncryptorUtils;
-import org.opensearch.flowframework.workflow.WorkflowData;
 import org.opensearch.script.Script;
 import org.opensearch.script.ScriptType;
 
@@ -50,7 +49,6 @@ import java.net.URL;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import static org.opensearch.core.rest.RestStatus.INTERNAL_SERVER_ERROR;
@@ -492,7 +490,7 @@ public class FlowFrameworkIndicesHandler {
      * @param nodeId WorkflowData object with relevent step information
      * @param workflowStepName the workflowstep name that created the resource
      * @param resourceId the id of the newly created resource
-     * @param completableFuture the CompletableFuture used for this step
+     * @param listener the ActionListener for this step to handle completing the future after update
      * @throws IOException if parsing fails on new resource
      */
     public void updateResourceInStateIndex(
@@ -500,7 +498,7 @@ public class FlowFrameworkIndicesHandler {
         String nodeId,
         String workflowStepName,
         String resourceId,
-        CompletableFuture<WorkflowData> completableFuture
+        ActionListener<UpdateResponse> listener
     ) throws IOException {
         ResourceCreated newResource = new ResourceCreated(workflowStepName, nodeId, resourceId);
         XContentBuilder builder = XContentBuilder.builder(XContentType.JSON.xContent());
@@ -516,10 +514,7 @@ public class FlowFrameworkIndicesHandler {
 
         updateFlowFrameworkSystemIndexDocWithScript(WORKFLOW_STATE_INDEX, workflowId, script, ActionListener.wrap(updateResponse -> {
             logger.info("updated resources created of {}", workflowId);
-        }, exception -> {
-            completableFuture.completeExceptionally(new FlowFrameworkException(exception.getMessage(), ExceptionsHelper.status(exception)));
-            logger.error("Failed to update workflow state with newly created resource", exception);
-        }));
-
+            listener.onResponse(updateResponse);
+        }, exception -> { listener.onFailure(exception); }));
     }
 }

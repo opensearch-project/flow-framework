@@ -255,22 +255,29 @@ public class RegisterLocalModelStep extends AbstractRetryableWorkflowStep {
                 try {
                     logger.info("Local Model registration successful");
                     String resourceName = WorkflowResources.getResourceByWorkflowStep(getName());
-                    registerLocalModelFuture.complete(
-                        new WorkflowData(
-                            Map.ofEntries(
-                                Map.entry(resourceName, response.getModelId()),
-                                Map.entry(REGISTER_MODEL_STATUS, response.getState().name())
-                            ),
-                            workflowId,
-                            nodeId
-                        )
-                    );
                     flowFrameworkIndicesHandler.updateResourceInStateIndex(
                         workflowId,
                         nodeId,
                         getName(),
                         response.getTaskId(),
-                        registerLocalModelFuture
+                        ActionListener.wrap(updateResponse -> {
+                            logger.info("successfully updated resources created in state index: {}", updateResponse.getIndex());
+                            registerLocalModelFuture.complete(
+                                new WorkflowData(
+                                    Map.ofEntries(
+                                        Map.entry(resourceName, response.getModelId()),
+                                        Map.entry(REGISTER_MODEL_STATUS, response.getState().name())
+                                    ),
+                                    workflowId,
+                                    nodeId
+                                )
+                            );
+                        }, exception -> {
+                            logger.error("Failed to update new created resource", exception);
+                            registerLocalModelFuture.completeExceptionally(
+                                new FlowFrameworkException(exception.getMessage(), ExceptionsHelper.status(exception))
+                            );
+                        })
                     );
 
                 } catch (Exception e) {

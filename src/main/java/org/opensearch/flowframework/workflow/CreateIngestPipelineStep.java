@@ -144,21 +144,28 @@ public class CreateIngestPipelineStep implements WorkflowStep {
 
                 try {
                     String resourceName = WorkflowResources.getResourceByWorkflowStep(getName());
-                    // PutPipelineRequest returns only an AcknowledgeResponse, returning pipelineId instead
-                    // TODO: revisit this concept of pipeline_id to be consistent with what makes most sense to end user here
-                    createIngestPipelineFuture.complete(
-                        new WorkflowData(
-                            Map.of(resourceName, putPipelineRequest.getId()),
-                            currentNodeInputs.getWorkflowId(),
-                            currentNodeInputs.getNodeId()
-                        )
-                    );
                     flowFrameworkIndicesHandler.updateResourceInStateIndex(
                         currentNodeInputs.getWorkflowId(),
                         currentNodeId,
                         getName(),
                         putPipelineRequest.getId(),
-                        createIngestPipelineFuture
+                        ActionListener.wrap(updateResponse -> {
+                            logger.info("successfully updated resources created in state index: {}", updateResponse.getIndex());
+                            // PutPipelineRequest returns only an AcknowledgeResponse, returning pipelineId instead
+                            // TODO: revisit this concept of pipeline_id to be consistent with what makes most sense to end user here
+                            createIngestPipelineFuture.complete(
+                                new WorkflowData(
+                                    Map.of(resourceName, putPipelineRequest.getId()),
+                                    currentNodeInputs.getWorkflowId(),
+                                    currentNodeInputs.getNodeId()
+                                )
+                            );
+                        }, exception -> {
+                            logger.error("Failed to update new created resource", exception);
+                            createIngestPipelineFuture.completeExceptionally(
+                                new FlowFrameworkException(exception.getMessage(), ExceptionsHelper.status(exception))
+                            );
+                        })
                     );
 
                 } catch (Exception e) {

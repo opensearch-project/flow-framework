@@ -84,20 +84,27 @@ public class CreateConnectorStep implements WorkflowStep {
 
                 try {
                     String resourceName = WorkflowResources.getResourceByWorkflowStep(getName());
-                    createConnectorFuture.complete(
-                        new WorkflowData(
-                            Map.ofEntries(Map.entry(resourceName, mlCreateConnectorResponse.getConnectorId())),
-                            currentNodeInputs.getWorkflowId(),
-                            currentNodeId
-                        )
-                    );
                     logger.info("Created connector successfully");
                     flowFrameworkIndicesHandler.updateResourceInStateIndex(
                         currentNodeInputs.getWorkflowId(),
                         currentNodeId,
                         getName(),
                         mlCreateConnectorResponse.getConnectorId(),
-                        createConnectorFuture
+                        ActionListener.wrap(response -> {
+                            logger.info("successfully updated resources created in state index: {}", response.getIndex());
+                            createConnectorFuture.complete(
+                                new WorkflowData(
+                                    Map.ofEntries(Map.entry(resourceName, mlCreateConnectorResponse.getConnectorId())),
+                                    currentNodeInputs.getWorkflowId(),
+                                    currentNodeId
+                                )
+                            );
+                        }, exception -> {
+                            logger.error("Failed to update new created resource", exception);
+                            createConnectorFuture.completeExceptionally(
+                                new FlowFrameworkException(exception.getMessage(), ExceptionsHelper.status(exception))
+                            );
+                        })
                     );
 
                 } catch (Exception e) {

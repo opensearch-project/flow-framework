@@ -73,19 +73,26 @@ public class CreateIndexStep implements WorkflowStep {
                 try {
                     String resourceName = WorkflowResources.getResourceByWorkflowStep(getName());
                     logger.info("created index: {}", createIndexResponse.index());
-                    createIndexFuture.complete(
-                        new WorkflowData(
-                            Map.of(resourceName, createIndexResponse.index()),
-                            currentNodeInputs.getWorkflowId(),
-                            currentNodeId
-                        )
-                    );
                     flowFrameworkIndicesHandler.updateResourceInStateIndex(
                         currentNodeInputs.getWorkflowId(),
                         currentNodeId,
                         getName(),
                         createIndexResponse.index(),
-                        createIndexFuture
+                        ActionListener.wrap(response -> {
+                            logger.info("successfully updated resource created in state index: {}", response.getIndex());
+                            createIndexFuture.complete(
+                                new WorkflowData(
+                                    Map.of(resourceName, createIndexResponse.index()),
+                                    currentNodeInputs.getWorkflowId(),
+                                    currentNodeId
+                                )
+                            );
+                        }, exception -> {
+                            logger.error("Failed to update new created resource", exception);
+                            createIndexFuture.completeExceptionally(
+                                new FlowFrameworkException(exception.getMessage(), ExceptionsHelper.status(exception))
+                            );
+                        })
                     );
                 } catch (Exception e) {
                     logger.error("Failed to parse and update new created resource", e);

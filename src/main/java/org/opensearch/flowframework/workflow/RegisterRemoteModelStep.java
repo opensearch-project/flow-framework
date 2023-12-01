@@ -77,22 +77,29 @@ public class RegisterRemoteModelStep implements WorkflowStep {
                 try {
                     logger.info("Remote Model registration successful");
                     String resourceName = WorkflowResources.getResourceByWorkflowStep(getName());
-                    registerRemoteModelFuture.complete(
-                        new WorkflowData(
-                            Map.ofEntries(
-                                Map.entry(resourceName, mlRegisterModelResponse.getModelId()),
-                                Map.entry(REGISTER_MODEL_STATUS, mlRegisterModelResponse.getStatus())
-                            ),
-                            currentNodeInputs.getWorkflowId(),
-                            currentNodeInputs.getNodeId()
-                        )
-                    );
                     flowFrameworkIndicesHandler.updateResourceInStateIndex(
                         currentNodeInputs.getWorkflowId(),
                         currentNodeId,
                         getName(),
                         mlRegisterModelResponse.getModelId(),
-                        registerRemoteModelFuture
+                        ActionListener.wrap(response -> {
+                            logger.info("successfully updated resources created in state index: {}", response.getIndex());
+                            registerRemoteModelFuture.complete(
+                                new WorkflowData(
+                                    Map.ofEntries(
+                                        Map.entry(resourceName, mlRegisterModelResponse.getModelId()),
+                                        Map.entry(REGISTER_MODEL_STATUS, mlRegisterModelResponse.getStatus())
+                                    ),
+                                    currentNodeInputs.getWorkflowId(),
+                                    currentNodeInputs.getNodeId()
+                                )
+                            );
+                        }, exception -> {
+                            logger.error("Failed to update new created resource", exception);
+                            registerRemoteModelFuture.completeExceptionally(
+                                new FlowFrameworkException(exception.getMessage(), ExceptionsHelper.status(exception))
+                            );
+                        })
                     );
 
                 } catch (Exception e) {
