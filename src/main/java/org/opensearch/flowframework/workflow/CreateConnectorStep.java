@@ -11,21 +11,16 @@ package org.opensearch.flowframework.workflow;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.opensearch.ExceptionsHelper;
-import org.opensearch.common.xcontent.XContentType;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.core.rest.RestStatus;
-import org.opensearch.core.xcontent.ToXContentObject;
-import org.opensearch.core.xcontent.XContentBuilder;
+import org.opensearch.flowframework.common.WorkflowResources;
 import org.opensearch.flowframework.exception.FlowFrameworkException;
 import org.opensearch.flowframework.indices.FlowFrameworkIndicesHandler;
-import org.opensearch.flowframework.model.ResourceCreated;
 import org.opensearch.ml.client.MachineLearningNodeClient;
 import org.opensearch.ml.common.connector.ConnectorAction;
 import org.opensearch.ml.common.connector.ConnectorAction.ActionType;
 import org.opensearch.ml.common.transport.connector.MLCreateConnectorInput;
 import org.opensearch.ml.common.transport.connector.MLCreateConnectorResponse;
-import org.opensearch.script.Script;
-import org.opensearch.script.ScriptType;
 
 import java.io.IOException;
 import java.security.AccessController;
@@ -48,7 +43,6 @@ import static org.opensearch.flowframework.common.CommonValue.NAME_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.PARAMETERS_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.PROTOCOL_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.VERSION_FIELD;
-import static org.opensearch.flowframework.common.CommonValue.WORKFLOW_STATE_INDEX;
 import static org.opensearch.flowframework.util.ParseUtils.getStringToStringMap;
 
 /**
@@ -61,7 +55,7 @@ public class CreateConnectorStep implements WorkflowStep {
     private MachineLearningNodeClient mlClient;
     private final FlowFrameworkIndicesHandler flowFrameworkIndicesHandler;
 
-    static final String NAME = "create_connector";
+    static final String NAME = WorkflowResources.CREATE_CONNECTOR.getWorkflowStep();
 
     /**
      * Instantiate this class
@@ -87,44 +81,35 @@ public class CreateConnectorStep implements WorkflowStep {
 
             @Override
             public void onResponse(MLCreateConnectorResponse mlCreateConnectorResponse) {
-                String workflowId = currentNodeInputs.getWorkflowId();
-                createConnectorFuture.complete(
-                    new WorkflowData(
-                        Map.ofEntries(Map.entry("connector_id", mlCreateConnectorResponse.getConnectorId())),
-                        workflowId,
-                        currentNodeInputs.getNodeId()
-                    )
-                );
+
                 try {
+                    String resourceName = WorkflowResources.getResourceByWorkflowStep(getName());
                     logger.info("Created connector successfully");
-                    String workflowStepName = getName();
-                    ResourceCreated newResource = new ResourceCreated(workflowStepName, mlCreateConnectorResponse.getConnectorId());
-                    XContentBuilder builder = XContentBuilder.builder(XContentType.JSON.xContent());
-                    newResource.toXContent(builder, ToXContentObject.EMPTY_PARAMS);
-
-                    // The script to append a new object to the resources_created array
-                    Script script = new Script(
-                        ScriptType.INLINE,
-                        "painless",
-                        "ctx._source.resources_created.add(params.newResource)",
-                        Collections.singletonMap("newResource", newResource)
-                    );
-
-                    flowFrameworkIndicesHandler.updateFlowFrameworkSystemIndexDocWithScript(
-                        WORKFLOW_STATE_INDEX,
-                        workflowId,
-                        script,
-                        ActionListener.wrap(updateResponse -> {
-                            logger.info("updated resources created of {}", workflowId);
+                    flowFrameworkIndicesHandler.updateResourceInStateIndex(
+                        currentNodeInputs.getWorkflowId(),
+                        currentNodeId,
+                        getName(),
+                        mlCreateConnectorResponse.getConnectorId(),
+                        ActionListener.wrap(response -> {
+                            logger.info("successfully updated resources created in state index: {}", response.getIndex());
+                            createConnectorFuture.complete(
+                                new WorkflowData(
+                                    Map.ofEntries(Map.entry(resourceName, mlCreateConnectorResponse.getConnectorId())),
+                                    currentNodeInputs.getWorkflowId(),
+                                    currentNodeId
+                                )
+                            );
                         }, exception -> {
+                            logger.error("Failed to update new created resource", exception);
                             createConnectorFuture.completeExceptionally(
                                 new FlowFrameworkException(exception.getMessage(), ExceptionsHelper.status(exception))
                             );
-                            logger.error("Failed to update workflow state with newly created resource: {}", exception);
                         })
                     );
-                } catch (IOException e) {
-                    logger.error("Failed to parse new created resource", e);
+
+                } catch (Exception e) {
+                    logger.error("Failed to parse and update new created resource", e);
+                    createConnectorFuture.completeExceptionally(new FlowFrameworkException(e.getMessage(), ExceptionsHelper.status(e)));
                 }
             }
 
