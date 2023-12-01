@@ -25,7 +25,6 @@ import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 
-import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
@@ -81,15 +80,12 @@ public class CreateConnectorStepTests extends OpenSearchTestCase {
         String connectorId = "connect";
         CreateConnectorStep createConnectorStep = new CreateConnectorStep(machineLearningNodeClient, flowFrameworkIndicesHandler);
 
-        @SuppressWarnings("unchecked")
-        ArgumentCaptor<ActionListener<MLCreateConnectorResponse>> actionListenerCaptor = ArgumentCaptor.forClass(ActionListener.class);
-
         doAnswer(invocation -> {
             ActionListener<MLCreateConnectorResponse> actionListener = invocation.getArgument(1);
             MLCreateConnectorResponse output = new MLCreateConnectorResponse(connectorId);
             actionListener.onResponse(output);
             return null;
-        }).when(machineLearningNodeClient).createConnector(any(MLCreateConnectorInput.class), actionListenerCaptor.capture());
+        }).when(machineLearningNodeClient).createConnector(any(MLCreateConnectorInput.class), any());
 
         CompletableFuture<WorkflowData> future = createConnectorStep.execute(
             inputData.getNodeId(),
@@ -98,8 +94,7 @@ public class CreateConnectorStepTests extends OpenSearchTestCase {
             Collections.emptyMap()
         );
 
-        verify(machineLearningNodeClient).createConnector(any(MLCreateConnectorInput.class), actionListenerCaptor.capture());
-
+        verify(machineLearningNodeClient).createConnector(any(MLCreateConnectorInput.class), any());
         assertTrue(future.isDone());
         assertEquals(connectorId, future.get().getContent().get("connector_id"));
 
@@ -108,14 +103,11 @@ public class CreateConnectorStepTests extends OpenSearchTestCase {
     public void testCreateConnectorFailure() throws IOException {
         CreateConnectorStep createConnectorStep = new CreateConnectorStep(machineLearningNodeClient, flowFrameworkIndicesHandler);
 
-        @SuppressWarnings("unchecked")
-        ArgumentCaptor<ActionListener<MLCreateConnectorResponse>> actionListenerCaptor = ArgumentCaptor.forClass(ActionListener.class);
-
         doAnswer(invocation -> {
             ActionListener<MLCreateConnectorResponse> actionListener = invocation.getArgument(1);
             actionListener.onFailure(new FlowFrameworkException("Failed to create connector", RestStatus.INTERNAL_SERVER_ERROR));
             return null;
-        }).when(machineLearningNodeClient).createConnector(any(MLCreateConnectorInput.class), actionListenerCaptor.capture());
+        }).when(machineLearningNodeClient).createConnector(any(MLCreateConnectorInput.class), any());
 
         CompletableFuture<WorkflowData> future = createConnectorStep.execute(
             inputData.getNodeId(),
@@ -124,7 +116,7 @@ public class CreateConnectorStepTests extends OpenSearchTestCase {
             Collections.emptyMap()
         );
 
-        verify(machineLearningNodeClient).createConnector(any(MLCreateConnectorInput.class), actionListenerCaptor.capture());
+        verify(machineLearningNodeClient).createConnector(any(MLCreateConnectorInput.class), any());
 
         assertTrue(future.isCompletedExceptionally());
         ExecutionException ex = assertThrows(ExecutionException.class, () -> future.get().getContent());
