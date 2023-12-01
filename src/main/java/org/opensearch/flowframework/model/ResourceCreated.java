@@ -13,10 +13,12 @@ import org.apache.logging.log4j.Logger;
 import org.opensearch.core.common.io.stream.StreamInput;
 import org.opensearch.core.common.io.stream.StreamOutput;
 import org.opensearch.core.common.io.stream.Writeable;
+import org.opensearch.core.rest.RestStatus;
 import org.opensearch.core.xcontent.ToXContentObject;
 import org.opensearch.core.xcontent.XContentBuilder;
 import org.opensearch.core.xcontent.XContentParser;
 import org.opensearch.flowframework.common.WorkflowResources;
+import org.opensearch.flowframework.exception.FlowFrameworkException;
 
 import java.io.IOException;
 
@@ -139,15 +141,15 @@ public class ResourceCreated implements ToXContentObject, Writeable {
         }
         if (workflowStepName == null) {
             logger.error("Resource created object failed parsing: workflowStepName: {}", workflowStepName);
-            throw new IOException("A ResourceCreated object requires workflowStepName");
+            throw new FlowFrameworkException("A ResourceCreated object requires workflowStepName", RestStatus.BAD_REQUEST);
         }
         if (workflowStepId == null) {
             logger.error("Resource created object failed parsing: workflowStepId: {}", workflowStepId);
-            throw new IOException("A ResourceCreated object requires workflowStepId");
+            throw new FlowFrameworkException("A ResourceCreated object requires workflowStepId", RestStatus.BAD_REQUEST);
         }
         if (resourceId == null) {
             logger.error("Resource created object failed parsing: resourceId: {}", resourceId);
-            throw new IOException("A ResourceCreated object requires resourceId");
+            throw new FlowFrameworkException("A ResourceCreated object requires resourceId", RestStatus.BAD_REQUEST);
         }
         return new ResourceCreated(workflowStepName, workflowStepId, resourceId);
     }

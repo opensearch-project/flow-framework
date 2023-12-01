@@ -10,8 +10,9 @@ package org.opensearch.flowframework.common;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.opensearch.core.rest.RestStatus;
+import org.opensearch.flowframework.exception.FlowFrameworkException;
 
-import java.io.IOException;
 import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -66,9 +67,9 @@ public enum WorkflowResources {
      * gets the resources created type based on the workflowStep
      * @param workflowStep workflow step name
      * @return the resource that will be created
-     * @throws IOException if workflow step doesn't exist in enum
+     * @throws FlowFrameworkException if workflow step doesn't exist in enum
      */
-    public static String getResourceByWorkflowStep(String workflowStep) throws IOException {
+    public static String getResourceByWorkflowStep(String workflowStep) throws FlowFrameworkException {
         if (workflowStep != null && !workflowStep.isEmpty()) {
             for (WorkflowResources mapping : values()) {
                 if (mapping.getWorkflowStep().equals(workflowStep)) {
@@ -77,7 +78,7 @@ public enum WorkflowResources {
             }
         }
         logger.error("Unable to find resource type for step: " + workflowStep);
-        throw new IOException("Unable to find resource type for step: " + workflowStep);
+        throw new FlowFrameworkException("Unable to find resource type for step: " + workflowStep, RestStatus.BAD_REQUEST);
     }
 
     /**
