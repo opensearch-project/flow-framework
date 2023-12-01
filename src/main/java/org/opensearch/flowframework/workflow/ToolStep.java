@@ -15,11 +15,21 @@ import org.opensearch.flowframework.exception.FlowFrameworkException;
 import org.opensearch.ml.common.agent.MLToolSpec;
 
 import java.io.IOException;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 
-import static org.opensearch.flowframework.common.CommonValue.*;
+import static org.opensearch.flowframework.common.CommonValue.DESCRIPTION_FIELD;
+import static org.opensearch.flowframework.common.CommonValue.INCLUDE_OUTPUT_IN_AGENT_RESPONSE;
+import static org.opensearch.flowframework.common.CommonValue.MODEL_ID;
+import static org.opensearch.flowframework.common.CommonValue.NAME_FIELD;
+import static org.opensearch.flowframework.common.CommonValue.PARAMETERS_FIELD;
+import static org.opensearch.flowframework.common.CommonValue.TOOLS_FIELD;
+import static org.opensearch.flowframework.common.CommonValue.TYPE;
 
 /**
  * Step to register a tool for an agent

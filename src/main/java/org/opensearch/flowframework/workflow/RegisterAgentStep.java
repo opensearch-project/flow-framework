@@ -24,12 +24,26 @@ import org.opensearch.ml.common.transport.agent.MLRegisterAgentResponse;
 
 import java.io.IOException;
 import java.time.Instant;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Stream;
 
-import static org.opensearch.flowframework.common.CommonValue.*;
+import static org.opensearch.flowframework.common.CommonValue.AGENT_ID;
+import static org.opensearch.flowframework.common.CommonValue.APP_TYPE_FIELD;
+import static org.opensearch.flowframework.common.CommonValue.CREATED_TIME;
+import static org.opensearch.flowframework.common.CommonValue.DESCRIPTION_FIELD;
+import static org.opensearch.flowframework.common.CommonValue.LAST_UPDATED_TIME_FIELD;
+import static org.opensearch.flowframework.common.CommonValue.MEMORY_FIELD;
+import static org.opensearch.flowframework.common.CommonValue.MODEL_ID;
+import static org.opensearch.flowframework.common.CommonValue.NAME_FIELD;
+import static org.opensearch.flowframework.common.CommonValue.PARAMETERS_FIELD;
+import static org.opensearch.flowframework.common.CommonValue.TOOLS_FIELD;
+import static org.opensearch.flowframework.common.CommonValue.TYPE;
 import static org.opensearch.flowframework.util.ParseUtils.getStringToStringMap;
 
 /**
@@ -70,7 +84,7 @@ public class RegisterAgentStep implements WorkflowStep {
         ActionListener<MLRegisterAgentResponse> actionListener = new ActionListener<>() {
             @Override
             public void onResponse(MLRegisterAgentResponse mlRegisterAgentResponse) {
-                logger.info("Agent registration successful");
+                logger.info("Agent registration successful for the agent {}", mlRegisterAgentResponse.getAgentId());
                 registerAgentModelFuture.complete(
                     new WorkflowData(
                         Map.ofEntries(Map.entry(AGENT_ID, mlRegisterAgentResponse.getAgentId())),
@@ -149,13 +163,17 @@ public class RegisterAgentStep implements WorkflowStep {
             }
         }
 
-        // Case when modelId can is present in previous node inputs
+        // Case when modelId is present in previous node inputs
         if (llmModelId == null) {
             llmModelId = getLlmModelId(previousNodeInputs, outputs);
-        } else {
+        }
+
+        // Case when modelId is not present at all
+        if (llmModelId == null) {
             registerAgentModelFuture.completeExceptionally(
                 new FlowFrameworkException("llm model id is not provided", RestStatus.BAD_REQUEST)
             );
+            return registerAgentModelFuture;
         }
 
         LLMSpec llmSpec = getLLMSpec(llmModelId, llmParameters);
@@ -261,13 +279,6 @@ public class RegisterAgentStep implements WorkflowStep {
         MLMemorySpec mlMemorySpec = builder.build();
         return mlMemorySpec;
 
-    }
-
-    private Instant getInstant(Object instant, String fieldName) {
-        if (instant instanceof Instant) {
-            return (Instant) instant;
-        }
-        throw new IllegalArgumentException("[" + fieldName + "] must be of type Instant.");
     }
 
 }

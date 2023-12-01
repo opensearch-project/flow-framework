@@ -166,8 +166,6 @@ public class CommonValue {
     public static final String WORKFLOW_STEP_NAME = "workflow_step_name";
     /** The field name for the step ID where a resource is created */
     public static final String WORKFLOW_STEP_ID = "workflow_step_id";
-    /** LLM Name for registering an agent */
-    public static final String LLM_FIELD = "llm";
     /** The tools' field for an agent */
     public static final String TOOLS_FIELD = "tools";
     /** The memory field for an agent */
