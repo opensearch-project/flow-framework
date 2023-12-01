@@ -8,19 +8,14 @@
  */
 package org.opensearch.flowframework.workflow;
 
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
-import org.opensearch.ExceptionsHelper;
-import org.opensearch.core.action.ActionListener;
-import org.opensearch.core.rest.RestStatus;
-import org.opensearch.flowframework.common.WorkflowResources;
-import org.opensearch.flowframework.exception.FlowFrameworkException;
-import org.opensearch.flowframework.indices.FlowFrameworkIndicesHandler;
-import org.opensearch.ml.client.MachineLearningNodeClient;
-import org.opensearch.ml.common.connector.ConnectorAction;
-import org.opensearch.ml.common.connector.ConnectorAction.ActionType;
-import org.opensearch.ml.common.transport.connector.MLCreateConnectorInput;
-import org.opensearch.ml.common.transport.connector.MLCreateConnectorResponse;
+import static org.opensearch.flowframework.common.CommonValue.ACTIONS_FIELD;
+import static org.opensearch.flowframework.common.CommonValue.CREDENTIAL_FIELD;
+import static org.opensearch.flowframework.common.CommonValue.DESCRIPTION_FIELD;
+import static org.opensearch.flowframework.common.CommonValue.NAME_FIELD;
+import static org.opensearch.flowframework.common.CommonValue.PARAMETERS_FIELD;
+import static org.opensearch.flowframework.common.CommonValue.PROTOCOL_FIELD;
+import static org.opensearch.flowframework.common.CommonValue.VERSION_FIELD;
+import static org.opensearch.flowframework.util.ParseUtils.getStringToStringMap;
 
 import java.io.IOException;
 import java.security.AccessController;
@@ -33,17 +28,23 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
-import java.util.stream.Stream;
 
-import static org.opensearch.flowframework.common.CommonValue.ACTIONS_FIELD;
-import static org.opensearch.flowframework.common.CommonValue.CREDENTIAL_FIELD;
-import static org.opensearch.flowframework.common.CommonValue.DESCRIPTION_FIELD;
-import static org.opensearch.flowframework.common.CommonValue.NAME_FIELD;
-import static org.opensearch.flowframework.common.CommonValue.PARAMETERS_FIELD;
-import static org.opensearch.flowframework.common.CommonValue.PROTOCOL_FIELD;
-import static org.opensearch.flowframework.common.CommonValue.VERSION_FIELD;
-import static org.opensearch.flowframework.util.ParseUtils.getStringToStringMap;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import org.opensearch.ExceptionsHelper;
+import org.opensearch.core.action.ActionListener;
+import org.opensearch.core.rest.RestStatus;
+import org.opensearch.flowframework.common.WorkflowResources;
+import org.opensearch.flowframework.exception.FlowFrameworkException;
+import org.opensearch.flowframework.indices.FlowFrameworkIndicesHandler;
+import org.opensearch.flowframework.util.ParseUtils;
+import org.opensearch.ml.client.MachineLearningNodeClient;
+import org.opensearch.ml.common.connector.ConnectorAction;
+import org.opensearch.ml.common.connector.ConnectorAction.ActionType;
+import org.opensearch.ml.common.transport.connector.MLCreateConnectorInput;
+import org.opensearch.ml.common.transport.connector.MLCreateConnectorResponse;
 
 /**
  * Step to create a connector for a remote model
@@ -120,48 +121,37 @@ public class CreateConnectorStep implements WorkflowStep {
             }
         };
 
-        String name = null;
-        String description = null;
-        String version = null;
-        String protocol = null;
-        Map<String, String> parameters = Collections.emptyMap();
-        Map<String, String> credentials = Collections.emptyMap();
-        List<ConnectorAction> actions = Collections.emptyList();
+        Set<String> requiredKeys = Set.of(
+            NAME_FIELD,
+            DESCRIPTION_FIELD,
+            VERSION_FIELD,
+            PROTOCOL_FIELD,
+            PARAMETERS_FIELD,
+            CREDENTIAL_FIELD,
+            ACTIONS_FIELD
+        );
+        Set<String> optionalKeys = Collections.emptySet();
 
-        // TODO: Recreating the list to get this compiling
-        // Need to refactor the below iteration to pull directly from the maps
-        List<WorkflowData> data = new ArrayList<>();
-        data.add(currentNodeInputs);
-        data.addAll(outputs.values());
+        Map<String, Object> inputs = ParseUtils.getInputsFromPreviousSteps(
+            requiredKeys,
+            optionalKeys,
+            currentNodeInputs,
+            outputs,
+            previousNodeInputs
+        );
+
+        String name = (String) inputs.get(NAME_FIELD);
+        String description = (String) inputs.get(DESCRIPTION_FIELD);
+        String version = (String) inputs.get(VERSION_FIELD);
+        String protocol = (String) inputs.get(PROTOCOL_FIELD);
+        Map<String, String> parameters;
+        Map<String, String> credentials;
+        List<ConnectorAction> actions;
 
         try {
-            for (WorkflowData workflowData : data) {
-                for (Entry<String, Object> entry : workflowData.getContent().entrySet()) {
-                    switch (entry.getKey()) {
-                        case NAME_FIELD:
-                            name = (String) entry.getValue();
-                            break;
-                        case DESCRIPTION_FIELD:
-                            description = (String) entry.getValue();
-                            break;
-                        case VERSION_FIELD:
-                            version = (String) entry.getValue();
-                            break;
-                        case PROTOCOL_FIELD:
-                            protocol = (String) entry.getValue();
-                            break;
-                        case PARAMETERS_FIELD:
-                            parameters = getParameterMap(entry.getValue());
-                            break;
-                        case CREDENTIAL_FIELD:
-                            credentials = getStringToStringMap(entry.getValue(), CREDENTIAL_FIELD);
-                            break;
-                        case ACTIONS_FIELD:
-                            actions = getConnectorActionList(entry.getValue());
-                            break;
-                    }
-                }
-            }
+            parameters = getParameterMap(inputs.get(PARAMETERS_FIELD));
+            credentials = getStringToStringMap(inputs.get(CREDENTIAL_FIELD), CREDENTIAL_FIELD);
+            actions = getConnectorActionList(inputs.get(ACTIONS_FIELD));
         } catch (IllegalArgumentException iae) {
             createConnectorFuture.completeExceptionally(new FlowFrameworkException(iae.getMessage(), RestStatus.BAD_REQUEST));
             return createConnectorFuture;
@@ -170,23 +160,17 @@ public class CreateConnectorStep implements WorkflowStep {
             return createConnectorFuture;
         }
 
-        if (Stream.of(name, description, version, protocol, parameters, credentials, actions).allMatch(x -> x != null)) {
-            MLCreateConnectorInput mlInput = MLCreateConnectorInput.builder()
-                .name(name)
-                .description(description)
-                .version(version)
-                .protocol(protocol)
-                .parameters(parameters)
-                .credential(credentials)
-                .actions(actions)
-                .build();
+        MLCreateConnectorInput mlInput = MLCreateConnectorInput.builder()
+            .name(name)
+            .description(description)
+            .version(version)
+            .protocol(protocol)
+            .parameters(parameters)
+            .credential(credentials)
+            .actions(actions)
+            .build();
 
-            mlClient.createConnector(mlInput, actionListener);
-        } else {
-            createConnectorFuture.completeExceptionally(
-                new FlowFrameworkException("Required fields are not provided", RestStatus.BAD_REQUEST)
-            );
-        }
+        mlClient.createConnector(mlInput, actionListener);
 
         return createConnectorFuture;
     }
