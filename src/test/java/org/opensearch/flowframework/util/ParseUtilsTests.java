@@ -8,11 +8,6 @@
  */
 package org.opensearch.flowframework.util;
 
-import java.io.IOException;
-import java.time.Instant;
-import java.util.Map;
-import java.util.Set;
-
 import org.opensearch.common.xcontent.XContentFactory;
 import org.opensearch.core.rest.RestStatus;
 import org.opensearch.core.xcontent.XContentBuilder;
@@ -20,6 +15,11 @@ import org.opensearch.core.xcontent.XContentParser;
 import org.opensearch.flowframework.exception.FlowFrameworkException;
 import org.opensearch.flowframework.workflow.WorkflowData;
 import org.opensearch.test.OpenSearchTestCase;
+
+import java.io.IOException;
+import java.time.Instant;
+import java.util.Map;
+import java.util.Set;
 
 public class ParseUtilsTests extends OpenSearchTestCase {
     public void testToInstant() throws IOException {

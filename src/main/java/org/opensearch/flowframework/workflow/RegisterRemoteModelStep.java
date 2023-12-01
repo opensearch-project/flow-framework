@@ -8,18 +8,6 @@
  */
 package org.opensearch.flowframework.workflow;
 
-import static org.opensearch.flowframework.common.CommonValue.CONNECTOR_ID;
-import static org.opensearch.flowframework.common.CommonValue.DESCRIPTION_FIELD;
-import static org.opensearch.flowframework.common.CommonValue.FUNCTION_NAME;
-import static org.opensearch.flowframework.common.CommonValue.MODEL_GROUP_ID;
-import static org.opensearch.flowframework.common.CommonValue.NAME_FIELD;
-import static org.opensearch.flowframework.common.CommonValue.REGISTER_MODEL_STATUS;
-
-import java.util.Locale;
-import java.util.Map;
-import java.util.Set;
-import java.util.concurrent.CompletableFuture;
-
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.opensearch.ExceptionsHelper;
@@ -33,6 +21,18 @@ import org.opensearch.ml.common.FunctionName;
 import org.opensearch.ml.common.transport.register.MLRegisterModelInput;
 import org.opensearch.ml.common.transport.register.MLRegisterModelInput.MLRegisterModelInputBuilder;
 import org.opensearch.ml.common.transport.register.MLRegisterModelResponse;
+
+import java.util.Locale;
+import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.CompletableFuture;
+
+import static org.opensearch.flowframework.common.CommonValue.CONNECTOR_ID;
+import static org.opensearch.flowframework.common.CommonValue.DESCRIPTION_FIELD;
+import static org.opensearch.flowframework.common.CommonValue.FUNCTION_NAME;
+import static org.opensearch.flowframework.common.CommonValue.MODEL_GROUP_ID;
+import static org.opensearch.flowframework.common.CommonValue.NAME_FIELD;
+import static org.opensearch.flowframework.common.CommonValue.REGISTER_MODEL_STATUS;
 
 /**
  * Step to register a remote model

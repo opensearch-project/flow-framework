@@ -8,24 +8,6 @@
  */
 package org.opensearch.flowframework.workflow;
 
-import static org.opensearch.flowframework.common.CommonValue.ALL_CONFIG;
-import static org.opensearch.flowframework.common.CommonValue.DESCRIPTION_FIELD;
-import static org.opensearch.flowframework.common.CommonValue.EMBEDDING_DIMENSION;
-import static org.opensearch.flowframework.common.CommonValue.FRAMEWORK_TYPE;
-import static org.opensearch.flowframework.common.CommonValue.MODEL_CONTENT_HASH_VALUE;
-import static org.opensearch.flowframework.common.CommonValue.MODEL_FORMAT;
-import static org.opensearch.flowframework.common.CommonValue.MODEL_GROUP_ID;
-import static org.opensearch.flowframework.common.CommonValue.MODEL_TYPE;
-import static org.opensearch.flowframework.common.CommonValue.NAME_FIELD;
-import static org.opensearch.flowframework.common.CommonValue.REGISTER_MODEL_STATUS;
-import static org.opensearch.flowframework.common.CommonValue.URL;
-import static org.opensearch.flowframework.common.CommonValue.VERSION_FIELD;
-
-import java.util.Map;
-import java.util.Set;
-import java.util.concurrent.CompletableFuture;
-import java.util.stream.Stream;
-
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.opensearch.ExceptionsHelper;
@@ -48,6 +30,24 @@ import org.opensearch.ml.common.model.TextEmbeddingModelConfig.TextEmbeddingMode
 import org.opensearch.ml.common.transport.register.MLRegisterModelInput;
 import org.opensearch.ml.common.transport.register.MLRegisterModelInput.MLRegisterModelInputBuilder;
 import org.opensearch.ml.common.transport.register.MLRegisterModelResponse;
+
+import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.CompletableFuture;
+import java.util.stream.Stream;
+
+import static org.opensearch.flowframework.common.CommonValue.ALL_CONFIG;
+import static org.opensearch.flowframework.common.CommonValue.DESCRIPTION_FIELD;
+import static org.opensearch.flowframework.common.CommonValue.EMBEDDING_DIMENSION;
+import static org.opensearch.flowframework.common.CommonValue.FRAMEWORK_TYPE;
+import static org.opensearch.flowframework.common.CommonValue.MODEL_CONTENT_HASH_VALUE;
+import static org.opensearch.flowframework.common.CommonValue.MODEL_FORMAT;
+import static org.opensearch.flowframework.common.CommonValue.MODEL_GROUP_ID;
+import static org.opensearch.flowframework.common.CommonValue.MODEL_TYPE;
+import static org.opensearch.flowframework.common.CommonValue.NAME_FIELD;
+import static org.opensearch.flowframework.common.CommonValue.REGISTER_MODEL_STATUS;
+import static org.opensearch.flowframework.common.CommonValue.URL;
+import static org.opensearch.flowframework.common.CommonValue.VERSION_FIELD;
 
 /**
  * Step to register a local model

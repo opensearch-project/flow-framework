@@ -13,13 +13,14 @@ import org.apache.logging.log4j.Logger;
 import org.opensearch.ExceptionsHelper;
 import org.opensearch.action.delete.DeleteResponse;
 import org.opensearch.core.action.ActionListener;
-import org.opensearch.core.rest.RestStatus;
 import org.opensearch.flowframework.exception.FlowFrameworkException;
+import org.opensearch.flowframework.util.ParseUtils;
 import org.opensearch.ml.client.MachineLearningNodeClient;
 
 import java.io.IOException;
+import java.util.Collections;
 import java.util.Map;
-import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 
 import static org.opensearch.flowframework.common.CommonValue.CONNECTOR_ID;
@@ -72,29 +73,23 @@ public class DeleteConnectorStep implements WorkflowStep {
             }
         };
 
-        String connectorId = null;
+        Set<String> requiredKeys = Set.of(CONNECTOR_ID);
+        Set<String> optionalKeys = Collections.emptySet();
 
-        // Previous Node inputs defines which step the connector ID came from
-        Optional<String> previousNode = previousNodeInputs.entrySet()
-            .stream()
-            .filter(e -> CONNECTOR_ID.equals(e.getValue()))
-            .map(Map.Entry::getKey)
-            .findFirst();
-        if (previousNode.isPresent()) {
-            WorkflowData previousNodeOutput = outputs.get(previousNode.get());
-            if (previousNodeOutput != null && previousNodeOutput.getContent().containsKey(CONNECTOR_ID)) {
-                connectorId = previousNodeOutput.getContent().get(CONNECTOR_ID).toString();
-            }
-        }
-
-        if (connectorId != null) {
-            mlClient.deleteConnector(connectorId, actionListener);
-        } else {
-            deleteConnectorFuture.completeExceptionally(
-                new FlowFrameworkException("Required field " + CONNECTOR_ID + " is not provided", RestStatus.BAD_REQUEST)
+        try {
+            Map<String, Object> inputs = ParseUtils.getInputsFromPreviousSteps(
+                requiredKeys,
+                optionalKeys,
+                currentNodeInputs,
+                outputs,
+                previousNodeInputs
             );
-        }
+            String connectorId = (String) inputs.get(CONNECTOR_ID);
 
+            mlClient.deleteConnector(connectorId, actionListener);
+        } catch (FlowFrameworkException e) {
+            deleteConnectorFuture.completeExceptionally(e);
+        }
         return deleteConnectorFuture;
     }
 

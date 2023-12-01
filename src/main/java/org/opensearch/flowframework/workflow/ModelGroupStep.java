@@ -8,19 +8,6 @@
  */
 package org.opensearch.flowframework.workflow;
 
-import static org.opensearch.flowframework.common.CommonValue.ADD_ALL_BACKEND_ROLES;
-import static org.opensearch.flowframework.common.CommonValue.BACKEND_ROLES_FIELD;
-import static org.opensearch.flowframework.common.CommonValue.DESCRIPTION_FIELD;
-import static org.opensearch.flowframework.common.CommonValue.MODEL_ACCESS_MODE;
-import static org.opensearch.flowframework.common.CommonValue.MODEL_GROUP_STATUS;
-import static org.opensearch.flowframework.common.CommonValue.NAME_FIELD;
-
-import java.io.IOException;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.concurrent.CompletableFuture;
-
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.opensearch.ExceptionsHelper;
@@ -34,6 +21,19 @@ import org.opensearch.ml.common.AccessMode;
 import org.opensearch.ml.common.transport.model_group.MLRegisterModelGroupInput;
 import org.opensearch.ml.common.transport.model_group.MLRegisterModelGroupInput.MLRegisterModelGroupInputBuilder;
 import org.opensearch.ml.common.transport.model_group.MLRegisterModelGroupResponse;
+
+import java.io.IOException;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.CompletableFuture;
+
+import static org.opensearch.flowframework.common.CommonValue.ADD_ALL_BACKEND_ROLES;
+import static org.opensearch.flowframework.common.CommonValue.BACKEND_ROLES_FIELD;
+import static org.opensearch.flowframework.common.CommonValue.DESCRIPTION_FIELD;
+import static org.opensearch.flowframework.common.CommonValue.MODEL_ACCESS_MODE;
+import static org.opensearch.flowframework.common.CommonValue.MODEL_GROUP_STATUS;
+import static org.opensearch.flowframework.common.CommonValue.NAME_FIELD;
 
 /**
  * Step to register a model group
