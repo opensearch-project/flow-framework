@@ -132,46 +132,49 @@ public class CreateConnectorStep implements WorkflowStep {
         );
         Set<String> optionalKeys = Collections.emptySet();
 
-        Map<String, Object> inputs = ParseUtils.getInputsFromPreviousSteps(
-            requiredKeys,
-            optionalKeys,
-            currentNodeInputs,
-            outputs,
-            previousNodeInputs
-        );
-
-        String name = (String) inputs.get(NAME_FIELD);
-        String description = (String) inputs.get(DESCRIPTION_FIELD);
-        String version = (String) inputs.get(VERSION_FIELD);
-        String protocol = (String) inputs.get(PROTOCOL_FIELD);
-        Map<String, String> parameters;
-        Map<String, String> credentials;
-        List<ConnectorAction> actions;
-
         try {
-            parameters = getParameterMap(inputs.get(PARAMETERS_FIELD));
-            credentials = getStringToStringMap(inputs.get(CREDENTIAL_FIELD), CREDENTIAL_FIELD);
-            actions = getConnectorActionList(inputs.get(ACTIONS_FIELD));
-        } catch (IllegalArgumentException iae) {
-            createConnectorFuture.completeExceptionally(new FlowFrameworkException(iae.getMessage(), RestStatus.BAD_REQUEST));
-            return createConnectorFuture;
-        } catch (PrivilegedActionException pae) {
-            createConnectorFuture.completeExceptionally(new FlowFrameworkException(pae.getMessage(), RestStatus.UNAUTHORIZED));
-            return createConnectorFuture;
+            Map<String, Object> inputs = ParseUtils.getInputsFromPreviousSteps(
+                requiredKeys,
+                optionalKeys,
+                currentNodeInputs,
+                outputs,
+                previousNodeInputs
+            );
+
+            String name = (String) inputs.get(NAME_FIELD);
+            String description = (String) inputs.get(DESCRIPTION_FIELD);
+            String version = (String) inputs.get(VERSION_FIELD);
+            String protocol = (String) inputs.get(PROTOCOL_FIELD);
+            Map<String, String> parameters;
+            Map<String, String> credentials;
+            List<ConnectorAction> actions;
+
+            try {
+                parameters = getParameterMap(inputs.get(PARAMETERS_FIELD));
+                credentials = getStringToStringMap(inputs.get(CREDENTIAL_FIELD), CREDENTIAL_FIELD);
+                actions = getConnectorActionList(inputs.get(ACTIONS_FIELD));
+            } catch (IllegalArgumentException iae) {
+                createConnectorFuture.completeExceptionally(new FlowFrameworkException(iae.getMessage(), RestStatus.BAD_REQUEST));
+                return createConnectorFuture;
+            } catch (PrivilegedActionException pae) {
+                createConnectorFuture.completeExceptionally(new FlowFrameworkException(pae.getMessage(), RestStatus.UNAUTHORIZED));
+                return createConnectorFuture;
+            }
+
+            MLCreateConnectorInput mlInput = MLCreateConnectorInput.builder()
+                .name(name)
+                .description(description)
+                .version(version)
+                .protocol(protocol)
+                .parameters(parameters)
+                .credential(credentials)
+                .actions(actions)
+                .build();
+
+            mlClient.createConnector(mlInput, actionListener);
+        } catch (FlowFrameworkException e) {
+            createConnectorFuture.completeExceptionally(e);
         }
-
-        MLCreateConnectorInput mlInput = MLCreateConnectorInput.builder()
-            .name(name)
-            .description(description)
-            .version(version)
-            .protocol(protocol)
-            .parameters(parameters)
-            .credential(credentials)
-            .actions(actions)
-            .build();
-
-        mlClient.createConnector(mlInput, actionListener);
-
         return createConnectorFuture;
     }
 

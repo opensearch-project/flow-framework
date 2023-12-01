@@ -12,7 +12,6 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.opensearch.ExceptionsHelper;
 import org.opensearch.core.action.ActionListener;
-import org.opensearch.core.rest.RestStatus;
 import org.opensearch.flowframework.exception.FlowFrameworkException;
 import org.opensearch.flowframework.util.ParseUtils;
 import org.opensearch.ml.client.MachineLearningNodeClient;
@@ -75,22 +74,21 @@ public class DeployModelStep implements WorkflowStep {
         Set<String> requiredKeys = Set.of(MODEL_ID);
         Set<String> optionalKeys = Collections.emptySet();
 
-        Map<String, Object> inputs = ParseUtils.getInputsFromPreviousSteps(
-            requiredKeys,
-            optionalKeys,
-            currentNodeInputs,
-            outputs,
-            previousNodeInputs
-        );
+        try {
+            Map<String, Object> inputs = ParseUtils.getInputsFromPreviousSteps(
+                requiredKeys,
+                optionalKeys,
+                currentNodeInputs,
+                outputs,
+                previousNodeInputs
+            );
 
-        String modelId = (String) inputs.get(MODEL_ID);
+            String modelId = (String) inputs.get(MODEL_ID);
 
-        if (modelId != null) {
             mlClient.deploy(modelId, actionListener);
-        } else {
-            deployModelFuture.completeExceptionally(new FlowFrameworkException("Model ID is not provided", RestStatus.BAD_REQUEST));
+        } catch (FlowFrameworkException e) {
+            deployModelFuture.completeExceptionally(e);
         }
-
         return deployModelFuture;
     }
 
