@@ -6,7 +6,7 @@
     "create_index": {
         "inputs":[
             "index_name",
-            "type"
+            "default_mapping_option"
         ],
         "outputs":[
             "index_name"
@@ -83,7 +83,7 @@
             "deploy_model_status"
         ]
     },
-    "model_group": {
+    "register_model_group": {
         "inputs":[
             "name"
         ],

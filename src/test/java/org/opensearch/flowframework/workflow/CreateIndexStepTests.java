@@ -10,6 +10,7 @@ package org.opensearch.flowframework.workflow;
 
 import org.opensearch.action.admin.indices.create.CreateIndexRequest;
 import org.opensearch.action.admin.indices.create.CreateIndexResponse;
+import org.opensearch.action.update.UpdateResponse;
 import org.opensearch.client.AdminClient;
 import org.opensearch.client.Client;
 import org.opensearch.client.IndicesAdminClient;
@@ -21,9 +22,12 @@ import org.opensearch.cluster.service.ClusterService;
 import org.opensearch.common.settings.Settings;
 import org.opensearch.common.util.concurrent.ThreadContext;
 import org.opensearch.core.action.ActionListener;
+import org.opensearch.core.index.shard.ShardId;
+import org.opensearch.flowframework.indices.FlowFrameworkIndicesHandler;
 import org.opensearch.test.OpenSearchTestCase;
 import org.opensearch.threadpool.ThreadPool;
 
+import java.io.IOException;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
@@ -35,8 +39,12 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
+import static org.opensearch.action.DocWriteResponse.Result.UPDATED;
 import static org.opensearch.flowframework.common.CommonValue.GLOBAL_CONTEXT_INDEX;
+import static org.opensearch.flowframework.common.CommonValue.WORKFLOW_STATE_INDEX;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -60,12 +68,18 @@ public class CreateIndexStepTests extends OpenSearchTestCase {
     private ThreadPool threadPool;
     @Mock
     IndexMetadata indexMetadata;
+    private FlowFrameworkIndicesHandler flowFrameworkIndicesHandler;
 
     @Override
     public void setUp() throws Exception {
         super.setUp();
+        this.flowFrameworkIndicesHandler = mock(FlowFrameworkIndicesHandler.class);
         MockitoAnnotations.openMocks(this);
-        inputData = new WorkflowData(Map.ofEntries(Map.entry("index_name", "demo"), Map.entry("type", "knn")), "test-id", "test-node-id");
+        inputData = new WorkflowData(
+            Map.ofEntries(Map.entry("index_name", "demo"), Map.entry("default_mapping_option", "knn")),
+            "test-id",
+            "test-node-id"
+        );
         clusterService = mock(ClusterService.class);
         client = mock(Client.class);
         adminClient = mock(AdminClient.class);
@@ -80,11 +94,18 @@ public class CreateIndexStepTests extends OpenSearchTestCase {
         when(clusterService.state()).thenReturn(ClusterState.builder(new ClusterName("test cluster")).build());
         when(metadata.indices()).thenReturn(Map.of(GLOBAL_CONTEXT_INDEX, indexMetadata));
 
-        createIndexStep = new CreateIndexStep(clusterService, client);
+        createIndexStep = new CreateIndexStep(clusterService, client, flowFrameworkIndicesHandler);
         CreateIndexStep.indexMappingUpdated = indexMappingUpdated;
     }
 
-    public void testCreateIndexStep() throws ExecutionException, InterruptedException {
+    public void testCreateIndexStep() throws ExecutionException, InterruptedException, IOException {
+
+        doAnswer(invocation -> {
+            ActionListener<UpdateResponse> updateResponseListener = invocation.getArgument(4);
+            updateResponseListener.onResponse(new UpdateResponse(new ShardId(WORKFLOW_STATE_INDEX, "", 1), "id", -2, 0, 0, UPDATED));
+            return null;
+        }).when(flowFrameworkIndicesHandler).updateResourceInStateIndex(anyString(), anyString(), anyString(), anyString(), any());
+
         @SuppressWarnings({ "unchecked" })
         ArgumentCaptor<ActionListener<CreateIndexResponse>> actionListenerCaptor = ArgumentCaptor.forClass(ActionListener.class);
         CompletableFuture<WorkflowData> future = createIndexStep.execute(

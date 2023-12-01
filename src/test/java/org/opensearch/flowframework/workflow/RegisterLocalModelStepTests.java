@@ -10,12 +10,15 @@ package org.opensearch.flowframework.workflow;
 
 import com.carrotsearch.randomizedtesting.annotations.ThreadLeakScope;
 
+import org.opensearch.action.update.UpdateResponse;
 import org.opensearch.cluster.service.ClusterService;
 import org.opensearch.common.settings.ClusterSettings;
 import org.opensearch.common.settings.Setting;
 import org.opensearch.common.settings.Settings;
 import org.opensearch.core.action.ActionListener;
+import org.opensearch.core.index.shard.ShardId;
 import org.opensearch.flowframework.exception.FlowFrameworkException;
+import org.opensearch.flowframework.indices.FlowFrameworkIndicesHandler;
 import org.opensearch.ml.client.MachineLearningNodeClient;
 import org.opensearch.ml.common.MLTask;
 import org.opensearch.ml.common.MLTaskState;
@@ -34,10 +37,13 @@ import java.util.stream.Stream;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
+import static org.opensearch.action.DocWriteResponse.Result.UPDATED;
 import static org.opensearch.flowframework.common.CommonValue.MODEL_ID;
 import static org.opensearch.flowframework.common.CommonValue.REGISTER_MODEL_STATUS;
+import static org.opensearch.flowframework.common.CommonValue.WORKFLOW_STATE_INDEX;
 import static org.opensearch.flowframework.common.FlowFrameworkSettings.MAX_GET_TASK_REQUEST_RETRY;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
@@ -49,6 +55,7 @@ public class RegisterLocalModelStepTests extends OpenSearchTestCase {
 
     private RegisterLocalModelStep registerLocalModelStep;
     private WorkflowData workflowData;
+    private FlowFrameworkIndicesHandler flowFrameworkIndicesHandler;
 
     @Mock
     MachineLearningNodeClient machineLearningNodeClient;
@@ -56,7 +63,7 @@ public class RegisterLocalModelStepTests extends OpenSearchTestCase {
     @Override
     public void setUp() throws Exception {
         super.setUp();
-
+        this.flowFrameworkIndicesHandler = mock(FlowFrameworkIndicesHandler.class);
         MockitoAnnotations.openMocks(this);
         ClusterService clusterService = mock(ClusterService.class);
         final Set<Setting<?>> settingsSet = Stream.concat(
@@ -69,7 +76,12 @@ public class RegisterLocalModelStepTests extends OpenSearchTestCase {
         ClusterSettings clusterSettings = new ClusterSettings(testMaxRetrySetting, settingsSet);
         when(clusterService.getClusterSettings()).thenReturn(clusterSettings);
 
-        this.registerLocalModelStep = new RegisterLocalModelStep(testMaxRetrySetting, clusterService, machineLearningNodeClient);
+        this.registerLocalModelStep = new RegisterLocalModelStep(
+            testMaxRetrySetting,
+            clusterService,
+            machineLearningNodeClient,
+            flowFrameworkIndicesHandler
+        );
 
         this.workflowData = new WorkflowData(
             Map.ofEntries(
@@ -126,6 +138,12 @@ public class RegisterLocalModelStepTests extends OpenSearchTestCase {
             actionListener.onResponse(output);
             return null;
         }).when(machineLearningNodeClient).getTask(any(), any());
+
+        doAnswer(invocation -> {
+            ActionListener<UpdateResponse> updateResponseListener = invocation.getArgument(4);
+            updateResponseListener.onResponse(new UpdateResponse(new ShardId(WORKFLOW_STATE_INDEX, "", 1), "id", -2, 0, 0, UPDATED));
+            return null;
+        }).when(flowFrameworkIndicesHandler).updateResourceInStateIndex(anyString(), anyString(), anyString(), anyString(), any());
 
         CompletableFuture<WorkflowData> future = registerLocalModelStep.execute(
             workflowData.getNodeId(),

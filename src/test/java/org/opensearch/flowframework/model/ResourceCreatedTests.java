@@ -8,6 +8,7 @@
  */
 package org.opensearch.flowframework.model;
 
+import org.opensearch.flowframework.common.WorkflowResources;
 import org.opensearch.test.OpenSearchTestCase;
 
 import java.io.IOException;
@@ -20,17 +21,21 @@ public class ResourceCreatedTests extends OpenSearchTestCase {
     }
 
     public void testParseFeature() throws IOException {
-        ResourceCreated resourceCreated = new ResourceCreated("A", "B");
-        assertEquals(resourceCreated.workflowStepName(), "A");
-        assertEquals(resourceCreated.resourceId(), "B");
+        String workflowStepName = WorkflowResources.CREATE_CONNECTOR.getWorkflowStep();
+        ResourceCreated ResourceCreated = new ResourceCreated(workflowStepName, "workflow_step_1", "L85p1IsBbfF");
+        assertEquals(ResourceCreated.workflowStepName(), workflowStepName);
+        assertEquals(ResourceCreated.workflowStepId(), "workflow_step_1");
+        assertEquals(ResourceCreated.resourceId(), "L85p1IsBbfF");
 
-        String expectedJson = "{\"workflow_step_name\":\"A\",\"resource_id\":\"B\"}";
-        String json = TemplateTestJsonUtil.parseToJson(resourceCreated);
+        String expectedJson =
+            "{\"workflow_step_name\":\"create_connector\",\"workflow_step_id\":\"workflow_step_1\",\"connector_id\":\"L85p1IsBbfF\"}";
+        String json = TemplateTestJsonUtil.parseToJson(ResourceCreated);
         assertEquals(expectedJson, json);
 
-        ResourceCreated resourceCreatedTwo = ResourceCreated.parse(TemplateTestJsonUtil.jsonToParser(json));
-        assertEquals("A", resourceCreatedTwo.workflowStepName());
-        assertEquals("B", resourceCreatedTwo.resourceId());
+        ResourceCreated ResourceCreatedTwo = ResourceCreated.parse(TemplateTestJsonUtil.jsonToParser(json));
+        assertEquals(workflowStepName, ResourceCreatedTwo.workflowStepName());
+        assertEquals("workflow_step_1", ResourceCreatedTwo.workflowStepId());
+        assertEquals("L85p1IsBbfF", ResourceCreatedTwo.resourceId());
     }
 
     public void testExceptions() throws IOException {
@@ -40,7 +45,7 @@ public class ResourceCreatedTests extends OpenSearchTestCase {
 
         String missingJson = "{\"resource_id\":\"B\"}";
         e = assertThrows(IOException.class, () -> ResourceCreated.parse(TemplateTestJsonUtil.jsonToParser(missingJson)));
-        assertEquals("A ResourceCreated object requires both a workflowStepName and resourceId.", e.getMessage());
+        assertEquals("Unable to parse field [resource_id] in a resources_created object.", e.getMessage());
     }
 
 }

@@ -77,6 +77,8 @@ public class CommonValue {
     public static final String INDEX_NAME = "index_name";
     /** Type field */
     public static final String TYPE = "type";
+    /** default_mapping_option filed */
+    public static final String DEFAULT_MAPPING_OPTION = "default_mapping_option";
     /** ID Field */
     public static final String ID = "id";
     /** Pipeline Id field */
@@ -103,6 +105,8 @@ public class CommonValue {
     public static final String MODEL_VERSION = "model_version";
     /** Model Group Id field */
     public static final String MODEL_GROUP_ID = "model_group_id";
+    /** Model Group Id field */
+    public static final String MODEL_GROUP_STATUS = "model_group_status";
     /** Description field */
     public static final String DESCRIPTION_FIELD = "description";
     /** Connector Id field */
@@ -158,10 +162,10 @@ public class CommonValue {
     public static final String USER_OUTPUTS_FIELD = "user_outputs";
     /** The template field name for template resources created */
     public static final String RESOURCES_CREATED_FIELD = "resources_created";
-    /** The field name for the ResourceCreated's resource ID */
-    public static final String RESOURCE_ID_FIELD = "resource_id";
-    /** The field name for the ResourceCreated's resource name */
+    /** The field name for the step name where a resource is created */
     public static final String WORKFLOW_STEP_NAME = "workflow_step_name";
+    /** The field name for the step ID where a resource is created */
+    public static final String WORKFLOW_STEP_ID = "workflow_step_id";
     /** LLM Name for registering an agent */
     public static final String LLM_FIELD = "llm";
     /** The tools' field for an agent */
