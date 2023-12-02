@@ -8,7 +8,6 @@
  */
 package org.opensearch.flowframework.util;
 
-import com.google.gson.Gson;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.opensearch.client.Client;
@@ -25,9 +24,6 @@ import org.opensearch.core.xcontent.XContentParser;
 import org.opensearch.ml.common.agent.LLMSpec;
 
 import java.io.IOException;
-import java.security.AccessController;
-import java.security.PrivilegedActionException;
-import java.security.PrivilegedExceptionAction;
 import java.time.Instant;
 import java.util.HashMap;
 import java.util.Map;
@@ -36,19 +32,12 @@ import java.util.Map.Entry;
 import static org.opensearch.core.xcontent.XContentParserUtils.ensureExpectedToken;
 import static org.opensearch.flowframework.common.CommonValue.MODEL_ID;
 import static org.opensearch.flowframework.common.CommonValue.PARAMETERS_FIELD;
-import static org.opensearch.ml.common.utils.StringUtils.getParameterMap;
 
 /**
  * Utility methods for Template parsing
  */
 public class ParseUtils {
     private static final Logger logger = LogManager.getLogger(ParseUtils.class);
-
-    public static final Gson gson;
-
-    static {
-        gson = new Gson();
-    }
 
     private ParseUtils() {}
 
@@ -117,37 +106,6 @@ public class ParseUtils {
         return map;
     }
 
-    // TODO Figure out a way to use the parse method of LLMSpec of ml-commons
-    /**
-     * Parses an XContent object representing the object of LLMSpec
-     * @param parser An XContent parser whose position is at the start of the map object to parse
-     * @return instance of {@link org.opensearch.ml.common.agent.LLMSpec}
-     * @throws IOException parsing error
-     */
-    public static LLMSpec parseLLM(XContentParser parser) throws IOException {
-        String modelId = null;
-        Map<String, String> parameters = null;
-
-        ensureExpectedToken(XContentParser.Token.START_OBJECT, parser.currentToken(), parser);
-        while (parser.nextToken() != XContentParser.Token.END_OBJECT) {
-            String fieldName = parser.currentName();
-            parser.nextToken();
-
-            switch (fieldName) {
-                case MODEL_ID:
-                    modelId = parser.text();
-                    break;
-                case PARAMETERS_FIELD:
-                    parameters = getParameterMap(parser.map());
-                    break;
-                default:
-                    parser.skipChildren();
-                    break;
-            }
-        }
-        return LLMSpec.builder().modelId(modelId).parameters(parameters).build();
-    }
-
     /**
      * Parse content parser to {@link java.time.Instant}.
      *
@@ -174,31 +132,6 @@ public class ParseUtils {
         String userStr = client.threadPool().getThreadContext().getTransient(ConfigConstants.OPENSEARCH_SECURITY_USER_INFO_THREAD_CONTEXT);
         logger.debug("Filtering result by " + userStr);
         return User.parse(userStr);
-    }
-
-    /**
-     * Generates a parameter map required when the parameter is nested within an object
-     * @param parameterObjs parameters
-     * @return a parameters map of type String,String
-     */
-    public static Map<String, String> getParameterMap(Map<String, ?> parameterObjs) {
-        Map<String, String> parameters = new HashMap<>();
-        for (String key : parameterObjs.keySet()) {
-            Object value = parameterObjs.get(key);
-            try {
-                AccessController.doPrivileged((PrivilegedExceptionAction<Void>) () -> {
-                    if (value instanceof String) {
-                        parameters.put(key, (String) value);
-                    } else {
-                        parameters.put(key, gson.toJson(value));
-                    }
-                    return null;
-                });
-            } catch (PrivilegedActionException e) {
-                throw new RuntimeException(e);
-            }
-        }
-        return parameters;
     }
 
     /**
