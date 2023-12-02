@@ -237,7 +237,7 @@ public class RegisterLocalModelStepTests extends OpenSearchTestCase {
     public void testMissingInputs() {
         CompletableFuture<WorkflowData> future = registerLocalModelStep.execute(
             "nodeId",
-            WorkflowData.EMPTY,
+            new WorkflowData(Collections.emptyMap(), "test-id", "test-node-id"),
             Collections.emptyMap(),
             Collections.emptyMap()
         );
@@ -245,7 +245,19 @@ public class RegisterLocalModelStepTests extends OpenSearchTestCase {
         assertTrue(future.isCompletedExceptionally());
         ExecutionException ex = assertThrows(ExecutionException.class, () -> future.get().getContent());
         assertTrue(ex.getCause() instanceof FlowFrameworkException);
-        assertEquals("Required fields are not provided", ex.getCause().getMessage());
+        assertTrue(ex.getCause().getMessage().startsWith("Missing required inputs ["));
+        for (String s : new String[] {
+            "model_format",
+            "name",
+            "model_type",
+            "embedding_dimension",
+            "framework_type",
+            "model_group_id",
+            "version",
+            "url",
+            "model_content_hash_value" }) {
+            assertTrue(ex.getCause().getMessage().contains(s));
+        }
+        assertTrue(ex.getCause().getMessage().endsWith("] in workflow [test-id] node [test-node-id]"));
     }
-
 }
