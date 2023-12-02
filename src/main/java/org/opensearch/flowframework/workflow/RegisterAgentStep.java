@@ -29,6 +29,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Stream;
 
@@ -37,8 +38,8 @@ import static org.opensearch.flowframework.common.CommonValue.APP_TYPE_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.CREATED_TIME;
 import static org.opensearch.flowframework.common.CommonValue.DESCRIPTION_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.LAST_UPDATED_TIME_FIELD;
-import static org.opensearch.flowframework.common.CommonValue.LLM_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.MEMORY_FIELD;
+import static org.opensearch.flowframework.common.CommonValue.MODEL_ID;
 import static org.opensearch.flowframework.common.CommonValue.NAME_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.PARAMETERS_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.TOOLS_FIELD;
@@ -55,6 +56,9 @@ public class RegisterAgentStep implements WorkflowStep {
     private MachineLearningNodeClient mlClient;
 
     static final String NAME = "register_agent";
+
+    private static final String LLM_MODEL_ID = "llm.model_id";
+    private static final String LLM_PARAMETERS = "llm.parameters";
 
     private List<MLToolSpec> mlToolSpecList;
 
@@ -80,7 +84,7 @@ public class RegisterAgentStep implements WorkflowStep {
         ActionListener<MLRegisterAgentResponse> actionListener = new ActionListener<>() {
             @Override
             public void onResponse(MLRegisterAgentResponse mlRegisterAgentResponse) {
-                logger.info("Remote Agent registration successful");
+                logger.info("Agent registration successful for the agent {}", mlRegisterAgentResponse.getAgentId());
                 registerAgentModelFuture.complete(
                     new WorkflowData(
                         Map.ofEntries(Map.entry(AGENT_ID, mlRegisterAgentResponse.getAgentId())),
@@ -100,7 +104,8 @@ public class RegisterAgentStep implements WorkflowStep {
         String name = null;
         String type = null;
         String description = null;
-        LLMSpec llm = null;
+        String llmModelId = null;
+        Map<String, String> llmParameters = Collections.emptyMap();
         List<MLToolSpec> tools = new ArrayList<>();
         Map<String, String> parameters = Collections.emptyMap();
         MLMemorySpec memory = null;
@@ -128,8 +133,11 @@ public class RegisterAgentStep implements WorkflowStep {
                     case TYPE:
                         type = (String) entry.getValue();
                         break;
-                    case LLM_FIELD:
-                        llm = getLLMSpec(entry.getValue());
+                    case LLM_MODEL_ID:
+                        llmModelId = (String) entry.getValue();
+                        break;
+                    case LLM_PARAMETERS:
+                        llmParameters = getStringToStringMap(entry.getValue(), LLM_PARAMETERS);
                         break;
                     case TOOLS_FIELD:
                         tools = addTools(entry.getValue());
@@ -155,7 +163,22 @@ public class RegisterAgentStep implements WorkflowStep {
             }
         }
 
-        if (Stream.of(name, type, llm, tools, parameters, memory, appType).allMatch(x -> x != null)) {
+        // Case when modelId is present in previous node inputs
+        if (llmModelId == null) {
+            llmModelId = getLlmModelId(previousNodeInputs, outputs);
+        }
+
+        // Case when modelId is not present at all
+        if (llmModelId == null) {
+            registerAgentModelFuture.completeExceptionally(
+                new FlowFrameworkException("llm model id is not provided", RestStatus.BAD_REQUEST)
+            );
+            return registerAgentModelFuture;
+        }
+
+        LLMSpec llmSpec = getLLMSpec(llmModelId, llmParameters);
+
+        if (Stream.of(name, type, llmSpec).allMatch(x -> x != null)) {
             MLAgentBuilder builder = MLAgent.builder().name(name);
 
             if (description != null) {
@@ -163,7 +186,7 @@ public class RegisterAgentStep implements WorkflowStep {
             }
 
             builder.type(type)
-                .llm(llm)
+                .llm(llmSpec)
                 .tools(tools)
                 .parameters(parameters)
                 .memory(memory)
@@ -195,11 +218,38 @@ public class RegisterAgentStep implements WorkflowStep {
         return mlToolSpecList;
     }
 
-    private LLMSpec getLLMSpec(Object llm) {
-        if (llm instanceof LLMSpec) {
-            return (LLMSpec) llm;
+    private String getLlmModelId(Map<String, String> previousNodeInputs, Map<String, WorkflowData> outputs) {
+        // Case when modelId is already pass in the template
+        String llmModelId = null;
+
+        // Case when modelId is passed through previousSteps
+        Optional<String> previousNode = previousNodeInputs.entrySet()
+            .stream()
+            .filter(e -> MODEL_ID.equals(e.getValue()))
+            .map(Map.Entry::getKey)
+            .findFirst();
+
+        if (previousNode.isPresent()) {
+            WorkflowData previousNodeOutput = outputs.get(previousNode.get());
+            if (previousNodeOutput != null && previousNodeOutput.getContent().containsKey(MODEL_ID)) {
+                llmModelId = previousNodeOutput.getContent().get(MODEL_ID).toString();
+            }
         }
-        throw new IllegalArgumentException("[" + LLM_FIELD + "] must be of type LLMSpec.");
+        return llmModelId;
+    }
+
+    private LLMSpec getLLMSpec(String llmModelId, Map<String, String> llmParameters) {
+        if (llmModelId == null) {
+            throw new IllegalArgumentException("model id for llm is null");
+        }
+        LLMSpec.LLMSpecBuilder builder = LLMSpec.builder();
+        builder.modelId(llmModelId);
+        if (llmParameters != null) {
+            builder.parameters(llmParameters);
+        }
+
+        LLMSpec llmSpec = builder.build();
+        return llmSpec;
     }
 
     private MLMemorySpec getMLMemorySpec(Object mlMemory) {
@@ -229,13 +279,6 @@ public class RegisterAgentStep implements WorkflowStep {
         MLMemorySpec mlMemorySpec = builder.build();
         return mlMemorySpec;
 
-    }
-
-    private Instant getInstant(Object instant, String fieldName) {
-        if (instant instanceof Instant) {
-            return (Instant) instant;
-        }
-        throw new IllegalArgumentException("[" + fieldName + "] must be of type Instant.");
     }
 
 }
