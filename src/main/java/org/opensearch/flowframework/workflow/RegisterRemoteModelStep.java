@@ -12,23 +12,20 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.opensearch.ExceptionsHelper;
 import org.opensearch.core.action.ActionListener;
-import org.opensearch.core.rest.RestStatus;
 import org.opensearch.flowframework.common.WorkflowResources;
 import org.opensearch.flowframework.exception.FlowFrameworkException;
 import org.opensearch.flowframework.indices.FlowFrameworkIndicesHandler;
+import org.opensearch.flowframework.util.ParseUtils;
 import org.opensearch.ml.client.MachineLearningNodeClient;
 import org.opensearch.ml.common.FunctionName;
 import org.opensearch.ml.common.transport.register.MLRegisterModelInput;
 import org.opensearch.ml.common.transport.register.MLRegisterModelInput.MLRegisterModelInputBuilder;
 import org.opensearch.ml.common.transport.register.MLRegisterModelResponse;
 
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import java.util.Map.Entry;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
-import java.util.stream.Stream;
 
 import static org.opensearch.flowframework.common.CommonValue.CONNECTOR_ID;
 import static org.opensearch.flowframework.common.CommonValue.DESCRIPTION_FIELD;
@@ -115,48 +112,23 @@ public class RegisterRemoteModelStep implements WorkflowStep {
             }
         };
 
-        String modelName = null;
-        FunctionName functionName = null;
-        String modelGroupId = null;
-        String description = null;
-        String connectorId = null;
+        Set<String> requiredKeys = Set.of(NAME_FIELD, FUNCTION_NAME, CONNECTOR_ID);
+        Set<String> optionalKeys = Set.of(MODEL_GROUP_ID, DESCRIPTION_FIELD);
 
-        // TODO: Recreating the list to get this compiling
-        // Need to refactor the below iteration to pull directly from the maps
-        List<WorkflowData> data = new ArrayList<>();
-        data.add(currentNodeInputs);
-        data.addAll(outputs.values());
+        try {
+            Map<String, Object> inputs = ParseUtils.getInputsFromPreviousSteps(
+                requiredKeys,
+                optionalKeys,
+                currentNodeInputs,
+                outputs,
+                previousNodeInputs
+            );
 
-        // TODO : Handle inline connector configuration : https://github.com/opensearch-project/flow-framework/issues/149
-
-        for (WorkflowData workflowData : data) {
-
-            Map<String, Object> content = workflowData.getContent();
-            for (Entry<String, Object> entry : content.entrySet()) {
-                switch (entry.getKey()) {
-                    case NAME_FIELD:
-                        modelName = (String) content.get(NAME_FIELD);
-                        break;
-                    case FUNCTION_NAME:
-                        functionName = FunctionName.from(((String) content.get(FUNCTION_NAME)).toUpperCase(Locale.ROOT));
-                        break;
-                    case MODEL_GROUP_ID:
-                        modelGroupId = (String) content.get(MODEL_GROUP_ID);
-                        break;
-                    case DESCRIPTION_FIELD:
-                        description = (String) content.get(DESCRIPTION_FIELD);
-                        break;
-                    case CONNECTOR_ID:
-                        connectorId = (String) content.get(CONNECTOR_ID);
-                        break;
-                    default:
-                        break;
-
-                }
-            }
-        }
-
-        if (Stream.of(modelName, functionName, connectorId).allMatch(x -> x != null)) {
+            String modelName = (String) inputs.get(NAME_FIELD);
+            FunctionName functionName = FunctionName.from(((String) inputs.get(FUNCTION_NAME)).toUpperCase(Locale.ROOT));
+            String modelGroupId = (String) inputs.get(MODEL_GROUP_ID);
+            String description = (String) inputs.get(DESCRIPTION_FIELD);
+            String connectorId = (String) inputs.get(CONNECTOR_ID);
 
             MLRegisterModelInputBuilder builder = MLRegisterModelInput.builder()
                 .functionName(functionName)
@@ -172,12 +144,10 @@ public class RegisterRemoteModelStep implements WorkflowStep {
             MLRegisterModelInput mlInput = builder.build();
 
             mlClient.register(mlInput, actionListener);
-        } else {
-            registerRemoteModelFuture.completeExceptionally(
-                new FlowFrameworkException("Required fields are not provided", RestStatus.BAD_REQUEST)
-            );
-        }
 
+        } catch (FlowFrameworkException e) {
+            registerRemoteModelFuture.completeExceptionally(e);
+        }
         return registerRemoteModelFuture;
     }
 

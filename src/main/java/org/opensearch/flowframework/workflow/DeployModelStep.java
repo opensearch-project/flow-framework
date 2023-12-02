@@ -12,14 +12,14 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.opensearch.ExceptionsHelper;
 import org.opensearch.core.action.ActionListener;
-import org.opensearch.core.rest.RestStatus;
 import org.opensearch.flowframework.exception.FlowFrameworkException;
+import org.opensearch.flowframework.util.ParseUtils;
 import org.opensearch.ml.client.MachineLearningNodeClient;
 import org.opensearch.ml.common.transport.deploy.MLDeployModelResponse;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.util.Collections;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 
 import static org.opensearch.flowframework.common.CommonValue.MODEL_ID;
@@ -71,27 +71,24 @@ public class DeployModelStep implements WorkflowStep {
             }
         };
 
-        String modelId = null;
+        Set<String> requiredKeys = Set.of(MODEL_ID);
+        Set<String> optionalKeys = Collections.emptySet();
 
-        // TODO: Recreating the list to get this compiling
-        // Need to refactor the below iteration to pull directly from the maps
-        List<WorkflowData> data = new ArrayList<>();
-        data.add(currentNodeInputs);
-        data.addAll(outputs.values());
+        try {
+            Map<String, Object> inputs = ParseUtils.getInputsFromPreviousSteps(
+                requiredKeys,
+                optionalKeys,
+                currentNodeInputs,
+                outputs,
+                previousNodeInputs
+            );
 
-        for (WorkflowData workflowData : data) {
-            if (workflowData.getContent().containsKey(MODEL_ID)) {
-                modelId = (String) workflowData.getContent().get(MODEL_ID);
-                break;
-            }
-        }
+            String modelId = (String) inputs.get(MODEL_ID);
 
-        if (modelId != null) {
             mlClient.deploy(modelId, actionListener);
-        } else {
-            deployModelFuture.completeExceptionally(new FlowFrameworkException("Model ID is not provided", RestStatus.BAD_REQUEST));
+        } catch (FlowFrameworkException e) {
+            deployModelFuture.completeExceptionally(e);
         }
-
         return deployModelFuture;
     }
 

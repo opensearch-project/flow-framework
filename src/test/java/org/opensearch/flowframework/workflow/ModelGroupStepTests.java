@@ -41,8 +41,8 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 
 public class ModelGroupStepTests extends OpenSearchTestCase {
-    private WorkflowData inputData = WorkflowData.EMPTY;
-    private WorkflowData inputDataWithNoName = WorkflowData.EMPTY;
+    private WorkflowData inputData;
+    private WorkflowData inputDataWithNoName;
 
     @Mock
     MachineLearningNodeClient machineLearningNodeClient;
@@ -65,7 +65,7 @@ public class ModelGroupStepTests extends OpenSearchTestCase {
             "test-id",
             "test-node-id"
         );
-
+        inputDataWithNoName = new WorkflowData(Collections.emptyMap(), "test-id", "test-node-id");
     }
 
     public void testRegisterModelGroup() throws ExecutionException, InterruptedException, IOException {
@@ -146,7 +146,7 @@ public class ModelGroupStepTests extends OpenSearchTestCase {
         assertTrue(future.isCompletedExceptionally());
         ExecutionException ex = assertThrows(ExecutionException.class, () -> future.get().getContent());
         assertTrue(ex.getCause() instanceof FlowFrameworkException);
-        assertEquals("Model group name is not provided", ex.getCause().getMessage());
+        assertEquals("Missing required inputs [name] in workflow [test-id] node [test-node-id]", ex.getCause().getMessage());
     }
 
 }
