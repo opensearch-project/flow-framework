@@ -14,7 +14,6 @@ import org.opensearch.core.xcontent.XContentParser;
 import org.opensearch.flowframework.workflow.ProcessNode;
 import org.opensearch.flowframework.workflow.WorkflowData;
 import org.opensearch.flowframework.workflow.WorkflowStep;
-import org.opensearch.ml.common.agent.LLMSpec;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -25,10 +24,7 @@ import java.util.Map.Entry;
 import java.util.Objects;
 
 import static org.opensearch.core.xcontent.XContentParserUtils.ensureExpectedToken;
-import static org.opensearch.flowframework.common.CommonValue.LLM_FIELD;
-import static org.opensearch.flowframework.util.ParseUtils.buildLLMMap;
 import static org.opensearch.flowframework.util.ParseUtils.buildStringToStringMap;
-import static org.opensearch.flowframework.util.ParseUtils.parseLLM;
 import static org.opensearch.flowframework.util.ParseUtils.parseStringToStringMap;
 
 /**
@@ -101,12 +97,6 @@ public class WorkflowNode implements ToXContentObject {
                     }
                 }
                 xContentBuilder.endArray();
-            } else if (e.getValue() instanceof LLMSpec) {
-                if (LLM_FIELD.equals(e.getKey())) {
-                    xContentBuilder.startObject();
-                    buildLLMMap(xContentBuilder, (LLMSpec) e.getValue());
-                    xContentBuilder.endObject();
-                }
             }
         }
         xContentBuilder.endObject();
@@ -150,11 +140,7 @@ public class WorkflowNode implements ToXContentObject {
                                 userInputs.put(inputFieldName, parser.text());
                                 break;
                             case START_OBJECT:
-                                if (LLM_FIELD.equals(inputFieldName)) {
-                                    userInputs.put(inputFieldName, parseLLM(parser));
-                                } else {
-                                    userInputs.put(inputFieldName, parseStringToStringMap(parser));
-                                }
+                                userInputs.put(inputFieldName, parseStringToStringMap(parser));
                                 break;
                             case START_ARRAY:
                                 if (PROCESSORS_FIELD.equals(inputFieldName)) {

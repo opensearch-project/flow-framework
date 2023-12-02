@@ -96,7 +96,6 @@
         "inputs":[
             "name",
             "type",
-            "llm",
             "tools",
             "parameters",
             "memory",
