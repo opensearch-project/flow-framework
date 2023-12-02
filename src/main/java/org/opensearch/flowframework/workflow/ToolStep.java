@@ -10,17 +10,14 @@ package org.opensearch.flowframework.workflow;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.opensearch.core.rest.RestStatus;
 import org.opensearch.flowframework.exception.FlowFrameworkException;
+import org.opensearch.flowframework.util.ParseUtils;
 import org.opensearch.ml.common.agent.MLToolSpec;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 
 import static org.opensearch.flowframework.common.CommonValue.*;
@@ -41,49 +38,25 @@ public class ToolStep implements WorkflowStep {
         Map<String, WorkflowData> outputs,
         Map<String, String> previousNodeInputs
     ) throws IOException {
-        String type = null;
-        String name = null;
-        String description = null;
-        Map<String, String> parameters = Collections.emptyMap();
-        Boolean includeOutputInAgentResponse = null;
 
-        // TODO: Recreating the list to get this compiling
-        // Need to refactor the below iteration to pull directly from the maps
-        List<WorkflowData> data = new ArrayList<>();
-        data.add(currentNodeInputs);
-        data.addAll(outputs.values());
+        Set<String> requiredKeys = Set.of(TYPE);
+        Set<String> optionalKeys = Set.of(NAME_FIELD, DESCRIPTION_FIELD, PARAMETERS_FIELD, INCLUDE_OUTPUT_IN_AGENT_RESPONSE);
 
-        for (WorkflowData workflowData : data) {
-            Map<String, Object> content = workflowData.getContent();
+        try {
+            Map<String, Object> inputs = ParseUtils.getInputsFromPreviousSteps(
+                requiredKeys,
+                optionalKeys,
+                currentNodeInputs,
+                outputs,
+                previousNodeInputs
+            );
 
-            for (Entry<String, Object> entry : content.entrySet()) {
-                switch (entry.getKey()) {
-                    case TYPE:
-                        type = (String) entry.getValue();
-                        break;
-                    case NAME_FIELD:
-                        name = (String) entry.getValue();
-                        break;
-                    case DESCRIPTION_FIELD:
-                        description = (String) entry.getValue();
-                        break;
-                    case PARAMETERS_FIELD:
-                        parameters = getToolsParametersMap(entry.getValue(), previousNodeInputs, outputs);
-                        break;
-                    case INCLUDE_OUTPUT_IN_AGENT_RESPONSE:
-                        includeOutputInAgentResponse = (Boolean) entry.getValue();
-                        break;
-                    default:
-                        break;
-                }
+            String type = (String) inputs.get(TYPE);
+            String name = (String) inputs.get(NAME_FIELD);
+            String description = (String) inputs.get(DESCRIPTION_FIELD);
+            Boolean includeOutputInAgentResponse = (Boolean) inputs.get(INCLUDE_OUTPUT_IN_AGENT_RESPONSE);
+            Map<String, String> parameters = getToolsParametersMap(inputs.get(PARAMETERS_FIELD), previousNodeInputs, outputs);
 
-            }
-
-        }
-
-        if (type == null) {
-            toolFuture.completeExceptionally(new FlowFrameworkException("Tool type is not provided", RestStatus.BAD_REQUEST));
-        } else {
             MLToolSpec.MLToolSpecBuilder builder = MLToolSpec.builder();
 
             builder.type(type);
@@ -109,9 +82,12 @@ public class ToolStep implements WorkflowStep {
                     currentNodeInputs.getNodeId()
                 )
             );
-        }
 
-        logger.info("Tool registered successfully {}", type);
+            logger.info("Tool registered successfully {}", type);
+
+        } catch (FlowFrameworkException e) {
+            toolFuture.completeExceptionally(e);
+        }
         return toolFuture;
     }
 
