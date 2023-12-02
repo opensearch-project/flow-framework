@@ -13,7 +13,6 @@ import org.opensearch.core.action.ActionListener;
 import org.opensearch.core.index.Index;
 import org.opensearch.core.index.shard.ShardId;
 import org.opensearch.core.rest.RestStatus;
-import org.opensearch.flowframework.common.CommonValue;
 import org.opensearch.flowframework.exception.FlowFrameworkException;
 import org.opensearch.ml.client.MachineLearningNodeClient;
 import org.opensearch.ml.common.transport.connector.MLCreateConnectorResponse;
@@ -44,7 +43,7 @@ public class DeleteConnectorStepTests extends OpenSearchTestCase {
 
         MockitoAnnotations.openMocks(this);
 
-        inputData = new WorkflowData(Map.of(CommonValue.CONNECTOR_ID, "test"), "test-id", "test-node-id");
+        inputData = new WorkflowData(Collections.emptyMap(), "test-id", "test-node-id");
     }
 
     public void testDeleteConnector() throws IOException, ExecutionException, InterruptedException {
@@ -86,7 +85,7 @@ public class DeleteConnectorStepTests extends OpenSearchTestCase {
         assertTrue(future.isCompletedExceptionally());
         ExecutionException ex = assertThrows(ExecutionException.class, () -> future.get().getContent());
         assertTrue(ex.getCause() instanceof FlowFrameworkException);
-        assertEquals("Required field connector_id is not provided", ex.getCause().getMessage());
+        assertEquals("Missing required inputs [connector_id] in workflow [test-id] node [test-node-id]", ex.getCause().getMessage());
     }
 
     public void testDeleteConnectorFailure() throws IOException {
