@@ -180,13 +180,6 @@ public class RegisterAgentStep implements WorkflowStep {
         return NAME;
     }
 
-    private List<MLToolSpec> addTools(Object tools) {
-        MLToolSpec mlToolSpec = (MLToolSpec) tools;
-        mlToolSpecList.add(mlToolSpec);
-        return mlToolSpecList;
-    }
-
-    // TODO https://github.com/opensearch-project/flow-framework/issues/241 - to add multiple tools
     private List<MLToolSpec> getTools(Map<String, String> previousNodeInputs, Map<String, WorkflowData> outputs) {
         List<MLToolSpec> mlToolSpecList = new ArrayList<>();
         List<String> previousNodes = previousNodeInputs.entrySet()
@@ -200,12 +193,11 @@ public class RegisterAgentStep implements WorkflowStep {
                 WorkflowData previousNodeOutput = outputs.get(previousNode);
                 if (previousNodeOutput != null && previousNodeOutput.getContent().containsKey(TOOLS_FIELD)) {
                     MLToolSpec mlToolSpec = (MLToolSpec) previousNodeOutput.getContent().get(TOOLS_FIELD);
-                    logger.info("TOOL ADDED {}", mlToolSpec.getType());
+                    logger.info("Tool added {}", mlToolSpec.getType());
                     mlToolSpecList.add(mlToolSpec);
                 }
             });
         }
-        logger.info("TOOLS LIST {}", mlToolSpecList.toString());
         return mlToolSpecList;
     }
 
