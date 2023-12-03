@@ -186,11 +186,12 @@ public class RegisterAgentStep implements WorkflowStep {
         return mlToolSpecList;
     }
 
+    // TODO https://github.com/opensearch-project/flow-framework/issues/241 - to add multiple tools
     private List<MLToolSpec> getTools(Map<String, String> previousNodeInputs, Map<String, WorkflowData> outputs) {
         List<MLToolSpec> mlToolSpecList = new ArrayList<>();
         List<String> previousNodes = previousNodeInputs.entrySet()
             .stream()
-            .filter(e -> e.getValue().startsWith(TOOLS_FIELD + "."))
+            .filter(e -> TOOLS_FIELD.equals(e.getValue()))
             .map(Map.Entry::getKey)
             .collect(Collectors.toList());
 
