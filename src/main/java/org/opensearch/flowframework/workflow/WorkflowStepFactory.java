@@ -52,7 +52,7 @@ public class WorkflowStepFactory {
         );
         stepMap.put(RegisterRemoteModelStep.NAME, () -> new RegisterRemoteModelStep(mlClient, flowFrameworkIndicesHandler));
         stepMap.put(DeleteModelStep.NAME, () -> new DeleteModelStep(mlClient));
-        stepMap.put(DeployModelStep.NAME, () -> new DeployModelStep(mlClient));
+        stepMap.put(DeployModelStep.NAME, () -> new DeployModelStep(settings, clusterService, mlClient, flowFrameworkIndicesHandler));
         stepMap.put(UndeployModelStep.NAME, () -> new UndeployModelStep(mlClient));
         stepMap.put(CreateConnectorStep.NAME, () -> new CreateConnectorStep(mlClient, flowFrameworkIndicesHandler));
         stepMap.put(DeleteConnectorStep.NAME, () -> new DeleteConnectorStep(mlClient));

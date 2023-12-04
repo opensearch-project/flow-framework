@@ -11,8 +11,11 @@ package org.opensearch.flowframework.workflow;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.opensearch.ExceptionsHelper;
+import org.opensearch.cluster.service.ClusterService;
+import org.opensearch.common.settings.Settings;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.flowframework.exception.FlowFrameworkException;
+import org.opensearch.flowframework.indices.FlowFrameworkIndicesHandler;
 import org.opensearch.flowframework.util.ParseUtils;
 import org.opensearch.ml.client.MachineLearningNodeClient;
 import org.opensearch.ml.common.transport.deploy.MLDeployModelResponse;
@@ -27,18 +30,26 @@ import static org.opensearch.flowframework.common.CommonValue.MODEL_ID;
 /**
  * Step to deploy a model
  */
-public class DeployModelStep implements WorkflowStep {
+public class DeployModelStep extends AbstractRetryableWorkflowStep {
     private static final Logger logger = LogManager.getLogger(DeployModelStep.class);
 
     private final MachineLearningNodeClient mlClient;
+    private final FlowFrameworkIndicesHandler flowFrameworkIndicesHandler;
     static final String NAME = "deploy_model";
 
     /**
      * Instantiate this class
      * @param mlClient client to instantiate MLClient
      */
-    public DeployModelStep(MachineLearningNodeClient mlClient) {
+    public DeployModelStep(
+        Settings settings,
+        ClusterService clusterService,
+        MachineLearningNodeClient mlClient,
+        FlowFrameworkIndicesHandler flowFrameworkIndicesHandler
+    ) {
+        super(settings, clusterService, mlClient, flowFrameworkIndicesHandler);
         this.mlClient = mlClient;
+        this.flowFrameworkIndicesHandler = flowFrameworkIndicesHandler;
     }
 
     @Override
@@ -55,13 +66,10 @@ public class DeployModelStep implements WorkflowStep {
             @Override
             public void onResponse(MLDeployModelResponse mlDeployModelResponse) {
                 logger.info("Model deployment state {}", mlDeployModelResponse.getStatus());
-                deployModelFuture.complete(
-                    new WorkflowData(
-                        Map.ofEntries(Map.entry("deploy_model_status", mlDeployModelResponse.getStatus())),
-                        currentNodeInputs.getWorkflowId(),
-                        currentNodeInputs.getNodeId()
-                    )
-                );
+                String taskId = mlDeployModelResponse.getTaskId();
+
+                // Attempt to retrieve the model ID
+                retryableGetMlTask(currentNodeInputs.getWorkflowId(), currentNodeId, deployModelFuture, taskId, 0, "Deploy model");
             }
 
             @Override
