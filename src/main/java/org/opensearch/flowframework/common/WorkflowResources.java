@@ -33,7 +33,9 @@ public enum WorkflowResources {
     /** official workflow step name for creating an ingest-pipeline and associated created resource */
     CREATE_INGEST_PIPELINE("create_ingest_pipeline", "pipeline_id"),
     /** official workflow step name for creating an index and associated created resource */
-    CREATE_INDEX("create_index", "index_name");
+    CREATE_INDEX("create_index", "index_name"),
+    /** official workflow step name for register an agent and the associated created resource */
+    REGISTER_AGENT("register_agent", "agent_id");
 
     private final String workflowStep;
     private final String resourceCreated;

@@ -13,7 +13,9 @@ import org.apache.logging.log4j.Logger;
 import org.opensearch.ExceptionsHelper;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.core.rest.RestStatus;
+import org.opensearch.flowframework.common.WorkflowResources;
 import org.opensearch.flowframework.exception.FlowFrameworkException;
+import org.opensearch.flowframework.indices.FlowFrameworkIndicesHandler;
 import org.opensearch.flowframework.util.ParseUtils;
 import org.opensearch.ml.client.MachineLearningNodeClient;
 import org.opensearch.ml.common.agent.LLMSpec;
@@ -54,8 +56,9 @@ public class RegisterAgentStep implements WorkflowStep {
     private static final Logger logger = LogManager.getLogger(RegisterAgentStep.class);
 
     private MachineLearningNodeClient mlClient;
+    private final FlowFrameworkIndicesHandler flowFrameworkIndicesHandler;
 
-    static final String NAME = "register_agent";
+    static final String NAME = WorkflowResources.REGISTER_AGENT.getWorkflowStep();
 
     private static final String LLM_MODEL_ID = "llm.model_id";
     private static final String LLM_PARAMETERS = "llm.parameters";
@@ -65,10 +68,12 @@ public class RegisterAgentStep implements WorkflowStep {
     /**
      * Instantiate this class
      * @param mlClient client to instantiate MLClient
+     * @param flowFrameworkIndicesHandler FlowFrameworkIndicesHandler class to update system indices
      */
-    public RegisterAgentStep(MachineLearningNodeClient mlClient) {
+    public RegisterAgentStep(MachineLearningNodeClient mlClient, FlowFrameworkIndicesHandler flowFrameworkIndicesHandler) {
         this.mlClient = mlClient;
         this.mlToolSpecList = new ArrayList<>();
+        this.flowFrameworkIndicesHandler = flowFrameworkIndicesHandler;
     }
 
     @Override
@@ -92,6 +97,36 @@ public class RegisterAgentStep implements WorkflowStep {
                         currentNodeInputs.getNodeId()
                     )
                 );
+
+                try {
+                    String resourceName = WorkflowResources.getResourceByWorkflowStep(getName());
+                    logger.info("Created connector successfully");
+                    flowFrameworkIndicesHandler.updateResourceInStateIndex(
+                        currentNodeInputs.getWorkflowId(),
+                        currentNodeId,
+                        getName(),
+                        mlRegisterAgentResponse.getAgentId(),
+                        ActionListener.wrap(response -> {
+                            logger.info("successfully updated resources created in state index: {}", response.getIndex());
+                            registerAgentModelFuture.complete(
+                                new WorkflowData(
+                                    Map.ofEntries(Map.entry(resourceName, mlRegisterAgentResponse.getAgentId())),
+                                    currentNodeInputs.getWorkflowId(),
+                                    currentNodeId
+                                )
+                            );
+                        }, exception -> {
+                            logger.error("Failed to update new created resource", exception);
+                            registerAgentModelFuture.completeExceptionally(
+                                new FlowFrameworkException(exception.getMessage(), ExceptionsHelper.status(exception))
+                            );
+                        })
+                    );
+
+                } catch (Exception e) {
+                    logger.error("Failed to parse and update new created resource", e);
+                    registerAgentModelFuture.completeExceptionally(new FlowFrameworkException(e.getMessage(), ExceptionsHelper.status(e)));
+                }
             }
 
             @Override
