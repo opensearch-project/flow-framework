@@ -39,7 +39,10 @@ public class DeployModelStep extends AbstractRetryableWorkflowStep {
 
     /**
      * Instantiate this class
+     * @param settings The OpenSearch settings
+     * @param clusterService The cluster service
      * @param mlClient client to instantiate MLClient
+     * @param flowFrameworkIndicesHandler FlowFrameworkIndicesHandler class to update system indices
      */
     public DeployModelStep(
         Settings settings,

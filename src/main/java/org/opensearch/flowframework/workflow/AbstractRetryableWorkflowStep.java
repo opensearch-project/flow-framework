@@ -43,6 +43,8 @@ public abstract class AbstractRetryableWorkflowStep implements WorkflowStep {
      * Instantiates a new Retryable workflow step
      * @param settings Environment settings
      * @param clusterService the cluster service
+     * @param mlClient machine learning client
+     * @param flowFrameworkIndicesHandler FlowFrameworkIndicesHandler class to update system indices
      */
     public AbstractRetryableWorkflowStep(
         Settings settings,

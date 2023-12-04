@@ -47,7 +47,7 @@ public class WorkflowNode implements ToXContentObject {
     /** The field defining the timeout value for this node */
     public static final String NODE_TIMEOUT_FIELD = "node_timeout";
     /** The default timeout value if the template doesn't override it */
-    public static final String NODE_TIMEOUT_DEFAULT_VALUE = "10s";
+    public static final String NODE_TIMEOUT_DEFAULT_VALUE = "15s";
 
     private final String id; // unique id
     private final String type; // maps to a WorkflowStep
