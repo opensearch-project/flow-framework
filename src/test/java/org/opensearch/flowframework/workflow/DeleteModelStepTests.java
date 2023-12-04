@@ -30,7 +30,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.verify;
 
-public class DeleteConnectorStepTests extends OpenSearchTestCase {
+public class DeleteModelStepTests extends OpenSearchTestCase {
     private WorkflowData inputData;
 
     @Mock
@@ -45,36 +45,36 @@ public class DeleteConnectorStepTests extends OpenSearchTestCase {
         inputData = new WorkflowData(Collections.emptyMap(), "test-id", "test-node-id");
     }
 
-    public void testDeleteConnector() throws IOException, ExecutionException, InterruptedException {
+    public void testDeleteModel() throws IOException, ExecutionException, InterruptedException {
 
-        String connectorId = randomAlphaOfLength(5);
-        DeleteConnectorStep deleteConnectorStep = new DeleteConnectorStep(machineLearningNodeClient);
+        String modelId = randomAlphaOfLength(5);
+        DeleteModelStep deleteModelStep = new DeleteModelStep(machineLearningNodeClient);
 
         doAnswer(invocation -> {
-            String connectorIdArg = invocation.getArgument(0);
+            String modelIdArg = invocation.getArgument(0);
             ActionListener<DeleteResponse> actionListener = invocation.getArgument(1);
             ShardId shardId = new ShardId(new Index("indexName", "uuid"), 1);
-            DeleteResponse output = new DeleteResponse(shardId, connectorIdArg, 1, 1, 1, true);
+            DeleteResponse output = new DeleteResponse(shardId, modelIdArg, 1, 1, 1, true);
             actionListener.onResponse(output);
             return null;
-        }).when(machineLearningNodeClient).deleteConnector(any(String.class), any());
+        }).when(machineLearningNodeClient).deleteModel(any(String.class), any());
 
-        CompletableFuture<WorkflowData> future = deleteConnectorStep.execute(
+        CompletableFuture<WorkflowData> future = deleteModelStep.execute(
             inputData.getNodeId(),
             inputData,
-            Map.of("step_1", new WorkflowData(Map.of("connector_id", connectorId), "workflowId", "nodeId")),
-            Map.of("step_1", "connector_id")
+            Map.of("step_1", new WorkflowData(Map.of("model_id", modelId), "workflowId", "nodeId")),
+            Map.of("step_1", "model_id")
         );
-        verify(machineLearningNodeClient).deleteConnector(any(String.class), any());
+        verify(machineLearningNodeClient).deleteModel(any(String.class), any());
 
         assertTrue(future.isDone());
-        assertEquals(connectorId, future.get().getContent().get("connector_id"));
+        assertEquals(modelId, future.get().getContent().get("model_id"));
     }
 
-    public void testNoConnectorIdInOutput() throws IOException {
-        DeleteConnectorStep deleteConnectorStep = new DeleteConnectorStep(machineLearningNodeClient);
+    public void testNoModelIdInOutput() throws IOException {
+        DeleteModelStep deleteModelStep = new DeleteModelStep(machineLearningNodeClient);
 
-        CompletableFuture<WorkflowData> future = deleteConnectorStep.execute(
+        CompletableFuture<WorkflowData> future = deleteModelStep.execute(
             inputData.getNodeId(),
             inputData,
             Collections.emptyMap(),
@@ -84,30 +84,30 @@ public class DeleteConnectorStepTests extends OpenSearchTestCase {
         assertTrue(future.isCompletedExceptionally());
         ExecutionException ex = assertThrows(ExecutionException.class, () -> future.get().getContent());
         assertTrue(ex.getCause() instanceof FlowFrameworkException);
-        assertEquals("Missing required inputs [connector_id] in workflow [test-id] node [test-node-id]", ex.getCause().getMessage());
+        assertEquals("Missing required inputs [model_id] in workflow [test-id] node [test-node-id]", ex.getCause().getMessage());
     }
 
-    public void testDeleteConnectorFailure() throws IOException {
-        DeleteConnectorStep deleteConnectorStep = new DeleteConnectorStep(machineLearningNodeClient);
+    public void testDeleteModelFailure() throws IOException {
+        DeleteModelStep deleteModelStep = new DeleteModelStep(machineLearningNodeClient);
 
         doAnswer(invocation -> {
             ActionListener<DeleteResponse> actionListener = invocation.getArgument(1);
-            actionListener.onFailure(new FlowFrameworkException("Failed to delete connector", RestStatus.INTERNAL_SERVER_ERROR));
+            actionListener.onFailure(new FlowFrameworkException("Failed to delete model", RestStatus.INTERNAL_SERVER_ERROR));
             return null;
-        }).when(machineLearningNodeClient).deleteConnector(any(String.class), any());
+        }).when(machineLearningNodeClient).deleteModel(any(String.class), any());
 
-        CompletableFuture<WorkflowData> future = deleteConnectorStep.execute(
+        CompletableFuture<WorkflowData> future = deleteModelStep.execute(
             inputData.getNodeId(),
             inputData,
-            Map.of("step_1", new WorkflowData(Map.of("connector_id", "test"), "workflowId", "nodeId")),
-            Map.of("step_1", "connector_id")
+            Map.of("step_1", new WorkflowData(Map.of("model_id", "test"), "workflowId", "nodeId")),
+            Map.of("step_1", "model_id")
         );
 
-        verify(machineLearningNodeClient).deleteConnector(any(String.class), any());
+        verify(machineLearningNodeClient).deleteModel(any(String.class), any());
 
         assertTrue(future.isCompletedExceptionally());
         ExecutionException ex = assertThrows(ExecutionException.class, () -> future.get().getContent());
         assertTrue(ex.getCause() instanceof FlowFrameworkException);
-        assertEquals("Failed to delete connector", ex.getCause().getMessage());
+        assertEquals("Failed to delete model", ex.getCause().getMessage());
     }
 }

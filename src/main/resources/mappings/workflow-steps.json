@@ -75,6 +75,14 @@
             "register_model_status"
         ]
     },
+    "delete_model": {
+        "inputs": [
+            "model_id"
+        ],
+        "outputs":[
+            "model_id"
+        ]
+    },
     "deploy_model": {
         "inputs":[
             "model_id"
