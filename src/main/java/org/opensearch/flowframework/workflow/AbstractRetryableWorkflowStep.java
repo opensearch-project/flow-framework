@@ -65,6 +65,7 @@ public abstract class AbstractRetryableWorkflowStep implements WorkflowStep {
      * @param future the workflow step future
      * @param taskId the ml task id
      * @param retries the current number of request retries
+     * @param workflowStep the workflow step which requires a retry get ml task functionality
      */
     void retryableGetMlTask(
         String workflowId,
@@ -72,23 +73,23 @@ public abstract class AbstractRetryableWorkflowStep implements WorkflowStep {
         CompletableFuture<WorkflowData> future,
         String taskId,
         int retries,
-        String message
+        String workflowStep
     ) {
         mlClient.getTask(taskId, ActionListener.wrap(response -> {
             MLTaskState currentState = response.getState();
             if (currentState != MLTaskState.COMPLETED) {
                 if (Stream.of(MLTaskState.FAILED, MLTaskState.COMPLETED_WITH_ERROR).anyMatch(x -> x == currentState)) {
                     // Model registration failed or completed with errors
-                    String errorMessage = message + " failed with error : " + response.getError();
+                    String errorMessage = workflowStep + " failed with error : " + response.getError();
                     logger.error(errorMessage);
                     future.completeExceptionally(new FlowFrameworkException(errorMessage, RestStatus.BAD_REQUEST));
                 } else {
                     // Task still in progress, attempt retry
-                    throw new IllegalStateException(message + " is not yet completed");
+                    throw new IllegalStateException(workflowStep + " is not yet completed");
                 }
             } else {
                 try {
-                    logger.info(message + " successful for {} and modelId {}", workflowId, response.getModelId());
+                    logger.info(workflowStep + " successful for {} and modelId {}", workflowId, response.getModelId());
                     String resourceName = WorkflowResources.getResourceByWorkflowStep(getName());
                     flowFrameworkIndicesHandler.updateResourceInStateIndex(
                         workflowId,
@@ -128,10 +129,9 @@ public abstract class AbstractRetryableWorkflowStep implements WorkflowStep {
                 } catch (Exception e) {
                     FutureUtils.cancel(future);
                 }
-                final int retryAdd = retries + 1;
-                retryableGetMlTask(workflowId, nodeId, future, taskId, retryAdd, message);
+                retryableGetMlTask(workflowId, nodeId, future, taskId, retries + 1, workflowStep);
             } else {
-                logger.error("Failed to retrieve" + message + ",maximum retries exceeded");
+                logger.error("Failed to retrieve" + workflowStep + ",maximum retries exceeded");
                 future.completeExceptionally(new FlowFrameworkException(exception.getMessage(), ExceptionsHelper.status(exception)));
             }
         }));
