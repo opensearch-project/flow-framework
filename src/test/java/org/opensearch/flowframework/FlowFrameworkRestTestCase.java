@@ -42,8 +42,10 @@ import org.opensearch.core.xcontent.NamedXContentRegistry;
 import org.opensearch.core.xcontent.XContentParser;
 import org.opensearch.flowframework.common.CommonValue;
 import org.opensearch.flowframework.model.ProvisioningProgress;
+import org.opensearch.flowframework.model.ResourceCreated;
 import org.opensearch.flowframework.model.State;
 import org.opensearch.flowframework.model.Template;
+import org.opensearch.flowframework.model.WorkflowState;
 import org.opensearch.test.rest.OpenSearchRestTestCase;
 import org.junit.After;
 import org.junit.Before;
@@ -69,6 +71,7 @@ import static org.opensearch.commons.ConfigConstants.OPENSEARCH_SECURITY_SSL_HTT
 import static org.opensearch.commons.ConfigConstants.OPENSEARCH_SECURITY_SSL_HTTP_KEYSTORE_KEYPASSWORD;
 import static org.opensearch.commons.ConfigConstants.OPENSEARCH_SECURITY_SSL_HTTP_KEYSTORE_PASSWORD;
 import static org.opensearch.commons.ConfigConstants.OPENSEARCH_SECURITY_SSL_HTTP_PEMCERT_FILEPATH;
+import static org.opensearch.core.xcontent.XContentParserUtils.ensureExpectedToken;
 import static org.opensearch.flowframework.common.CommonValue.WORKFLOW_URI;
 
 /**
@@ -77,40 +80,49 @@ import static org.opensearch.flowframework.common.CommonValue.WORKFLOW_URI;
 public abstract class FlowFrameworkRestTestCase extends OpenSearchRestTestCase {
 
     @Before
-    public void setUpSettings() throws IOException {
+    public void setUpSettings() throws Exception {
 
-        // Enable Flow Framework Plugin Rest APIs
-        Response response = TestHelpers.makeRequest(
-            client(),
-            "PUT",
-            "_cluster/settings",
-            null,
-            "{\"transient\":{\"plugins.flow_framework.enabled\":true}}",
-            ImmutableList.of(new BasicHeader(HttpHeaders.USER_AGENT, ""))
-        );
-        assertEquals(200, response.getStatusLine().getStatusCode());
+        if (!indexExistsWithAdminClient(".plugins-ml-config")) {
 
-        // Enable ML Commons to run on non-ml nodes
-        response = TestHelpers.makeRequest(
-            client(),
-            "PUT",
-            "_cluster/settings",
-            null,
-            "{\"persistent\":{\"plugins.ml_commons.only_run_on_ml_node\":false}}",
-            ImmutableList.of(new BasicHeader(HttpHeaders.USER_AGENT, ""))
-        );
-        assertEquals(200, response.getStatusLine().getStatusCode());
+            // Initial cluster set up
 
-        // Enable local model registration via URL
-        response = TestHelpers.makeRequest(
-            client(),
-            "PUT",
-            "_cluster/settings",
-            null,
-            "{\"persistent\":{\"plugins.ml_commons.allow_registering_model_via_url\":true}}",
-            ImmutableList.of(new BasicHeader(HttpHeaders.USER_AGENT, ""))
-        );
-        assertEquals(200, response.getStatusLine().getStatusCode());
+            // Enable Flow Framework Plugin Rest APIs
+            Response response = TestHelpers.makeRequest(
+                client(),
+                "PUT",
+                "_cluster/settings",
+                null,
+                "{\"transient\":{\"plugins.flow_framework.enabled\":true}}",
+                ImmutableList.of(new BasicHeader(HttpHeaders.USER_AGENT, ""))
+            );
+            assertEquals(200, response.getStatusLine().getStatusCode());
+
+            // Enable ML Commons to run on non-ml nodes
+            response = TestHelpers.makeRequest(
+                client(),
+                "PUT",
+                "_cluster/settings",
+                null,
+                "{\"persistent\":{\"plugins.ml_commons.only_run_on_ml_node\":false}}",
+                ImmutableList.of(new BasicHeader(HttpHeaders.USER_AGENT, ""))
+            );
+            assertEquals(200, response.getStatusLine().getStatusCode());
+
+            // Enable local model registration via URL
+            response = TestHelpers.makeRequest(
+                client(),
+                "PUT",
+                "_cluster/settings",
+                null,
+                "{\"persistent\":{\"plugins.ml_commons.allow_registering_model_via_url\":true}}",
+                ImmutableList.of(new BasicHeader(HttpHeaders.USER_AGENT, ""))
+            );
+            assertEquals(200, response.getStatusLine().getStatusCode());
+
+            // Ensure .plugins-ml-config is created before proceeding with integration tests
+            assertBusy(() -> { assertTrue(indexExistsWithAdminClient(".plugins-ml-config")); });
+
+        }
 
     }
 
@@ -124,6 +136,11 @@ public abstract class FlowFrameworkRestTestCase extends OpenSearchRestTestCase {
         }
 
         return isHttps;
+    }
+
+    @Override
+    protected Settings restClientSettings() {
+        return super.restClientSettings();
     }
 
     @Override
@@ -354,5 +371,34 @@ public abstract class FlowFrameworkRestTestCase extends OpenSearchRestTestCase {
         assertEquals(stateStatus.name(), (String) responseMap.get(CommonValue.STATE_FIELD));
         assertEquals(provisioningStatus.name(), (String) responseMap.get(CommonValue.PROVISIONING_PROGRESS_FIELD));
 
+    }
+
+    /**
+     * Helper method to wait until a workflow provisioning has completed and retrieve any resources created
+     * @param workflowId the workflow id to retrieve resources from
+     * @return a list of created resources
+     * @throws Exception if the request fails
+     */
+    protected List<ResourceCreated> getResourcesCreated(String workflowId) throws Exception {
+
+        // wait and ensure state is completed/done
+        assertBusy(() -> { getAndAssertWorkflowStatus(workflowId, State.COMPLETED, ProvisioningProgress.DONE); });
+
+        Response response = getWorkflowStatus(workflowId, true);
+
+        // Parse workflow state from response and retreieve resources created
+        MediaType mediaType = MediaType.fromMediaType(response.getEntity().getContentType());
+        try (
+            XContentParser parser = mediaType.xContent()
+                .createParser(
+                    NamedXContentRegistry.EMPTY,
+                    DeprecationHandler.THROW_UNSUPPORTED_OPERATION,
+                    response.getEntity().getContent()
+                )
+        ) {
+            ensureExpectedToken(XContentParser.Token.START_OBJECT, parser.nextToken(), parser);
+            WorkflowState workflowState = WorkflowState.parse(parser);
+            return workflowState.resourcesCreated();
+        }
     }
 }
