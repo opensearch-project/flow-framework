@@ -95,8 +95,6 @@ public class CreateWorkflowTransportAction extends HandledTransportAction<Workfl
             user
         );
 
-        logger.info("TESTING TEMPLATE : " + templateWithUser.toJson());
-
         if (request.isDryRun()) {
             try {
                 validateWorkflows(templateWithUser);
