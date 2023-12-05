@@ -156,7 +156,7 @@ public class RegisterLocalModelStepTests extends OpenSearchTestCase {
         verify(machineLearningNodeClient, times(1)).getTask(any(), any());
 
         assertTrue(future.isDone());
-        assertTrue(!future.isCompletedExceptionally());
+        assertFalse(future.isCompletedExceptionally());
         assertEquals(modelId, future.get().getContent().get(MODEL_ID));
         assertEquals(status, future.get().getContent().get(REGISTER_MODEL_STATUS));
 
