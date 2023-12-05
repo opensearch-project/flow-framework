@@ -110,7 +110,7 @@ public abstract class AbstractRetryableWorkflowStep implements WorkflowStep {
                 try {
                     logger.info(workflowStep + " successful for {} and modelId {}", workflowId, response.getModelId());
                     String resourceName = WorkflowResources.getResourceByWorkflowStep(getName());
-                    if (resourceName != WorkflowResources.DEPLOY_MODEL.getWorkflowStep()) {
+                    if (getName().equals(WorkflowResources.DEPLOY_MODEL.getWorkflowStep())) {
                         completeFuture(resourceName, nodeId, workflowId, response, future);
                     } else {
                         flowFrameworkIndicesHandler.updateResourceInStateIndex(
