@@ -56,7 +56,7 @@ public class EncryptorUtils {
 
     private static final String ALGORITHM = "AES";
     private static final String PROVIDER = "Custom";
-    private static final String WRAPPING_ALGORITHM = "AES/GCM/NoPadding";
+    private static final String WRAPPING_ALGORITHM = "AES/GCM/NOPADDING";
 
     private ClusterService clusterService;
     private Client client;
