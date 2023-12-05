@@ -40,6 +40,9 @@ import org.opensearch.core.xcontent.DeprecationHandler;
 import org.opensearch.core.xcontent.MediaType;
 import org.opensearch.core.xcontent.NamedXContentRegistry;
 import org.opensearch.core.xcontent.XContentParser;
+import org.opensearch.flowframework.common.CommonValue;
+import org.opensearch.flowframework.model.ProvisioningProgress;
+import org.opensearch.flowframework.model.State;
 import org.opensearch.flowframework.model.Template;
 import org.opensearch.test.rest.OpenSearchRestTestCase;
 import org.junit.After;
@@ -188,7 +191,7 @@ public abstract class FlowFrameworkRestTestCase extends OpenSearchRestTestCase {
 
     @SuppressWarnings("unchecked")
     @After
-    protected void wipeAllODFEIndices() throws IOException {
+    protected void wipeAllSystemIndices() throws IOException {
         Response response = adminClient().performRequest(new Request("GET", "/_cat/indices?format=json&expand_wildcards=all"));
         MediaType xContentType = MediaType.fromMediaType(response.getEntity().getContentType());
         try (
@@ -272,7 +275,7 @@ public abstract class FlowFrameworkRestTestCase extends OpenSearchRestTestCase {
     }
 
     /**
-     * wipeAllIndices won't work since it cannot delete security index. Use wipeAllODFEIndices instead.
+     * wipeAllIndices won't work since it cannot delete security index. Use wipeAllSystemIndices instead.
      */
     @Override
     protected boolean preserveIndicesUponCompletion() {
@@ -319,18 +322,37 @@ public abstract class FlowFrameworkRestTestCase extends OpenSearchRestTestCase {
     /**
      * Helper method to invoke the Get Workflow Rest Action
      * @param workflowId the workflow ID to get the status
+     * @param all verbose status flag
      * @throws Exception if the request fails
      * @return rest response
      */
-    protected Response getWorkflowStatus(String workflowId) throws Exception {
+    protected Response getWorkflowStatus(String workflowId, boolean all) throws Exception {
         return TestHelpers.makeRequest(
             client(),
             "GET",
-            String.format(Locale.ROOT, "%s/%s/%s", WORKFLOW_URI, workflowId, "_status"),
+            String.format(Locale.ROOT, "%s/%s/%s?all=%s", WORKFLOW_URI, workflowId, "_status", all),
             ImmutableMap.of(),
             "",
             null
         );
+
+    }
+
+    /**
+     * Helper method to invoke the Get Workflow Rest Action and assert the provisioning and state status
+     * @param workflowId the workflow ID to get the status
+     * @param stateStatus the state status name
+     * @param provisioningStatus the provisioning status name
+     * @throws Exception if the request fails
+     */
+    protected void getAndAssertWorkflowStatus(String workflowId, State stateStatus, ProvisioningProgress provisioningStatus)
+        throws Exception {
+        Response response = getWorkflowStatus(workflowId, true);
+        assertEquals(RestStatus.OK, TestHelpers.restStatus(response));
+
+        Map<String, Object> responseMap = entityAsMap(response);
+        assertEquals(stateStatus.name(), (String) responseMap.get(CommonValue.STATE_FIELD));
+        assertEquals(provisioningStatus.name(), (String) responseMap.get(CommonValue.PROVISIONING_PROGRESS_FIELD));
 
     }
 }
