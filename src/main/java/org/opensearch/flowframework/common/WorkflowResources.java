@@ -30,6 +30,8 @@ public enum WorkflowResources {
     REGISTER_LOCAL_MODEL("register_local_model", "model_id"),
     /** official workflow step name for registering a model group and associated created resource */
     REGISTER_MODEL_GROUP("register_model_group", "model_group_id"),
+    /** official workflow step name for deploying a model and associated created resource */
+    DEPLOY_MODEL("deploy_model", "model_id"),
     /** official workflow step name for creating an ingest-pipeline and associated created resource */
     CREATE_INGEST_PIPELINE("create_ingest_pipeline", "pipeline_id"),
     /** official workflow step name for creating an index and associated created resource */
