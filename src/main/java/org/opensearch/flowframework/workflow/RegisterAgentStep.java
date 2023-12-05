@@ -35,7 +35,6 @@ import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 
-import static org.opensearch.flowframework.common.CommonValue.AGENT_ID;
 import static org.opensearch.flowframework.common.CommonValue.APP_TYPE_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.CREATED_TIME;
 import static org.opensearch.flowframework.common.CommonValue.DESCRIPTION_FIELD;
@@ -89,18 +88,9 @@ public class RegisterAgentStep implements WorkflowStep {
         ActionListener<MLRegisterAgentResponse> actionListener = new ActionListener<>() {
             @Override
             public void onResponse(MLRegisterAgentResponse mlRegisterAgentResponse) {
-                logger.info("Agent registration successful for the agent {}", mlRegisterAgentResponse.getAgentId());
-                registerAgentModelFuture.complete(
-                    new WorkflowData(
-                        Map.ofEntries(Map.entry(AGENT_ID, mlRegisterAgentResponse.getAgentId())),
-                        currentNodeInputs.getWorkflowId(),
-                        currentNodeInputs.getNodeId()
-                    )
-                );
-
                 try {
                     String resourceName = WorkflowResources.getResourceByWorkflowStep(getName());
-                    logger.info("Created connector successfully");
+                    logger.info("Agent registration successful for the agent {}", mlRegisterAgentResponse.getAgentId());
                     flowFrameworkIndicesHandler.updateResourceInStateIndex(
                         currentNodeInputs.getWorkflowId(),
                         currentNodeId,
