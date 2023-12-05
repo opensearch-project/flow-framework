@@ -52,7 +52,6 @@ public class WorkflowNodeTests extends OpenSearchTestCase {
         assertNotEquals(nodeA, nodeB);
 
         String json = TemplateTestJsonUtil.parseToJson(nodeA);
-        logger.info("TESTING : " + json);
         assertTrue(json.startsWith("{\"id\":\"A\",\"type\":\"a-type\",\"previous_node_inputs\":{\"foo\":\"field\"},"));
         assertTrue(json.contains("\"user_inputs\":{"));
         assertTrue(json.contains("\"foo\":\"a string\""));
