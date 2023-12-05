@@ -1,0 +1,62 @@
+{
+    "name": "registermodelgroup-registerlocalmodel-deploymodel",
+    "description": "test case",
+    "use_case": "TEST_CASE",
+    "version": {
+      "template": "1.0.0",
+      "compatibility": [
+        "2.12.0",
+        "3.0.0"
+      ]
+    },
+    "workflows": {
+      "provision": {
+        "nodes": [
+          {
+            "id": "workflow_step_1",
+            "type": "model_group",
+            "user_inputs": {
+              "name": "my-model-group"
+            }
+          },
+          {
+            "id": "workflow_step_2",
+            "type": "register_local_model",
+            "previous_node_inputs": {
+              "workflow_step_1": "model_group_id"
+            },
+            "user_inputs": {
+              "node_timeout": "60s",
+              "name": "all-MiniLM-L6-v2",
+              "version": "1.0.0",
+              "description": "test model",
+              "model_format": "TORCH_SCRIPT",
+              "model_content_hash_value": "c15f0d2e62d872be5b5bc6c84d2e0f4921541e29fefbef51d59cc10a8ae30e0f",
+              "model_type": "bert",
+              "embedding_dimension": "384",
+              "framework_type": "sentence_transformers",
+              "all_config": "{\"_name_or_path\":\"nreimers/MiniLM-L6-H384-uncased\",\"architectures\":[\"BertModel\"],\"attention_probs_dropout_prob\":0.1,\"gradient_checkpointing\":false,\"hidden_act\":\"gelu\",\"hidden_dropout_prob\":0.1,\"hidden_size\":384,\"initializer_range\":0.02,\"intermediate_size\":1536,\"layer_norm_eps\":1e-12,\"max_position_embeddings\":512,\"model_type\":\"bert\",\"num_attention_heads\":12,\"num_hidden_layers\":6,\"pad_token_id\":0,\"position_embedding_type\":\"absolute\",\"transformers_version\":\"4.8.2\",\"type_vocab_size\":2,\"use_cache\":true,\"vocab_size\":30522}",
+              "url": "https://artifacts.opensearch.org/models/ml-models/huggingface/sentence-transformers/all-MiniLM-L6-v2/1.0.1/torch_script/sentence-transformers_all-MiniLM-L6-v2-1.0.1-torch_script.zip"
+            }
+          },
+          {
+            "id": "workflow_step_3",
+            "type": "deploy_model",
+            "previous_node_inputs": {
+              "workflow_step_2": "model_id"
+            }
+          }
+        ],
+        "edges": [
+          {
+            "source": "workflow_step_1",
+            "dest": "workflow_step_2"
+          },
+          {
+            "source": "workflow_step_2",
+            "dest": "workflow_step_3"
+          }
+        ]
+      }
+    }
+  }
