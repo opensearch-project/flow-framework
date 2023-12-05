@@ -70,7 +70,7 @@ buildscript {
 
     dependencies {
         classpath "org.opensearch.gradle:build-tools:${opensearch_version}"
-        classpath "com.diffplug.spotless:spotless-plugin-gradle:6.23.2"
+        classpath "com.diffplug.spotless:spotless-plugin-gradle:6.23.3"
         classpath "com.github.form-com.diff-coverage-gradle:diff-coverage:0.9.5"
     }
 }
