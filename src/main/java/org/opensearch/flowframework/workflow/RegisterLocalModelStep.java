@@ -13,15 +13,12 @@ import org.apache.logging.log4j.Logger;
 import org.opensearch.ExceptionsHelper;
 import org.opensearch.cluster.service.ClusterService;
 import org.opensearch.common.settings.Settings;
-import org.opensearch.common.util.concurrent.FutureUtils;
 import org.opensearch.core.action.ActionListener;
-import org.opensearch.core.rest.RestStatus;
 import org.opensearch.flowframework.common.WorkflowResources;
 import org.opensearch.flowframework.exception.FlowFrameworkException;
 import org.opensearch.flowframework.indices.FlowFrameworkIndicesHandler;
 import org.opensearch.flowframework.util.ParseUtils;
 import org.opensearch.ml.client.MachineLearningNodeClient;
-import org.opensearch.ml.common.MLTaskState;
 import org.opensearch.ml.common.model.MLModelConfig;
 import org.opensearch.ml.common.model.MLModelFormat;
 import org.opensearch.ml.common.model.TextEmbeddingModelConfig;
@@ -34,7 +31,6 @@ import org.opensearch.ml.common.transport.register.MLRegisterModelResponse;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
-import java.util.stream.Stream;
 
 import static org.opensearch.flowframework.common.CommonValue.ALL_CONFIG;
 import static org.opensearch.flowframework.common.CommonValue.DESCRIPTION_FIELD;
@@ -45,7 +41,6 @@ import static org.opensearch.flowframework.common.CommonValue.MODEL_FORMAT;
 import static org.opensearch.flowframework.common.CommonValue.MODEL_GROUP_ID;
 import static org.opensearch.flowframework.common.CommonValue.MODEL_TYPE;
 import static org.opensearch.flowframework.common.CommonValue.NAME_FIELD;
-import static org.opensearch.flowframework.common.CommonValue.REGISTER_MODEL_STATUS;
 import static org.opensearch.flowframework.common.CommonValue.URL;
 import static org.opensearch.flowframework.common.CommonValue.VERSION_FIELD;
 
@@ -75,7 +70,7 @@ public class RegisterLocalModelStep extends AbstractRetryableWorkflowStep {
         MachineLearningNodeClient mlClient,
         FlowFrameworkIndicesHandler flowFrameworkIndicesHandler
     ) {
-        super(settings, clusterService);
+        super(settings, clusterService, mlClient, flowFrameworkIndicesHandler);
         this.mlClient = mlClient;
         this.flowFrameworkIndicesHandler = flowFrameworkIndicesHandler;
     }
@@ -98,7 +93,14 @@ public class RegisterLocalModelStep extends AbstractRetryableWorkflowStep {
                 String taskId = mlRegisterModelResponse.getTaskId();
 
                 // Attempt to retrieve the model ID
-                retryableGetMlTask(currentNodeInputs.getWorkflowId(), currentNodeId, registerLocalModelFuture, taskId, 0);
+                retryableGetMlTask(
+                    currentNodeInputs.getWorkflowId(),
+                    currentNodeId,
+                    registerLocalModelFuture,
+                    taskId,
+                    0,
+                    "Local model registration"
+                );
             }
 
             @Override
@@ -177,85 +179,5 @@ public class RegisterLocalModelStep extends AbstractRetryableWorkflowStep {
     @Override
     public String getName() {
         return NAME;
-    }
-
-    /**
-     * Retryable get ml task
-     * @param workflowId the workflow id
-     * @param nodeId the workflow node id
-     * @param registerLocalModelFuture the workflow step future
-     * @param taskId the ml task id
-     * @param retries the current number of request retries
-     */
-    void retryableGetMlTask(
-        String workflowId,
-        String nodeId,
-        CompletableFuture<WorkflowData> registerLocalModelFuture,
-        String taskId,
-        int retries
-    ) {
-        mlClient.getTask(taskId, ActionListener.wrap(response -> {
-            MLTaskState currentState = response.getState();
-            if (currentState != MLTaskState.COMPLETED) {
-                if (Stream.of(MLTaskState.FAILED, MLTaskState.COMPLETED_WITH_ERROR).anyMatch(x -> x == currentState)) {
-                    // Model registration failed or completed with errors
-                    String errorMessage = "Local model registration failed with error : " + response.getError();
-                    logger.error(errorMessage);
-                    registerLocalModelFuture.completeExceptionally(new FlowFrameworkException(errorMessage, RestStatus.BAD_REQUEST));
-                } else {
-                    // Task still in progress, attempt retry
-                    throw new IllegalStateException("Local model registration is not yet completed");
-                }
-            } else {
-                try {
-                    logger.info("Local Model registration successful");
-                    String resourceName = WorkflowResources.getResourceByWorkflowStep(getName());
-                    flowFrameworkIndicesHandler.updateResourceInStateIndex(
-                        workflowId,
-                        nodeId,
-                        getName(),
-                        response.getTaskId(),
-                        ActionListener.wrap(updateResponse -> {
-                            logger.info("successfully updated resources created in state index: {}", updateResponse.getIndex());
-                            registerLocalModelFuture.complete(
-                                new WorkflowData(
-                                    Map.ofEntries(
-                                        Map.entry(resourceName, response.getModelId()),
-                                        Map.entry(REGISTER_MODEL_STATUS, response.getState().name())
-                                    ),
-                                    workflowId,
-                                    nodeId
-                                )
-                            );
-                        }, exception -> {
-                            logger.error("Failed to update new created resource", exception);
-                            registerLocalModelFuture.completeExceptionally(
-                                new FlowFrameworkException(exception.getMessage(), ExceptionsHelper.status(exception))
-                            );
-                        })
-                    );
-
-                } catch (Exception e) {
-                    logger.error("Failed to parse and update new created resource", e);
-                    registerLocalModelFuture.completeExceptionally(new FlowFrameworkException(e.getMessage(), ExceptionsHelper.status(e)));
-                }
-            }
-        }, exception -> {
-            if (retries < maxRetry) {
-                // Sleep thread prior to retrying request
-                try {
-                    Thread.sleep(5000);
-                } catch (Exception e) {
-                    FutureUtils.cancel(registerLocalModelFuture);
-                }
-                final int retryAdd = retries + 1;
-                retryableGetMlTask(workflowId, nodeId, registerLocalModelFuture, taskId, retryAdd);
-            } else {
-                logger.error("Failed to retrieve local model registration task, maximum retries exceeded");
-                registerLocalModelFuture.completeExceptionally(
-                    new FlowFrameworkException(exception.getMessage(), ExceptionsHelper.status(exception))
-                );
-            }
-        }));
     }
 }
