@@ -234,7 +234,7 @@ public class ProvisionWorkflowTransportAction extends HandledTransportAction<Wor
                     Instant.now().toEpochMilli()
                 ),
                 ActionListener.wrap(updateResponse -> {
-                    logger.info("updated workflow {} state to {}", workflowId, State.COMPLETED);
+                    logger.info("updated workflow {} state to {}", workflowId, State.FAILED);
                 }, exceptionState -> { logger.error("Failed to update workflow state : {}", exceptionState.getMessage(), ex); })
             );
         }
