@@ -12,6 +12,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.opensearch.ExceptionsHelper;
 import org.opensearch.core.action.ActionListener;
+import org.opensearch.core.common.util.CollectionUtils;
 import org.opensearch.flowframework.common.WorkflowResources;
 import org.opensearch.flowframework.exception.FlowFrameworkException;
 import org.opensearch.flowframework.indices.FlowFrameworkIndicesHandler;
@@ -72,7 +73,7 @@ public class ModelGroupStep implements WorkflowStep {
             @Override
             public void onResponse(MLRegisterModelGroupResponse mlRegisterModelGroupResponse) {
                 try {
-                    logger.info("Remote Model registration successful");
+                    logger.info("Model group registration successful");
                     String resourceName = WorkflowResources.getResourceByWorkflowStep(getName());
                     flowFrameworkIndicesHandler.updateResourceInStateIndex(
                         currentNodeInputs.getWorkflowId(),
@@ -134,7 +135,7 @@ public class ModelGroupStep implements WorkflowStep {
             if (description != null) {
                 builder.description(description);
             }
-            if (!backendRoles.isEmpty()) {
+            if (!CollectionUtils.isEmpty(backendRoles)) {
                 builder.backendRoles(backendRoles);
             }
             if (modelAccessMode != null) {
@@ -160,6 +161,9 @@ public class ModelGroupStep implements WorkflowStep {
 
     @SuppressWarnings("unchecked")
     private List<String> getBackendRoles(Map<String, Object> content) {
-        return (List<String>) content.get(BACKEND_ROLES_FIELD);
+        if (content.containsKey(BACKEND_ROLES_FIELD)) {
+            return (List<String>) content.get(BACKEND_ROLES_FIELD);
+        }
+        return null;
     }
 }
