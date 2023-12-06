@@ -47,7 +47,7 @@ import org.opensearch.flowframework.model.State;
 import org.opensearch.flowframework.model.Template;
 import org.opensearch.flowframework.model.WorkflowState;
 import org.opensearch.test.rest.OpenSearchRestTestCase;
-import org.junit.After;
+import org.junit.AfterClass;
 import org.junit.Before;
 
 import javax.net.ssl.SSLEngine;
@@ -62,6 +62,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 import static org.opensearch.client.RestClientBuilder.DEFAULT_MAX_CONN_PER_ROUTE;
@@ -206,9 +207,10 @@ public abstract class FlowFrameworkRestTestCase extends OpenSearchRestTestCase {
 
     }
 
+    // Cleans up resources after all test execution has been completed
     @SuppressWarnings("unchecked")
-    @After
-    protected void wipeAllSystemIndices() throws IOException {
+    @AfterClass
+    protected static void wipeAllSystemIndices() throws IOException {
         Response response = adminClient().performRequest(new Request("GET", "/_cat/indices?format=json&expand_wildcards=all"));
         MediaType xContentType = MediaType.fromMediaType(response.getEntity().getContentType());
         try (
@@ -300,6 +302,14 @@ public abstract class FlowFrameworkRestTestCase extends OpenSearchRestTestCase {
     }
 
     /**
+     * Required to persist cluster settings between test executions
+     */
+    @Override
+    protected boolean preserveClusterSettings() {
+        return true;
+    }
+
+    /**
      * Helper method to invoke the Create Workflow Rest Action
      * @param template the template to create
      * @throws Exception if the request fails
@@ -317,6 +327,24 @@ public abstract class FlowFrameworkRestTestCase extends OpenSearchRestTestCase {
      */
     protected Response createWorkflowDryRun(Template template) throws Exception {
         return TestHelpers.makeRequest(client(), "POST", WORKFLOW_URI + "?dryrun=true", ImmutableMap.of(), template.toJson(), null);
+    }
+
+    /**
+     * Helper method to invoke the Update Workflow API
+     * @param workflowId the document id
+     * @param template the template used to update
+     * @throws Exception if the request fails
+     * @return a rest response
+     */
+    protected Response updateWorkflow(String workflowId, Template template) throws Exception {
+        return TestHelpers.makeRequest(
+            client(),
+            "PUT",
+            String.format(Locale.ROOT, "%s/%s", WORKFLOW_URI, workflowId),
+            ImmutableMap.of(),
+            template.toJson(),
+            null
+        );
     }
 
     /**
@@ -376,13 +404,18 @@ public abstract class FlowFrameworkRestTestCase extends OpenSearchRestTestCase {
     /**
      * Helper method to wait until a workflow provisioning has completed and retrieve any resources created
      * @param workflowId the workflow id to retrieve resources from
+     * @param timeout the max wait time in seconds
      * @return a list of created resources
      * @throws Exception if the request fails
      */
-    protected List<ResourceCreated> getResourcesCreated(String workflowId) throws Exception {
+    protected List<ResourceCreated> getResourcesCreated(String workflowId, int timeout) throws Exception {
 
         // wait and ensure state is completed/done
-        assertBusy(() -> { getAndAssertWorkflowStatus(workflowId, State.COMPLETED, ProvisioningProgress.DONE); });
+        assertBusy(
+            () -> { getAndAssertWorkflowStatus(workflowId, State.COMPLETED, ProvisioningProgress.DONE); },
+            timeout,
+            TimeUnit.SECONDS
+        );
 
         Response response = getWorkflowStatus(workflowId, true);
 
