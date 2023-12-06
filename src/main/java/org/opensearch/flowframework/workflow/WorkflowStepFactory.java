@@ -59,6 +59,7 @@ public class WorkflowStepFactory {
         stepMap.put(ModelGroupStep.NAME, () -> new ModelGroupStep(mlClient, flowFrameworkIndicesHandler));
         stepMap.put(ToolStep.NAME, ToolStep::new);
         stepMap.put(RegisterAgentStep.NAME, () -> new RegisterAgentStep(mlClient, flowFrameworkIndicesHandler));
+        stepMap.put(DeleteAgentStep.NAME, () -> new DeleteAgentStep(mlClient));
     }
 
     /**
