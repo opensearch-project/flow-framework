@@ -123,6 +123,14 @@
             "agent_id"
         ]
     },
+    "delete_agent": {
+        "inputs": [
+            "agent_id"
+        ],
+        "outputs":[
+            "agent_id"
+        ]
+    },
     "create_tool": {
         "inputs": [
             "type"
