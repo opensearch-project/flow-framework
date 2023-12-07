@@ -153,7 +153,7 @@ dependencies {
     api group: 'org.opensearch', name:'opensearch-ml-client', version: "${opensearch_build}"
     implementation group: 'org.apache.commons', name: 'commons-lang3', version: '3.14.0'
     implementation "org.opensearch:common-utils:${common_utils_version}"
-    implementation 'com.amazonaws:aws-encryption-sdk-java:2.4.1'
+    implementation 'com.amazonaws:aws-encryption-sdk-java:3.0.0'
     implementation 'org.bouncycastle:bcprov-jdk18on:1.77'
 
     // ZipArchive dependencies used for integration tests
