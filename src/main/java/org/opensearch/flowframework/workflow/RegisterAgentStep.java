@@ -45,6 +45,9 @@ import static org.opensearch.flowframework.common.CommonValue.NAME_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.PARAMETERS_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.TOOLS_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.TYPE;
+import static org.opensearch.flowframework.common.CommonValue.WORKFLOW_ID;
+import static org.opensearch.flowframework.common.CommonValue.WORKFLOW_ID_FIELD;
+import static org.opensearch.flowframework.common.CommonValue.WORKFLOW_STEP_ID;
 import static org.opensearch.flowframework.util.ParseUtils.getStringToStringMap;
 
 /**
@@ -83,6 +86,8 @@ public class RegisterAgentStep implements WorkflowStep {
         Map<String, String> previousNodeInputs
     ) throws IOException {
 
+        String workflowId = currentNodeInputs.getWorkflowId();
+
         CompletableFuture<WorkflowData> registerAgentModelFuture = new CompletableFuture<>();
 
         ActionListener<MLRegisterAgentResponse> actionListener = new ActionListener<>() {
@@ -92,7 +97,7 @@ public class RegisterAgentStep implements WorkflowStep {
                     String resourceName = WorkflowResources.getResourceByWorkflowStep(getName());
                     logger.info("Agent registration successful for the agent {}", mlRegisterAgentResponse.getAgentId());
                     flowFrameworkIndicesHandler.updateResourceInStateIndex(
-                        currentNodeInputs.getWorkflowId(),
+                        workflowId,
                         currentNodeId,
                         getName(),
                         mlRegisterAgentResponse.getAgentId(),
@@ -101,7 +106,7 @@ public class RegisterAgentStep implements WorkflowStep {
                             registerAgentModelFuture.complete(
                                 new WorkflowData(
                                     Map.ofEntries(Map.entry(resourceName, mlRegisterAgentResponse.getAgentId())),
-                                    currentNodeInputs.getWorkflowId(),
+                                    workflowId,
                                     currentNodeId
                                 )
                             );
@@ -168,7 +173,8 @@ public class RegisterAgentStep implements WorkflowStep {
             // Case when modelId is not present at all
             if (llmModelId == null) {
                 registerAgentModelFuture.completeExceptionally(
-                    new FlowFrameworkException("llm model id is not provided", RestStatus.BAD_REQUEST)
+                    new FlowFrameworkException("llm model id is not provided for workflow: " + workflowId + " on node: " + currentNodeId,
+                            RestStatus.BAD_REQUEST)
                 );
                 return registerAgentModelFuture;
             }
