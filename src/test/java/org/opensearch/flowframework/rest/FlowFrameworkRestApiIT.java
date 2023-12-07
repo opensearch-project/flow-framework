@@ -8,6 +8,7 @@
  */
 package org.opensearch.flowframework.rest;
 
+import org.opensearch.action.search.SearchResponse;
 import org.opensearch.client.Response;
 import org.opensearch.client.ResponseException;
 import org.opensearch.core.rest.RestStatus;
@@ -22,13 +23,44 @@ import org.opensearch.flowframework.model.WorkflowEdge;
 import org.opensearch.flowframework.model.WorkflowNode;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import static org.opensearch.flowframework.common.CommonValue.CREDENTIAL_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.PROVISION_WORKFLOW;
 import static org.opensearch.flowframework.common.CommonValue.WORKFLOW_ID;
 
 public class FlowFrameworkRestApiIT extends FlowFrameworkRestTestCase {
+
+    public void testSearchWorkflows() throws Exception {
+
+        // Create a Workflow that has a credential 12345
+        Template template = TestHelpers.createTemplateFromFile("createconnector-registerremotemodel-deploymodel.json");
+        Response response = createWorkflow(template);
+        assertEquals(RestStatus.CREATED, TestHelpers.restStatus(response));
+
+        // Retrieve WorkflowID
+        Map<String, Object> responseMap = entityAsMap(response);
+        String workflowId = (String) responseMap.get(WORKFLOW_ID);
+
+        // Hit Search Workflows API
+        String termIdQuery = "{\"query\":{\"ids\":{\"values\":[\"" + workflowId + "\"]}}}";
+        SearchResponse searchResponse = searchWorkflows(termIdQuery);
+        assertEquals(1, searchResponse.getHits().getTotalHits().value);
+
+        String searchHitSource = searchResponse.getHits().getAt(0).getSourceAsString();
+        Template searchHitTemplate = Template.parse(searchHitSource);
+
+        // Confirm that credentials have been encrypted within the search response
+        List<WorkflowNode> provisionNodes = searchHitTemplate.workflows().get(PROVISION_WORKFLOW).nodes();
+        for (WorkflowNode node : provisionNodes) {
+            if (node.type().equals("create_connector")) {
+                Map<String, String> credentialMap = new HashMap<>((Map<String, String>) node.userInputs().get(CREDENTIAL_FIELD));
+                assertTrue(credentialMap.values().stream().allMatch(x -> x != "12345"));
+            }
+        }
+    }
 
     public void testCreateAndProvisionLocalModelWorkflow() throws Exception {
 
@@ -77,6 +109,7 @@ public class FlowFrameworkRestApiIT extends FlowFrameworkRestTestCase {
         // Attempt provision
         ResponseException exception = expectThrows(ResponseException.class, () -> provisionWorkflow(workflowId));
         assertTrue(exception.getMessage().contains("Invalid graph, missing the following required inputs : [name]"));
+        getAndAssertWorkflowStatus(workflowId, State.NOT_STARTED, ProvisioningProgress.NOT_STARTED);
 
         // update workflow with updated inputs
         response = updateWorkflow(workflowId, template);

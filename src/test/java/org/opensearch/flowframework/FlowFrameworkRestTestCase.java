@@ -26,6 +26,7 @@ import org.apache.hc.core5.http.nio.ssl.TlsStrategy;
 import org.apache.hc.core5.reactor.ssl.TlsDetails;
 import org.apache.hc.core5.ssl.SSLContextBuilder;
 import org.apache.hc.core5.util.Timeout;
+import org.opensearch.action.search.SearchResponse;
 import org.opensearch.client.Request;
 import org.opensearch.client.Response;
 import org.opensearch.client.RestClient;
@@ -381,6 +382,39 @@ public abstract class FlowFrameworkRestTestCase extends OpenSearchRestTestCase {
             null
         );
 
+    }
+
+    /**
+     * Helper method to invoke the Search Workflow Rest Action with the given query
+     * @param query the search query
+     * @return rest response
+     * @throws Exception if the request fails
+     */
+    protected SearchResponse searchWorkflows(String query) throws Exception {
+
+        // Execute search
+        Response restSearchResponse = TestHelpers.makeRequest(
+            client(),
+            "GET",
+            String.format(Locale.ROOT, "%s/_search", WORKFLOW_URI),
+            ImmutableMap.of(),
+            query,
+            null
+        );
+        assertEquals(RestStatus.OK, TestHelpers.restStatus(restSearchResponse));
+
+        // Parse entity content into SearchResponse
+        MediaType mediaType = MediaType.fromMediaType(restSearchResponse.getEntity().getContentType());
+        try (
+            XContentParser parser = mediaType.xContent()
+                .createParser(
+                    NamedXContentRegistry.EMPTY,
+                    DeprecationHandler.THROW_UNSUPPORTED_OPERATION,
+                    restSearchResponse.getEntity().getContent()
+                )
+        ) {
+            return SearchResponse.fromXContent(parser);
+        }
     }
 
     /**
