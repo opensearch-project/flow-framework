@@ -83,6 +83,8 @@ public class RegisterAgentStep implements WorkflowStep {
         Map<String, String> previousNodeInputs
     ) throws IOException {
 
+        String workflowId = currentNodeInputs.getWorkflowId();
+
         CompletableFuture<WorkflowData> registerAgentModelFuture = new CompletableFuture<>();
 
         ActionListener<MLRegisterAgentResponse> actionListener = new ActionListener<>() {
@@ -92,7 +94,7 @@ public class RegisterAgentStep implements WorkflowStep {
                     String resourceName = WorkflowResources.getResourceByWorkflowStep(getName());
                     logger.info("Agent registration successful for the agent {}", mlRegisterAgentResponse.getAgentId());
                     flowFrameworkIndicesHandler.updateResourceInStateIndex(
-                        currentNodeInputs.getWorkflowId(),
+                        workflowId,
                         currentNodeId,
                         getName(),
                         mlRegisterAgentResponse.getAgentId(),
@@ -101,7 +103,7 @@ public class RegisterAgentStep implements WorkflowStep {
                             registerAgentModelFuture.complete(
                                 new WorkflowData(
                                     Map.ofEntries(Map.entry(resourceName, mlRegisterAgentResponse.getAgentId())),
-                                    currentNodeInputs.getWorkflowId(),
+                                    workflowId,
                                     currentNodeId
                                 )
                             );
@@ -168,12 +170,15 @@ public class RegisterAgentStep implements WorkflowStep {
             // Case when modelId is not present at all
             if (llmModelId == null) {
                 registerAgentModelFuture.completeExceptionally(
-                    new FlowFrameworkException("llm model id is not provided", RestStatus.BAD_REQUEST)
+                    new FlowFrameworkException(
+                        "llm model id is not provided for workflow: " + workflowId + " on node: " + currentNodeId,
+                        RestStatus.BAD_REQUEST
+                    )
                 );
                 return registerAgentModelFuture;
             }
 
-            LLMSpec llmSpec = getLLMSpec(llmModelId, llmParameters);
+            LLMSpec llmSpec = getLLMSpec(llmModelId, llmParameters, workflowId, currentNodeId);
 
             MLAgentBuilder builder = MLAgent.builder().name(name);
 
@@ -246,9 +251,12 @@ public class RegisterAgentStep implements WorkflowStep {
         return llmModelId;
     }
 
-    private LLMSpec getLLMSpec(String llmModelId, Map<String, String> llmParameters) {
+    private LLMSpec getLLMSpec(String llmModelId, Map<String, String> llmParameters, String workflowId, String currentNodeId) {
         if (llmModelId == null) {
-            throw new FlowFrameworkException("model id for llm is null", RestStatus.BAD_REQUEST);
+            throw new FlowFrameworkException(
+                "model id for llm is null for workflow: " + workflowId + " on node: " + currentNodeId,
+                RestStatus.BAD_REQUEST
+            );
         }
         LLMSpec.LLMSpecBuilder builder = LLMSpec.builder();
         builder.modelId(llmModelId);
