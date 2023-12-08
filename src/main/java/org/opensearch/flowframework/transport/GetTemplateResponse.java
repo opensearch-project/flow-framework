@@ -23,7 +23,7 @@ import java.io.IOException;
 public class GetTemplateResponse extends ActionResponse implements ToXContentObject {
 
     /** The template */
-    public Template template;
+    private Template template;
 
     /**
      * Instantiates a new GetTemplateResponse from an input stream
@@ -51,6 +51,14 @@ public class GetTemplateResponse extends ActionResponse implements ToXContentObj
     @Override
     public XContentBuilder toXContent(XContentBuilder xContentBuilder, Params params) throws IOException {
         return this.template.toXContent(xContentBuilder, params);
+    }
+
+    /**
+     * Gets the template
+     * @return the template
+     */
+    public Template getTemplate() {
+        return this.template;
     }
 
 }
