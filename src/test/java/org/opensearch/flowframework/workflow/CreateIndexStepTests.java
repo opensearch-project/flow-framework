@@ -42,11 +42,7 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-@SuppressWarnings("deprecation")
 public class CreateIndexStepTests extends OpenSearchTestCase {
-
-    private static final String META = "_meta";
-    private static final String SCHEMA_VERSION_FIELD = "schemaVersion";
 
     private WorkflowData inputData = WorkflowData.EMPTY;
     private Client client;

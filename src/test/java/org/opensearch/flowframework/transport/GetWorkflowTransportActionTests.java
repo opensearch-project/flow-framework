@@ -19,7 +19,6 @@ import org.opensearch.core.common.io.stream.StreamInput;
 import org.opensearch.core.xcontent.ToXContent;
 import org.opensearch.core.xcontent.XContentBuilder;
 import org.opensearch.flowframework.TestHelpers;
-import org.opensearch.flowframework.indices.FlowFrameworkIndicesHandler;
 import org.opensearch.flowframework.model.WorkflowState;
 import org.opensearch.tasks.Task;
 import org.opensearch.test.OpenSearchTestCase;
@@ -40,10 +39,7 @@ import static org.mockito.Mockito.when;
 public class GetWorkflowTransportActionTests extends OpenSearchTestCase {
 
     private GetWorkflowTransportAction getWorkflowTransportAction;
-    private FlowFrameworkIndicesHandler flowFrameworkIndicesHandler;
     private Client client;
-    private ThreadPool threadPool;
-    private ThreadContext threadContext;
     private ActionListener<GetWorkflowResponse> response;
     private Task task;
 
@@ -51,7 +47,6 @@ public class GetWorkflowTransportActionTests extends OpenSearchTestCase {
     public void setUp() throws Exception {
         super.setUp();
         this.client = mock(Client.class);
-        this.threadPool = mock(ThreadPool.class);
         this.getWorkflowTransportAction = new GetWorkflowTransportAction(
             mock(TransportService.class),
             mock(ActionFilters.class),
