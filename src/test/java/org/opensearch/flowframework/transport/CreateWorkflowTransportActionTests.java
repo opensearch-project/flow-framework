@@ -44,8 +44,8 @@ import static org.opensearch.flowframework.common.CommonValue.WORKFLOW_STATE_IND
 import static org.opensearch.flowframework.common.FlowFrameworkSettings.MAX_WORKFLOWS;
 import static org.opensearch.flowframework.common.FlowFrameworkSettings.WORKFLOW_REQUEST_TIMEOUT;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.Mockito.anyInt;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
@@ -70,7 +70,7 @@ public class CreateWorkflowTransportActionTests extends OpenSearchTestCase {
         super.setUp();
         threadPool = mock(ThreadPool.class);
         settings = Settings.builder()
-            .put("plugins.flow_framework.max_workflows.", 2)
+            .put("plugins.flow_framework.max_workflows", 2)
             .put("plugins.flow_framework.request_timeout", TimeValue.timeValueSeconds(10))
             .build();
         this.flowFrameworkIndicesHandler = mock(FlowFrameworkIndicesHandler.class);
@@ -196,11 +196,10 @@ public class CreateWorkflowTransportActionTests extends OpenSearchTestCase {
         createWorkflowTransportAction.doExecute(mock(Task.class), workflowRequest, listener);
         ArgumentCaptor<Exception> exceptionCaptor = ArgumentCaptor.forClass(Exception.class);
         verify(listener, times(1)).onFailure(exceptionCaptor.capture());
-        assertEquals(("Maximum workflows limit reached 1000"), exceptionCaptor.getValue().getMessage());
+        assertEquals(("Maximum workflows limit reached 2"), exceptionCaptor.getValue().getMessage());
     }
 
     public void testMaxWorkflowWithNoIndex() {
-        @SuppressWarnings("unchecked")
         ActionListener<Boolean> listener = new ActionListener<Boolean>() {
             @Override
             public void onResponse(Boolean booleanResponse) {
