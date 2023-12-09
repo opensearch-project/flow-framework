@@ -1,6 +1,5 @@
 import java.nio.file.Files
 import org.opensearch.gradle.test.RestIntegTestTask
-import java.util.concurrent.Callable
 
 apply plugin: 'java'
 apply plugin: 'idea'
@@ -70,16 +69,11 @@ buildscript {
 
     dependencies {
         classpath "org.opensearch.gradle:build-tools:${opensearch_version}"
-        classpath "com.diffplug.spotless:spotless-plugin-gradle:6.23.3"
+        classpath "com.diffplug.spotless:spotless-plugin-gradle:6.23.0"
         classpath "com.github.form-com.diff-coverage-gradle:diff-coverage:0.9.5"
     }
 }
 
-allprojects {
-    // Default to the apache license
-    project.ext.licenseName = 'The Apache Software License, Version 2.0'
-    project.ext.licenseUrl = 'http://www.apache.org/licenses/LICENSE-2.0.txt'
-}
 
 publishing {
     publications {
@@ -92,28 +86,23 @@ publishing {
                 name = pluginName
                 description = pluginDescription
                 groupId = "org.opensearch.plugin"
-
-                withXml { XmlProvider xml ->
-                    Node node = xml.asNode()
-                    node.appendNode('inceptionYear', '2021')
-
-                    Node license = node.appendNode('licenses').appendNode('license')
-                    license.appendNode('name', project.licenseName)
-                    license.appendNode('url', project.licenseUrl)
-
-                    Node developer = node.appendNode('developers').appendNode('developer')
-                    developer.appendNode('name', 'OpenSearch')
-                    developer.appendNode('url', 'https://github.com/opensearch-project/flow-framework')
+                licenses {
+                    license {
+                        name = "The Apache License, Version 2.0"
+                        url = "http://www.apache.org/licenses/LICENSE-2.0.txt"
+                    }
+                }
+                developers {
+                    developer {
+                        name = "OpenSearch AI Flow Framework Plugin"
+                        url = "https://github.com/opensearch-project/opensearch-ai-flow-framework"
+                    }
                 }
             }
         }
     }
 
     repositories {
-        maven {
-            name = 'staging'
-            url = "${rootProject.buildDir}/local-staging-repo"
-        }
         maven {
             name = "Snapshots"
             url = "https://aws.oss.sonatype.org/content/repositories/snapshots"
@@ -156,22 +145,14 @@ dependencies {
     implementation 'com.amazonaws:aws-encryption-sdk-java:2.4.1'
     implementation 'org.bouncycastle:bcprov-jdk18on:1.77'
 
-    // ZipArchive dependencies used for integration tests
-    zipArchive group: 'org.opensearch.plugin', name:'opensearch-ml-plugin', version: "${opensearch_build}"
-
     configurations.all {
         resolutionStrategy {
             force("com.google.guava:guava:32.1.3-jre") // CVE for 31.1
-            force("org.eclipse.platform:org.eclipse.core.runtime:3.30.0") // CVE for < 3.29.0
+            force("org.eclipse.platform:org.eclipse.core.runtime:3.29.0") // CVE for < 3.29.0
             force("com.fasterxml.jackson.core:jackson-core:2.16.0") // Dependency Jar Hell
         }
     }
 }
-
-
-def opensearch_tmp_dir = rootProject.file('build/private/opensearch_tmp').absoluteFile
-opensearch_tmp_dir.mkdirs()
-def _numNodes = findProperty('numNodes') as Integer ?: 1
 
 test {
     include '**/*Tests.class'
@@ -185,8 +166,6 @@ jacocoTestReport {
 }
 tasks.named("check").configure { dependsOn(jacocoTestReport) }
 
-
-// Set up integration tests
 task integTest(type: RestIntegTestTask) {
     description = "Run tests against a cluster"
     testClassesDirs = sourceSets.test.output.classesDirs
@@ -194,18 +173,10 @@ task integTest(type: RestIntegTestTask) {
 }
 tasks.named("check").configure { dependsOn(integTest) }
 
+def _numNodes = findProperty('numNodes') as Integer ?: 1
+
 integTest {
 
-    dependsOn "bundlePlugin"
-    systemProperty 'tests.security.manager', 'false'
-    systemProperty 'java.io.tmpdir', opensearch_tmp_dir.absolutePath
-    systemProperty('project.root', project.rootDir.absolutePath)
-    systemProperty "https", System.getProperty("https")
-    systemProperty "user", System.getProperty("user")
-    systemProperty "password", System.getProperty("password")
-
-
-    // doFirst delays this block until execution time
     doFirst {
         // Tell the test JVM if the cluster JVM is running under a debugger so that tests can
         // use longer timeouts for requests.
@@ -226,31 +197,10 @@ integTest {
     }
 }
 
-// Set up integration test clusters, installs all zipArchive dependencies and Flow Framework
 testClusters.integTest {
     testDistribution = "ARCHIVE"
-
-    // Installs all registered zipArchive dependencies on integTest cluster nodes
-    configurations.zipArchive.asFileTree.each {
-        plugin(provider(new Callable<RegularFile>(){
-            @Override
-            RegularFile call() throws Exception {
-                return new RegularFile() {
-                    @Override
-                    File getAsFile() {
-                        return it
-                    }
-                }
-            }
-        }))
-    }
-
-    // Install Flow Framwork Plugin on integTest cluster nodes
-    plugin(project.tasks.bundlePlugin.archiveFile)
-
     // Cluster shrink exception thrown if we try to set numberOfNodes to 1, so only apply if > 1
     if (_numNodes > 1) numberOfNodes = _numNodes
-
     // When running integration tests it doesn't forward the --debug-jvm to the cluster anymore
     // i.e. we have to use a custom property to flag when we want to debug OpenSearch JVM
     // since we also support multi node integration tests we increase debugPort per node
@@ -261,9 +211,11 @@ testClusters.integTest {
             debugPort += 1
         }
     }
+
+    // This installs our plugin into the testClusters
+    plugin(project.tasks.bundlePlugin.archiveFile)
 }
 
-// Automatically sets up the integration test cluster locally
 run {
     useCluster testClusters.integTest
 }
@@ -307,15 +259,5 @@ diffCoverageReport {
         minBranches = 0.60
         minLines = 0.75
         failOnViolation = true
-    }
-}
-
-
-tasks.withType(AbstractPublishToMaven) {
-    def predicate = provider {
-        publication.name == "pluginZip"
-    }
-    onlyIf("Publishing only ZIP distributions") {
-        predicate.get()
     }
 }
