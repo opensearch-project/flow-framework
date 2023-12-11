@@ -19,7 +19,7 @@ import org.opensearch.core.xcontent.ToXContent;
 import org.opensearch.core.xcontent.XContentBuilder;
 import org.opensearch.flowframework.common.FlowFrameworkFeatureEnabledSetting;
 import org.opensearch.flowframework.exception.FlowFrameworkException;
-import org.opensearch.flowframework.transport.GetTemplateAction;
+import org.opensearch.flowframework.transport.GetWorkflowAction;
 import org.opensearch.flowframework.transport.WorkflowRequest;
 import org.opensearch.rest.BaseRestHandler;
 import org.opensearch.rest.BytesRestResponse;
@@ -36,23 +36,23 @@ import static org.opensearch.flowframework.common.FlowFrameworkSettings.FLOW_FRA
 /**
  * Rest Action to facilitate requests to get a stored template
  */
-public class RestGetTemplateAction extends BaseRestHandler {
+public class RestGetWorkflowAction extends BaseRestHandler {
 
-    private static final String GET_TEMPLATE_ACTION = "get_template";
-    private static final Logger logger = LogManager.getLogger(RestGetTemplateAction.class);
+    private static final String GET_WORKFLOW_ACTION = "get_workflow";
+    private static final Logger logger = LogManager.getLogger(RestGetWorkflowAction.class);
     private FlowFrameworkFeatureEnabledSetting flowFrameworkFeatureEnabledSetting;
 
     /**
      * Instantiates a new RestGetWorkflowAction
      * @param flowFrameworkFeatureEnabledSetting Whether this API is enabled
      */
-    public RestGetTemplateAction(FlowFrameworkFeatureEnabledSetting flowFrameworkFeatureEnabledSetting) {
+    public RestGetWorkflowAction(FlowFrameworkFeatureEnabledSetting flowFrameworkFeatureEnabledSetting) {
         this.flowFrameworkFeatureEnabledSetting = flowFrameworkFeatureEnabledSetting;
     }
 
     @Override
     public String getName() {
-        return GET_TEMPLATE_ACTION;
+        return GET_WORKFLOW_ACTION;
     }
 
     @Override
@@ -82,7 +82,7 @@ public class RestGetTemplateAction extends BaseRestHandler {
             }
 
             WorkflowRequest workflowRequest = new WorkflowRequest(workflowId, null);
-            return channel -> client.execute(GetTemplateAction.INSTANCE, workflowRequest, ActionListener.wrap(response -> {
+            return channel -> client.execute(GetWorkflowAction.INSTANCE, workflowRequest, ActionListener.wrap(response -> {
                 XContentBuilder builder = response.toXContent(channel.newBuilder(), ToXContent.EMPTY_PARAMS);
                 channel.sendResponse(new BytesRestResponse(RestStatus.OK, builder));
             }, exception -> {

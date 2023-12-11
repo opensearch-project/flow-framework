@@ -45,11 +45,11 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-public class GetTemplateTransportActionTests extends OpenSearchTestCase {
+public class GetWorkflowTransportActionTests extends OpenSearchTestCase {
 
     private ThreadPool threadPool;
     private Client client;
-    private GetTemplateTransportAction getTemplateTransportAction;
+    private GetWorkflowTransportAction getTemplateTransportAction;
     private FlowFrameworkIndicesHandler flowFrameworkIndicesHandler;
     private Template template;
 
@@ -59,7 +59,7 @@ public class GetTemplateTransportActionTests extends OpenSearchTestCase {
         this.threadPool = mock(ThreadPool.class);
         this.client = mock(Client.class);
         this.flowFrameworkIndicesHandler = mock(FlowFrameworkIndicesHandler.class);
-        this.getTemplateTransportAction = new GetTemplateTransportAction(
+        this.getTemplateTransportAction = new GetWorkflowTransportAction(
             mock(TransportService.class),
             mock(ActionFilters.class),
             flowFrameworkIndicesHandler,
@@ -94,11 +94,11 @@ public class GetTemplateTransportActionTests extends OpenSearchTestCase {
 
     }
 
-    public void testGetTemplateNoGlobalContext() {
+    public void testGetWorkflowNoGlobalContext() {
 
         when(flowFrameworkIndicesHandler.doesIndexExist(anyString())).thenReturn(false);
         @SuppressWarnings("unchecked")
-        ActionListener<GetTemplateResponse> listener = mock(ActionListener.class);
+        ActionListener<GetWorkflowResponse> listener = mock(ActionListener.class);
         WorkflowRequest workflowRequest = new WorkflowRequest("1", null);
         getTemplateTransportAction.doExecute(mock(Task.class), workflowRequest, listener);
 
@@ -107,10 +107,10 @@ public class GetTemplateTransportActionTests extends OpenSearchTestCase {
         assertTrue(exceptionCaptor.getValue().getMessage().contains("There are no templates in the global_context"));
     }
 
-    public void testGetTemplateSuccess() {
+    public void testGetWorkflowSuccess() {
         String workflowId = "12345";
         @SuppressWarnings("unchecked")
-        ActionListener<GetTemplateResponse> listener = mock(ActionListener.class);
+        ActionListener<GetWorkflowResponse> listener = mock(ActionListener.class);
         WorkflowRequest workflowRequest = new WorkflowRequest(workflowId, null);
 
         when(flowFrameworkIndicesHandler.doesIndexExist(anyString())).thenReturn(true);
@@ -129,15 +129,15 @@ public class GetTemplateTransportActionTests extends OpenSearchTestCase {
 
         getTemplateTransportAction.doExecute(mock(Task.class), workflowRequest, listener);
 
-        ArgumentCaptor<GetTemplateResponse> templateCaptor = ArgumentCaptor.forClass(GetTemplateResponse.class);
+        ArgumentCaptor<GetWorkflowResponse> templateCaptor = ArgumentCaptor.forClass(GetWorkflowResponse.class);
         verify(listener, times(1)).onResponse(templateCaptor.capture());
         assertEquals(this.template.name(), templateCaptor.getValue().getTemplate().name());
     }
 
-    public void testGetTemplateFailure() {
+    public void testGetWorkflowFailure() {
         String workflowId = "12345";
         @SuppressWarnings("unchecked")
-        ActionListener<GetTemplateResponse> listener = mock(ActionListener.class);
+        ActionListener<GetWorkflowResponse> listener = mock(ActionListener.class);
         WorkflowRequest workflowRequest = new WorkflowRequest(workflowId, null);
 
         when(flowFrameworkIndicesHandler.doesIndexExist(anyString())).thenReturn(true);

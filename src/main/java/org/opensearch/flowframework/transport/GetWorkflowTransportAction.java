@@ -30,33 +30,33 @@ import static org.opensearch.flowframework.common.CommonValue.GLOBAL_CONTEXT_IND
 /**
  * Transport action to retrieve a use case template within the Global Context
  */
-public class GetTemplateTransportAction extends HandledTransportAction<WorkflowRequest, GetTemplateResponse> {
+public class GetWorkflowTransportAction extends HandledTransportAction<WorkflowRequest, GetWorkflowResponse> {
 
-    private final Logger logger = LogManager.getLogger(GetTemplateTransportAction.class);
+    private final Logger logger = LogManager.getLogger(GetWorkflowTransportAction.class);
     private final FlowFrameworkIndicesHandler flowFrameworkIndicesHandler;
     private final Client client;
 
     /**
-     * Instantiates a new GetTempltateTransportAction instance
+     * Instantiates a new GetWorkflowTransportAction instance
      * @param transportService the transport service
      * @param actionFilters action filters
      * @param flowFrameworkIndicesHandler The Flow Framework indices handler
      * @param client the Opensearch Client
      */
     @Inject
-    public GetTemplateTransportAction(
+    public GetWorkflowTransportAction(
         TransportService transportService,
         ActionFilters actionFilters,
         FlowFrameworkIndicesHandler flowFrameworkIndicesHandler,
         Client client
     ) {
-        super(GetTemplateAction.NAME, transportService, actionFilters, WorkflowRequest::new);
+        super(GetWorkflowAction.NAME, transportService, actionFilters, WorkflowRequest::new);
         this.flowFrameworkIndicesHandler = flowFrameworkIndicesHandler;
         this.client = client;
     }
 
     @Override
-    protected void doExecute(Task task, WorkflowRequest request, ActionListener<GetTemplateResponse> listener) {
+    protected void doExecute(Task task, WorkflowRequest request, ActionListener<GetWorkflowResponse> listener) {
         if (flowFrameworkIndicesHandler.doesIndexExist(GLOBAL_CONTEXT_INDEX)) {
 
             String workflowId = request.getWorkflowId();
@@ -75,7 +75,7 @@ public class GetTemplateTransportAction extends HandledTransportAction<WorkflowR
                             )
                         );
                     } else {
-                        listener.onResponse(new GetTemplateResponse(Template.parse(response.getSourceAsString())));
+                        listener.onResponse(new GetWorkflowResponse(Template.parse(response.getSourceAsString())));
                     }
                 }, exception -> {
                     logger.error("Failed to retrieve template from global context.", exception);

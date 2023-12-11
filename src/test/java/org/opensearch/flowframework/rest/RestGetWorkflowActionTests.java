@@ -26,8 +26,8 @@ import static org.opensearch.flowframework.common.CommonValue.WORKFLOW_URI;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-public class RestGetTemplateActionTests extends OpenSearchTestCase {
-    private RestGetTemplateAction restGetTemplateAction;
+public class RestGetWorkflowActionTests extends OpenSearchTestCase {
+    private RestGetWorkflowAction restGetWorkflowAction;
     private String getPath;
     private FlowFrameworkFeatureEnabledSetting flowFrameworkFeatureEnabledSetting;
     private NodeClient nodeClient;
@@ -39,17 +39,17 @@ public class RestGetTemplateActionTests extends OpenSearchTestCase {
         this.getPath = String.format(Locale.ROOT, "%s/{%s}", WORKFLOW_URI, "workflow_id");
         flowFrameworkFeatureEnabledSetting = mock(FlowFrameworkFeatureEnabledSetting.class);
         when(flowFrameworkFeatureEnabledSetting.isFlowFrameworkEnabled()).thenReturn(true);
-        this.restGetTemplateAction = new RestGetTemplateAction(flowFrameworkFeatureEnabledSetting);
+        this.restGetWorkflowAction = new RestGetWorkflowAction(flowFrameworkFeatureEnabledSetting);
         this.nodeClient = mock(NodeClient.class);
     }
 
     public void testRestGetWorkflowActionName() {
-        String name = restGetTemplateAction.getName();
-        assertEquals("get_template", name);
+        String name = restGetWorkflowAction.getName();
+        assertEquals("get_workflow", name);
     }
 
     public void testRestGetWorkflowActionRoutes() {
-        List<RestHandler.Route> routes = restGetTemplateAction.routes();
+        List<RestHandler.Route> routes = restGetWorkflowAction.routes();
         assertEquals(1, routes.size());
         assertEquals(RestRequest.Method.GET, routes.get(0).getMethod());
         assertEquals(this.getPath, routes.get(0).getPath());
@@ -63,7 +63,7 @@ public class RestGetTemplateActionTests extends OpenSearchTestCase {
 
         FakeRestChannel channel = new FakeRestChannel(request, false, 1);
         IllegalArgumentException ex = expectThrows(IllegalArgumentException.class, () -> {
-            restGetTemplateAction.handleRequest(request, channel, nodeClient);
+            restGetWorkflowAction.handleRequest(request, channel, nodeClient);
         });
         assertEquals("request [POST /_plugins/_flow_framework/workflow/{workflow_id}] does not support having a body", ex.getMessage());
     }
@@ -76,7 +76,7 @@ public class RestGetTemplateActionTests extends OpenSearchTestCase {
             .build();
 
         FakeRestChannel channel = new FakeRestChannel(request, true, 1);
-        restGetTemplateAction.handleRequest(request, channel, nodeClient);
+        restGetWorkflowAction.handleRequest(request, channel, nodeClient);
 
         assertEquals(1, channel.errors().get());
         assertEquals(RestStatus.BAD_REQUEST, channel.capturedResponse().status());
@@ -89,7 +89,7 @@ public class RestGetTemplateActionTests extends OpenSearchTestCase {
                 .withPath(this.getPath)
                 .build();
         FakeRestChannel channel = new FakeRestChannel(request, false, 1);
-        restGetTemplateAction.handleRequest(request, channel, nodeClient);
+        restGetWorkflowAction.handleRequest(request, channel, nodeClient);
         assertEquals(RestStatus.FORBIDDEN, channel.capturedResponse().status());
         assertTrue(channel.capturedResponse().content().utf8ToString().contains("This API is disabled."));
     }

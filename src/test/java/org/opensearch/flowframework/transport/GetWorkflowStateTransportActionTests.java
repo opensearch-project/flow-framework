@@ -87,7 +87,7 @@ public class GetWorkflowStateTransportActionTests extends OpenSearchTestCase {
         Assert.assertEquals(GetWorkflowStateAction.INSTANCE.name(), GetWorkflowStateAction.NAME);
     }
 
-    public void testGetAnomalyDetectorRequest() throws IOException {
+    public void testGetWorkflowStateRequest() throws IOException {
         GetWorkflowStateRequest request = new GetWorkflowStateRequest("1234", false);
         BytesStreamOutput out = new BytesStreamOutput();
         request.writeTo(out);
@@ -98,7 +98,7 @@ public class GetWorkflowStateTransportActionTests extends OpenSearchTestCase {
         Assert.assertNull(newRequest.validate());
     }
 
-    public void testGetAnomalyDetectorResponse() throws IOException {
+    public void testGetWorkflowStateResponse() throws IOException {
         BytesStreamOutput out = new BytesStreamOutput();
         String workflowId = randomAlphaOfLength(5);
         WorkflowState workFlowState = new WorkflowState(

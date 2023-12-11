@@ -20,26 +20,26 @@ import java.io.IOException;
 /**
  * Transport Response from getting a template
  */
-public class GetTemplateResponse extends ActionResponse implements ToXContentObject {
+public class GetWorkflowResponse extends ActionResponse implements ToXContentObject {
 
     /** The template */
     private Template template;
 
     /**
-     * Instantiates a new GetTemplateResponse from an input stream
+     * Instantiates a new GetWorkflowResponse from an input stream
      * @param in the input stream to read from
      * @throws IOException if the template json cannot be read from the input stream
      */
-    public GetTemplateResponse(StreamInput in) throws IOException {
+    public GetWorkflowResponse(StreamInput in) throws IOException {
         super(in);
         this.template = Template.parse(in.readString());
     }
 
     /**
-     * Instantiates a new GetTemplateResponse
+     * Instantiates a new GetWorkflowResponse
      * @param template the template
      */
-    public GetTemplateResponse(Template template) {
+    public GetWorkflowResponse(Template template) {
         this.template = template;
     }
 
