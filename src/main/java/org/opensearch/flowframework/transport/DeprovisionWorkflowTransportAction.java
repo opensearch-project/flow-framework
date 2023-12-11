@@ -248,10 +248,12 @@ public class DeprovisionWorkflowTransportAction extends HandledTransportAction<W
         }
         if (deprovisionProcessSequence.isEmpty()) {
             // Successful deprovision, return workflow ID
+            // TODO: Reset state for this workflow ID to NOT STARTED
             listener.onResponse(new WorkflowResponse(workflowId));
         } else {
             // Failed deprovision, give user list of remaining resources
             listener.onFailure(
+                // TODO: Update state for this workflow ID to just the remaining resources
                 new FlowFrameworkException(
                     "Failed to deprovision some resources: ["
                         + deprovisionProcessSequence.stream()
