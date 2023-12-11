@@ -38,34 +38,34 @@ import static org.opensearch.flowframework.common.CommonValue.WORKFLOW_STATE_IND
  * Transport Action to get a specific workflow. Currently, we only support the action with _status
  * in the API path but will add the ability to get the workflow and not just the status in the future
  */
-public class GetWorkflowTransportAction extends HandledTransportAction<GetWorkflowRequest, GetWorkflowResponse> {
+public class GetWorkflowStateTransportAction extends HandledTransportAction<GetWorkflowStateRequest, GetWorkflowStateResponse> {
 
-    private final Logger logger = LogManager.getLogger(GetWorkflowTransportAction.class);
+    private final Logger logger = LogManager.getLogger(GetWorkflowStateTransportAction.class);
 
     private final Client client;
     private final NamedXContentRegistry xContentRegistry;
 
     /**
-     * Intantiates a new CreateWorkflowTransportAction
+     * Intantiates a new GetWorkflowStateTransportAction
      * @param transportService The TransportService
      * @param actionFilters action filters
      * @param client The client used to make the request to OS
      * @param xContentRegistry contentRegister to parse get response
      */
     @Inject
-    public GetWorkflowTransportAction(
+    public GetWorkflowStateTransportAction(
         TransportService transportService,
         ActionFilters actionFilters,
         Client client,
         NamedXContentRegistry xContentRegistry
     ) {
-        super(GetWorkflowAction.NAME, transportService, actionFilters, GetWorkflowRequest::new);
+        super(GetWorkflowStateAction.NAME, transportService, actionFilters, GetWorkflowStateRequest::new);
         this.client = client;
         this.xContentRegistry = xContentRegistry;
     }
 
     @Override
-    protected void doExecute(Task task, GetWorkflowRequest request, ActionListener<GetWorkflowResponse> listener) {
+    protected void doExecute(Task task, GetWorkflowStateRequest request, ActionListener<GetWorkflowStateResponse> listener) {
         String workflowId = request.getWorkflowId();
         User user = ParseUtils.getUserContext(client);
         GetRequest getRequest = new GetRequest(WORKFLOW_STATE_INDEX).id(workflowId);
@@ -75,7 +75,7 @@ public class GetWorkflowTransportAction extends HandledTransportAction<GetWorkfl
                     try (XContentParser parser = ParseUtils.createXContentParserFromRegistry(xContentRegistry, r.getSourceAsBytesRef())) {
                         ensureExpectedToken(XContentParser.Token.START_OBJECT, parser.nextToken(), parser);
                         WorkflowState workflowState = WorkflowState.parse(parser);
-                        listener.onResponse(new GetWorkflowResponse(workflowState, request.getAll()));
+                        listener.onResponse(new GetWorkflowStateResponse(workflowState, request.getAll()));
                     } catch (Exception e) {
                         logger.error("Failed to parse workflowState" + r.getId(), e);
                         listener.onFailure(new FlowFrameworkException("Failed to parse workflowState" + r.getId(), RestStatus.BAD_REQUEST));

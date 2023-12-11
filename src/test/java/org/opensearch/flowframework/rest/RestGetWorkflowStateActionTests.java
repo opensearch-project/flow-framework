@@ -26,8 +26,8 @@ import static org.opensearch.flowframework.common.CommonValue.WORKFLOW_URI;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-public class RestGetWorkflowActionTests extends OpenSearchTestCase {
-    private RestGetWorkflowAction restGetWorkflowAction;
+public class RestGetWorkflowStateActionTests extends OpenSearchTestCase {
+    private RestGetWorkflowStateAction restGetWorkflowAction;
     private String getPath;
     private NodeClient nodeClient;
     private FlowFrameworkFeatureEnabledSetting flowFrameworkFeatureEnabledSetting;
@@ -39,18 +39,18 @@ public class RestGetWorkflowActionTests extends OpenSearchTestCase {
         this.getPath = String.format(Locale.ROOT, "%s/{%s}/%s", WORKFLOW_URI, "workflow_id", "_status");
         flowFrameworkFeatureEnabledSetting = mock(FlowFrameworkFeatureEnabledSetting.class);
         when(flowFrameworkFeatureEnabledSetting.isFlowFrameworkEnabled()).thenReturn(true);
-        this.restGetWorkflowAction = new RestGetWorkflowAction(flowFrameworkFeatureEnabledSetting);
+        this.restGetWorkflowAction = new RestGetWorkflowStateAction(flowFrameworkFeatureEnabledSetting);
         this.nodeClient = mock(NodeClient.class);
     }
 
     public void testConstructor() {
-        RestGetWorkflowAction getWorkflowAction = new RestGetWorkflowAction(flowFrameworkFeatureEnabledSetting);
+        RestGetWorkflowStateAction getWorkflowAction = new RestGetWorkflowStateAction(flowFrameworkFeatureEnabledSetting);
         assertNotNull(getWorkflowAction);
     }
 
     public void testRestGetWorkflowActionName() {
         String name = restGetWorkflowAction.getName();
-        assertEquals("get_workflow", name);
+        assertEquals("get_workflow_state", name);
     }
 
     public void testRestGetWorkflowActionRoutes() {

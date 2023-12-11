@@ -37,14 +37,14 @@ import org.mockito.Mockito;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-public class GetWorkflowTransportActionTests extends OpenSearchTestCase {
+public class GetWorkflowStateTransportActionTests extends OpenSearchTestCase {
 
-    private GetWorkflowTransportAction getWorkflowTransportAction;
+    private GetWorkflowStateTransportAction getWorkflowTransportAction;
     private FlowFrameworkIndicesHandler flowFrameworkIndicesHandler;
     private Client client;
     private ThreadPool threadPool;
     private ThreadContext threadContext;
-    private ActionListener<GetWorkflowResponse> response;
+    private ActionListener<GetWorkflowStateResponse> response;
     private Task task;
 
     @Override
@@ -52,7 +52,7 @@ public class GetWorkflowTransportActionTests extends OpenSearchTestCase {
         super.setUp();
         this.client = mock(Client.class);
         this.threadPool = mock(ThreadPool.class);
-        this.getWorkflowTransportAction = new GetWorkflowTransportAction(
+        this.getWorkflowTransportAction = new GetWorkflowStateTransportAction(
             mock(TransportService.class),
             mock(ActionFilters.class),
             client,
@@ -65,9 +65,9 @@ public class GetWorkflowTransportActionTests extends OpenSearchTestCase {
         when(client.threadPool()).thenReturn(clientThreadPool);
         when(clientThreadPool.getThreadContext()).thenReturn(threadContext);
 
-        response = new ActionListener<GetWorkflowResponse>() {
+        response = new ActionListener<GetWorkflowStateResponse>() {
             @Override
-            public void onResponse(GetWorkflowResponse getResponse) {
+            public void onResponse(GetWorkflowStateResponse getResponse) {
                 assertTrue(true);
             }
 
@@ -78,21 +78,21 @@ public class GetWorkflowTransportActionTests extends OpenSearchTestCase {
     }
 
     public void testGetTransportAction() throws IOException {
-        GetWorkflowRequest getWorkflowRequest = new GetWorkflowRequest("1234", false);
+        GetWorkflowStateRequest getWorkflowRequest = new GetWorkflowStateRequest("1234", false);
         getWorkflowTransportAction.doExecute(task, getWorkflowRequest, response);
     }
 
     public void testGetAction() {
-        Assert.assertNotNull(GetWorkflowAction.INSTANCE.name());
-        Assert.assertEquals(GetWorkflowAction.INSTANCE.name(), GetWorkflowAction.NAME);
+        Assert.assertNotNull(GetWorkflowStateAction.INSTANCE.name());
+        Assert.assertEquals(GetWorkflowStateAction.INSTANCE.name(), GetWorkflowStateAction.NAME);
     }
 
     public void testGetAnomalyDetectorRequest() throws IOException {
-        GetWorkflowRequest request = new GetWorkflowRequest("1234", false);
+        GetWorkflowStateRequest request = new GetWorkflowStateRequest("1234", false);
         BytesStreamOutput out = new BytesStreamOutput();
         request.writeTo(out);
         StreamInput input = out.bytes().streamInput();
-        GetWorkflowRequest newRequest = new GetWorkflowRequest(input);
+        GetWorkflowStateRequest newRequest = new GetWorkflowStateRequest(input);
         Assert.assertEquals(request.getWorkflowId(), newRequest.getWorkflowId());
         Assert.assertEquals(request.getAll(), newRequest.getAll());
         Assert.assertNull(newRequest.validate());
@@ -113,10 +113,10 @@ public class GetWorkflowTransportActionTests extends OpenSearchTestCase {
             Collections.emptyList()
         );
 
-        GetWorkflowResponse response = new GetWorkflowResponse(workFlowState, false);
+        GetWorkflowStateResponse response = new GetWorkflowStateResponse(workFlowState, false);
         response.writeTo(out);
         NamedWriteableAwareStreamInput input = new NamedWriteableAwareStreamInput(out.bytes().streamInput(), writableRegistry());
-        GetWorkflowResponse newResponse = new GetWorkflowResponse(input);
+        GetWorkflowStateResponse newResponse = new GetWorkflowStateResponse(input);
         XContentBuilder builder = TestHelpers.builder();
         Assert.assertNotNull(newResponse.toXContent(builder, ToXContent.EMPTY_PARAMS));
 
