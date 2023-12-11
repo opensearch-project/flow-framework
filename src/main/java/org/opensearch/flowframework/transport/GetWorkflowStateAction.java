@@ -13,15 +13,15 @@ import org.opensearch.action.ActionType;
 import static org.opensearch.flowframework.common.CommonValue.TRANSPORT_ACTION_NAME_PREFIX;
 
 /**
- * External Action for public facing RestGetWorkflowAction
+ * External Action for public facing RestGetWorkflowStateAction
  */
-public class GetWorkflowAction extends ActionType<GetWorkflowResponse> {
+public class GetWorkflowStateAction extends ActionType<GetWorkflowStateResponse> {
     /** The name of this action */
-    public static final String NAME = TRANSPORT_ACTION_NAME_PREFIX + "workflow/get";
+    public static final String NAME = TRANSPORT_ACTION_NAME_PREFIX + "workflow_state/get";
     /** An instance of this action */
-    public static final GetWorkflowAction INSTANCE = new GetWorkflowAction();
+    public static final GetWorkflowStateAction INSTANCE = new GetWorkflowStateAction();
 
-    private GetWorkflowAction() {
-        super(NAME, GetWorkflowResponse::new);
+    private GetWorkflowStateAction() {
+        super(NAME, GetWorkflowStateResponse::new);
     }
 }

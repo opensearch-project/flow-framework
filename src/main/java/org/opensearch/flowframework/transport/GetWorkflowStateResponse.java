@@ -20,7 +20,7 @@ import java.io.IOException;
 /**
  * Transport Response from getting a workflow status
  */
-public class GetWorkflowResponse extends ActionResponse implements ToXContentObject {
+public class GetWorkflowStateResponse extends ActionResponse implements ToXContentObject {
 
     /** The workflow state */
     public WorkflowState workflowState;
@@ -28,22 +28,22 @@ public class GetWorkflowResponse extends ActionResponse implements ToXContentObj
     public boolean allStatus;
 
     /**
-     * Instantiates a new GetWorkflowResponse from an input stream
+     * Instantiates a new GetWorkflowStateResponse from an input stream
      * @param in the input stream to read from
      * @throws IOException if the workflowId cannot be read from the input stream
      */
-    public GetWorkflowResponse(StreamInput in) throws IOException {
+    public GetWorkflowStateResponse(StreamInput in) throws IOException {
         super(in);
         workflowState = new WorkflowState(in);
         allStatus = in.readBoolean();
     }
 
     /**
-     * Instatiates a new GetWorkflowResponse from an input stream
+     * Instatiates a new GetWorkflowStateResponse from an input stream
      * @param workflowState the workflow state object
      * @param allStatus whether to return all fields in state index
      */
-    public GetWorkflowResponse(WorkflowState workflowState, boolean allStatus) {
+    public GetWorkflowStateResponse(WorkflowState workflowState, boolean allStatus) {
         if (allStatus) {
             this.workflowState = workflowState;
         } else {
