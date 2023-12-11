@@ -65,7 +65,6 @@ public class RestDeprovisionWorkflowAction extends BaseRestHandler {
                     RestStatus.FORBIDDEN
                 );
             }
-
             // Validate content
             if (request.hasContent()) {
                 throw new FlowFrameworkException("No request body is required", RestStatus.BAD_REQUEST);
