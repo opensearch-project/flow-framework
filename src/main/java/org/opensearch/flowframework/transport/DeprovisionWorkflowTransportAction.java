@@ -127,7 +127,7 @@ public class DeprovisionWorkflowTransportAction extends HandledTransportAction<W
                 workflowProcessSorter.validateGraph(provisionProcessSequence);
 
                 // We have a valid template and sorted nodes, get the created resources
-                getResourcesAndExecute(request, provisionProcessSequence, listener);
+                getResourcesAndExecute(request.getWorkflowId(), provisionProcessSequence, listener);
             }, exception -> {
                 if (exception instanceof FlowFrameworkException) {
                     logger.error("Workflow validation failed for workflow : " + workflowId);
@@ -144,11 +144,12 @@ public class DeprovisionWorkflowTransportAction extends HandledTransportAction<W
     }
 
     private void getResourcesAndExecute(
-        WorkflowRequest request,
+        String workflowId,
         List<ProcessNode> provisionProcessSequence,
         ActionListener<WorkflowResponse> listener
     ) {
-        client.execute(GetWorkflowAction.INSTANCE, request, ActionListener.wrap(response -> {
+        GetWorkflowRequest getRequest = new GetWorkflowRequest(workflowId, true);
+        client.execute(GetWorkflowAction.INSTANCE, getRequest, ActionListener.wrap(response -> {
             // Get a map of step id to created resources
             final Map<String, ResourceCreated> resourceMap = response.getWorkflowState()
                 .resourcesCreated()
@@ -156,9 +157,9 @@ public class DeprovisionWorkflowTransportAction extends HandledTransportAction<W
                 .collect(Collectors.toMap(ResourceCreated::workflowStepId, Function.identity()));
 
             // Now finally do the deprovision
-            executeDeprovisionSequence(request.getWorkflowId(), resourceMap, provisionProcessSequence, listener);
+            executeDeprovisionSequence(workflowId, resourceMap, provisionProcessSequence, listener);
         }, exception -> {
-            logger.error("Failed to get workflow state for workflow " + request.getWorkflowId());
+            logger.error("Failed to get workflow state for workflow " + workflowId);
             listener.onFailure(new FlowFrameworkException(exception.getMessage(), ExceptionsHelper.status(exception)));
         }));
     }
@@ -201,6 +202,7 @@ public class DeprovisionWorkflowTransportAction extends HandledTransportAction<W
             .collect(Collectors.toList());
         // Deprovision in reverse order of provisioning to minimize risk of dependencies
         Collections.reverse(deprovisionProcessSequence);
+        logger.info("Deprovisioning steps: {}", deprovisionProcessSequence.stream().map(ProcessNode::id).collect(Collectors.joining(", ")));
 
         // Repeat attempting to delete resources as long as at least one is successful
         int resourceCount = deprovisionProcessSequence.size();
@@ -210,19 +212,35 @@ public class DeprovisionWorkflowTransportAction extends HandledTransportAction<W
                 ProcessNode deprovisionNode = iter.next();
                 String resourceNameAndId = getResourceFromProcessNode(deprovisionNode, resourceMap);
                 CompletableFuture<WorkflowData> deprovisionFuture = deprovisionNode.execute();
-                deprovisionFuture.join();
-                if (deprovisionFuture.isCompletedExceptionally()) {
-                    // Occasional failures with dependent resources may occur, log and continue
-                    logger.info("Failed {} for {}", deprovisionNode.id(), resourceNameAndId);
-                } else {
+                try {
+                    deprovisionFuture.join();
+                    logger.info("Successful {} for {}", deprovisionNode.id(), resourceNameAndId);
                     // Remove from list so we don't try again
                     iter.remove();
-                    logger.info("Successfully deprovisioned {}", resourceNameAndId);
+                } catch (Throwable t) {
+                    logger.info(
+                        "Failed {} for {}: {}",
+                        deprovisionNode.id(),
+                        resourceNameAndId,
+                        t.getCause() == null ? t.getMessage() : t.getCause().getMessage()
+                    );
                 }
+                if (deprovisionFuture.isCompletedExceptionally()) {} else {}
             }
             if (deprovisionProcessSequence.size() < resourceCount) {
                 // If we've deleted something, decrement and try again if not zero
                 resourceCount = deprovisionProcessSequence.size();
+                deprovisionProcessSequence = deprovisionProcessSequence.stream().map(pn -> {
+                    return new ProcessNode(
+                        pn.id(),
+                        workflowStepFactory.createStep(pn.workflowStep().getName()),
+                        pn.previousNodeInputs(),
+                        pn.input(),
+                        pn.predecessors(),
+                        this.threadPool,
+                        pn.nodeTimeout()
+                    );
+                }).collect(Collectors.toList());
             } else {
                 // If nothing was deleted, exit loop
                 break;
@@ -251,7 +269,7 @@ public class DeprovisionWorkflowTransportAction extends HandledTransportAction<W
         int pos = deprovisionId.indexOf(DEPROVISION_SUFFIX);
         if (pos > 0) {
             String stepName = deprovisionId.substring(0, pos);
-            return getResourceByWorkflowStep(stepName) + " " + resourceMap.get(stepName);
+            return getResourceByWorkflowStep(deprovisionNode.workflowStep().getName()) + " " + resourceMap.get(stepName).resourceId();
         }
         return null;
     }

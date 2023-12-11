@@ -23,7 +23,7 @@ import java.util.stream.Stream;
 public enum WorkflowResources {
 
     /** official workflow step name for creating a connector and associated created resource */
-    CREATE_CONNECTOR("create_connector", "connector_id", "delete_connetor"),
+    CREATE_CONNECTOR("create_connector", "connector_id", "delete_connector"),
     /** official workflow step name for registering a remote model and associated created resource */
     REGISTER_REMOTE_MODEL("register_remote_model", "model_id", "delete_model"),
     /** official workflow step name for registering a local model and associated created resource */
@@ -86,7 +86,7 @@ public enum WorkflowResources {
     public static String getResourceByWorkflowStep(String workflowStep) throws FlowFrameworkException {
         if (workflowStep != null && !workflowStep.isEmpty()) {
             for (WorkflowResources mapping : values()) {
-                if (mapping.getWorkflowStep().equals(workflowStep)) {
+                if (workflowStep.equals(mapping.getWorkflowStep()) || workflowStep.equals(mapping.getDeprovisionStep())) {
                     return mapping.getResourceCreated();
                 }
             }
