@@ -51,8 +51,6 @@ public class CreateWorkflowTransportAction extends HandledTransportAction<Workfl
     private final Client client;
     private final Settings settings;
 
-    private final TransportService transportService;
-
     /**
      * Intantiates a new CreateWorkflowTransportAction
      * @param transportService the TransportService
@@ -72,7 +70,6 @@ public class CreateWorkflowTransportAction extends HandledTransportAction<Workfl
         Client client
     ) {
         super(CreateWorkflowAction.NAME, transportService, actionFilters, WorkflowRequest::new);
-        this.transportService = transportService;
         this.workflowProcessSorter = workflowProcessSorter;
         this.flowFrameworkIndicesHandler = flowFrameworkIndicesHandler;
         this.settings = settings;

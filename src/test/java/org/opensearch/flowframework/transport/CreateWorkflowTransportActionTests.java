@@ -195,7 +195,7 @@ public class CreateWorkflowTransportActionTests extends OpenSearchTestCase {
         WorkflowRequest workflowRequest = new WorkflowRequest(
             null,
             template,
-            true,
+            false,
             WORKFLOW_REQUEST_TIMEOUT.get(settings),
             MAX_WORKFLOWS.get(settings)
         );
@@ -227,14 +227,6 @@ public class CreateWorkflowTransportActionTests extends OpenSearchTestCase {
             responseListener.onResponse(new IndexResponse(new ShardId(WORKFLOW_STATE_INDEX, "", 1), "1", 1L, 1L, 1L, true));
             return null;
         }).when(flowFrameworkIndicesHandler).putInitialStateToWorkflowState(any(), any(), any());
-
-        doAnswer(invocation -> {
-            ActionListener<WorkflowResponse> responseListener = invocation.getArgument(2);
-            WorkflowResponse response = mock(WorkflowResponse.class);
-            when(response.getWorkflowId()).thenReturn("1");
-            responseListener.onResponse(response);
-            return null;
-        }).when(client).execute(eq(ProvisionWorkflowAction.INSTANCE), any(WorkflowRequest.class), any(ActionListener.class));
 
         ArgumentCaptor<WorkflowResponse> workflowResponseCaptor = ArgumentCaptor.forClass(WorkflowResponse.class);
 
