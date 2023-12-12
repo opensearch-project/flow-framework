@@ -163,7 +163,7 @@ public class FlowFrameworkPlugin extends Plugin implements ActionPlugin {
                 settings,
                 PROVISION_THREAD_POOL,
                 OpenSearchExecutors.allocatedProcessors(settings),
-                10,
+                100,
                 FLOW_FRAMEWORK_THREAD_POOL_PREFIX + PROVISION_THREAD_POOL
             )
         );
