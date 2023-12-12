@@ -226,7 +226,7 @@ public class DeprovisionWorkflowTransportAction extends HandledTransportAction<W
                     // Remove from list so we don't try again
                     iter.remove();
                     // Pause briefly before next step
-                    // Thread.sleep(100);
+                    Thread.sleep(100);
                 } catch (Throwable t) {
                     logger.info(
                         "Failed {} for {}: {}",
@@ -252,7 +252,7 @@ public class DeprovisionWorkflowTransportAction extends HandledTransportAction<W
                 }).collect(Collectors.toList());
                 // Pause briefly before next loop
                 try {
-                    Thread.sleep(1);
+                    Thread.sleep(1000);
                 } catch (InterruptedException e) {
                     break;
                 }
