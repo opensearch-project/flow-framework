@@ -60,6 +60,16 @@ public class ParseUtilsTests extends OpenSearchTestCase {
         assertNull(instant);
     }
 
+    public void testBuildAndParseStringToStringMap() throws IOException {
+        Map<String, String> stringMap = Map.ofEntries(Map.entry("one", "two"));
+        XContentBuilder builder = XContentFactory.jsonBuilder();
+        ParseUtils.buildStringToStringMap(builder, stringMap);
+        XContentParser parser = this.createParser(builder);
+        parser.nextToken();
+        Map<String, String> parsedMap = ParseUtils.parseStringToStringMap(parser);
+        assertEquals(stringMap.get("one"), parsedMap.get("one"));
+    }
+
     public void testGetInputsFromPreviousSteps() {
         WorkflowData currentNodeInputs = new WorkflowData(
             Map.ofEntries(Map.entry("content1", 1), Map.entry("param1", 2), Map.entry("content3", "${{step1.output1}}")),
