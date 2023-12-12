@@ -85,6 +85,25 @@ public class ParseUtils {
     }
 
     /**
+     * Builds an XContent object representing a map of String keys to Object values.
+     *
+     * @param xContentBuilder An XContent builder whose position is at the start of the map object to build
+     * @param map A map as key-value String to Object.
+     * @throws IOException on a build failure
+     */
+    public static void buildStringToObjectMap(XContentBuilder xContentBuilder, Map<?, ?> map) throws IOException {
+        xContentBuilder.startObject();
+        for (Entry<?, ?> e : map.entrySet()) {
+            if (e.getValue() instanceof String) {
+                xContentBuilder.field((String) e.getKey(), (String) e.getValue());
+            } else {
+                xContentBuilder.field((String) e.getKey(), e.getValue());
+            }
+        }
+        xContentBuilder.endObject();
+    }
+
+    /**
      * Builds an XContent object representing a LLMSpec.
      *
      * @param xContentBuilder An XContent builder whose position is at the start of the map object to build
@@ -113,6 +132,30 @@ public class ParseUtils {
             String fieldName = parser.currentName();
             parser.nextToken();
             map.put(fieldName, parser.text());
+        }
+        return map;
+    }
+
+    /**
+     * Parses an XContent object representing a map of String keys to Object values.
+     * The Object value here can either be a string or a map
+     * @param parser An XContent parser whose position is at the start of the map object to parse
+     * @return A map as identified by the key-value pairs in the XContent
+     * @throws IOException on a parse failure
+     */
+    public static Map<String, Object> parseStringToObjectMap(XContentParser parser) throws IOException {
+        ensureExpectedToken(XContentParser.Token.START_OBJECT, parser.currentToken(), parser);
+        Map<String, Object> map = new HashMap<>();
+        while (parser.nextToken() != XContentParser.Token.END_OBJECT) {
+            String fieldName = parser.currentName();
+            parser.nextToken();
+            if (parser.currentToken() == XContentParser.Token.START_OBJECT) {
+                // If the current token is a START_OBJECT, parse it as Map<String, String>
+                map.put(fieldName, parseStringToStringMap(parser));
+            } else {
+                // Otherwise, parse it as a string
+                map.put(fieldName, parser.text());
+            }
         }
         return map;
     }
