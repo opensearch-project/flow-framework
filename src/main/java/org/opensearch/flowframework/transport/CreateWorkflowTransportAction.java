@@ -130,6 +130,14 @@ public class CreateWorkflowTransportAction extends HandledTransportAction<Workfl
                                         user,
                                         ActionListener.wrap(stateResponse -> {
                                             logger.info("create state workflow doc");
+                                            if (request.isProvision()) {
+                                                WorkflowRequest workflowRequest = new WorkflowRequest(globalContextResponse.getId(), null);
+                                                transportService.sendRequest(transportService.getLocalNode(),
+                                                        ProvisionWorkflowAction.NAME,
+                                                        workflowRequest,
+                                                        new ActionListenerResponseHandler<>(listener, WorkflowResponse::new)
+                                                );
+                                            }
                                             listener.onResponse(new WorkflowResponse(globalContextResponse.getId()));
                                         }, exception -> {
                                             logger.error("Failed to save workflow state : {}", exception.getMessage());
@@ -142,14 +150,6 @@ public class CreateWorkflowTransportAction extends HandledTransportAction<Workfl
                                             }
                                         })
                                     );
-                                    if (request.isProvision()) {
-                                        WorkflowRequest workflowRequest = new WorkflowRequest(globalContextResponse.getId(), null);
-                                        transportService.sendRequest(transportService.getLocalNode(),
-                                            ProvisionWorkflowAction.NAME,
-                                            workflowRequest,
-                                            new ActionListenerResponseHandler<>(listener, WorkflowResponse::new)
-                                            );
-                                    }
                                 }, exception -> {
                                     logger.error("Failed to save use case template : {}", exception.getMessage());
                                     if (exception instanceof FlowFrameworkException) {
