@@ -39,6 +39,11 @@ public class WorkflowRequest extends ActionRequest {
     private boolean dryRun;
 
     /**
+     * Provision flag
+     */
+    private boolean provision;
+
+    /**
      * Timeout for request
      */
     private TimeValue requestTimeout;
@@ -77,20 +82,20 @@ public class WorkflowRequest extends ActionRequest {
      * Instantiates a new WorkflowRequest
      * @param workflowId the documentId of the workflow
      * @param template the use case template which describes the workflow
-     * @param dryRun flag to indicate if validation is necessary
+     * @param provision flag to indicate if provision is necessary
      * @param requestTimeout timeout of the request
      * @param maxWorkflows max number of workflows
      */
     public WorkflowRequest(
         @Nullable String workflowId,
         @Nullable Template template,
-        boolean dryRun,
+        boolean provision,
         @Nullable TimeValue requestTimeout,
         @Nullable Integer maxWorkflows
     ) {
         this.workflowId = workflowId;
         this.template = template;
-        this.dryRun = dryRun;
+        this.provision = provision;
         this.requestTimeout = requestTimeout;
         this.maxWorkflows = maxWorkflows;
     }
@@ -105,7 +110,7 @@ public class WorkflowRequest extends ActionRequest {
         this.workflowId = in.readOptionalString();
         String templateJson = in.readOptionalString();
         this.template = templateJson == null ? null : Template.parse(templateJson);
-        this.dryRun = in.readBoolean();
+        this.provision = in.readBoolean();
         this.requestTimeout = in.readOptionalTimeValue();
         this.maxWorkflows = in.readOptionalInt();
     }
@@ -129,11 +134,11 @@ public class WorkflowRequest extends ActionRequest {
     }
 
     /**
-     * Gets the dry run validation flag
-     * @return the dry run boolean
+     * Gets the provision flag
+     * @return the provision boolean
      */
-    public boolean isDryRun() {
-        return this.dryRun;
+    public boolean isProvision() {
+        return this.provision;
     }
 
     /**

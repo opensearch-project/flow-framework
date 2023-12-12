@@ -12,6 +12,7 @@ import com.google.common.collect.ImmutableMap;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.opensearch.ExceptionsHelper;
+import org.opensearch.action.ActionListenerResponseHandler;
 import org.opensearch.action.search.SearchRequest;
 import org.opensearch.action.support.ActionFilters;
 import org.opensearch.action.support.HandledTransportAction;
@@ -21,7 +22,9 @@ import org.opensearch.common.settings.Settings;
 import org.opensearch.common.unit.TimeValue;
 import org.opensearch.commons.authuser.User;
 import org.opensearch.core.action.ActionListener;
+import org.opensearch.core.common.io.stream.StreamInput;
 import org.opensearch.core.rest.RestStatus;
+import org.opensearch.core.transport.TransportResponse;
 import org.opensearch.flowframework.common.CommonValue;
 import org.opensearch.flowframework.exception.FlowFrameworkException;
 import org.opensearch.flowframework.indices.FlowFrameworkIndicesHandler;
@@ -35,8 +38,11 @@ import org.opensearch.index.query.QueryBuilder;
 import org.opensearch.index.query.QueryBuilders;
 import org.opensearch.search.builder.SearchSourceBuilder;
 import org.opensearch.tasks.Task;
+import org.opensearch.transport.TransportException;
+import org.opensearch.transport.TransportResponseHandler;
 import org.opensearch.transport.TransportService;
 
+import java.io.IOException;
 import java.util.List;
 
 import static org.opensearch.flowframework.common.CommonValue.PROVISIONING_PROGRESS_FIELD;
@@ -54,6 +60,8 @@ public class CreateWorkflowTransportAction extends HandledTransportAction<Workfl
     private final FlowFrameworkIndicesHandler flowFrameworkIndicesHandler;
     private final Client client;
     private final Settings settings;
+
+    private final TransportService transportService;
 
     /**
      * Intantiates a new CreateWorkflowTransportAction
@@ -74,6 +82,7 @@ public class CreateWorkflowTransportAction extends HandledTransportAction<Workfl
         Client client
     ) {
         super(CreateWorkflowAction.NAME, transportService, actionFilters, WorkflowRequest::new);
+        this.transportService = transportService;
         this.workflowProcessSorter = workflowProcessSorter;
         this.flowFrameworkIndicesHandler = flowFrameworkIndicesHandler;
         this.settings = settings;
@@ -94,20 +103,6 @@ public class CreateWorkflowTransportAction extends HandledTransportAction<Workfl
             request.getTemplate().getUiMetadata(),
             user
         );
-
-        if (request.isDryRun()) {
-            try {
-                validateWorkflows(templateWithUser);
-            } catch (Exception e) {
-                if (e instanceof FlowFrameworkException) {
-                    logger.error("Workflow validation failed for template : " + templateWithUser.name());
-                    listener.onFailure(e);
-                } else {
-                    listener.onFailure(new FlowFrameworkException(e.getMessage(), ExceptionsHelper.status(e)));
-                }
-                return;
-            }
-        }
 
         if (request.getWorkflowId() == null) {
             // Throttle incoming requests
@@ -147,6 +142,14 @@ public class CreateWorkflowTransportAction extends HandledTransportAction<Workfl
                                             }
                                         })
                                     );
+                                    if (request.isProvision()) {
+                                        WorkflowRequest workflowRequest = new WorkflowRequest(globalContextResponse.getId(), null);
+                                        transportService.sendRequest(transportService.getLocalNode(),
+                                            ProvisionWorkflowAction.NAME,
+                                            workflowRequest,
+                                            new ActionListenerResponseHandler<>(listener, WorkflowResponse::new)
+                                            );
+                                    }
                                 }, exception -> {
                                     logger.error("Failed to save use case template : {}", exception.getMessage());
                                     if (exception instanceof FlowFrameworkException) {

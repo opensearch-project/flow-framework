@@ -114,67 +114,67 @@ public class CreateWorkflowTransportActionTests extends OpenSearchTestCase {
         );
     }
 
-    public void testFailedDryRunValidation() {
-
-        WorkflowNode createConnector = new WorkflowNode(
-            "workflow_step_1",
-            "create_connector",
-            Map.of(),
-            Map.ofEntries(
-                Map.entry("name", ""),
-                Map.entry("description", ""),
-                Map.entry("version", ""),
-                Map.entry("protocol", ""),
-                Map.entry("parameters", ""),
-                Map.entry("credential", ""),
-                Map.entry("actions", "")
-            )
-        );
-
-        WorkflowNode registerModel = new WorkflowNode(
-            "workflow_step_2",
-            "register_model",
-            Map.ofEntries(Map.entry("workflow_step_1", "connector_id")),
-            Map.ofEntries(Map.entry("name", "name"), Map.entry("function_name", "remote"), Map.entry("description", "description"))
-        );
-
-        WorkflowNode deployModel = new WorkflowNode(
-            "workflow_step_3",
-            "deploy_model",
-            Map.ofEntries(Map.entry("workflow_step_2", "model_id")),
-            Map.of()
-        );
-
-        WorkflowEdge edge1 = new WorkflowEdge(createConnector.id(), registerModel.id());
-        WorkflowEdge edge2 = new WorkflowEdge(registerModel.id(), deployModel.id());
-        WorkflowEdge cyclicalEdge = new WorkflowEdge(deployModel.id(), createConnector.id());
-
-        Workflow workflow = new Workflow(
-            Map.of(),
-            List.of(createConnector, registerModel, deployModel),
-            List.of(edge1, edge2, cyclicalEdge)
-        );
-
-        Template cyclicalTemplate = new Template(
-            "test",
-            "description",
-            "use case",
-            Version.fromString("1.0.0"),
-            List.of(Version.fromString("2.0.0"), Version.fromString("3.0.0")),
-            Map.of("workflow", workflow),
-            Map.of(),
-            TestHelpers.randomUser()
-        );
-
-        @SuppressWarnings("unchecked")
-        ActionListener<WorkflowResponse> listener = mock(ActionListener.class);
-        WorkflowRequest createNewWorkflow = new WorkflowRequest(null, cyclicalTemplate, true, null, null);
-
-        createWorkflowTransportAction.doExecute(mock(Task.class), createNewWorkflow, listener);
-        ArgumentCaptor<Exception> exceptionCaptor = ArgumentCaptor.forClass(Exception.class);
-        verify(listener, times(1)).onFailure(exceptionCaptor.capture());
-        assertEquals("No start node detected: all nodes have a predecessor.", exceptionCaptor.getValue().getMessage());
-    }
+//    public void testFailedDryRunValidation() {
+//
+//        WorkflowNode createConnector = new WorkflowNode(
+//            "workflow_step_1",
+//            "create_connector",
+//            Map.of(),
+//            Map.ofEntries(
+//                Map.entry("name", ""),
+//                Map.entry("description", ""),
+//                Map.entry("version", ""),
+//                Map.entry("protocol", ""),
+//                Map.entry("parameters", ""),
+//                Map.entry("credential", ""),
+//                Map.entry("actions", "")
+//            )
+//        );
+//
+//        WorkflowNode registerModel = new WorkflowNode(
+//            "workflow_step_2",
+//            "register_model",
+//            Map.ofEntries(Map.entry("workflow_step_1", "connector_id")),
+//            Map.ofEntries(Map.entry("name", "name"), Map.entry("function_name", "remote"), Map.entry("description", "description"))
+//        );
+//
+//        WorkflowNode deployModel = new WorkflowNode(
+//            "workflow_step_3",
+//            "deploy_model",
+//            Map.ofEntries(Map.entry("workflow_step_2", "model_id")),
+//            Map.of()
+//        );
+//
+//        WorkflowEdge edge1 = new WorkflowEdge(createConnector.id(), registerModel.id());
+//        WorkflowEdge edge2 = new WorkflowEdge(registerModel.id(), deployModel.id());
+//        WorkflowEdge cyclicalEdge = new WorkflowEdge(deployModel.id(), createConnector.id());
+//
+//        Workflow workflow = new Workflow(
+//            Map.of(),
+//            List.of(createConnector, registerModel, deployModel),
+//            List.of(edge1, edge2, cyclicalEdge)
+//        );
+//
+//        Template cyclicalTemplate = new Template(
+//            "test",
+//            "description",
+//            "use case",
+//            Version.fromString("1.0.0"),
+//            List.of(Version.fromString("2.0.0"), Version.fromString("3.0.0")),
+//            Map.of("workflow", workflow),
+//            Map.of(),
+//            TestHelpers.randomUser()
+//        );
+//
+//        @SuppressWarnings("unchecked")
+//        ActionListener<WorkflowResponse> listener = mock(ActionListener.class);
+//        WorkflowRequest createNewWorkflow = new WorkflowRequest(null, cyclicalTemplate, true, null, null);
+//
+//        createWorkflowTransportAction.doExecute(mock(Task.class), createNewWorkflow, listener);
+//        ArgumentCaptor<Exception> exceptionCaptor = ArgumentCaptor.forClass(Exception.class);
+//        verify(listener, times(1)).onFailure(exceptionCaptor.capture());
+//        assertEquals("No start node detected: all nodes have a predecessor.", exceptionCaptor.getValue().getMessage());
+//    }
 
     public void testMaxWorkflow() {
         @SuppressWarnings("unchecked")

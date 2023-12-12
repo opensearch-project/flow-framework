@@ -31,6 +31,7 @@ import java.util.List;
 import java.util.Locale;
 
 import static org.opensearch.flowframework.common.CommonValue.DRY_RUN;
+import static org.opensearch.flowframework.common.CommonValue.PROVISION_WORKFLOW;
 import static org.opensearch.flowframework.common.CommonValue.WORKFLOW_ID;
 import static org.opensearch.flowframework.common.CommonValue.WORKFLOW_URI;
 import static org.opensearch.flowframework.common.FlowFrameworkSettings.FLOW_FRAMEWORK_ENABLED;
@@ -90,9 +91,9 @@ public class RestCreateWorkflowAction extends AbstractWorkflowAction {
 
             String workflowId = request.param(WORKFLOW_ID);
             Template template = Template.parse(request.content().utf8ToString());
-            boolean dryRun = request.paramAsBoolean(DRY_RUN, false);
+            boolean provision = request.paramAsBoolean(PROVISION_WORKFLOW, false);
 
-            WorkflowRequest workflowRequest = new WorkflowRequest(workflowId, template, dryRun, requestTimeout, maxWorkflows);
+            WorkflowRequest workflowRequest = new WorkflowRequest(workflowId, template, provision, requestTimeout, maxWorkflows);
 
             return channel -> client.execute(CreateWorkflowAction.INSTANCE, workflowRequest, ActionListener.wrap(response -> {
                 XContentBuilder builder = response.toXContent(channel.newBuilder(), ToXContent.EMPTY_PARAMS);
