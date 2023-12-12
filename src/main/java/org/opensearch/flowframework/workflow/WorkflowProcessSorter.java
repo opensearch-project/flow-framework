@@ -10,6 +10,8 @@ package org.opensearch.flowframework.workflow;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.opensearch.cluster.service.ClusterService;
+import org.opensearch.common.settings.Settings;
 import org.opensearch.common.unit.TimeValue;
 import org.opensearch.core.rest.RestStatus;
 import org.opensearch.flowframework.exception.FlowFrameworkException;
@@ -32,6 +34,7 @@ import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import static org.opensearch.flowframework.common.FlowFrameworkSettings.MAX_WORKFLOW_STEPS;
 import static org.opensearch.flowframework.model.WorkflowNode.NODE_TIMEOUT_DEFAULT_VALUE;
 import static org.opensearch.flowframework.model.WorkflowNode.NODE_TIMEOUT_FIELD;
 import static org.opensearch.flowframework.model.WorkflowNode.USER_INPUTS_FIELD;
@@ -45,16 +48,26 @@ public class WorkflowProcessSorter {
 
     private WorkflowStepFactory workflowStepFactory;
     private ThreadPool threadPool;
+    private Integer maxWorkflowSteps;
 
     /**
      * Instantiate this class.
      *
      * @param workflowStepFactory The factory which matches template step types to instances.
      * @param threadPool The OpenSearch Thread pool to pass to process nodes.
+     * @param clusterService The OpenSearch cluster service.
+     * @param settings OpenSerch settings
      */
-    public WorkflowProcessSorter(WorkflowStepFactory workflowStepFactory, ThreadPool threadPool) {
+    public WorkflowProcessSorter(
+        WorkflowStepFactory workflowStepFactory,
+        ThreadPool threadPool,
+        ClusterService clusterService,
+        Settings settings
+    ) {
         this.workflowStepFactory = workflowStepFactory;
         this.threadPool = threadPool;
+        this.maxWorkflowSteps = MAX_WORKFLOW_STEPS.get(settings);
+        clusterService.getClusterSettings().addSettingsUpdateConsumer(MAX_WORKFLOW_STEPS, it -> maxWorkflowSteps = it);
     }
 
     /**
@@ -64,6 +77,20 @@ public class WorkflowProcessSorter {
      * @return A list of Process Nodes sorted topologically.  All predecessors of any node will occur prior to it in the list.
      */
     public List<ProcessNode> sortProcessNodes(Workflow workflow, String workflowId) {
+        if (workflow.nodes().size() > this.maxWorkflowSteps) {
+            throw new FlowFrameworkException(
+                "Workflow "
+                    + workflowId
+                    + " has "
+                    + workflow.nodes().size()
+                    + " nodes, which exceeds the maximum of "
+                    + this.maxWorkflowSteps
+                    + ". Change the setting ["
+                    + MAX_WORKFLOW_STEPS.getKey()
+                    + "] to increase this.",
+                RestStatus.BAD_REQUEST
+            );
+        }
         List<WorkflowNode> sortedNodes = topologicalSort(workflow.nodes(), workflow.edges());
 
         List<ProcessNode> nodes = new ArrayList<>();

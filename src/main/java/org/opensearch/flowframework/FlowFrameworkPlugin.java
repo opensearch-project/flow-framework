@@ -63,6 +63,7 @@ import static org.opensearch.flowframework.common.CommonValue.PROVISION_THREAD_P
 import static org.opensearch.flowframework.common.FlowFrameworkSettings.FLOW_FRAMEWORK_ENABLED;
 import static org.opensearch.flowframework.common.FlowFrameworkSettings.MAX_GET_TASK_REQUEST_RETRY;
 import static org.opensearch.flowframework.common.FlowFrameworkSettings.MAX_WORKFLOWS;
+import static org.opensearch.flowframework.common.FlowFrameworkSettings.MAX_WORKFLOW_STEPS;
 import static org.opensearch.flowframework.common.FlowFrameworkSettings.WORKFLOW_REQUEST_TIMEOUT;
 
 /**
@@ -106,7 +107,7 @@ public class FlowFrameworkPlugin extends Plugin implements ActionPlugin {
             mlClient,
             flowFrameworkIndicesHandler
         );
-        WorkflowProcessSorter workflowProcessSorter = new WorkflowProcessSorter(workflowStepFactory, threadPool);
+        WorkflowProcessSorter workflowProcessSorter = new WorkflowProcessSorter(workflowStepFactory, threadPool, clusterService, settings);
 
         return ImmutableList.of(workflowStepFactory, workflowProcessSorter, encryptorUtils, flowFrameworkIndicesHandler);
     }
@@ -144,6 +145,7 @@ public class FlowFrameworkPlugin extends Plugin implements ActionPlugin {
         List<Setting<?>> settings = ImmutableList.of(
             FLOW_FRAMEWORK_ENABLED,
             MAX_WORKFLOWS,
+            MAX_WORKFLOW_STEPS,
             WORKFLOW_REQUEST_TIMEOUT,
             MAX_GET_TASK_REQUEST_RETRY
         );
@@ -158,7 +160,7 @@ public class FlowFrameworkPlugin extends Plugin implements ActionPlugin {
                 settings,
                 PROVISION_THREAD_POOL,
                 OpenSearchExecutors.allocatedProcessors(settings),
-                10,
+                100,
                 FLOW_FRAMEWORK_THREAD_POOL_PREFIX + PROVISION_THREAD_POOL
             )
         );

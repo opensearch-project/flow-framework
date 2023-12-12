@@ -24,7 +24,9 @@ import java.util.Map.Entry;
 import java.util.Objects;
 
 import static org.opensearch.core.xcontent.XContentParserUtils.ensureExpectedToken;
+import static org.opensearch.flowframework.util.ParseUtils.buildStringToObjectMap;
 import static org.opensearch.flowframework.util.ParseUtils.buildStringToStringMap;
+import static org.opensearch.flowframework.util.ParseUtils.parseStringToObjectMap;
 import static org.opensearch.flowframework.util.ParseUtils.parseStringToStringMap;
 
 /**
@@ -93,7 +95,7 @@ public class WorkflowNode implements ToXContentObject {
                     }
                 } else {
                     for (Map<?, ?> map : (Map<?, ?>[]) e.getValue()) {
-                        buildStringToStringMap(xContentBuilder, map);
+                        buildStringToObjectMap(xContentBuilder, map);
                     }
                 }
                 xContentBuilder.endArray();
@@ -150,9 +152,9 @@ public class WorkflowNode implements ToXContentObject {
                                     }
                                     userInputs.put(inputFieldName, processorList.toArray(new PipelineProcessor[0]));
                                 } else {
-                                    List<Map<String, String>> mapList = new ArrayList<>();
+                                    List<Map<String, Object>> mapList = new ArrayList<>();
                                     while (parser.nextToken() != XContentParser.Token.END_ARRAY) {
-                                        mapList.add(parseStringToStringMap(parser));
+                                        mapList.add(parseStringToObjectMap(parser));
                                     }
                                     userInputs.put(inputFieldName, mapList.toArray(new Map[0]));
                                 }
