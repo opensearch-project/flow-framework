@@ -18,6 +18,8 @@ public class FlowFrameworkSettings {
 
     /** The upper limit of max workflows that can be created  */
     public static final int MAX_WORKFLOWS_LIMIT = 10000;
+    /** The upper limit of max workflow steps that can be in a single workflow  */
+    public static final int MAX_WORKFLOW_STEPS_LIMIT = 500;
 
     /** This setting sets max workflows that can be created  */
     public static final Setting<Integer> MAX_WORKFLOWS = Setting.intSetting(
@@ -25,6 +27,16 @@ public class FlowFrameworkSettings {
         1000,
         0,
         MAX_WORKFLOWS_LIMIT,
+        Setting.Property.NodeScope,
+        Setting.Property.Dynamic
+    );
+
+    /** This setting sets max workflows that can be created  */
+    public static final Setting<Integer> MAX_WORKFLOW_STEPS = Setting.intSetting(
+        "plugins.flow_framework.max_workflow_steps",
+        50,
+        1,
+        MAX_WORKFLOW_STEPS_LIMIT,
         Setting.Property.NodeScope,
         Setting.Property.Dynamic
     );
