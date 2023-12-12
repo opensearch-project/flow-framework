@@ -25,6 +25,8 @@ import org.opensearch.core.action.ActionListener;
 import org.opensearch.core.common.io.stream.StreamInput;
 import org.opensearch.core.rest.RestStatus;
 import org.opensearch.core.transport.TransportResponse;
+import org.opensearch.core.xcontent.ToXContent;
+import org.opensearch.core.xcontent.XContentBuilder;
 import org.opensearch.flowframework.common.CommonValue;
 import org.opensearch.flowframework.exception.FlowFrameworkException;
 import org.opensearch.flowframework.indices.FlowFrameworkIndicesHandler;
@@ -36,6 +38,7 @@ import org.opensearch.flowframework.workflow.ProcessNode;
 import org.opensearch.flowframework.workflow.WorkflowProcessSorter;
 import org.opensearch.index.query.QueryBuilder;
 import org.opensearch.index.query.QueryBuilders;
+import org.opensearch.rest.BytesRestResponse;
 import org.opensearch.search.builder.SearchSourceBuilder;
 import org.opensearch.tasks.Task;
 import org.opensearch.transport.TransportException;
@@ -132,11 +135,18 @@ public class CreateWorkflowTransportAction extends HandledTransportAction<Workfl
                                             logger.info("create state workflow doc");
                                             if (request.isProvision()) {
                                                 WorkflowRequest workflowRequest = new WorkflowRequest(globalContextResponse.getId(), null);
-                                                transportService.sendRequest(transportService.getLocalNode(),
-                                                        ProvisionWorkflowAction.NAME,
-                                                        workflowRequest,
-                                                        new ActionListenerResponseHandler<>(listener, WorkflowResponse::new)
-                                                );
+                                                client.execute(ProvisionWorkflowAction.INSTANCE, workflowRequest, ActionListener.wrap(provisionResponse -> {
+                                                    listener.onResponse(new WorkflowResponse(globalContextResponse.getId()));
+                                                }, exception -> {
+                                                    if (exception instanceof FlowFrameworkException) {
+                                                        listener.onFailure(exception);
+                                                    } else {
+                                                        listener.onFailure(
+                                                            new FlowFrameworkException(exception.getMessage(), RestStatus.BAD_REQUEST)
+                                                        );
+                                                    }
+                                                    logger.error("Failed to send back provision workflow exception", exception);
+                                                }));
                                             }
                                             listener.onResponse(new WorkflowResponse(globalContextResponse.getId()));
                                         }, exception -> {
