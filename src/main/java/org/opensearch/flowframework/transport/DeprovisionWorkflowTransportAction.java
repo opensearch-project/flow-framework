@@ -17,12 +17,13 @@ import org.opensearch.action.support.HandledTransportAction;
 import org.opensearch.client.Client;
 import org.opensearch.common.inject.Inject;
 import org.opensearch.common.util.concurrent.ThreadContext;
-import org.opensearch.commons.authuser.User;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.core.rest.RestStatus;
 import org.opensearch.flowframework.exception.FlowFrameworkException;
 import org.opensearch.flowframework.indices.FlowFrameworkIndicesHandler;
+import org.opensearch.flowframework.model.ProvisioningProgress;
 import org.opensearch.flowframework.model.ResourceCreated;
+import org.opensearch.flowframework.model.State;
 import org.opensearch.flowframework.model.Template;
 import org.opensearch.flowframework.model.Workflow;
 import org.opensearch.flowframework.util.EncryptorUtils;
@@ -34,6 +35,7 @@ import org.opensearch.tasks.Task;
 import org.opensearch.threadpool.ThreadPool;
 import org.opensearch.transport.TransportService;
 
+import java.time.Instant;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
@@ -44,10 +46,13 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import static org.opensearch.flowframework.common.CommonValue.GLOBAL_CONTEXT_INDEX;
+import static org.opensearch.flowframework.common.CommonValue.PROVISIONING_PROGRESS_FIELD;
+import static org.opensearch.flowframework.common.CommonValue.PROVISION_START_TIME_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.PROVISION_WORKFLOW;
+import static org.opensearch.flowframework.common.CommonValue.RESOURCES_CREATED_FIELD;
+import static org.opensearch.flowframework.common.CommonValue.STATE_FIELD;
 import static org.opensearch.flowframework.common.WorkflowResources.getDeprovisionStepByWorkflowStep;
 import static org.opensearch.flowframework.common.WorkflowResources.getResourceByWorkflowStep;
-import static org.opensearch.flowframework.util.ParseUtils.getUserContext;
 
 /**
  * Transport Action to deprovision a workflow from a stored use case template
@@ -99,7 +104,6 @@ public class DeprovisionWorkflowTransportAction extends HandledTransportAction<W
     @Override
     protected void doExecute(Task task, WorkflowRequest request, ActionListener<WorkflowResponse> listener) {
         // Retrieve use case template from global context
-        User user = getUserContext(client);
         String workflowId = request.getWorkflowId();
         GetRequest getRequest = new GetRequest(GLOBAL_CONTEXT_INDEX, workflowId);
 
@@ -130,7 +134,7 @@ public class DeprovisionWorkflowTransportAction extends HandledTransportAction<W
                 workflowProcessSorter.validateGraph(provisionProcessSequence);
 
                 // We have a valid template and sorted nodes, get the created resources
-                getResourcesAndExecute(user, request.getWorkflowId(), provisionProcessSequence, listener);
+                getResourcesAndExecute(request.getWorkflowId(), provisionProcessSequence, listener);
             }, exception -> {
                 if (exception instanceof FlowFrameworkException) {
                     logger.error("Workflow validation failed for workflow : " + workflowId);
@@ -147,13 +151,12 @@ public class DeprovisionWorkflowTransportAction extends HandledTransportAction<W
     }
 
     private void getResourcesAndExecute(
-        User user,
         String workflowId,
         List<ProcessNode> provisionProcessSequence,
         ActionListener<WorkflowResponse> listener
     ) {
-        GetWorkflowRequest getRequest = new GetWorkflowRequest(workflowId, true);
-        client.execute(GetWorkflowAction.INSTANCE, getRequest, ActionListener.wrap(response -> {
+        GetWorkflowStateRequest getRequest = new GetWorkflowStateRequest(workflowId, true);
+        client.execute(GetWorkflowStateAction.INSTANCE, getRequest, ActionListener.wrap(response -> {
             // Get a map of step id to created resources
             final Map<String, ResourceCreated> resourceMap = response.getWorkflowState()
                 .resourcesCreated()
@@ -161,7 +164,7 @@ public class DeprovisionWorkflowTransportAction extends HandledTransportAction<W
                 .collect(Collectors.toMap(ResourceCreated::workflowStepId, Function.identity()));
 
             // Now finally do the deprovision
-            executeDeprovisionSequence(user, workflowId, resourceMap, provisionProcessSequence, listener);
+            executeDeprovisionSequence(workflowId, resourceMap, provisionProcessSequence, listener);
         }, exception -> {
             logger.error("Failed to get workflow state for workflow " + workflowId);
             listener.onFailure(new FlowFrameworkException(exception.getMessage(), ExceptionsHelper.status(exception)));
@@ -169,7 +172,6 @@ public class DeprovisionWorkflowTransportAction extends HandledTransportAction<W
     }
 
     private void executeDeprovisionSequence(
-        User user,
         String workflowId,
         Map<String, ResourceCreated> resourceMap,
         List<ProcessNode> provisionProcessSequence,
@@ -215,7 +217,8 @@ public class DeprovisionWorkflowTransportAction extends HandledTransportAction<W
             Iterator<ProcessNode> iter = deprovisionProcessSequence.iterator();
             while (iter.hasNext()) {
                 ProcessNode deprovisionNode = iter.next();
-                String resourceNameAndId = getResourceFromProcessNode(deprovisionNode, resourceMap);
+                ResourceCreated resource = getResourceFromDeprovisionNode(deprovisionNode, resourceMap);
+                String resourceNameAndId = getResourceNameAndId(resource);
                 CompletableFuture<WorkflowData> deprovisionFuture = deprovisionNode.execute();
                 try {
                     deprovisionFuture.join();
@@ -223,7 +226,7 @@ public class DeprovisionWorkflowTransportAction extends HandledTransportAction<W
                     // Remove from list so we don't try again
                     iter.remove();
                     // Pause briefly before next step
-                    Thread.sleep(100);
+                    // Thread.sleep(100);
                 } catch (Throwable t) {
                     logger.info(
                         "Failed {} for {}: {}",
@@ -249,7 +252,7 @@ public class DeprovisionWorkflowTransportAction extends HandledTransportAction<W
                 }).collect(Collectors.toList());
                 // Pause briefly before next loop
                 try {
-                    Thread.sleep(1000);
+                    Thread.sleep(1);
                 } catch (InterruptedException e) {
                     break;
                 }
@@ -258,17 +261,55 @@ public class DeprovisionWorkflowTransportAction extends HandledTransportAction<W
                 break;
             }
         }
-        if (deprovisionProcessSequence.isEmpty()) {
+        // Get corresponding resources
+        List<ResourceCreated> remainingResources = deprovisionProcessSequence.stream()
+            .map(pn -> getResourceFromDeprovisionNode(pn, resourceMap))
+            .collect(Collectors.toList());
+        logger.info("Resources remaining: {}", remainingResources);
+        updateWorkflowState(workflowId, remainingResources, listener);
+    }
+
+    private void updateWorkflowState(
+        String workflowId,
+        List<ResourceCreated> remainingResources,
+        ActionListener<WorkflowResponse> listener
+    ) {
+        if (remainingResources.isEmpty()) {
             // Successful deprovision
-            resetWorkflowState(user, workflowId, listener);
+            flowFrameworkIndicesHandler.updateFlowFrameworkSystemIndexDoc(
+                workflowId,
+                Map.ofEntries(
+                    Map.entry(STATE_FIELD, State.NOT_STARTED),
+                    Map.entry(PROVISIONING_PROGRESS_FIELD, ProvisioningProgress.NOT_STARTED),
+                    Map.entry(PROVISION_START_TIME_FIELD, Instant.now().toEpochMilli()),
+                    Map.entry(RESOURCES_CREATED_FIELD, Collections.emptyList())
+                ),
+                ActionListener.wrap(updateResponse -> {
+                    logger.info("updated workflow {} state to NOT_STARTED", workflowId);
+                }, exception -> { logger.error("Failed to update workflow state : {}", exception.getMessage()); })
+            );
+            // return workflow ID
+            listener.onResponse(new WorkflowResponse(workflowId));
         } else {
-            // Failed deprovision, give user list of remaining resources
+            // Failed deprovision
+            flowFrameworkIndicesHandler.updateFlowFrameworkSystemIndexDoc(
+                workflowId,
+                Map.ofEntries(
+                    Map.entry(STATE_FIELD, State.COMPLETED),
+                    Map.entry(PROVISIONING_PROGRESS_FIELD, ProvisioningProgress.DONE),
+                    Map.entry(PROVISION_START_TIME_FIELD, Instant.now().toEpochMilli()),
+                    Map.entry(RESOURCES_CREATED_FIELD, remainingResources)
+                ),
+                ActionListener.wrap(updateResponse -> {
+                    logger.info("updated workflow {} state to COMPLETED", workflowId);
+                }, exception -> { logger.error("Failed to update workflow state : {}", exception.getMessage()); })
+            );
+            // give user list of remaining resources
             listener.onFailure(
-                // TODO: Update state for this workflow ID to just the remaining resources
                 new FlowFrameworkException(
                     "Failed to deprovision some resources: ["
-                        + deprovisionProcessSequence.stream()
-                            .map(pn -> getResourceFromProcessNode(pn, resourceMap))
+                        + remainingResources.stream()
+                            .map(DeprovisionWorkflowTransportAction::getResourceNameAndId)
                             .filter(Objects::nonNull)
                             .distinct()
                             .collect(Collectors.joining(", "))
@@ -279,27 +320,16 @@ public class DeprovisionWorkflowTransportAction extends HandledTransportAction<W
         }
     }
 
-    private void resetWorkflowState(User user, String workflowId, ActionListener<WorkflowResponse> listener) {
-        flowFrameworkIndicesHandler.putInitialStateToWorkflowState(workflowId, user, ActionListener.wrap(stateResponse -> {
-            logger.info("create state workflow doc");
-            listener.onResponse(new WorkflowResponse(workflowId));
-        }, exception -> {
-            logger.error("Failed to save workflow state : {}", exception.getMessage());
-            if (exception instanceof FlowFrameworkException) {
-                listener.onFailure(exception);
-            } else {
-                listener.onFailure(new FlowFrameworkException(exception.getMessage(), RestStatus.BAD_REQUEST));
-            }
-        }));
-    }
-
-    private String getResourceFromProcessNode(ProcessNode deprovisionNode, Map<String, ResourceCreated> resourceMap) {
+    private static ResourceCreated getResourceFromDeprovisionNode(ProcessNode deprovisionNode, Map<String, ResourceCreated> resourceMap) {
         String deprovisionId = deprovisionNode.id();
         int pos = deprovisionId.indexOf(DEPROVISION_SUFFIX);
-        if (pos > 0) {
-            String stepName = deprovisionId.substring(0, pos);
-            return getResourceByWorkflowStep(deprovisionNode.workflowStep().getName()) + " " + resourceMap.get(stepName).resourceId();
+        return pos > 0 ? resourceMap.get(deprovisionId.substring(0, pos)) : null;
+    }
+
+    private static String getResourceNameAndId(ResourceCreated resource) {
+        if (resource == null) {
+            return null;
         }
-        return null;
+        return getResourceByWorkflowStep(resource.workflowStepName()) + " " + resource.resourceId();
     }
 }
