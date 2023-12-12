@@ -16,6 +16,7 @@ import org.opensearch.common.settings.Setting;
 import org.opensearch.common.settings.Settings;
 import org.opensearch.core.rest.RestStatus;
 import org.opensearch.core.xcontent.XContentParser;
+import org.opensearch.flowframework.common.FlowFrameworkSettings;
 import org.opensearch.flowframework.exception.FlowFrameworkException;
 import org.opensearch.flowframework.indices.FlowFrameworkIndicesHandler;
 import org.opensearch.flowframework.model.TemplateTestJsonUtil;
@@ -32,6 +33,7 @@ import org.junit.BeforeClass;
 import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
@@ -41,6 +43,7 @@ import java.util.stream.Stream;
 import static org.opensearch.flowframework.common.FlowFrameworkSettings.FLOW_FRAMEWORK_ENABLED;
 import static org.opensearch.flowframework.common.FlowFrameworkSettings.MAX_GET_TASK_REQUEST_RETRY;
 import static org.opensearch.flowframework.common.FlowFrameworkSettings.MAX_WORKFLOWS;
+import static org.opensearch.flowframework.common.FlowFrameworkSettings.MAX_WORKFLOW_STEPS;
 import static org.opensearch.flowframework.common.FlowFrameworkSettings.WORKFLOW_REQUEST_TIMEOUT;
 import static org.opensearch.flowframework.model.TemplateTestJsonUtil.edge;
 import static org.opensearch.flowframework.model.TemplateTestJsonUtil.node;
@@ -79,11 +82,12 @@ public class WorkflowProcessSorterTests extends OpenSearchTestCase {
         MachineLearningNodeClient mlClient = mock(MachineLearningNodeClient.class);
         FlowFrameworkIndicesHandler flowFrameworkIndicesHandler = mock(FlowFrameworkIndicesHandler.class);
 
+        Settings settings = Settings.builder().put("plugins.flow_framework.max_workflow_steps", 5).build();
         final Set<Setting<?>> settingsSet = Stream.concat(
             ClusterSettings.BUILT_IN_CLUSTER_SETTINGS.stream(),
-            Stream.of(FLOW_FRAMEWORK_ENABLED, MAX_WORKFLOWS, WORKFLOW_REQUEST_TIMEOUT, MAX_GET_TASK_REQUEST_RETRY)
+            Stream.of(FLOW_FRAMEWORK_ENABLED, MAX_WORKFLOWS, MAX_WORKFLOW_STEPS, WORKFLOW_REQUEST_TIMEOUT, MAX_GET_TASK_REQUEST_RETRY)
         ).collect(Collectors.toSet());
-        ClusterSettings clusterSettings = new ClusterSettings(Settings.EMPTY, settingsSet);
+        ClusterSettings clusterSettings = new ClusterSettings(settings, settingsSet);
         when(clusterService.getClusterSettings()).thenReturn(clusterSettings);
 
         when(client.admin()).thenReturn(adminClient);
@@ -96,7 +100,7 @@ public class WorkflowProcessSorterTests extends OpenSearchTestCase {
             mlClient,
             flowFrameworkIndicesHandler
         );
-        workflowProcessSorter = new WorkflowProcessSorter(factory, testThreadPool);
+        workflowProcessSorter = new WorkflowProcessSorter(factory, testThreadPool, clusterService, settings);
     }
 
     @AfterClass
@@ -244,6 +248,21 @@ public class WorkflowProcessSorterTests extends OpenSearchTestCase {
 
         ex = assertThrows(FlowFrameworkException.class, () -> parse(workflow(List.of(node("A"), node("A")), Collections.emptyList())));
         assertEquals("Duplicate node id A.", ex.getMessage());
+        assertEquals(RestStatus.BAD_REQUEST, ((FlowFrameworkException) ex).getRestStatus());
+
+        ex = assertThrows(
+            FlowFrameworkException.class,
+            () -> parse(workflow(List.of(node("A"), node("B"), node("C"), node("D"), node("E"), node("F")), Collections.emptyList()))
+        );
+        String message = String.format(
+            Locale.ROOT,
+            "Workflow %s has %d nodes, which exceeds the maximum of %d. Change the setting [%s] to increase this.",
+            "123",
+            6,
+            5,
+            FlowFrameworkSettings.MAX_WORKFLOW_STEPS.getKey()
+        );
+        assertEquals(message, ex.getMessage());
         assertEquals(RestStatus.BAD_REQUEST, ((FlowFrameworkException) ex).getRestStatus());
     }
 
