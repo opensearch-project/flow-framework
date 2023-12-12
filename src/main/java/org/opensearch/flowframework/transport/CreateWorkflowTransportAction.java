@@ -12,7 +12,6 @@ import com.google.common.collect.ImmutableMap;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.opensearch.ExceptionsHelper;
-import org.opensearch.action.ActionListenerResponseHandler;
 import org.opensearch.action.search.SearchRequest;
 import org.opensearch.action.support.ActionFilters;
 import org.opensearch.action.support.HandledTransportAction;
@@ -22,31 +21,19 @@ import org.opensearch.common.settings.Settings;
 import org.opensearch.common.unit.TimeValue;
 import org.opensearch.commons.authuser.User;
 import org.opensearch.core.action.ActionListener;
-import org.opensearch.core.common.io.stream.StreamInput;
 import org.opensearch.core.rest.RestStatus;
-import org.opensearch.core.transport.TransportResponse;
-import org.opensearch.core.xcontent.ToXContent;
-import org.opensearch.core.xcontent.XContentBuilder;
 import org.opensearch.flowframework.common.CommonValue;
 import org.opensearch.flowframework.exception.FlowFrameworkException;
 import org.opensearch.flowframework.indices.FlowFrameworkIndicesHandler;
 import org.opensearch.flowframework.model.ProvisioningProgress;
 import org.opensearch.flowframework.model.State;
 import org.opensearch.flowframework.model.Template;
-import org.opensearch.flowframework.model.Workflow;
-import org.opensearch.flowframework.workflow.ProcessNode;
 import org.opensearch.flowframework.workflow.WorkflowProcessSorter;
 import org.opensearch.index.query.QueryBuilder;
 import org.opensearch.index.query.QueryBuilders;
-import org.opensearch.rest.BytesRestResponse;
 import org.opensearch.search.builder.SearchSourceBuilder;
 import org.opensearch.tasks.Task;
-import org.opensearch.transport.TransportException;
-import org.opensearch.transport.TransportResponseHandler;
 import org.opensearch.transport.TransportService;
-
-import java.io.IOException;
-import java.util.List;
 
 import static org.opensearch.flowframework.common.CommonValue.PROVISIONING_PROGRESS_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.STATE_FIELD;
@@ -136,18 +123,22 @@ public class CreateWorkflowTransportAction extends HandledTransportAction<Workfl
                                             if (request.isProvision()) {
                                                 logger.info("provision parameter");
                                                 WorkflowRequest workflowRequest = new WorkflowRequest(globalContextResponse.getId(), null);
-                                                client.execute(ProvisionWorkflowAction.INSTANCE, workflowRequest, ActionListener.wrap(provisionResponse -> {
-                                                    listener.onResponse(new WorkflowResponse(provisionResponse.getWorkflowId()));
-                                                }, exception -> {
-                                                    if (exception instanceof FlowFrameworkException) {
-                                                        listener.onFailure(exception);
-                                                    } else {
-                                                        listener.onFailure(
-                                                            new FlowFrameworkException(exception.getMessage(), RestStatus.BAD_REQUEST)
-                                                        );
-                                                    }
-                                                    logger.error("Failed to send back provision workflow exception", exception);
-                                                }));
+                                                client.execute(
+                                                    ProvisionWorkflowAction.INSTANCE,
+                                                    workflowRequest,
+                                                    ActionListener.wrap(provisionResponse -> {
+                                                        listener.onResponse(new WorkflowResponse(provisionResponse.getWorkflowId()));
+                                                    }, exception -> {
+                                                        if (exception instanceof FlowFrameworkException) {
+                                                            listener.onFailure(exception);
+                                                        } else {
+                                                            listener.onFailure(
+                                                                new FlowFrameworkException(exception.getMessage(), RestStatus.BAD_REQUEST)
+                                                            );
+                                                        }
+                                                        logger.error("Failed to send back provision workflow exception", exception);
+                                                    })
+                                                );
                                             } else {
                                                 listener.onResponse(new WorkflowResponse(globalContextResponse.getId()));
                                             }
@@ -254,12 +245,4 @@ public class CreateWorkflowTransportAction extends HandledTransportAction<Workfl
             }));
         }
     }
-
-    private void validateWorkflows(Template template) throws Exception {
-        for (Workflow workflow : template.workflows().values()) {
-            List<ProcessNode> sortedNodes = workflowProcessSorter.sortProcessNodes(workflow, null);
-            workflowProcessSorter.validateGraph(sortedNodes);
-        }
-    }
-
 }
