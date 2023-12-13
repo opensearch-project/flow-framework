@@ -155,7 +155,7 @@ public class DeprovisionWorkflowTransportActionTests extends OpenSearchTestCase 
             ActionListener<GetWorkflowStateResponse> responseListener = invocation.getArgument(2);
 
             WorkflowState state = WorkflowState.builder()
-                .resourcesCreated(List.of(new ResourceCreated("create_connector", "step_1", "connectorId")))
+                .resourcesCreated(List.of(new ResourceCreated("create_connector", "step_1", "connector_id", "connectorId")))
                 .build();
             responseListener.onResponse(new GetWorkflowStateResponse(state, true));
             return null;
@@ -215,7 +215,7 @@ public class DeprovisionWorkflowTransportActionTests extends OpenSearchTestCase 
             ActionListener<GetWorkflowStateResponse> responseListener = invocation.getArgument(2);
 
             WorkflowState state = WorkflowState.builder()
-                .resourcesCreated(List.of(new ResourceCreated("deploy_model", "step_1", "modelId")))
+                .resourcesCreated(List.of(new ResourceCreated("deploy_model", "step_1", "model_id", "modelId")))
                 .build();
             responseListener.onResponse(new GetWorkflowStateResponse(state, true));
             return null;
