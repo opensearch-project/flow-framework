@@ -67,7 +67,7 @@ public class CreateWorkflowTransportActionTests extends OpenSearchTestCase {
         super.setUp();
         threadPool = mock(ThreadPool.class);
         settings = Settings.builder()
-            .put("plugins.flow_framework.max_workflows.", 2)
+            .put("plugins.flow_framework.max_workflows", 2)
             .put("plugins.flow_framework.request_timeout", TimeValue.timeValueSeconds(10))
             .build();
         this.flowFrameworkIndicesHandler = mock(FlowFrameworkIndicesHandler.class);
@@ -193,7 +193,7 @@ public class CreateWorkflowTransportActionTests extends OpenSearchTestCase {
         createWorkflowTransportAction.doExecute(mock(Task.class), workflowRequest, listener);
         ArgumentCaptor<Exception> exceptionCaptor = ArgumentCaptor.forClass(Exception.class);
         verify(listener, times(1)).onFailure(exceptionCaptor.capture());
-        assertEquals(("Maximum workflows limit reached 1000"), exceptionCaptor.getValue().getMessage());
+        assertEquals(("Maximum workflows limit reached 2"), exceptionCaptor.getValue().getMessage());
     }
 
     public void testMaxWorkflowWithNoIndex() {

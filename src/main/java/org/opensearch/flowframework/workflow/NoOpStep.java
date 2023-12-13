@@ -17,6 +17,9 @@ import java.util.concurrent.CompletableFuture;
  */
 public class NoOpStep implements WorkflowStep {
 
+    /** Instantiate this class */
+    public NoOpStep() {}
+
     /** The name of this step, used as a key in the template and the {@link WorkflowStepFactory} */
     public static final String NAME = "noop";
 
