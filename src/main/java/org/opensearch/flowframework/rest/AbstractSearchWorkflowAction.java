@@ -35,6 +35,7 @@ import static org.opensearch.flowframework.util.RestHandlerUtils.getSourceContex
 
 /**
  * Abstract class to handle search request.
+ * @param <T> The type to search
  */
 public abstract class AbstractSearchWorkflowAction<T extends ToXContentObject> extends BaseRestHandler {
 
