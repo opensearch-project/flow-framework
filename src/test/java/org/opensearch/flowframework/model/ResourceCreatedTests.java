@@ -20,17 +20,17 @@ public class ResourceCreatedTests extends OpenSearchTestCase {
     }
 
     public void testParseFeature() throws IOException {
-        ResourceCreated ResourceCreated = new ResourceCreated("A", "B");
-        assertEquals(ResourceCreated.workflowStepName(), "A");
-        assertEquals(ResourceCreated.resourceId(), "B");
+        ResourceCreated resourceCreated = new ResourceCreated("A", "B");
+        assertEquals(resourceCreated.workflowStepName(), "A");
+        assertEquals(resourceCreated.resourceId(), "B");
 
         String expectedJson = "{\"workflow_step_name\":\"A\",\"resource_id\":\"B\"}";
-        String json = TemplateTestJsonUtil.parseToJson(ResourceCreated);
+        String json = TemplateTestJsonUtil.parseToJson(resourceCreated);
         assertEquals(expectedJson, json);
 
-        ResourceCreated ResourceCreatedTwo = ResourceCreated.parse(TemplateTestJsonUtil.jsonToParser(json));
-        assertEquals("A", ResourceCreatedTwo.workflowStepName());
-        assertEquals("B", ResourceCreatedTwo.resourceId());
+        ResourceCreated resourceCreatedTwo = ResourceCreated.parse(TemplateTestJsonUtil.jsonToParser(json));
+        assertEquals("A", resourceCreatedTwo.workflowStepName());
+        assertEquals("B", resourceCreatedTwo.resourceId());
     }
 
     public void testExceptions() throws IOException {

@@ -15,7 +15,6 @@ import org.opensearch.client.Client;
 import org.opensearch.common.settings.Settings;
 import org.opensearch.common.util.concurrent.ThreadContext;
 import org.opensearch.core.action.ActionListener;
-import org.opensearch.flowframework.indices.FlowFrameworkIndicesHandler;
 import org.opensearch.tasks.Task;
 import org.opensearch.test.OpenSearchTestCase;
 import org.opensearch.threadpool.ThreadPool;
@@ -23,7 +22,7 @@ import org.opensearch.transport.TransportService;
 
 import org.mockito.ArgumentCaptor;
 
-import static org.mockito.Mockito.any;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
@@ -33,10 +32,8 @@ import static org.mockito.Mockito.when;
 public class SearchWorkflowTransportActionTests extends OpenSearchTestCase {
 
     private SearchWorkflowTransportAction searchWorkflowTransportAction;
-    private FlowFrameworkIndicesHandler flowFrameworkIndicesHandler;
     private Client client;
     private ThreadPool threadPool;
-    private ThreadContext threadContext;
 
     @Override
     public void setUp() throws Exception {

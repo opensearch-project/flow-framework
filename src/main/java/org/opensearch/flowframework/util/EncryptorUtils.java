@@ -56,6 +56,8 @@ public class EncryptorUtils {
 
     private static final String ALGORITHM = "AES";
     private static final String PROVIDER = "Custom";
+    // Intentionally uppercase to work around localization bug
+    // https://github.com/aws/aws-encryption-sdk-java/issues/1879
     private static final String WRAPPING_ALGORITHM = "AES/GCM/NOPADDING";
 
     private ClusterService clusterService;
