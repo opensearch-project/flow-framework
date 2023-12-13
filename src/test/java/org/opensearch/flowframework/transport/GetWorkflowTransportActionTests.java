@@ -8,120 +8,151 @@
  */
 package org.opensearch.flowframework.transport;
 
+import org.opensearch.Version;
+import org.opensearch.action.get.GetRequest;
+import org.opensearch.action.get.GetResponse;
 import org.opensearch.action.support.ActionFilters;
 import org.opensearch.client.Client;
-import org.opensearch.common.io.stream.BytesStreamOutput;
 import org.opensearch.common.settings.Settings;
 import org.opensearch.common.util.concurrent.ThreadContext;
+import org.opensearch.common.xcontent.XContentFactory;
 import org.opensearch.core.action.ActionListener;
-import org.opensearch.core.common.io.stream.NamedWriteableAwareStreamInput;
-import org.opensearch.core.common.io.stream.StreamInput;
-import org.opensearch.core.xcontent.ToXContent;
+import org.opensearch.core.common.bytes.BytesReference;
 import org.opensearch.core.xcontent.XContentBuilder;
 import org.opensearch.flowframework.TestHelpers;
 import org.opensearch.flowframework.indices.FlowFrameworkIndicesHandler;
-import org.opensearch.flowframework.model.WorkflowState;
+import org.opensearch.flowframework.model.Template;
+import org.opensearch.flowframework.model.Workflow;
+import org.opensearch.flowframework.model.WorkflowEdge;
+import org.opensearch.flowframework.model.WorkflowNode;
+import org.opensearch.index.get.GetResult;
 import org.opensearch.tasks.Task;
 import org.opensearch.test.OpenSearchTestCase;
 import org.opensearch.threadpool.ThreadPool;
 import org.opensearch.transport.TransportService;
-import org.junit.Assert;
 
-import java.io.IOException;
-import java.time.Instant;
-import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 
-import org.mockito.Mockito;
+import org.mockito.ArgumentCaptor;
 
+import static org.opensearch.flowframework.common.CommonValue.GLOBAL_CONTEXT_INDEX;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 public class GetWorkflowTransportActionTests extends OpenSearchTestCase {
 
-    private GetWorkflowTransportAction getWorkflowTransportAction;
-    private FlowFrameworkIndicesHandler flowFrameworkIndicesHandler;
-    private Client client;
     private ThreadPool threadPool;
-    private ThreadContext threadContext;
-    private ActionListener<GetWorkflowResponse> response;
-    private Task task;
+    private Client client;
+    private GetWorkflowTransportAction getTemplateTransportAction;
+    private FlowFrameworkIndicesHandler flowFrameworkIndicesHandler;
+    private Template template;
 
     @Override
     public void setUp() throws Exception {
         super.setUp();
-        this.client = mock(Client.class);
         this.threadPool = mock(ThreadPool.class);
-        this.getWorkflowTransportAction = new GetWorkflowTransportAction(
+        this.client = mock(Client.class);
+        this.flowFrameworkIndicesHandler = mock(FlowFrameworkIndicesHandler.class);
+        this.getTemplateTransportAction = new GetWorkflowTransportAction(
             mock(TransportService.class),
             mock(ActionFilters.class),
-            client,
-            xContentRegistry()
+            flowFrameworkIndicesHandler,
+            client
         );
-        task = Mockito.mock(Task.class);
+
+        Version templateVersion = Version.fromString("1.0.0");
+        List<Version> compatibilityVersions = List.of(Version.fromString("2.0.0"), Version.fromString("3.0.0"));
+        WorkflowNode nodeA = new WorkflowNode("A", "a-type", Map.of(), Map.of("foo", "bar"));
+        WorkflowNode nodeB = new WorkflowNode("B", "b-type", Map.of(), Map.of("baz", "qux"));
+        WorkflowEdge edgeAB = new WorkflowEdge("A", "B");
+        List<WorkflowNode> nodes = List.of(nodeA, nodeB);
+        List<WorkflowEdge> edges = List.of(edgeAB);
+        Workflow workflow = new Workflow(Map.of("key", "value"), nodes, edges);
+
+        this.template = new Template(
+            "test",
+            "description",
+            "use case",
+            templateVersion,
+            compatibilityVersions,
+            Map.of("provision", workflow),
+            Map.of(),
+            TestHelpers.randomUser()
+        );
+
         ThreadPool clientThreadPool = mock(ThreadPool.class);
         ThreadContext threadContext = new ThreadContext(Settings.EMPTY);
 
         when(client.threadPool()).thenReturn(clientThreadPool);
         when(clientThreadPool.getThreadContext()).thenReturn(threadContext);
 
-        response = new ActionListener<GetWorkflowResponse>() {
-            @Override
-            public void onResponse(GetWorkflowResponse getResponse) {
-                assertTrue(true);
-            }
-
-            @Override
-            public void onFailure(Exception e) {}
-        };
-
     }
 
-    public void testGetTransportAction() throws IOException {
-        GetWorkflowRequest getWorkflowRequest = new GetWorkflowRequest("1234", false);
-        getWorkflowTransportAction.doExecute(task, getWorkflowRequest, response);
+    public void testGetWorkflowNoGlobalContext() {
+
+        when(flowFrameworkIndicesHandler.doesIndexExist(anyString())).thenReturn(false);
+        @SuppressWarnings("unchecked")
+        ActionListener<GetWorkflowResponse> listener = mock(ActionListener.class);
+        WorkflowRequest workflowRequest = new WorkflowRequest("1", null);
+        getTemplateTransportAction.doExecute(mock(Task.class), workflowRequest, listener);
+
+        ArgumentCaptor<Exception> exceptionCaptor = ArgumentCaptor.forClass(Exception.class);
+        verify(listener, times(1)).onFailure(exceptionCaptor.capture());
+        assertTrue(exceptionCaptor.getValue().getMessage().contains("There are no templates in the global_context"));
     }
 
-    public void testGetAction() {
-        Assert.assertNotNull(GetWorkflowAction.INSTANCE.name());
-        Assert.assertEquals(GetWorkflowAction.INSTANCE.name(), GetWorkflowAction.NAME);
+    public void testGetWorkflowSuccess() {
+        String workflowId = "12345";
+        @SuppressWarnings("unchecked")
+        ActionListener<GetWorkflowResponse> listener = mock(ActionListener.class);
+        WorkflowRequest workflowRequest = new WorkflowRequest(workflowId, null);
+
+        when(flowFrameworkIndicesHandler.doesIndexExist(anyString())).thenReturn(true);
+
+        // Stub client.get to force on response
+        doAnswer(invocation -> {
+            ActionListener<GetResponse> responseListener = invocation.getArgument(1);
+
+            XContentBuilder builder = XContentFactory.jsonBuilder();
+            this.template.toXContent(builder, null);
+            BytesReference templateBytesRef = BytesReference.bytes(builder);
+            GetResult getResult = new GetResult(GLOBAL_CONTEXT_INDEX, workflowId, 1, 1, 1, true, templateBytesRef, null, null);
+            responseListener.onResponse(new GetResponse(getResult));
+            return null;
+        }).when(client).get(any(GetRequest.class), any());
+
+        getTemplateTransportAction.doExecute(mock(Task.class), workflowRequest, listener);
+
+        ArgumentCaptor<GetWorkflowResponse> templateCaptor = ArgumentCaptor.forClass(GetWorkflowResponse.class);
+        verify(listener, times(1)).onResponse(templateCaptor.capture());
+        assertEquals(this.template.name(), templateCaptor.getValue().getTemplate().name());
     }
 
-    public void testGetAnomalyDetectorRequest() throws IOException {
-        GetWorkflowRequest request = new GetWorkflowRequest("1234", false);
-        BytesStreamOutput out = new BytesStreamOutput();
-        request.writeTo(out);
-        StreamInput input = out.bytes().streamInput();
-        GetWorkflowRequest newRequest = new GetWorkflowRequest(input);
-        Assert.assertEquals(request.getWorkflowId(), newRequest.getWorkflowId());
-        Assert.assertEquals(request.getAll(), newRequest.getAll());
-        Assert.assertNull(newRequest.validate());
-    }
+    public void testGetWorkflowFailure() {
+        String workflowId = "12345";
+        @SuppressWarnings("unchecked")
+        ActionListener<GetWorkflowResponse> listener = mock(ActionListener.class);
+        WorkflowRequest workflowRequest = new WorkflowRequest(workflowId, null);
 
-    public void testGetAnomalyDetectorResponse() throws IOException {
-        BytesStreamOutput out = new BytesStreamOutput();
-        String workflowId = randomAlphaOfLength(5);
-        WorkflowState workFlowState = new WorkflowState(
-            workflowId,
-            "test",
-            "PROVISIONING",
-            "IN_PROGRESS",
-            Instant.now(),
-            Instant.now(),
-            TestHelpers.randomUser(),
-            Collections.emptyMap(),
-            Collections.emptyList()
-        );
+        when(flowFrameworkIndicesHandler.doesIndexExist(anyString())).thenReturn(true);
 
-        GetWorkflowResponse response = new GetWorkflowResponse(workFlowState, false);
-        response.writeTo(out);
-        NamedWriteableAwareStreamInput input = new NamedWriteableAwareStreamInput(out.bytes().streamInput(), writableRegistry());
-        GetWorkflowResponse newResponse = new GetWorkflowResponse(input);
-        XContentBuilder builder = TestHelpers.builder();
-        Assert.assertNotNull(newResponse.toXContent(builder, ToXContent.EMPTY_PARAMS));
+        // Stub client.get to force on failure
+        doAnswer(invocation -> {
+            ActionListener<GetResponse> responseListener = invocation.getArgument(1);
+            responseListener.onFailure(new Exception("Failed to retrieve template from global context."));
+            return null;
+        }).when(client).get(any(GetRequest.class), any());
 
-        Map<String, Object> map = TestHelpers.XContentBuilderToMap(builder);
-        Assert.assertEquals(map.get("state"), workFlowState.getState());
-        Assert.assertEquals(map.get("workflow_id"), workFlowState.getWorkflowId());
+        getTemplateTransportAction.doExecute(mock(Task.class), workflowRequest, listener);
+
+        ArgumentCaptor<Exception> exceptionCaptor = ArgumentCaptor.forClass(Exception.class);
+        verify(listener, times(1)).onFailure(exceptionCaptor.capture());
+        assertEquals("Failed to retrieve template from global context.", exceptionCaptor.getValue().getMessage());
     }
 }
