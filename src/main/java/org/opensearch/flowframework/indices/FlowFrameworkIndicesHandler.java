@@ -34,6 +34,7 @@ import org.opensearch.core.rest.RestStatus;
 import org.opensearch.core.xcontent.ToXContent;
 import org.opensearch.core.xcontent.ToXContentObject;
 import org.opensearch.core.xcontent.XContentBuilder;
+import org.opensearch.flowframework.common.WorkflowResources;
 import org.opensearch.flowframework.exception.FlowFrameworkException;
 import org.opensearch.flowframework.model.ProvisioningProgress;
 import org.opensearch.flowframework.model.ResourceCreated;
@@ -500,7 +501,12 @@ public class FlowFrameworkIndicesHandler {
         String resourceId,
         ActionListener<UpdateResponse> listener
     ) throws IOException {
-        ResourceCreated newResource = new ResourceCreated(workflowStepName, nodeId, resourceId);
+        ResourceCreated newResource = new ResourceCreated(
+            workflowStepName,
+            nodeId,
+            WorkflowResources.getResourceByWorkflowStep(workflowStepName),
+            resourceId
+        );
         XContentBuilder builder = XContentBuilder.builder(XContentType.JSON.xContent());
         newResource.toXContent(builder, ToXContentObject.EMPTY_PARAMS);
 
