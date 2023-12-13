@@ -16,6 +16,8 @@ import static org.opensearch.flowframework.common.CommonValue.TRANSPORT_ACTION_N
  * External Action for public facing RestGetWorkflowStateAction
  */
 public class GetWorkflowStateAction extends ActionType<GetWorkflowStateResponse> {
+    // TODO : If the template body is returned as part of the GetWorkflowStateAction,
+    // it is necessary to ensure the user has permissions for workflow/get
     /** The name of this action */
     public static final String NAME = TRANSPORT_ACTION_NAME_PREFIX + "workflow_state/get";
     /** An instance of this action */
