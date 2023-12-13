@@ -9,6 +9,7 @@
 package org.opensearch.flowframework.model;
 
 import org.opensearch.flowframework.common.WorkflowResources;
+import org.opensearch.flowframework.exception.FlowFrameworkException;
 import org.opensearch.test.OpenSearchTestCase;
 
 import java.io.IOException;
@@ -28,7 +29,7 @@ public class ResourceCreatedTests extends OpenSearchTestCase {
         assertEquals(ResourceCreated.resourceId(), "L85p1IsBbfF");
 
         String expectedJson =
-            "{\"workflow_step_name\":\"create_connector\",\"workflow_step_id\":\"workflow_step_1\",\"connector_id\":\"L85p1IsBbfF\"}";
+            "{\"workflow_step_name\":\"create_connector\",\"workflow_step_id\":\"workflow_step_1\",\"resource_type\":\"connector_id\",\"resource_id\":\"L85p1IsBbfF\"}";
         String json = TemplateTestJsonUtil.parseToJson(ResourceCreated);
         assertEquals(expectedJson, json);
 
@@ -40,12 +41,18 @@ public class ResourceCreatedTests extends OpenSearchTestCase {
 
     public void testExceptions() throws IOException {
         String badJson = "{\"wrong\":\"A\",\"resource_id\":\"B\"}";
-        IOException e = assertThrows(IOException.class, () -> ResourceCreated.parse(TemplateTestJsonUtil.jsonToParser(badJson)));
-        assertEquals("Unable to parse field [wrong] in a resources_created object.", e.getMessage());
+        IOException badJsonException = assertThrows(
+            IOException.class,
+            () -> ResourceCreated.parse(TemplateTestJsonUtil.jsonToParser(badJson))
+        );
+        assertEquals("Unable to parse field [wrong] in a resources_created object.", badJsonException.getMessage());
 
         String missingJson = "{\"resource_id\":\"B\"}";
-        e = assertThrows(IOException.class, () -> ResourceCreated.parse(TemplateTestJsonUtil.jsonToParser(missingJson)));
-        assertEquals("Unable to parse field [resource_id] in a resources_created object.", e.getMessage());
+        FlowFrameworkException missingJsonException = assertThrows(
+            FlowFrameworkException.class,
+            () -> ResourceCreated.parse(TemplateTestJsonUtil.jsonToParser(missingJson))
+        );
+        assertEquals("A ResourceCreated object requires workflowStepName", missingJsonException.getMessage());
     }
 
 }
