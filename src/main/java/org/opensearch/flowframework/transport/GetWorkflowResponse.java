@@ -13,55 +13,52 @@ import org.opensearch.core.common.io.stream.StreamInput;
 import org.opensearch.core.common.io.stream.StreamOutput;
 import org.opensearch.core.xcontent.ToXContentObject;
 import org.opensearch.core.xcontent.XContentBuilder;
-import org.opensearch.flowframework.model.WorkflowState;
+import org.opensearch.flowframework.model.Template;
 
 import java.io.IOException;
 
 /**
- * Transport Response from getting a workflow status
+ * Transport Response from getting a template
  */
 public class GetWorkflowResponse extends ActionResponse implements ToXContentObject {
 
-    /** The workflow state */
-    public WorkflowState workflowState;
-    /** Flag to indicate if the entire state should be returned */
-    public boolean allStatus;
+    /** The template */
+    private Template template;
 
     /**
      * Instantiates a new GetWorkflowResponse from an input stream
      * @param in the input stream to read from
-     * @throws IOException if the workflowId cannot be read from the input stream
+     * @throws IOException if the template json cannot be read from the input stream
      */
     public GetWorkflowResponse(StreamInput in) throws IOException {
         super(in);
-        workflowState = new WorkflowState(in);
-        allStatus = in.readBoolean();
+        this.template = Template.parse(in.readString());
     }
 
     /**
-     * Instatiates a new GetWorkflowResponse from an input stream
-     * @param workflowState the workflow state object
-     * @param allStatus whether to return all fields in state index
+     * Instantiates a new GetWorkflowResponse
+     * @param template the template
      */
-    public GetWorkflowResponse(WorkflowState workflowState, boolean allStatus) {
-        if (allStatus) {
-            this.workflowState = workflowState;
-        } else {
-            this.workflowState = new WorkflowState.Builder().workflowId(workflowState.getWorkflowId())
-                .error(workflowState.getError())
-                .state(workflowState.getState())
-                .resourcesCreated(workflowState.resourcesCreated())
-                .build();
-        }
+    public GetWorkflowResponse(Template template) {
+        this.template = template;
     }
 
     @Override
     public void writeTo(StreamOutput out) throws IOException {
-        workflowState.writeTo(out);
+        out.writeString(template.toJson());
     }
 
     @Override
     public XContentBuilder toXContent(XContentBuilder xContentBuilder, Params params) throws IOException {
-        return workflowState.toXContent(xContentBuilder, params);
+        return this.template.toXContent(xContentBuilder, params);
     }
+
+    /**
+     * Gets the template
+     * @return the template
+     */
+    public Template getTemplate() {
+        return this.template;
+    }
+
 }

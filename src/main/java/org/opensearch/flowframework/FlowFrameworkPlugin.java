@@ -29,11 +29,14 @@ import org.opensearch.flowframework.common.FlowFrameworkFeatureEnabledSetting;
 import org.opensearch.flowframework.indices.FlowFrameworkIndicesHandler;
 import org.opensearch.flowframework.rest.RestCreateWorkflowAction;
 import org.opensearch.flowframework.rest.RestGetWorkflowAction;
+import org.opensearch.flowframework.rest.RestGetWorkflowStateAction;
 import org.opensearch.flowframework.rest.RestProvisionWorkflowAction;
 import org.opensearch.flowframework.rest.RestSearchWorkflowAction;
 import org.opensearch.flowframework.transport.CreateWorkflowAction;
 import org.opensearch.flowframework.transport.CreateWorkflowTransportAction;
 import org.opensearch.flowframework.transport.GetWorkflowAction;
+import org.opensearch.flowframework.transport.GetWorkflowStateAction;
+import org.opensearch.flowframework.transport.GetWorkflowStateTransportAction;
 import org.opensearch.flowframework.transport.GetWorkflowTransportAction;
 import org.opensearch.flowframework.transport.ProvisionWorkflowAction;
 import org.opensearch.flowframework.transport.ProvisionWorkflowTransportAction;
@@ -126,6 +129,7 @@ public class FlowFrameworkPlugin extends Plugin implements ActionPlugin {
             new RestCreateWorkflowAction(flowFrameworkFeatureEnabledSetting, settings, clusterService),
             new RestProvisionWorkflowAction(flowFrameworkFeatureEnabledSetting),
             new RestSearchWorkflowAction(flowFrameworkFeatureEnabledSetting),
+            new RestGetWorkflowStateAction(flowFrameworkFeatureEnabledSetting),
             new RestGetWorkflowAction(flowFrameworkFeatureEnabledSetting)
         );
     }
@@ -136,6 +140,7 @@ public class FlowFrameworkPlugin extends Plugin implements ActionPlugin {
             new ActionHandler<>(CreateWorkflowAction.INSTANCE, CreateWorkflowTransportAction.class),
             new ActionHandler<>(ProvisionWorkflowAction.INSTANCE, ProvisionWorkflowTransportAction.class),
             new ActionHandler<>(SearchWorkflowAction.INSTANCE, SearchWorkflowTransportAction.class),
+            new ActionHandler<>(GetWorkflowStateAction.INSTANCE, GetWorkflowStateTransportAction.class),
             new ActionHandler<>(GetWorkflowAction.INSTANCE, GetWorkflowTransportAction.class)
         );
     }
