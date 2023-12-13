@@ -23,20 +23,22 @@ public class ResourceCreatedTests extends OpenSearchTestCase {
 
     public void testParseFeature() throws IOException {
         String workflowStepName = WorkflowResources.CREATE_CONNECTOR.getWorkflowStep();
-        ResourceCreated ResourceCreated = new ResourceCreated(workflowStepName, "workflow_step_1", "L85p1IsBbfF");
-        assertEquals(ResourceCreated.workflowStepName(), workflowStepName);
-        assertEquals(ResourceCreated.workflowStepId(), "workflow_step_1");
-        assertEquals(ResourceCreated.resourceId(), "L85p1IsBbfF");
+        String resourceType = WorkflowResources.getResourceByWorkflowStep(workflowStepName);
+        ResourceCreated resourceCreated = new ResourceCreated(workflowStepName, "workflow_step_1", resourceType, "L85p1IsBbfF");
+        assertEquals(workflowStepName, resourceCreated.workflowStepName());
+        assertEquals("workflow_step_1", resourceCreated.workflowStepId());
+        assertEquals("connector_id", resourceCreated.resourceType());
+        assertEquals("L85p1IsBbfF", resourceCreated.resourceId());
 
         String expectedJson =
             "{\"workflow_step_name\":\"create_connector\",\"workflow_step_id\":\"workflow_step_1\",\"resource_type\":\"connector_id\",\"resource_id\":\"L85p1IsBbfF\"}";
-        String json = TemplateTestJsonUtil.parseToJson(ResourceCreated);
+        String json = TemplateTestJsonUtil.parseToJson(resourceCreated);
         assertEquals(expectedJson, json);
 
-        ResourceCreated ResourceCreatedTwo = ResourceCreated.parse(TemplateTestJsonUtil.jsonToParser(json));
-        assertEquals(workflowStepName, ResourceCreatedTwo.workflowStepName());
-        assertEquals("workflow_step_1", ResourceCreatedTwo.workflowStepId());
-        assertEquals("L85p1IsBbfF", ResourceCreatedTwo.resourceId());
+        ResourceCreated resourceCreatedTwo = ResourceCreated.parse(TemplateTestJsonUtil.jsonToParser(json));
+        assertEquals(workflowStepName, resourceCreatedTwo.workflowStepName());
+        assertEquals("workflow_step_1", resourceCreatedTwo.workflowStepId());
+        assertEquals("L85p1IsBbfF", resourceCreatedTwo.resourceId());
     }
 
     public void testExceptions() throws IOException {

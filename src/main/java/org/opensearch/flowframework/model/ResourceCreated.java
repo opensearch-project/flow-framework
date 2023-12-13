@@ -17,7 +17,6 @@ import org.opensearch.core.rest.RestStatus;
 import org.opensearch.core.xcontent.ToXContentObject;
 import org.opensearch.core.xcontent.XContentBuilder;
 import org.opensearch.core.xcontent.XContentParser;
-import org.opensearch.flowframework.common.WorkflowResources;
 import org.opensearch.flowframework.exception.FlowFrameworkException;
 
 import java.io.IOException;
@@ -45,16 +44,10 @@ public class ResourceCreated implements ToXContentObject, Writeable {
      * Create this resources created object with given workflow step name, ID and resource ID.
      * @param workflowStepName The workflow step name associating to the step where it was created
      * @param workflowStepId The workflow step ID associating to the step where it was created
+     * @param resourceType The resource type
      * @param resourceId The resources ID for relating to the created resource
      */
-    public ResourceCreated(String workflowStepName, String workflowStepId, String resourceId) {
-        this.workflowStepName = workflowStepName;
-        this.workflowStepId = workflowStepId;
-        this.resourceType = WorkflowResources.getResourceByWorkflowStep(workflowStepName);
-        this.resourceId = resourceId;
-    }
-
-    private ResourceCreated(String workflowStepName, String workflowStepId, String resourceType, String resourceId) {
+    public ResourceCreated(String workflowStepName, String workflowStepId, String resourceType, String resourceId) {
         this.workflowStepName = workflowStepName;
         this.workflowStepId = workflowStepId;
         this.resourceType = resourceType;
