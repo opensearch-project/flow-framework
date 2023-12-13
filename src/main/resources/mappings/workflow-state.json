@@ -31,7 +31,21 @@
       "type": "object"
     },
     "resources_created": {
-      "type": "object"
+      "type": "nested",
+      "properties": {
+        "workflow_step_name": {
+          "type": "keyword"
+        },
+        "workflow_step_id": {
+          "type": "keyword"
+        },
+        "resource_type": {
+          "type": "keyword"
+        },
+        "resource_id": {
+          "type": "keyword"
+        }
+      }
     },
     "ui_metadata": {
       "type": "object",

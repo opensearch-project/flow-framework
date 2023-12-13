@@ -23,9 +23,9 @@ import java.io.IOException;
 public class GetWorkflowStateResponse extends ActionResponse implements ToXContentObject {
 
     /** The workflow state */
-    public WorkflowState workflowState;
+    private final WorkflowState workflowState;
     /** Flag to indicate if the entire state should be returned */
-    public boolean allStatus;
+    private final boolean allStatus;
 
     /**
      * Instantiates a new GetWorkflowStateResponse from an input stream
@@ -44,6 +44,7 @@ public class GetWorkflowStateResponse extends ActionResponse implements ToXConte
      * @param allStatus whether to return all fields in state index
      */
     public GetWorkflowStateResponse(WorkflowState workflowState, boolean allStatus) {
+        this.allStatus = allStatus;
         if (allStatus) {
             this.workflowState = workflowState;
         } else {
@@ -58,10 +59,27 @@ public class GetWorkflowStateResponse extends ActionResponse implements ToXConte
     @Override
     public void writeTo(StreamOutput out) throws IOException {
         workflowState.writeTo(out);
+        out.writeBoolean(allStatus);
     }
 
     @Override
     public XContentBuilder toXContent(XContentBuilder xContentBuilder, Params params) throws IOException {
         return workflowState.toXContent(xContentBuilder, params);
+    }
+
+    /**
+     * Gets the workflow state.
+     * @return the workflow state
+     */
+    public WorkflowState getWorkflowState() {
+        return workflowState;
+    }
+
+    /**
+     * Gets whether to return the entire state.
+     * @return true if the entire state should be returned
+     */
+    public boolean isAllStatus() {
+        return allStatus;
     }
 }
