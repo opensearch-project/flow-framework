@@ -145,8 +145,9 @@ public class DeprovisionWorkflowTransportAction extends HandledTransportAction<W
                 }
             }));
         } catch (Exception e) {
-            logger.error("Failed to retrieve template from global context.", e);
-            listener.onFailure(new FlowFrameworkException(e.getMessage(), ExceptionsHelper.status(e)));
+            String message = "Failed to retrieve template from global context.";
+            logger.error(message, e);
+            listener.onFailure(new FlowFrameworkException(message, ExceptionsHelper.status(e)));
         }
     }
 
@@ -155,8 +156,8 @@ public class DeprovisionWorkflowTransportAction extends HandledTransportAction<W
         List<ProcessNode> provisionProcessSequence,
         ActionListener<WorkflowResponse> listener
     ) {
-        GetWorkflowStateRequest getRequest = new GetWorkflowStateRequest(workflowId, true);
-        client.execute(GetWorkflowStateAction.INSTANCE, getRequest, ActionListener.wrap(response -> {
+        GetWorkflowStateRequest getStateRequest = new GetWorkflowStateRequest(workflowId, true);
+        client.execute(GetWorkflowStateAction.INSTANCE, getStateRequest, ActionListener.wrap(response -> {
             // Get a map of step id to created resources
             final Map<String, ResourceCreated> resourceMap = response.getWorkflowState()
                 .resourcesCreated()
@@ -166,8 +167,9 @@ public class DeprovisionWorkflowTransportAction extends HandledTransportAction<W
             // Now finally do the deprovision
             executeDeprovisionSequence(workflowId, resourceMap, provisionProcessSequence, listener);
         }, exception -> {
-            logger.error("Failed to get workflow state for workflow " + workflowId);
-            listener.onFailure(new FlowFrameworkException(exception.getMessage(), ExceptionsHelper.status(exception)));
+            String message = "Failed to get workflow state for workflow " + workflowId;
+            logger.error(message, exception);
+            listener.onFailure(new FlowFrameworkException(message, ExceptionsHelper.status(exception)));
         }));
     }
 
@@ -177,7 +179,7 @@ public class DeprovisionWorkflowTransportAction extends HandledTransportAction<W
         List<ProcessNode> provisionProcessSequence,
         ActionListener<WorkflowResponse> listener
     ) {
-        // Create a list of ProcessNodes with ta corresponding deprovision workflow steps
+        // Create a list of ProcessNodes with the corresponding deprovision workflow steps
         List<ProcessNode> deprovisionProcessSequence = provisionProcessSequence.stream()
             // Only include nodes that created a resource
             .filter(pn -> resourceMap.containsKey(pn.id()))
