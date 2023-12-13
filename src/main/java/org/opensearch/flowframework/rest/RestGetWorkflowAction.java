@@ -92,7 +92,7 @@ public class RestGetWorkflowAction extends BaseRestHandler {
                     channel.sendResponse(new BytesRestResponse(ex.getRestStatus(), exceptionBuilder));
 
                 } catch (IOException e) {
-                    logger.error("Failed to send back get template exception", e);
+                    logger.error("Failed to send back get workflow exception", e);
                     channel.sendResponse(new BytesRestResponse(ExceptionsHelper.status(e), e.getMessage()));
                 }
             }));
