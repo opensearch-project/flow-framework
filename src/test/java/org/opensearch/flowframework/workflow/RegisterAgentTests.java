@@ -15,10 +15,8 @@ import org.opensearch.core.rest.RestStatus;
 import org.opensearch.flowframework.exception.FlowFrameworkException;
 import org.opensearch.flowframework.indices.FlowFrameworkIndicesHandler;
 import org.opensearch.ml.client.MachineLearningNodeClient;
-import org.opensearch.ml.common.agent.LLMSpec;
 import org.opensearch.ml.common.agent.MLAgent;
 import org.opensearch.ml.common.agent.MLMemorySpec;
-import org.opensearch.ml.common.agent.MLToolSpec;
 import org.opensearch.ml.common.transport.agent.MLRegisterAgentResponse;
 import org.opensearch.test.OpenSearchTestCase;
 
@@ -54,10 +52,6 @@ public class RegisterAgentTests extends OpenSearchTestCase {
         this.flowFrameworkIndicesHandler = mock(FlowFrameworkIndicesHandler.class);
         MockitoAnnotations.openMocks(this);
 
-        MLToolSpec tools = new MLToolSpec("tool1", "CatIndexTool", "desc", Collections.emptyMap(), false);
-
-        LLMSpec llmSpec = new LLMSpec("xyz", Collections.emptyMap());
-
         Map<?, ?> mlMemorySpec = Map.ofEntries(
             Map.entry(MLMemorySpec.MEMORY_TYPE_FIELD, "type"),
             Map.entry(MLMemorySpec.SESSION_ID_FIELD, "abc"),
@@ -71,7 +65,7 @@ public class RegisterAgentTests extends OpenSearchTestCase {
                 Map.entry("type", "type"),
                 Map.entry("llm.model_id", "xyz"),
                 Map.entry("llm.parameters", Collections.emptyMap()),
-                Map.entry("tools", tools),
+                Map.entry("tools", new String[] { "abc", "xyz" }),
                 Map.entry("parameters", Collections.emptyMap()),
                 Map.entry("memory", mlMemorySpec),
                 Map.entry("created_time", 1689793598499L),

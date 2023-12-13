@@ -11,6 +11,7 @@ package org.opensearch.flowframework.workflow;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.opensearch.ExceptionsHelper;
+import org.opensearch.common.Nullable;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.core.rest.RestStatus;
 import org.opensearch.flowframework.common.WorkflowResources;
@@ -28,6 +29,7 @@ import org.opensearch.ml.common.transport.agent.MLRegisterAgentResponse;
 import java.io.IOException;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -155,7 +157,8 @@ public class RegisterAgentStep implements WorkflowStep {
             String description = (String) inputs.get(DESCRIPTION_FIELD);
             String llmModelId = (String) inputs.get(LLM_MODEL_ID);
             Map<String, String> llmParameters = getStringToStringMap(inputs.get(PARAMETERS_FIELD), LLM_PARAMETERS);
-            List<MLToolSpec> tools = getTools(previousNodeInputs, outputs);
+            String[] tools = (String[]) inputs.get(TOOLS_FIELD);
+            List<MLToolSpec> toolsList = getTools(tools, previousNodeInputs, outputs);
             Map<String, String> parameters = getStringToStringMap(inputs.get(PARAMETERS_FIELD), PARAMETERS_FIELD);
             MLMemorySpec memory = getMLMemorySpec(inputs.get(MEMORY_FIELD));
             Instant createdTime = Instant.ofEpochMilli((Long) inputs.get(CREATED_TIME));
@@ -188,7 +191,7 @@ public class RegisterAgentStep implements WorkflowStep {
 
             builder.type(type)
                 .llm(llmSpec)
-                .tools(tools)
+                .tools(toolsList)
                 .parameters(parameters)
                 .memory(memory)
                 .createdTime(createdTime)
@@ -210,24 +213,25 @@ public class RegisterAgentStep implements WorkflowStep {
         return NAME;
     }
 
-    private List<MLToolSpec> getTools(Map<String, String> previousNodeInputs, Map<String, WorkflowData> outputs) {
+    private List<MLToolSpec> getTools(@Nullable String[] tools, Map<String, String> previousNodeInputs, Map<String, WorkflowData> outputs) {
         List<MLToolSpec> mlToolSpecList = new ArrayList<>();
         List<String> previousNodes = previousNodeInputs.entrySet()
             .stream()
             .filter(e -> TOOLS_FIELD.equals(e.getValue()))
             .map(Map.Entry::getKey)
             .collect(Collectors.toList());
-
-        if (previousNodes != null) {
-            previousNodes.forEach((previousNode) -> {
-                WorkflowData previousNodeOutput = outputs.get(previousNode);
-                if (previousNodeOutput != null && previousNodeOutput.getContent().containsKey(TOOLS_FIELD)) {
-                    MLToolSpec mlToolSpec = (MLToolSpec) previousNodeOutput.getContent().get(TOOLS_FIELD);
-                    logger.info("Tool added {}", mlToolSpec.getType());
-                    mlToolSpecList.add(mlToolSpec);
-                }
-            });
-        }
+        // Anything in tools is sorted first, followed by anything else in previous node inputs
+        List<String> sortedNodes = tools == null ? new ArrayList<>() : Arrays.asList(tools);
+        previousNodes.removeAll(sortedNodes);
+        sortedNodes.addAll(previousNodes);
+        sortedNodes.forEach((node) -> {
+            WorkflowData previousNodeOutput = outputs.get(node);
+            if (previousNodeOutput != null && previousNodeOutput.getContent().containsKey(TOOLS_FIELD)) {
+                MLToolSpec mlToolSpec = (MLToolSpec) previousNodeOutput.getContent().get(TOOLS_FIELD);
+                logger.info("Tool added {}", mlToolSpec.getType());
+                mlToolSpecList.add(mlToolSpec);
+            }
+        });
         return mlToolSpecList;
     }
 
