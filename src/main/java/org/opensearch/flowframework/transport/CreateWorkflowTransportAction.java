@@ -28,12 +28,16 @@ import org.opensearch.flowframework.indices.FlowFrameworkIndicesHandler;
 import org.opensearch.flowframework.model.ProvisioningProgress;
 import org.opensearch.flowframework.model.State;
 import org.opensearch.flowframework.model.Template;
+import org.opensearch.flowframework.model.Workflow;
+import org.opensearch.flowframework.workflow.ProcessNode;
 import org.opensearch.flowframework.workflow.WorkflowProcessSorter;
 import org.opensearch.index.query.QueryBuilder;
 import org.opensearch.index.query.QueryBuilders;
 import org.opensearch.search.builder.SearchSourceBuilder;
 import org.opensearch.tasks.Task;
 import org.opensearch.transport.TransportService;
+
+import java.util.List;
 
 import static org.opensearch.flowframework.common.CommonValue.PROVISIONING_PROGRESS_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.STATE_FIELD;
@@ -90,6 +94,20 @@ public class CreateWorkflowTransportAction extends HandledTransportAction<Workfl
             request.getTemplate().getUiMetadata(),
             user
         );
+
+        if (request.isProvision()) {
+            try {
+                validateWorkflows(templateWithUser);
+            } catch (Exception e) {
+                if (e instanceof FlowFrameworkException) {
+                    logger.error("Workflow validation failed for template : " + templateWithUser.name());
+                    listener.onFailure(e);
+                } else {
+                    listener.onFailure(new FlowFrameworkException(e.getMessage(), ExceptionsHelper.status(e)));
+                }
+                return;
+            }
+        }
 
         if (request.getWorkflowId() == null) {
             // Throttle incoming requests
@@ -240,6 +258,13 @@ public class CreateWorkflowTransportAction extends HandledTransportAction<Workfl
                 logger.error("Unable to fetch the workflows {}", exception);
                 internalListener.onFailure(new FlowFrameworkException("Unable to fetch the workflows", RestStatus.BAD_REQUEST));
             }));
+        }
+    }
+
+    private void validateWorkflows(Template template) throws Exception {
+        for (Workflow workflow : template.workflows().values()) {
+            List<ProcessNode> sortedNodes = workflowProcessSorter.sortProcessNodes(workflow, null);
+            workflowProcessSorter.validateGraph(sortedNodes);
         }
     }
 }
