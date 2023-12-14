@@ -59,7 +59,7 @@ public class WorkflowRequest extends ActionRequest {
      * @param template the use case template which describes the workflow
      */
     public WorkflowRequest(@Nullable String workflowId, @Nullable Template template) {
-        this(workflowId, template, false, null, null);
+        this(workflowId, template, false, false, null, null);
     }
 
     /**
@@ -75,13 +75,14 @@ public class WorkflowRequest extends ActionRequest {
         @Nullable TimeValue requestTimeout,
         @Nullable Integer maxWorkflows
     ) {
-        this(workflowId, template, false, requestTimeout, maxWorkflows);
+        this(workflowId, template, false, false, requestTimeout, maxWorkflows);
     }
 
     /**
      * Instantiates a new WorkflowRequest
      * @param workflowId the documentId of the workflow
      * @param template the use case template which describes the workflow
+     * @param dryRun flag to indicate if validation is necessary
      * @param provision flag to indicate if provision is necessary
      * @param requestTimeout timeout of the request
      * @param maxWorkflows max number of workflows
@@ -89,12 +90,14 @@ public class WorkflowRequest extends ActionRequest {
     public WorkflowRequest(
         @Nullable String workflowId,
         @Nullable Template template,
+        boolean dryRun,
         boolean provision,
         @Nullable TimeValue requestTimeout,
         @Nullable Integer maxWorkflows
     ) {
         this.workflowId = workflowId;
         this.template = template;
+        this.dryRun = dryRun;
         this.provision = provision;
         this.requestTimeout = requestTimeout;
         this.maxWorkflows = maxWorkflows;
@@ -110,6 +113,7 @@ public class WorkflowRequest extends ActionRequest {
         this.workflowId = in.readOptionalString();
         String templateJson = in.readOptionalString();
         this.template = templateJson == null ? null : Template.parse(templateJson);
+        this.dryRun = in.readBoolean();
         this.provision = in.readBoolean();
         this.requestTimeout = in.readOptionalTimeValue();
         this.maxWorkflows = in.readOptionalInt();
@@ -131,6 +135,14 @@ public class WorkflowRequest extends ActionRequest {
     @Nullable
     public Template getTemplate() {
         return this.template;
+    }
+
+    /**
+     * Gets the dry run validation flag
+     * @return the dry run boolean
+     */
+    public boolean isDryRun() {
+        return this.dryRun;
     }
 
     /**
@@ -163,6 +175,7 @@ public class WorkflowRequest extends ActionRequest {
         out.writeOptionalString(workflowId);
         out.writeOptionalString(template == null ? null : template.toJson());
         out.writeBoolean(dryRun);
+        out.writeBoolean(provision);
         out.writeOptionalTimeValue(requestTimeout);
         out.writeOptionalInt(maxWorkflows);
     }

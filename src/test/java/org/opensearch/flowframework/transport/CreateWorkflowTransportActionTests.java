@@ -144,12 +144,12 @@ public class CreateWorkflowTransportActionTests extends OpenSearchTestCase {
         );
     }
 
-    public void testDryRunValidation_Success() {
+    public void testDryRunValidation_withoutProvision_Success() {
         Template validTemplate = generateValidTemplate();
 
         @SuppressWarnings("unchecked")
         ActionListener<WorkflowResponse> listener = mock(ActionListener.class);
-        WorkflowRequest createNewWorkflow = new WorkflowRequest(null, validTemplate, true, null, null);
+        WorkflowRequest createNewWorkflow = new WorkflowRequest(null, validTemplate, true, false, null, null);
         createWorkflowTransportAction.doExecute(mock(Task.class), createNewWorkflow, listener);
     }
 
@@ -207,7 +207,7 @@ public class CreateWorkflowTransportActionTests extends OpenSearchTestCase {
 
         @SuppressWarnings("unchecked")
         ActionListener<WorkflowResponse> listener = mock(ActionListener.class);
-        WorkflowRequest createNewWorkflow = new WorkflowRequest(null, cyclicalTemplate, true, null, null);
+        WorkflowRequest createNewWorkflow = new WorkflowRequest(null, cyclicalTemplate, true, false, null, null);
 
         createWorkflowTransportAction.doExecute(mock(Task.class), createNewWorkflow, listener);
         ArgumentCaptor<Exception> exceptionCaptor = ArgumentCaptor.forClass(Exception.class);
@@ -221,6 +221,7 @@ public class CreateWorkflowTransportActionTests extends OpenSearchTestCase {
         WorkflowRequest workflowRequest = new WorkflowRequest(
             null,
             template,
+            false,
             false,
             WORKFLOW_REQUEST_TIMEOUT.get(settings),
             MAX_WORKFLOWS.get(settings)
@@ -259,6 +260,7 @@ public class CreateWorkflowTransportActionTests extends OpenSearchTestCase {
             null,
             template,
             false,
+            false,
             WORKFLOW_REQUEST_TIMEOUT.get(settings),
             MAX_WORKFLOWS.get(settings)
         );
@@ -295,6 +297,7 @@ public class CreateWorkflowTransportActionTests extends OpenSearchTestCase {
         WorkflowRequest workflowRequest = new WorkflowRequest(
             null,
             template,
+            false,
             false,
             WORKFLOW_REQUEST_TIMEOUT.get(settings),
             MAX_WORKFLOWS.get(settings)
@@ -378,7 +381,7 @@ public class CreateWorkflowTransportActionTests extends OpenSearchTestCase {
         assertEquals("1", responseCaptor.getValue().getWorkflowId());
     }
 
-    public void testCreateWorkflow_withProvisionParam() {
+    public void testCreateWorkflow_withDryRun_withProvision_Success() {
 
         Template validTemplate = generateValidTemplate();
 
@@ -387,6 +390,7 @@ public class CreateWorkflowTransportActionTests extends OpenSearchTestCase {
         WorkflowRequest workflowRequest = new WorkflowRequest(
             null,
             validTemplate,
+            true,
             true,
             WORKFLOW_REQUEST_TIMEOUT.get(settings),
             MAX_WORKFLOWS.get(settings)
@@ -436,7 +440,7 @@ public class CreateWorkflowTransportActionTests extends OpenSearchTestCase {
         assertEquals("1", workflowResponseCaptor.getValue().getWorkflowId());
     }
 
-    public void testCreateWorkflow_withFailedProvision() {
+    public void testCreateWorkflow_withDryRun_withProvision_FailedProvisioning() {
         Template validTemplate = generateValidTemplate();
 
         @SuppressWarnings("unchecked")
@@ -444,6 +448,7 @@ public class CreateWorkflowTransportActionTests extends OpenSearchTestCase {
         WorkflowRequest workflowRequest = new WorkflowRequest(
             null,
             validTemplate,
+            true,
             true,
             WORKFLOW_REQUEST_TIMEOUT.get(settings),
             MAX_WORKFLOWS.get(settings)
