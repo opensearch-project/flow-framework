@@ -8,12 +8,20 @@
  */
 package org.opensearch.flowframework.workflow;
 
+import org.opensearch.action.admin.cluster.node.info.NodeInfo;
+import org.opensearch.action.admin.cluster.node.info.NodesInfoRequest;
+import org.opensearch.action.admin.cluster.node.info.NodesInfoResponse;
+import org.opensearch.action.admin.cluster.node.info.PluginsAndModules;
 import org.opensearch.client.AdminClient;
 import org.opensearch.client.Client;
+import org.opensearch.client.ClusterAdminClient;
+import org.opensearch.cluster.ClusterState;
+import org.opensearch.cluster.node.DiscoveryNodes;
 import org.opensearch.cluster.service.ClusterService;
 import org.opensearch.common.settings.ClusterSettings;
 import org.opensearch.common.settings.Setting;
 import org.opensearch.common.settings.Settings;
+import org.opensearch.core.action.ActionListener;
 import org.opensearch.core.rest.RestStatus;
 import org.opensearch.core.xcontent.XContentParser;
 import org.opensearch.flowframework.common.FlowFrameworkSettings;
@@ -24,6 +32,7 @@ import org.opensearch.flowframework.model.Workflow;
 import org.opensearch.flowframework.model.WorkflowEdge;
 import org.opensearch.flowframework.model.WorkflowNode;
 import org.opensearch.ml.client.MachineLearningNodeClient;
+import org.opensearch.plugins.PluginInfo;
 import org.opensearch.test.OpenSearchTestCase;
 import org.opensearch.threadpool.TestThreadPool;
 import org.opensearch.threadpool.ThreadPool;
@@ -50,6 +59,8 @@ import static org.opensearch.flowframework.model.TemplateTestJsonUtil.node;
 import static org.opensearch.flowframework.model.TemplateTestJsonUtil.nodeWithType;
 import static org.opensearch.flowframework.model.TemplateTestJsonUtil.nodeWithTypeAndTimeout;
 import static org.opensearch.flowframework.model.TemplateTestJsonUtil.workflow;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -73,12 +84,12 @@ public class WorkflowProcessSorterTests extends OpenSearchTestCase {
 
     private static TestThreadPool testThreadPool;
     private static WorkflowProcessSorter workflowProcessSorter;
+    private static Client client = mock(Client.class);
+    private static ClusterService clusterService = mock(ClusterService.class);
 
     @BeforeClass
     public static void setup() {
         AdminClient adminClient = mock(AdminClient.class);
-        ClusterService clusterService = mock(ClusterService.class);
-        Client client = mock(Client.class);
         MachineLearningNodeClient mlClient = mock(MachineLearningNodeClient.class);
         FlowFrameworkIndicesHandler flowFrameworkIndicesHandler = mock(FlowFrameworkIndicesHandler.class);
 
@@ -328,5 +339,171 @@ public class WorkflowProcessSorterTests extends OpenSearchTestCase {
         );
         assertEquals("Invalid graph, missing the following required inputs : [connector_id]", ex.getMessage());
         assertEquals(RestStatus.BAD_REQUEST, ex.getRestStatus());
+    }
+
+    public void testSuccessfulInstalledPluginValidation() throws Exception {
+
+        // Mock and stub the cluster admin client to invoke the NodesInfoRequest
+        AdminClient adminClient = mock(AdminClient.class);
+        ClusterAdminClient clusterAdminClient = mock(ClusterAdminClient.class);
+        when(client.admin()).thenReturn(adminClient);
+        when(adminClient.cluster()).thenReturn(clusterAdminClient);
+
+        // Mock and stub the clusterservice to get the local node
+        ClusterState clusterState = mock(ClusterState.class);
+        DiscoveryNodes discoveryNodes = mock(DiscoveryNodes.class);
+        when(clusterService.state()).thenReturn(clusterState);
+        when(clusterState.getNodes()).thenReturn(discoveryNodes);
+        when(discoveryNodes.getLocalNodeId()).thenReturn("123");
+
+        // Stub cluster admin client's node info request
+        doAnswer(invocation -> {
+            ActionListener<NodesInfoResponse> listener = invocation.getArgument(1);
+
+            // Mock and stub Plugin info
+            PluginInfo mockedFlowPluginInfo = mock(PluginInfo.class);
+            PluginInfo mockedMlPluginInfo = mock(PluginInfo.class);
+            when(mockedFlowPluginInfo.getName()).thenReturn("opensearch-flow-framework");
+            when(mockedMlPluginInfo.getName()).thenReturn("opensearch-ml");
+
+            // Mock and stub PluginsAndModules
+            PluginsAndModules mockedPluginsAndModules = mock(PluginsAndModules.class);
+            when(mockedPluginsAndModules.getPluginInfos()).thenReturn(List.of(mockedFlowPluginInfo, mockedMlPluginInfo));
+
+            // Mock and stub NodesInfoResponse to NodeInfo
+            NodeInfo nodeInfo = mock(NodeInfo.class);
+            @SuppressWarnings("unchecked")
+            Map<String, NodeInfo> mockedMap = mock(Map.class);
+            NodesInfoResponse response = mock(NodesInfoResponse.class);
+            when(response.getNodesMap()).thenReturn(mockedMap);
+            when(mockedMap.get(any())).thenReturn(nodeInfo);
+            when(nodeInfo.getInfo(any())).thenReturn(mockedPluginsAndModules);
+
+            // stub on response to pass the mocked NodesInfoRepsonse
+            listener.onResponse(response);
+            return null;
+
+        }).when(clusterAdminClient).nodesInfo(any(NodesInfoRequest.class), any());
+
+        WorkflowNode createConnector = new WorkflowNode(
+            "workflow_step_1",
+            CreateConnectorStep.NAME,
+            Map.of(),
+            Map.ofEntries(
+                Map.entry("name", ""),
+                Map.entry("description", ""),
+                Map.entry("version", ""),
+                Map.entry("protocol", ""),
+                Map.entry("parameters", ""),
+                Map.entry("credential", ""),
+                Map.entry("actions", "")
+            )
+        );
+        WorkflowNode registerModel = new WorkflowNode(
+            "workflow_step_2",
+            RegisterRemoteModelStep.NAME,
+            Map.ofEntries(Map.entry("workflow_step_1", "connector_id")),
+            Map.ofEntries(Map.entry("name", "name"), Map.entry("function_name", "remote"), Map.entry("description", "description"))
+        );
+        WorkflowNode deployModel = new WorkflowNode(
+            "workflow_step_3",
+            DeployModelStep.NAME,
+            Map.ofEntries(Map.entry("workflow_step_2", "model_id")),
+            Map.of()
+        );
+
+        WorkflowEdge edge1 = new WorkflowEdge(createConnector.id(), registerModel.id());
+        WorkflowEdge edge2 = new WorkflowEdge(registerModel.id(), deployModel.id());
+
+        Workflow workflow = new Workflow(Map.of(), List.of(createConnector, registerModel, deployModel), List.of(edge1, edge2));
+        List<ProcessNode> sortedProcessNodes = workflowProcessSorter.sortProcessNodes(workflow, "123");
+
+        workflowProcessSorter.validatePluginsInstalled(sortedProcessNodes);
+    }
+
+    public void testFailedInstalledPluginValidation() throws Exception {
+
+        // Mock and stub the cluster admin client to invoke the NodesInfoRequest
+        AdminClient adminClient = mock(AdminClient.class);
+        ClusterAdminClient clusterAdminClient = mock(ClusterAdminClient.class);
+        when(client.admin()).thenReturn(adminClient);
+        when(adminClient.cluster()).thenReturn(clusterAdminClient);
+
+        // Mock and stub the clusterservice to get the local node
+        ClusterState clusterState = mock(ClusterState.class);
+        DiscoveryNodes discoveryNodes = mock(DiscoveryNodes.class);
+        when(clusterService.state()).thenReturn(clusterState);
+        when(clusterState.getNodes()).thenReturn(discoveryNodes);
+        when(discoveryNodes.getLocalNodeId()).thenReturn("123");
+
+        // Stub cluster admin client's node info request
+        doAnswer(invocation -> {
+            ActionListener<NodesInfoResponse> listener = invocation.getArgument(1);
+
+            // Mock and stub Plugin info, We ommit the opensearch-ml info here to trigger validation failure
+            PluginInfo mockedFlowPluginInfo = mock(PluginInfo.class);
+            when(mockedFlowPluginInfo.getName()).thenReturn("opensearch-flow-framework");
+
+            // Mock and stub PluginsAndModules
+            PluginsAndModules mockedPluginsAndModules = mock(PluginsAndModules.class);
+            when(mockedPluginsAndModules.getPluginInfos()).thenReturn(List.of(mockedFlowPluginInfo));
+
+            // Mock and stub NodesInfoResponse to NodeInfo
+            NodeInfo nodeInfo = mock(NodeInfo.class);
+            @SuppressWarnings("unchecked")
+            Map<String, NodeInfo> mockedMap = mock(Map.class);
+            NodesInfoResponse response = mock(NodesInfoResponse.class);
+            when(response.getNodesMap()).thenReturn(mockedMap);
+            when(mockedMap.get(any())).thenReturn(nodeInfo);
+            when(nodeInfo.getInfo(any())).thenReturn(mockedPluginsAndModules);
+
+            // stub on response to pass the mocked NodesInfoRepsonse
+            listener.onResponse(response);
+            return null;
+
+        }).when(clusterAdminClient).nodesInfo(any(NodesInfoRequest.class), any());
+
+        WorkflowNode createConnector = new WorkflowNode(
+            "workflow_step_1",
+            CreateConnectorStep.NAME,
+            Map.of(),
+            Map.ofEntries(
+                Map.entry("name", ""),
+                Map.entry("description", ""),
+                Map.entry("version", ""),
+                Map.entry("protocol", ""),
+                Map.entry("parameters", ""),
+                Map.entry("credential", ""),
+                Map.entry("actions", "")
+            )
+        );
+        WorkflowNode registerModel = new WorkflowNode(
+            "workflow_step_2",
+            RegisterRemoteModelStep.NAME,
+            Map.ofEntries(Map.entry("workflow_step_1", "connector_id")),
+            Map.ofEntries(Map.entry("name", "name"), Map.entry("function_name", "remote"), Map.entry("description", "description"))
+        );
+        WorkflowNode deployModel = new WorkflowNode(
+            "workflow_step_3",
+            DeployModelStep.NAME,
+            Map.ofEntries(Map.entry("workflow_step_2", "model_id")),
+            Map.of()
+        );
+
+        WorkflowEdge edge1 = new WorkflowEdge(createConnector.id(), registerModel.id());
+        WorkflowEdge edge2 = new WorkflowEdge(registerModel.id(), deployModel.id());
+
+        Workflow workflow = new Workflow(Map.of(), List.of(createConnector, registerModel, deployModel), List.of(edge1, edge2));
+        List<ProcessNode> sortedProcessNodes = workflowProcessSorter.sortProcessNodes(workflow, "123");
+
+        FlowFrameworkException exception = expectThrows(
+            FlowFrameworkException.class,
+            () -> workflowProcessSorter.validatePluginsInstalled(sortedProcessNodes)
+        );
+
+        assertEquals(
+            "The workflowStep create_connector requires the following plugins to be installed : [opensearch-ml]",
+            exception.getMessage()
+        );
     }
 }
