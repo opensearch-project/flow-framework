@@ -172,8 +172,10 @@ public class CommonValue {
     public static final String RESOURCE_TYPE = "resource_type";
     /** The field name for the resource id */
     public static final String RESOURCE_ID = "resource_id";
-    /** The tools' field for an agent */
+    /** The tools field for an agent */
     public static final String TOOLS_FIELD = "tools";
+    /** The tools order field for an agent */
+    public static final String TOOLS_ORDER_FIELD = "tools_order";
     /** The memory field for an agent */
     public static final String MEMORY_FIELD = "memory";
     /** The app type field for an agent */

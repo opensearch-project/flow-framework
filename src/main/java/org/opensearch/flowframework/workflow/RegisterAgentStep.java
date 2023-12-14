@@ -46,6 +46,7 @@ import static org.opensearch.flowframework.common.CommonValue.MODEL_ID;
 import static org.opensearch.flowframework.common.CommonValue.NAME_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.PARAMETERS_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.TOOLS_FIELD;
+import static org.opensearch.flowframework.common.CommonValue.TOOLS_ORDER_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.TYPE;
 import static org.opensearch.flowframework.util.ParseUtils.getStringToStringMap;
 
@@ -64,8 +65,6 @@ public class RegisterAgentStep implements WorkflowStep {
     private static final String LLM_MODEL_ID = "llm.model_id";
     private static final String LLM_PARAMETERS = "llm.parameters";
 
-    private List<MLToolSpec> mlToolSpecList;
-
     /**
      * Instantiate this class
      * @param mlClient client to instantiate MLClient
@@ -73,7 +72,6 @@ public class RegisterAgentStep implements WorkflowStep {
      */
     public RegisterAgentStep(MachineLearningNodeClient mlClient, FlowFrameworkIndicesHandler flowFrameworkIndicesHandler) {
         this.mlClient = mlClient;
-        this.mlToolSpecList = new ArrayList<>();
         this.flowFrameworkIndicesHandler = flowFrameworkIndicesHandler;
     }
 
@@ -136,6 +134,7 @@ public class RegisterAgentStep implements WorkflowStep {
             LLM_MODEL_ID,
             LLM_PARAMETERS,
             TOOLS_FIELD,
+            TOOLS_ORDER_FIELD,
             PARAMETERS_FIELD,
             MEMORY_FIELD,
             CREATED_TIME,
@@ -157,8 +156,8 @@ public class RegisterAgentStep implements WorkflowStep {
             String description = (String) inputs.get(DESCRIPTION_FIELD);
             String llmModelId = (String) inputs.get(LLM_MODEL_ID);
             Map<String, String> llmParameters = getStringToStringMap(inputs.get(PARAMETERS_FIELD), LLM_PARAMETERS);
-            String[] tools = (String[]) inputs.get(TOOLS_FIELD);
-            List<MLToolSpec> toolsList = getTools(tools, previousNodeInputs, outputs);
+            String[] toolsOrder = (String[]) inputs.get(TOOLS_ORDER_FIELD);
+            List<MLToolSpec> toolsList = getTools(toolsOrder, previousNodeInputs, outputs);
             Map<String, String> parameters = getStringToStringMap(inputs.get(PARAMETERS_FIELD), PARAMETERS_FIELD);
             MLMemorySpec memory = getMLMemorySpec(inputs.get(MEMORY_FIELD));
             Instant createdTime = Instant.ofEpochMilli((Long) inputs.get(CREATED_TIME));
@@ -285,7 +284,6 @@ public class RegisterAgentStep implements WorkflowStep {
         sessionId = (String) map.get(MLMemorySpec.SESSION_ID_FIELD);
         windowSize = (Integer) map.get(MLMemorySpec.WINDOW_SIZE_FIELD);
 
-        @SuppressWarnings("unchecked")
         MLMemorySpec.MLMemorySpecBuilder builder = MLMemorySpec.builder();
 
         builder.type(type);
