@@ -24,7 +24,7 @@ import java.util.Map.Entry;
 import java.util.Objects;
 
 import static org.opensearch.core.xcontent.XContentParserUtils.ensureExpectedToken;
-import static org.opensearch.flowframework.common.CommonValue.TOOLS_FIELD;
+import static org.opensearch.flowframework.common.CommonValue.TOOLS_ORDER_FIELD;
 import static org.opensearch.flowframework.util.ParseUtils.buildStringToObjectMap;
 import static org.opensearch.flowframework.util.ParseUtils.buildStringToStringMap;
 import static org.opensearch.flowframework.util.ParseUtils.parseStringToObjectMap;
@@ -94,7 +94,7 @@ public class WorkflowNode implements ToXContentObject {
                     for (PipelineProcessor p : (PipelineProcessor[]) e.getValue()) {
                         xContentBuilder.value(p);
                     }
-                } else if (TOOLS_FIELD.equals(e.getKey())) {
+                } else if (TOOLS_ORDER_FIELD.equals(e.getKey())) {
                     for (String t : (String[]) e.getValue()) {
                         xContentBuilder.value(t);
                     }
@@ -156,7 +156,7 @@ public class WorkflowNode implements ToXContentObject {
                                         processorList.add(PipelineProcessor.parse(parser));
                                     }
                                     userInputs.put(inputFieldName, processorList.toArray(new PipelineProcessor[0]));
-                                } else if (TOOLS_FIELD.equals(inputFieldName)) {
+                                } else if (TOOLS_ORDER_FIELD.equals(inputFieldName)) {
                                     List<String> toolsList = new ArrayList<>();
                                     while (parser.nextToken() != XContentParser.Token.END_ARRAY) {
                                         toolsList.add(parser.text());
