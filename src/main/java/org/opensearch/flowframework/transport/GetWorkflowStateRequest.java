@@ -17,9 +17,9 @@ import org.opensearch.core.common.io.stream.StreamOutput;
 import java.io.IOException;
 
 /**
- * Transport Request to get a workflow or workflow status
+ * Transport Request to get a workflow status
  */
-public class GetWorkflowRequest extends ActionRequest {
+public class GetWorkflowStateRequest extends ActionRequest {
 
     /**
      * The documentId of the workflow entry within the Global Context index
@@ -33,21 +33,21 @@ public class GetWorkflowRequest extends ActionRequest {
     private boolean all;
 
     /**
-     * Instantiates a new GetWorkflowRequest
+     * Instantiates a new GetWorkflowStateRequest
      * @param workflowId the documentId of the workflow
      * @param all whether the get request is looking for all fields in status
      */
-    public GetWorkflowRequest(@Nullable String workflowId, boolean all) {
+    public GetWorkflowStateRequest(@Nullable String workflowId, boolean all) {
         this.workflowId = workflowId;
         this.all = all;
     }
 
     /**
-     * Instantiates a new GetWorkflowRequest request
+     * Instantiates a new GetWorkflowStateRequest request
      * @param in The input stream to read from
      * @throws IOException If the stream cannot be read properly
      */
-    public GetWorkflowRequest(StreamInput in) throws IOException {
+    public GetWorkflowStateRequest(StreamInput in) throws IOException {
         super(in);
         this.workflowId = in.readString();
         this.all = in.readBoolean();

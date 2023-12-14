@@ -72,6 +72,7 @@ public class RegisterAgentTests extends OpenSearchTestCase {
                 Map.entry("llm.model_id", "xyz"),
                 Map.entry("llm.parameters", Collections.emptyMap()),
                 Map.entry("tools", tools),
+                Map.entry("tools_order", new String[] { "abc", "xyz" }),
                 Map.entry("parameters", Collections.emptyMap()),
                 Map.entry("memory", mlMemorySpec),
                 Map.entry("created_time", 1689793598499L),
