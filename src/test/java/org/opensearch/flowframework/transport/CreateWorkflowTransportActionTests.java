@@ -22,6 +22,7 @@ import org.opensearch.common.util.concurrent.ThreadContext;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.core.index.shard.ShardId;
 import org.opensearch.flowframework.TestHelpers;
+import org.opensearch.flowframework.common.WorkflowResources;
 import org.opensearch.flowframework.indices.FlowFrameworkIndicesHandler;
 import org.opensearch.flowframework.model.Template;
 import org.opensearch.flowframework.model.Workflow;
@@ -29,7 +30,6 @@ import org.opensearch.flowframework.model.WorkflowEdge;
 import org.opensearch.flowframework.model.WorkflowNode;
 import org.opensearch.flowframework.util.ParseUtils;
 import org.opensearch.flowframework.workflow.WorkflowProcessSorter;
-import org.opensearch.flowframework.workflow.WorkflowStepFactory;
 import org.opensearch.tasks.Task;
 import org.opensearch.test.OpenSearchTestCase;
 import org.opensearch.threadpool.ThreadPool;
@@ -53,9 +53,12 @@ import static org.opensearch.flowframework.common.FlowFrameworkSettings.MAX_WORK
 import static org.opensearch.flowframework.common.FlowFrameworkSettings.MAX_WORKFLOW_STEPS;
 import static org.opensearch.flowframework.common.FlowFrameworkSettings.WORKFLOW_REQUEST_TIMEOUT;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.anyInt;
 import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
@@ -68,7 +71,7 @@ public class CreateWorkflowTransportActionTests extends OpenSearchTestCase {
     private FlowFrameworkIndicesHandler flowFrameworkIndicesHandler;
     private WorkflowProcessSorter workflowProcessSorter;
     private Template template;
-    private Client client = mock(Client.class);
+    private Client client;
     private ThreadPool threadPool;
     private ClusterSettings clusterSettings;
     private ClusterService clusterService;
@@ -79,6 +82,8 @@ public class CreateWorkflowTransportActionTests extends OpenSearchTestCase {
     @Override
     public void setUp() throws Exception {
         super.setUp();
+        client = mock(Client.class);
+
         threadPool = mock(ThreadPool.class);
         settings = Settings.builder()
             .put("plugins.flow_framework.max_workflows", 2)
@@ -92,13 +97,11 @@ public class CreateWorkflowTransportActionTests extends OpenSearchTestCase {
         clusterService = mock(ClusterService.class);
         when(clusterService.getClusterSettings()).thenReturn(clusterSettings);
         this.flowFrameworkIndicesHandler = mock(FlowFrameworkIndicesHandler.class);
-        this.workflowProcessSorter = new WorkflowProcessSorter(
-            mock(WorkflowStepFactory.class),
-            threadPool,
-            clusterService,
-            client,
-            settings
-        );
+
+        // Validation functionality should not be invoked in these unit tests, mocking instead
+        this.workflowProcessSorter = mock(WorkflowProcessSorter.class);
+
+        // Spy this action to stub check max workflows
         this.createWorkflowTransportAction = spy(
             new CreateWorkflowTransportAction(
                 mock(TransportService.class),
@@ -138,7 +141,16 @@ public class CreateWorkflowTransportActionTests extends OpenSearchTestCase {
         );
     }
 
-    public void testFailedDryRunValidation() {
+    public void testDryRunValidation_withoutProvision_Success() {
+        Template validTemplate = generateValidTemplate();
+
+        @SuppressWarnings("unchecked")
+        ActionListener<WorkflowResponse> listener = mock(ActionListener.class);
+        WorkflowRequest createNewWorkflow = new WorkflowRequest(null, validTemplate, true, false, null, null);
+        createWorkflowTransportAction.doExecute(mock(Task.class), createNewWorkflow, listener);
+    }
+
+    public void testDryRunValidation_Failed() throws Exception {
 
         WorkflowNode createConnector = new WorkflowNode(
             "workflow_step_1",
@@ -192,12 +204,12 @@ public class CreateWorkflowTransportActionTests extends OpenSearchTestCase {
 
         @SuppressWarnings("unchecked")
         ActionListener<WorkflowResponse> listener = mock(ActionListener.class);
-        WorkflowRequest createNewWorkflow = new WorkflowRequest(null, cyclicalTemplate, true, null, null);
+        // Stub validation failure
+        doThrow(Exception.class).when(workflowProcessSorter).validate(any());
+        WorkflowRequest createNewWorkflow = new WorkflowRequest(null, cyclicalTemplate, true, false, null, null);
 
         createWorkflowTransportAction.doExecute(mock(Task.class), createNewWorkflow, listener);
-        ArgumentCaptor<Exception> exceptionCaptor = ArgumentCaptor.forClass(Exception.class);
-        verify(listener, times(1)).onFailure(exceptionCaptor.capture());
-        assertEquals("No start node detected: all nodes have a predecessor.", exceptionCaptor.getValue().getMessage());
+        verify(listener, times(1)).onFailure(any());
     }
 
     public void testMaxWorkflow() {
@@ -206,6 +218,7 @@ public class CreateWorkflowTransportActionTests extends OpenSearchTestCase {
         WorkflowRequest workflowRequest = new WorkflowRequest(
             null,
             template,
+            false,
             false,
             WORKFLOW_REQUEST_TIMEOUT.get(settings),
             MAX_WORKFLOWS.get(settings)
@@ -244,6 +257,7 @@ public class CreateWorkflowTransportActionTests extends OpenSearchTestCase {
             null,
             template,
             false,
+            false,
             WORKFLOW_REQUEST_TIMEOUT.get(settings),
             MAX_WORKFLOWS.get(settings)
         );
@@ -280,6 +294,7 @@ public class CreateWorkflowTransportActionTests extends OpenSearchTestCase {
         WorkflowRequest workflowRequest = new WorkflowRequest(
             null,
             template,
+            false,
             false,
             WORKFLOW_REQUEST_TIMEOUT.get(settings),
             MAX_WORKFLOWS.get(settings)
@@ -361,5 +376,173 @@ public class CreateWorkflowTransportActionTests extends OpenSearchTestCase {
         verify(listener, times(1)).onResponse(responseCaptor.capture());
 
         assertEquals("1", responseCaptor.getValue().getWorkflowId());
+    }
+
+    public void testCreateWorkflow_withDryRun_withProvision_Success() throws Exception {
+
+        Template validTemplate = generateValidTemplate();
+
+        @SuppressWarnings("unchecked")
+        ActionListener<WorkflowResponse> listener = mock(ActionListener.class);
+
+        doNothing().when(workflowProcessSorter).validate(any());
+        WorkflowRequest workflowRequest = new WorkflowRequest(
+            null,
+            validTemplate,
+            true,
+            true,
+            WORKFLOW_REQUEST_TIMEOUT.get(settings),
+            MAX_WORKFLOWS.get(settings)
+        );
+
+        // Bypass checkMaxWorkflows and force onResponse
+        doAnswer(invocation -> {
+            ActionListener<Boolean> checkMaxWorkflowListener = invocation.getArgument(2);
+            checkMaxWorkflowListener.onResponse(true);
+            return null;
+        }).when(createWorkflowTransportAction).checkMaxWorkflows(any(TimeValue.class), anyInt(), any());
+
+        // Bypass initializeConfigIndex and force onResponse
+        doAnswer(invocation -> {
+            ActionListener<Boolean> initalizeMasterKeyIndexListener = invocation.getArgument(0);
+            initalizeMasterKeyIndexListener.onResponse(true);
+            return null;
+        }).when(flowFrameworkIndicesHandler).initializeConfigIndex(any());
+
+        // Bypass putTemplateToGlobalContext and force onResponse
+        doAnswer(invocation -> {
+            ActionListener<IndexResponse> responseListener = invocation.getArgument(1);
+            responseListener.onResponse(new IndexResponse(new ShardId(GLOBAL_CONTEXT_INDEX, "", 1), "1", 1L, 1L, 1L, true));
+            return null;
+        }).when(flowFrameworkIndicesHandler).putTemplateToGlobalContext(any(), any());
+
+        // Bypass putInitialStateToWorkflowState and force on response
+        doAnswer(invocation -> {
+            ActionListener<IndexResponse> responseListener = invocation.getArgument(2);
+            responseListener.onResponse(new IndexResponse(new ShardId(WORKFLOW_STATE_INDEX, "", 1), "1", 1L, 1L, 1L, true));
+            return null;
+        }).when(flowFrameworkIndicesHandler).putInitialStateToWorkflowState(any(), any(), any());
+
+        doAnswer(invocation -> {
+            ActionListener<WorkflowResponse> responseListener = invocation.getArgument(2);
+            WorkflowResponse response = mock(WorkflowResponse.class);
+            when(response.getWorkflowId()).thenReturn("1");
+            responseListener.onResponse(response);
+            return null;
+        }).when(client).execute(eq(ProvisionWorkflowAction.INSTANCE), any(WorkflowRequest.class), any(ActionListener.class));
+
+        ArgumentCaptor<WorkflowResponse> workflowResponseCaptor = ArgumentCaptor.forClass(WorkflowResponse.class);
+
+        createWorkflowTransportAction.doExecute(mock(Task.class), workflowRequest, listener);
+
+        verify(listener, times(1)).onResponse(workflowResponseCaptor.capture());
+        assertEquals("1", workflowResponseCaptor.getValue().getWorkflowId());
+    }
+
+    public void testCreateWorkflow_withDryRun_withProvision_FailedProvisioning() throws Exception {
+
+        Template validTemplate = generateValidTemplate();
+
+        @SuppressWarnings("unchecked")
+        ActionListener<WorkflowResponse> listener = mock(ActionListener.class);
+        doNothing().when(workflowProcessSorter).validate(any());
+        WorkflowRequest workflowRequest = new WorkflowRequest(
+            null,
+            validTemplate,
+            true,
+            true,
+            WORKFLOW_REQUEST_TIMEOUT.get(settings),
+            MAX_WORKFLOWS.get(settings)
+        );
+
+        // Bypass dryRun, we should not be invoking the actual validation in this transport action unit test
+
+        // Bypass checkMaxWorkflows and force onResponse
+        doAnswer(invocation -> {
+            ActionListener<Boolean> checkMaxWorkflowListener = invocation.getArgument(2);
+            checkMaxWorkflowListener.onResponse(true);
+            return null;
+        }).when(createWorkflowTransportAction).checkMaxWorkflows(any(TimeValue.class), anyInt(), any());
+
+        // Bypass initializeConfigIndex and force onResponse
+        doAnswer(invocation -> {
+            ActionListener<Boolean> initalizeMasterKeyIndexListener = invocation.getArgument(0);
+            initalizeMasterKeyIndexListener.onResponse(true);
+            return null;
+        }).when(flowFrameworkIndicesHandler).initializeConfigIndex(any());
+
+        // Bypass putTemplateToGlobalContext and force onResponse
+        doAnswer(invocation -> {
+            ActionListener<IndexResponse> responseListener = invocation.getArgument(1);
+            responseListener.onResponse(new IndexResponse(new ShardId(GLOBAL_CONTEXT_INDEX, "", 1), "1", 1L, 1L, 1L, true));
+            return null;
+        }).when(flowFrameworkIndicesHandler).putTemplateToGlobalContext(any(), any());
+
+        // Bypass putInitialStateToWorkflowState and force on response
+        doAnswer(invocation -> {
+            ActionListener<IndexResponse> responseListener = invocation.getArgument(2);
+            responseListener.onResponse(new IndexResponse(new ShardId(WORKFLOW_STATE_INDEX, "", 1), "1", 1L, 1L, 1L, true));
+            return null;
+        }).when(flowFrameworkIndicesHandler).putInitialStateToWorkflowState(any(), any(), any());
+
+        doAnswer(invocation -> {
+            ActionListener<WorkflowResponse> responseListener = invocation.getArgument(2);
+            WorkflowResponse response = mock(WorkflowResponse.class);
+            when(response.getWorkflowId()).thenReturn("1");
+            responseListener.onFailure(new Exception("failed"));
+            return null;
+        }).when(client).execute(eq(ProvisionWorkflowAction.INSTANCE), any(WorkflowRequest.class), any(ActionListener.class));
+
+        createWorkflowTransportAction.doExecute(mock(Task.class), workflowRequest, listener);
+        ArgumentCaptor<Exception> exceptionCaptor = ArgumentCaptor.forClass(Exception.class);
+        verify(listener, times(1)).onFailure(exceptionCaptor.capture());
+        assertEquals("failed", exceptionCaptor.getValue().getMessage());
+    }
+
+    private Template generateValidTemplate() {
+        WorkflowNode createConnector = new WorkflowNode(
+            "workflow_step_1",
+            WorkflowResources.CREATE_CONNECTOR.getWorkflowStep(),
+            Map.of(),
+            Map.ofEntries(
+                Map.entry("name", ""),
+                Map.entry("description", ""),
+                Map.entry("version", ""),
+                Map.entry("protocol", ""),
+                Map.entry("parameters", ""),
+                Map.entry("credential", ""),
+                Map.entry("actions", "")
+            )
+        );
+        WorkflowNode registerModel = new WorkflowNode(
+            "workflow_step_2",
+            WorkflowResources.REGISTER_REMOTE_MODEL.getWorkflowStep(),
+            Map.ofEntries(Map.entry("workflow_step_1", "connector_id")),
+            Map.ofEntries(Map.entry("name", "name"), Map.entry("function_name", "remote"), Map.entry("description", "description"))
+        );
+        WorkflowNode deployModel = new WorkflowNode(
+            "workflow_step_3",
+            WorkflowResources.DEPLOY_MODEL.getWorkflowStep(),
+            Map.ofEntries(Map.entry("workflow_step_2", "model_id")),
+            Map.of()
+        );
+
+        WorkflowEdge edge1 = new WorkflowEdge(createConnector.id(), registerModel.id());
+        WorkflowEdge edge2 = new WorkflowEdge(registerModel.id(), deployModel.id());
+
+        Workflow workflow = new Workflow(Map.of(), List.of(createConnector, registerModel, deployModel), List.of(edge1, edge2));
+
+        Template validTemplate = new Template(
+            "test",
+            "description",
+            "use case",
+            Version.fromString("1.0.0"),
+            List.of(Version.fromString("2.0.0"), Version.fromString("3.0.0")),
+            Map.of("workflow", workflow),
+            Map.of(),
+            TestHelpers.randomUser()
+        );
+
+        return validTemplate;
     }
 }
