@@ -100,7 +100,7 @@ public class WorkflowProcessSorterTests extends OpenSearchTestCase {
             mlClient,
             flowFrameworkIndicesHandler
         );
-        workflowProcessSorter = new WorkflowProcessSorter(factory, testThreadPool, clusterService, settings);
+        workflowProcessSorter = new WorkflowProcessSorter(factory, testThreadPool, clusterService, client, settings);
     }
 
     @AfterClass

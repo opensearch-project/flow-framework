@@ -10,15 +10,21 @@ package org.opensearch.flowframework.workflow;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.opensearch.action.admin.cluster.node.info.NodeInfo;
+import org.opensearch.action.admin.cluster.node.info.NodesInfoRequest;
+import org.opensearch.action.admin.cluster.node.info.PluginsAndModules;
+import org.opensearch.client.Client;
 import org.opensearch.cluster.service.ClusterService;
 import org.opensearch.common.settings.Settings;
 import org.opensearch.common.unit.TimeValue;
+import org.opensearch.core.action.ActionListener;
 import org.opensearch.core.rest.RestStatus;
 import org.opensearch.flowframework.exception.FlowFrameworkException;
 import org.opensearch.flowframework.model.Workflow;
 import org.opensearch.flowframework.model.WorkflowEdge;
 import org.opensearch.flowframework.model.WorkflowNode;
 import org.opensearch.flowframework.model.WorkflowValidator;
+import org.opensearch.plugins.PluginInfo;
 import org.opensearch.threadpool.ThreadPool;
 
 import java.util.ArrayDeque;
@@ -31,6 +37,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Queue;
 import java.util.Set;
+import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -49,6 +56,8 @@ public class WorkflowProcessSorter {
     private WorkflowStepFactory workflowStepFactory;
     private ThreadPool threadPool;
     private Integer maxWorkflowSteps;
+    private ClusterService clusterService;
+    private Client client;
 
     /**
      * Instantiate this class.
@@ -56,17 +65,21 @@ public class WorkflowProcessSorter {
      * @param workflowStepFactory The factory which matches template step types to instances.
      * @param threadPool The OpenSearch Thread pool to pass to process nodes.
      * @param clusterService The OpenSearch cluster service.
+     * @param client The OpenSearch Client
      * @param settings OpenSerch settings
      */
     public WorkflowProcessSorter(
         WorkflowStepFactory workflowStepFactory,
         ThreadPool threadPool,
         ClusterService clusterService,
+        Client client,
         Settings settings
     ) {
         this.workflowStepFactory = workflowStepFactory;
         this.threadPool = threadPool;
         this.maxWorkflowSteps = MAX_WORKFLOW_STEPS.get(settings);
+        this.clusterService = clusterService;
+        this.client = client;
         clusterService.getClusterSettings().addSettingsUpdateConsumer(MAX_WORKFLOW_STEPS, it -> maxWorkflowSteps = it);
     }
 
@@ -120,6 +133,59 @@ public class WorkflowProcessSorter {
         }
 
         return nodes;
+    }
+
+    /**
+     * Validates a sorted workflow, determines if each process node's required plugins are currently installed
+     * @param processNodes A list of process nodes
+     * @throws Exception on validation failure
+     */
+    public void validatePluginsInstalled(List<ProcessNode> processNodes) throws Exception {
+
+        WorkflowValidator validator = WorkflowValidator.parse("mappings/workflow-steps.json");
+
+        // Retrieve node information to ascertain installed plugins
+        NodesInfoRequest nodesInfoRequest = new NodesInfoRequest();
+        nodesInfoRequest.clear().addMetric(NodesInfoRequest.Metric.PLUGINS.metricName());
+        CompletableFuture<List<String>> installedPluginsFuture = new CompletableFuture<>();
+        client.admin().cluster().nodesInfo(nodesInfoRequest, ActionListener.wrap(response -> {
+            List<String> installedPlugins = new ArrayList<>();
+
+            // Retrieve installed plugin names from the local node
+            String localNodeId = clusterService.state().getNodes().getLocalNodeId();
+            NodeInfo info = response.getNodesMap().get(localNodeId);
+            PluginsAndModules plugins = info.getInfo(PluginsAndModules.class);
+            for (PluginInfo pluginInfo : plugins.getPluginInfos()) {
+                installedPlugins.add(pluginInfo.getName());
+            }
+
+            installedPluginsFuture.complete(installedPlugins);
+
+        }, exception -> {
+            logger.error("Failed to retrieve installed plugins");
+            installedPluginsFuture.completeExceptionally(exception);
+        }));
+
+        // Block execution until installed plugin list is returned
+        List<String> installedPlugins = installedPluginsFuture.get();
+
+        // Iterate through process nodes in graph
+        for (ProcessNode processNode : processNodes) {
+
+            // Retrieve required plugins of this node based on type
+            String nodeType = processNode.workflowStep().getName();
+            List<String> requiredPlugins = new ArrayList<>(validator.getWorkflowStepValidators().get(nodeType).getRequiredPlugins());
+            if (!installedPlugins.containsAll(requiredPlugins)) {
+                requiredPlugins.removeAll(installedPlugins);
+                throw new FlowFrameworkException(
+                    "The workflowStep "
+                        + processNode.workflowStep().getName()
+                        + " requires the following plugins to be installed : "
+                        + requiredPlugins.toString(),
+                    RestStatus.BAD_REQUEST
+                );
+            }
+        }
     }
 
     /**

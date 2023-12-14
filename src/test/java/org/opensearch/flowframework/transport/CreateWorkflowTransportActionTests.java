@@ -92,7 +92,13 @@ public class CreateWorkflowTransportActionTests extends OpenSearchTestCase {
         clusterService = mock(ClusterService.class);
         when(clusterService.getClusterSettings()).thenReturn(clusterSettings);
         this.flowFrameworkIndicesHandler = mock(FlowFrameworkIndicesHandler.class);
-        this.workflowProcessSorter = new WorkflowProcessSorter(mock(WorkflowStepFactory.class), threadPool, clusterService, settings);
+        this.workflowProcessSorter = new WorkflowProcessSorter(
+            mock(WorkflowStepFactory.class),
+            threadPool,
+            clusterService,
+            client,
+            settings
+        );
         this.createWorkflowTransportAction = spy(
             new CreateWorkflowTransportAction(
                 mock(TransportService.class),

@@ -123,6 +123,7 @@ public class ProvisionWorkflowTransportAction extends HandledTransportAction<Wor
                 Workflow provisionWorkflow = template.workflows().get(PROVISION_WORKFLOW);
                 List<ProcessNode> provisionProcessSequence = workflowProcessSorter.sortProcessNodes(provisionWorkflow, workflowId);
                 workflowProcessSorter.validateGraph(provisionProcessSequence);
+                workflowProcessSorter.validatePluginsInstalled(provisionProcessSequence);
 
                 flowFrameworkIndicesHandler.updateFlowFrameworkSystemIndexDoc(
                     workflowId,
