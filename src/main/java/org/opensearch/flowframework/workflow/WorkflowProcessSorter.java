@@ -136,13 +136,23 @@ public class WorkflowProcessSorter {
     }
 
     /**
+     * Validates inputs and ensures the required plugins are installed for each step in a topologically sorted graph
+     * @param processNodes the topologically sorted list of process nodes
+     * @throws Exception if validation fails
+     */
+    public void validate(List<ProcessNode> processNodes) throws Exception {
+        WorkflowValidator validator = WorkflowValidator.parse("mappings/workflow-steps.json");
+        validatePluginsInstalled(processNodes, validator);
+        validateGraph(processNodes, validator);
+    }
+
+    /**
      * Validates a sorted workflow, determines if each process node's required plugins are currently installed
      * @param processNodes A list of process nodes
+     * @param validator The validation definitions for the workflow steps
      * @throws Exception on validation failure
      */
-    public void validatePluginsInstalled(List<ProcessNode> processNodes) throws Exception {
-
-        WorkflowValidator validator = WorkflowValidator.parse("mappings/workflow-steps.json");
+    public void validatePluginsInstalled(List<ProcessNode> processNodes, WorkflowValidator validator) throws Exception {
 
         // Retrieve node information to ascertain installed plugins
         NodesInfoRequest nodesInfoRequest = new NodesInfoRequest();
@@ -191,11 +201,10 @@ public class WorkflowProcessSorter {
     /**
      * Validates a sorted workflow, determines if each process node's user inputs and predecessor outputs match the expected workflow step inputs
      * @param processNodes A list of process nodes
+     * @param validator The validation definitions for the workflow steps
      * @throws Exception on validation failure
      */
-    public void validateGraph(List<ProcessNode> processNodes) throws Exception {
-
-        WorkflowValidator validator = WorkflowValidator.parse("mappings/workflow-steps.json");
+    public void validateGraph(List<ProcessNode> processNodes, WorkflowValidator validator) throws Exception {
 
         // Iterate through process nodes in graph
         for (ProcessNode processNode : processNodes) {

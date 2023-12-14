@@ -31,6 +31,7 @@ import org.opensearch.flowframework.model.TemplateTestJsonUtil;
 import org.opensearch.flowframework.model.Workflow;
 import org.opensearch.flowframework.model.WorkflowEdge;
 import org.opensearch.flowframework.model.WorkflowNode;
+import org.opensearch.flowframework.model.WorkflowValidator;
 import org.opensearch.ml.client.MachineLearningNodeClient;
 import org.opensearch.plugins.PluginInfo;
 import org.opensearch.test.OpenSearchTestCase;
@@ -86,9 +87,10 @@ public class WorkflowProcessSorterTests extends OpenSearchTestCase {
     private static WorkflowProcessSorter workflowProcessSorter;
     private static Client client = mock(Client.class);
     private static ClusterService clusterService = mock(ClusterService.class);
+    private static WorkflowValidator validator;
 
     @BeforeClass
-    public static void setup() {
+    public static void setup() throws IOException {
         AdminClient adminClient = mock(AdminClient.class);
         MachineLearningNodeClient mlClient = mock(MachineLearningNodeClient.class);
         FlowFrameworkIndicesHandler flowFrameworkIndicesHandler = mock(FlowFrameworkIndicesHandler.class);
@@ -112,6 +114,7 @@ public class WorkflowProcessSorterTests extends OpenSearchTestCase {
             flowFrameworkIndicesHandler
         );
         workflowProcessSorter = new WorkflowProcessSorter(factory, testThreadPool, clusterService, client, settings);
+        validator = WorkflowValidator.parse("mappings/workflow-steps.json");
     }
 
     @AfterClass
@@ -311,7 +314,7 @@ public class WorkflowProcessSorterTests extends OpenSearchTestCase {
         Workflow workflow = new Workflow(Map.of(), List.of(createConnector, registerModel, deployModel), List.of(edge1, edge2));
 
         List<ProcessNode> sortedProcessNodes = workflowProcessSorter.sortProcessNodes(workflow, "123");
-        workflowProcessSorter.validateGraph(sortedProcessNodes);
+        workflowProcessSorter.validateGraph(sortedProcessNodes, validator);
     }
 
     public void testFailedGraphValidation() {
@@ -335,7 +338,7 @@ public class WorkflowProcessSorterTests extends OpenSearchTestCase {
         List<ProcessNode> sortedProcessNodes = workflowProcessSorter.sortProcessNodes(workflow, "123");
         FlowFrameworkException ex = expectThrows(
             FlowFrameworkException.class,
-            () -> workflowProcessSorter.validateGraph(sortedProcessNodes)
+            () -> workflowProcessSorter.validateGraph(sortedProcessNodes, validator)
         );
         assertEquals("Invalid graph, missing the following required inputs : [connector_id]", ex.getMessage());
         assertEquals(RestStatus.BAD_REQUEST, ex.getRestStatus());
@@ -418,7 +421,7 @@ public class WorkflowProcessSorterTests extends OpenSearchTestCase {
         Workflow workflow = new Workflow(Map.of(), List.of(createConnector, registerModel, deployModel), List.of(edge1, edge2));
         List<ProcessNode> sortedProcessNodes = workflowProcessSorter.sortProcessNodes(workflow, "123");
 
-        workflowProcessSorter.validatePluginsInstalled(sortedProcessNodes);
+        workflowProcessSorter.validatePluginsInstalled(sortedProcessNodes, validator);
     }
 
     public void testFailedInstalledPluginValidation() throws Exception {
@@ -498,7 +501,7 @@ public class WorkflowProcessSorterTests extends OpenSearchTestCase {
 
         FlowFrameworkException exception = expectThrows(
             FlowFrameworkException.class,
-            () -> workflowProcessSorter.validatePluginsInstalled(sortedProcessNodes)
+            () -> workflowProcessSorter.validatePluginsInstalled(sortedProcessNodes, validator)
         );
 
         assertEquals(
