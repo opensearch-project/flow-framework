@@ -28,6 +28,7 @@ import org.opensearch.env.NodeEnvironment;
 import org.opensearch.flowframework.common.FlowFrameworkFeatureEnabledSetting;
 import org.opensearch.flowframework.indices.FlowFrameworkIndicesHandler;
 import org.opensearch.flowframework.rest.RestCreateWorkflowAction;
+import org.opensearch.flowframework.rest.RestDeleteWorkflowAction;
 import org.opensearch.flowframework.rest.RestDeprovisionWorkflowAction;
 import org.opensearch.flowframework.rest.RestGetWorkflowAction;
 import org.opensearch.flowframework.rest.RestGetWorkflowStateAction;
@@ -36,6 +37,8 @@ import org.opensearch.flowframework.rest.RestSearchWorkflowAction;
 import org.opensearch.flowframework.rest.RestSearchWorkflowStateAction;
 import org.opensearch.flowframework.transport.CreateWorkflowAction;
 import org.opensearch.flowframework.transport.CreateWorkflowTransportAction;
+import org.opensearch.flowframework.transport.DeleteWorkflowAction;
+import org.opensearch.flowframework.transport.DeleteWorkflowTransportAction;
 import org.opensearch.flowframework.transport.DeprovisionWorkflowAction;
 import org.opensearch.flowframework.transport.DeprovisionWorkflowTransportAction;
 import org.opensearch.flowframework.transport.GetWorkflowAction;
@@ -139,6 +142,7 @@ public class FlowFrameworkPlugin extends Plugin implements ActionPlugin {
     ) {
         return ImmutableList.of(
             new RestCreateWorkflowAction(flowFrameworkFeatureEnabledSetting, settings, clusterService),
+            new RestDeleteWorkflowAction(flowFrameworkFeatureEnabledSetting),
             new RestProvisionWorkflowAction(flowFrameworkFeatureEnabledSetting),
             new RestDeprovisionWorkflowAction(flowFrameworkFeatureEnabledSetting),
             new RestSearchWorkflowAction(flowFrameworkFeatureEnabledSetting),
@@ -152,6 +156,7 @@ public class FlowFrameworkPlugin extends Plugin implements ActionPlugin {
     public List<ActionHandler<? extends ActionRequest, ? extends ActionResponse>> getActions() {
         return ImmutableList.of(
             new ActionHandler<>(CreateWorkflowAction.INSTANCE, CreateWorkflowTransportAction.class),
+            new ActionHandler<>(DeleteWorkflowAction.INSTANCE, DeleteWorkflowTransportAction.class),
             new ActionHandler<>(ProvisionWorkflowAction.INSTANCE, ProvisionWorkflowTransportAction.class),
             new ActionHandler<>(DeprovisionWorkflowAction.INSTANCE, DeprovisionWorkflowTransportAction.class),
             new ActionHandler<>(SearchWorkflowAction.INSTANCE, SearchWorkflowTransportAction.class),
