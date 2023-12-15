@@ -30,8 +30,6 @@ import org.opensearch.flowframework.model.WorkflowEdge;
 import org.opensearch.flowframework.model.WorkflowNode;
 import org.opensearch.flowframework.util.ParseUtils;
 import org.opensearch.flowframework.workflow.WorkflowProcessSorter;
-import org.opensearch.flowframework.workflow.WorkflowStepFactory;
-import org.opensearch.ml.client.MachineLearningNodeClient;
 import org.opensearch.tasks.Task;
 import org.opensearch.test.OpenSearchTestCase;
 import org.opensearch.threadpool.ThreadPool;
@@ -59,6 +57,8 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.anyInt;
 import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
@@ -71,7 +71,7 @@ public class CreateWorkflowTransportActionTests extends OpenSearchTestCase {
     private FlowFrameworkIndicesHandler flowFrameworkIndicesHandler;
     private WorkflowProcessSorter workflowProcessSorter;
     private Template template;
-    private Client client = mock(Client.class);
+    private Client client;
     private ThreadPool threadPool;
     private ClusterSettings clusterSettings;
     private ClusterService clusterService;
@@ -82,6 +82,8 @@ public class CreateWorkflowTransportActionTests extends OpenSearchTestCase {
     @Override
     public void setUp() throws Exception {
         super.setUp();
+        client = mock(Client.class);
+
         threadPool = mock(ThreadPool.class);
         settings = Settings.builder()
             .put("plugins.flow_framework.max_workflows", 2)
@@ -96,15 +98,10 @@ public class CreateWorkflowTransportActionTests extends OpenSearchTestCase {
         when(clusterService.getClusterSettings()).thenReturn(clusterSettings);
         this.flowFrameworkIndicesHandler = mock(FlowFrameworkIndicesHandler.class);
 
-        MachineLearningNodeClient mlClient = mock(MachineLearningNodeClient.class);
-        WorkflowStepFactory factory = new WorkflowStepFactory(
-            Settings.EMPTY,
-            clusterService,
-            client,
-            mlClient,
-            flowFrameworkIndicesHandler
-        );
-        this.workflowProcessSorter = new WorkflowProcessSorter(factory, threadPool, clusterService, settings);
+        // Validation functionality should not be invoked in these unit tests, mocking instead
+        this.workflowProcessSorter = mock(WorkflowProcessSorter.class);
+
+        // Spy this action to stub check max workflows
         this.createWorkflowTransportAction = spy(
             new CreateWorkflowTransportAction(
                 mock(TransportService.class),
@@ -153,7 +150,7 @@ public class CreateWorkflowTransportActionTests extends OpenSearchTestCase {
         createWorkflowTransportAction.doExecute(mock(Task.class), createNewWorkflow, listener);
     }
 
-    public void testDryRunValidation_Failed() {
+    public void testDryRunValidation_Failed() throws Exception {
 
         WorkflowNode createConnector = new WorkflowNode(
             "workflow_step_1",
@@ -207,12 +204,12 @@ public class CreateWorkflowTransportActionTests extends OpenSearchTestCase {
 
         @SuppressWarnings("unchecked")
         ActionListener<WorkflowResponse> listener = mock(ActionListener.class);
+        // Stub validation failure
+        doThrow(Exception.class).when(workflowProcessSorter).validate(any());
         WorkflowRequest createNewWorkflow = new WorkflowRequest(null, cyclicalTemplate, true, false, null, null);
 
         createWorkflowTransportAction.doExecute(mock(Task.class), createNewWorkflow, listener);
-        ArgumentCaptor<Exception> exceptionCaptor = ArgumentCaptor.forClass(Exception.class);
-        verify(listener, times(1)).onFailure(exceptionCaptor.capture());
-        assertEquals("No start node detected: all nodes have a predecessor.", exceptionCaptor.getValue().getMessage());
+        verify(listener, times(1)).onFailure(any());
     }
 
     public void testMaxWorkflow() {
@@ -381,12 +378,14 @@ public class CreateWorkflowTransportActionTests extends OpenSearchTestCase {
         assertEquals("1", responseCaptor.getValue().getWorkflowId());
     }
 
-    public void testCreateWorkflow_withDryRun_withProvision_Success() {
+    public void testCreateWorkflow_withDryRun_withProvision_Success() throws Exception {
 
         Template validTemplate = generateValidTemplate();
 
         @SuppressWarnings("unchecked")
         ActionListener<WorkflowResponse> listener = mock(ActionListener.class);
+
+        doNothing().when(workflowProcessSorter).validate(any());
         WorkflowRequest workflowRequest = new WorkflowRequest(
             null,
             validTemplate,
@@ -440,11 +439,13 @@ public class CreateWorkflowTransportActionTests extends OpenSearchTestCase {
         assertEquals("1", workflowResponseCaptor.getValue().getWorkflowId());
     }
 
-    public void testCreateWorkflow_withDryRun_withProvision_FailedProvisioning() {
+    public void testCreateWorkflow_withDryRun_withProvision_FailedProvisioning() throws Exception {
+
         Template validTemplate = generateValidTemplate();
 
         @SuppressWarnings("unchecked")
         ActionListener<WorkflowResponse> listener = mock(ActionListener.class);
+        doNothing().when(workflowProcessSorter).validate(any());
         WorkflowRequest workflowRequest = new WorkflowRequest(
             null,
             validTemplate,
