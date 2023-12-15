@@ -62,7 +62,7 @@ public class RestGetWorkflowAction extends BaseRestHandler {
 
     @Override
     protected BaseRestHandler.RestChannelConsumer prepareRequest(RestRequest request, NodeClient client) throws IOException {
-
+        String workflowId = request.param(WORKFLOW_ID);
         try {
             if (!flowFrameworkFeatureEnabledSetting.isFlowFrameworkEnabled()) {
                 throw new FlowFrameworkException(
@@ -76,7 +76,6 @@ public class RestGetWorkflowAction extends BaseRestHandler {
                 throw new FlowFrameworkException("Invalid request format", RestStatus.BAD_REQUEST);
             }
             // Validate params
-            String workflowId = request.param(WORKFLOW_ID);
             if (workflowId == null) {
                 throw new FlowFrameworkException("workflow_id cannot be null", RestStatus.BAD_REQUEST);
             }
