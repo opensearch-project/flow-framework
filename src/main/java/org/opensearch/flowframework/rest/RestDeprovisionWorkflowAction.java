@@ -57,7 +57,7 @@ public class RestDeprovisionWorkflowAction extends BaseRestHandler {
 
     @Override
     protected BaseRestHandler.RestChannelConsumer prepareRequest(RestRequest request, NodeClient client) throws IOException {
-
+        String workflowId = request.param(WORKFLOW_ID);
         try {
             if (!flowFrameworkFeatureEnabledSetting.isFlowFrameworkEnabled()) {
                 throw new FlowFrameworkException(
@@ -67,10 +67,10 @@ public class RestDeprovisionWorkflowAction extends BaseRestHandler {
             }
             // Validate content
             if (request.hasContent()) {
-                throw new FlowFrameworkException("No request body is required", RestStatus.BAD_REQUEST);
+                // BaseRestHandler will give appropriate error message
+                return channel -> channel.sendResponse(null);
             }
             // Validate params
-            String workflowId = request.param(WORKFLOW_ID);
             if (workflowId == null) {
                 throw new FlowFrameworkException("workflow_id cannot be null", RestStatus.BAD_REQUEST);
             }
