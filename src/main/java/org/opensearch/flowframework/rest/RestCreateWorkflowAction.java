@@ -78,6 +78,7 @@ public class RestCreateWorkflowAction extends AbstractWorkflowAction {
 
     @Override
     protected RestChannelConsumer prepareRequest(RestRequest request, NodeClient client) throws IOException {
+        String workflowId = request.param(WORKFLOW_ID);
         if (!flowFrameworkFeatureEnabledSetting.isFlowFrameworkEnabled()) {
             FlowFrameworkException ffe = new FlowFrameworkException(
                 "This API is disabled. To enable it, set [" + FLOW_FRAMEWORK_ENABLED.getKey() + "] to true.",
@@ -88,8 +89,6 @@ public class RestCreateWorkflowAction extends AbstractWorkflowAction {
             );
         }
         try {
-
-            String workflowId = request.param(WORKFLOW_ID);
             Template template = Template.parse(request.content().utf8ToString());
             boolean dryRun = request.paramAsBoolean(DRY_RUN, false);
             boolean provision = request.paramAsBoolean(PROVISION_WORKFLOW, false);

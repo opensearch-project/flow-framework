@@ -63,7 +63,7 @@ public class RestGetWorkflowStateActionTests extends OpenSearchTestCase {
     public void testNullWorkflowId() throws Exception {
 
         // Request with no params
-        RestRequest request = new FakeRestRequest.Builder(xContentRegistry()).withMethod(RestRequest.Method.POST)
+        RestRequest request = new FakeRestRequest.Builder(xContentRegistry()).withMethod(RestRequest.Method.GET)
             .withPath(this.getPath)
             .build();
 
@@ -76,7 +76,7 @@ public class RestGetWorkflowStateActionTests extends OpenSearchTestCase {
     }
 
     public void testInvalidRequestWithContent() {
-        RestRequest request = new FakeRestRequest.Builder(xContentRegistry()).withMethod(RestRequest.Method.POST)
+        RestRequest request = new FakeRestRequest.Builder(xContentRegistry()).withMethod(RestRequest.Method.GET)
             .withPath(this.getPath)
             .withContent(new BytesArray("request body"), MediaTypeRegistry.JSON)
             .build();
@@ -86,14 +86,14 @@ public class RestGetWorkflowStateActionTests extends OpenSearchTestCase {
             restGetWorkflowStateAction.handleRequest(request, channel, nodeClient);
         });
         assertEquals(
-            "request [POST /_plugins/_flow_framework/workflow/{workflow_id}/_status] does not support having a body",
+            "request [GET /_plugins/_flow_framework/workflow/{workflow_id}/_status] does not support having a body",
             ex.getMessage()
         );
     }
 
     public void testFeatureFlagNotEnabled() throws Exception {
         when(flowFrameworkFeatureEnabledSetting.isFlowFrameworkEnabled()).thenReturn(false);
-        RestRequest request = new FakeRestRequest.Builder(xContentRegistry()).withMethod(RestRequest.Method.POST)
+        RestRequest request = new FakeRestRequest.Builder(xContentRegistry()).withMethod(RestRequest.Method.GET)
                 .withPath(this.getPath)
                 .build();
         FakeRestChannel channel = new FakeRestChannel(request, false, 1);
