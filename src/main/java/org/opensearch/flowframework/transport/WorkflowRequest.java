@@ -19,7 +19,7 @@ import org.opensearch.flowframework.model.Template;
 import java.io.IOException;
 
 /**
- * Transport Request to create and provision a workflow
+ * Transport Request to create, provision, and deprovision a workflow
  */
 public class WorkflowRequest extends ActionRequest {
 
