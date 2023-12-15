@@ -77,7 +77,8 @@ public class RestProvisionWorkflowAction extends BaseRestHandler {
             }
             // Validate content
             if (request.hasContent()) {
-                throw new FlowFrameworkException("Invalid request format", RestStatus.BAD_REQUEST);
+                // BaseRestHandler will give appropriate error message
+                return channel -> channel.sendResponse(null);
             }
             // Validate params
             if (workflowId == null) {

@@ -68,7 +68,8 @@ public class RestGetWorkflowStateAction extends BaseRestHandler {
 
             // Validate content
             if (request.hasContent()) {
-                throw new FlowFrameworkException("No request body present", RestStatus.BAD_REQUEST);
+                // BaseRestHandler will give appropriate error message
+                return channel -> channel.sendResponse(null);
             }
             // Validate params
             if (workflowId == null) {
