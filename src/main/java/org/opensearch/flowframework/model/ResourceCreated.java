@@ -176,15 +176,14 @@ public class ResourceCreated implements ToXContentObject, Writeable {
 
     @Override
     public String toString() {
-        return "resources_Created [workflow_step_name= "
+        return "resources_Created [workflow_step_name="
             + workflowStepName
-            + ", workflow_step_id= "
+            + ", workflow_step_id="
             + workflowStepId
-            + ", resource_type= "
+            + ", resource_type="
             + resourceType
-            + ", resource_id= "
+            + ", resource_id="
             + resourceId
             + "]";
     }
-
 }
