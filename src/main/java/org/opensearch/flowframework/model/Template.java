@@ -260,9 +260,9 @@ public class Template implements ToXContentObject, Writeable {
     }
 
     /**
-     * Parse raw json content into a Template instance.
+     * Parse raw xContent into a Template instance.
      *
-     * @param parser json based content parser
+     * @param parser xContent based content parser
      * @return an instance of the template
      * @throws IOException if content can't be parsed correctly
      */
