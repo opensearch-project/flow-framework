@@ -62,7 +62,7 @@ public class RestGetWorkflowAction extends BaseRestHandler {
 
     @Override
     protected BaseRestHandler.RestChannelConsumer prepareRequest(RestRequest request, NodeClient client) throws IOException {
-
+        String workflowId = request.param(WORKFLOW_ID);
         try {
             if (!flowFrameworkFeatureEnabledSetting.isFlowFrameworkEnabled()) {
                 throw new FlowFrameworkException(
@@ -70,13 +70,12 @@ public class RestGetWorkflowAction extends BaseRestHandler {
                     RestStatus.FORBIDDEN
                 );
             }
-
             // Validate content
             if (request.hasContent()) {
-                throw new FlowFrameworkException("Invalid request format", RestStatus.BAD_REQUEST);
+                // BaseRestHandler will give appropriate error message
+                return channel -> channel.sendResponse(null);
             }
             // Validate params
-            String workflowId = request.param(WORKFLOW_ID);
             if (workflowId == null) {
                 throw new FlowFrameworkException("workflow_id cannot be null", RestStatus.BAD_REQUEST);
             }
@@ -87,7 +86,9 @@ public class RestGetWorkflowAction extends BaseRestHandler {
                 channel.sendResponse(new BytesRestResponse(RestStatus.OK, builder));
             }, exception -> {
                 try {
-                    FlowFrameworkException ex = new FlowFrameworkException(exception.getMessage(), ExceptionsHelper.status(exception));
+                    FlowFrameworkException ex = exception instanceof FlowFrameworkException
+                        ? (FlowFrameworkException) exception
+                        : new FlowFrameworkException(exception.getMessage(), ExceptionsHelper.status(exception));
                     XContentBuilder exceptionBuilder = ex.toXContent(channel.newErrorBuilder(), ToXContent.EMPTY_PARAMS);
                     channel.sendResponse(new BytesRestResponse(ex.getRestStatus(), exceptionBuilder));
 
