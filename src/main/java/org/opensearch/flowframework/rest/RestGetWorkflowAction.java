@@ -86,7 +86,9 @@ public class RestGetWorkflowAction extends BaseRestHandler {
                 channel.sendResponse(new BytesRestResponse(RestStatus.OK, builder));
             }, exception -> {
                 try {
-                    FlowFrameworkException ex = new FlowFrameworkException(exception.getMessage(), ExceptionsHelper.status(exception));
+                    FlowFrameworkException ex = exception instanceof FlowFrameworkException
+                        ? (FlowFrameworkException) exception
+                        : new FlowFrameworkException(exception.getMessage(), ExceptionsHelper.status(exception));
                     XContentBuilder exceptionBuilder = ex.toXContent(channel.newErrorBuilder(), ToXContent.EMPTY_PARAMS);
                     channel.sendResponse(new BytesRestResponse(ex.getRestStatus(), exceptionBuilder));
 
