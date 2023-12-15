@@ -1,7 +1,8 @@
 {
     "noop": {
         "inputs":[],
-        "outputs":[]
+        "outputs":[],
+        "required_plugins":[]
     },
     "create_index": {
         "inputs":[
@@ -10,7 +11,8 @@
         ],
         "outputs":[
             "index_name"
-        ]
+        ],
+        "required_plugins":[]
     },
     "create_ingest_pipeline": {
         "inputs":[
@@ -23,7 +25,8 @@
         ],
         "outputs":[
             "pipeline_id"
-        ]
+        ],
+        "required_plugins":[]
     },
     "create_connector": {
         "inputs":[
@@ -37,6 +40,9 @@
         ],
         "outputs":[
             "connector_id"
+        ],
+        "required_plugins":[
+            "opensearch-ml"
         ]
     },
     "delete_connector": {
@@ -45,6 +51,9 @@
         ],
         "outputs":[
             "connector_id"
+        ],
+        "required_plugins":[
+            "opensearch-ml"
         ]
     },
     "register_local_model": {
@@ -62,6 +71,9 @@
         "outputs":[
             "model_id",
             "register_model_status"
+        ],
+        "required_plugins":[
+            "opensearch-ml"
         ]
     },
     "register_remote_model": {
@@ -73,6 +85,9 @@
         "outputs": [
             "model_id",
             "register_model_status"
+        ],
+        "required_plugins":[
+            "opensearch-ml"
         ]
     },
     "delete_model": {
@@ -81,6 +96,9 @@
         ],
         "outputs":[
             "model_id"
+        ],
+        "required_plugins":[
+            "opensearch-ml"
         ]
     },
     "deploy_model": {
@@ -89,6 +107,9 @@
         ],
         "outputs":[
             "deploy_model_status"
+        ],
+        "required_plugins":[
+            "opensearch-ml"
         ]
     },
     "undeploy_model": {
@@ -97,6 +118,9 @@
         ],
         "outputs":[
             "success"
+        ],
+        "required_plugins":[
+            "opensearch-ml"
         ]
     },
     "register_model_group": {
@@ -106,6 +130,9 @@
         "outputs":[
             "model_group_id",
             "model_group_status"
+        ],
+        "required_plugins":[
+            "opensearch-ml"
         ]
     },
     "register_agent": {
@@ -121,6 +148,9 @@
         ],
         "outputs":[
             "agent_id"
+        ],
+        "required_plugins":[
+            "opensearch-ml"
         ]
     },
     "delete_agent": {
@@ -129,6 +159,9 @@
         ],
         "outputs":[
             "agent_id"
+        ],
+        "required_plugins":[
+            "opensearch-ml"
         ]
     },
     "create_tool": {
@@ -137,6 +170,9 @@
         ],
         "outputs": [
             "tools"
+        ],
+        "required_plugins":[
+            "opensearch-ml"
         ]
     }
 }

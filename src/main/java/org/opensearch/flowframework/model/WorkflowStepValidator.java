@@ -25,18 +25,23 @@ public class WorkflowStepValidator {
     private static final String INPUTS_FIELD = "inputs";
     /** Outputs field name */
     private static final String OUTPUTS_FIELD = "outputs";
+    /** Required Plugins field name */
+    private static final String REQUIRED_PLUGINS = "required_plugins";
 
     private List<String> inputs;
     private List<String> outputs;
+    private List<String> requiredPlugins;
 
     /**
      * Intantiate the object representing a Workflow Step validator
      * @param inputs the workflow step inputs
      * @param outputs the workflow step outputs
+     * @param requiredPlugins the required plugins for this workflow step
      */
-    public WorkflowStepValidator(List<String> inputs, List<String> outputs) {
+    public WorkflowStepValidator(List<String> inputs, List<String> outputs, List<String> requiredPlugins) {
         this.inputs = inputs;
         this.outputs = outputs;
+        this.requiredPlugins = requiredPlugins;
     }
 
     /**
@@ -48,6 +53,7 @@ public class WorkflowStepValidator {
     public static WorkflowStepValidator parse(XContentParser parser) throws IOException {
         List<String> parsedInputs = new ArrayList<>();
         List<String> parsedOutputs = new ArrayList<>();
+        List<String> requiredPlugins = new ArrayList<>();
 
         ensureExpectedToken(XContentParser.Token.START_OBJECT, parser.currentToken(), parser);
         while (parser.nextToken() != XContentParser.Token.END_OBJECT) {
@@ -66,11 +72,17 @@ public class WorkflowStepValidator {
                         parsedOutputs.add(parser.text());
                     }
                     break;
+                case REQUIRED_PLUGINS:
+                    ensureExpectedToken(XContentParser.Token.START_ARRAY, parser.currentToken(), parser);
+                    while (parser.nextToken() != XContentParser.Token.END_ARRAY) {
+                        requiredPlugins.add(parser.text());
+                    }
+                    break;
                 default:
                     throw new IOException("Unable to parse field [" + fieldName + "] in a WorkflowStepValidator object.");
             }
         }
-        return new WorkflowStepValidator(parsedInputs, parsedOutputs);
+        return new WorkflowStepValidator(parsedInputs, parsedOutputs, requiredPlugins);
     }
 
     /**
@@ -87,5 +99,13 @@ public class WorkflowStepValidator {
      */
     public List<String> getOutputs() {
         return List.copyOf(outputs);
+    }
+
+    /**
+     * Get the required plugins
+     * @return the outputs
+     */
+    public List<String> getRequiredPlugins() {
+        return List.copyOf(requiredPlugins);
     }
 }
