@@ -18,6 +18,7 @@ import org.opensearch.core.action.ActionListener;
 import org.opensearch.core.rest.RestStatus;
 import org.opensearch.core.xcontent.ToXContent;
 import org.opensearch.core.xcontent.XContentBuilder;
+import org.opensearch.core.xcontent.XContentParser;
 import org.opensearch.flowframework.common.FlowFrameworkFeatureEnabledSetting;
 import org.opensearch.flowframework.exception.FlowFrameworkException;
 import org.opensearch.flowframework.model.Template;
@@ -30,6 +31,7 @@ import java.io.IOException;
 import java.util.List;
 import java.util.Locale;
 
+import static org.opensearch.core.xcontent.XContentParserUtils.ensureExpectedToken;
 import static org.opensearch.flowframework.common.CommonValue.DRY_RUN;
 import static org.opensearch.flowframework.common.CommonValue.PROVISION_WORKFLOW;
 import static org.opensearch.flowframework.common.CommonValue.WORKFLOW_ID;
@@ -89,7 +91,9 @@ public class RestCreateWorkflowAction extends AbstractWorkflowAction {
             );
         }
         try {
-            Template template = Template.parse(request.content().utf8ToString());
+            XContentParser parser = request.contentParser();
+            ensureExpectedToken(XContentParser.Token.START_OBJECT, parser.nextToken(), parser);
+            Template template = Template.parse(parser);
             boolean dryRun = request.paramAsBoolean(DRY_RUN, false);
             boolean provision = request.paramAsBoolean(PROVISION_WORKFLOW, false);
 
