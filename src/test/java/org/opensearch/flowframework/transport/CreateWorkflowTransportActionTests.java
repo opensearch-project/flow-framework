@@ -455,8 +455,6 @@ public class CreateWorkflowTransportActionTests extends OpenSearchTestCase {
             MAX_WORKFLOWS.get(settings)
         );
 
-        // Bypass dryRun, we should not be invoking the actual validation in this transport action unit test
-
         // Bypass checkMaxWorkflows and force onResponse
         doAnswer(invocation -> {
             ActionListener<Boolean> checkMaxWorkflowListener = invocation.getArgument(2);
