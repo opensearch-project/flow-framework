@@ -26,8 +26,8 @@ import static org.opensearch.flowframework.common.CommonValue.WORKFLOW_URI;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-public class RestGetWorkflowActionTests extends OpenSearchTestCase {
-    private RestGetWorkflowAction restGetWorkflowAction;
+public class RestDeleteWorkflowActionTests extends OpenSearchTestCase {
+    private RestDeleteWorkflowAction restDeleteWorkflowAction;
     private String getPath;
     private FlowFrameworkFeatureEnabledSetting flowFrameworkFeatureEnabledSetting;
     private NodeClient nodeClient;
@@ -39,44 +39,44 @@ public class RestGetWorkflowActionTests extends OpenSearchTestCase {
         this.getPath = String.format(Locale.ROOT, "%s/{%s}", WORKFLOW_URI, "workflow_id");
         flowFrameworkFeatureEnabledSetting = mock(FlowFrameworkFeatureEnabledSetting.class);
         when(flowFrameworkFeatureEnabledSetting.isFlowFrameworkEnabled()).thenReturn(true);
-        this.restGetWorkflowAction = new RestGetWorkflowAction(flowFrameworkFeatureEnabledSetting);
+        this.restDeleteWorkflowAction = new RestDeleteWorkflowAction(flowFrameworkFeatureEnabledSetting);
         this.nodeClient = mock(NodeClient.class);
     }
 
-    public void testRestGetWorkflowActionName() {
-        String name = restGetWorkflowAction.getName();
-        assertEquals("get_workflow", name);
+    public void testRestDeleteWorkflowActionName() {
+        String name = restDeleteWorkflowAction.getName();
+        assertEquals("delete_workflow", name);
     }
 
-    public void testRestGetWorkflowActionRoutes() {
-        List<RestHandler.Route> routes = restGetWorkflowAction.routes();
+    public void testRestDeleteWorkflowActionRoutes() {
+        List<RestHandler.Route> routes = restDeleteWorkflowAction.routes();
         assertEquals(1, routes.size());
-        assertEquals(RestRequest.Method.GET, routes.get(0).getMethod());
+        assertEquals(RestRequest.Method.DELETE, routes.get(0).getMethod());
         assertEquals(this.getPath, routes.get(0).getPath());
     }
 
     public void testInvalidRequestWithContent() {
-        RestRequest request = new FakeRestRequest.Builder(xContentRegistry()).withMethod(RestRequest.Method.GET)
+        RestRequest request = new FakeRestRequest.Builder(xContentRegistry()).withMethod(RestRequest.Method.DELETE)
             .withPath(this.getPath)
             .withContent(new BytesArray("request body"), MediaTypeRegistry.JSON)
             .build();
 
         FakeRestChannel channel = new FakeRestChannel(request, false, 1);
         IllegalArgumentException ex = expectThrows(IllegalArgumentException.class, () -> {
-            restGetWorkflowAction.handleRequest(request, channel, nodeClient);
+            restDeleteWorkflowAction.handleRequest(request, channel, nodeClient);
         });
-        assertEquals("request [GET /_plugins/_flow_framework/workflow/{workflow_id}] does not support having a body", ex.getMessage());
+        assertEquals("request [DELETE /_plugins/_flow_framework/workflow/{workflow_id}] does not support having a body", ex.getMessage());
     }
 
     public void testNullWorkflowId() throws Exception {
 
         // Request with no params
-        RestRequest request = new FakeRestRequest.Builder(xContentRegistry()).withMethod(RestRequest.Method.GET)
+        RestRequest request = new FakeRestRequest.Builder(xContentRegistry()).withMethod(RestRequest.Method.DELETE)
             .withPath(this.getPath)
             .build();
 
         FakeRestChannel channel = new FakeRestChannel(request, true, 1);
-        restGetWorkflowAction.handleRequest(request, channel, nodeClient);
+        restDeleteWorkflowAction.handleRequest(request, channel, nodeClient);
 
         assertEquals(1, channel.errors().get());
         assertEquals(RestStatus.BAD_REQUEST, channel.capturedResponse().status());
@@ -85,11 +85,11 @@ public class RestGetWorkflowActionTests extends OpenSearchTestCase {
 
     public void testFeatureFlagNotEnabled() throws Exception {
         when(flowFrameworkFeatureEnabledSetting.isFlowFrameworkEnabled()).thenReturn(false);
-        RestRequest request = new FakeRestRequest.Builder(xContentRegistry()).withMethod(RestRequest.Method.GET)
+        RestRequest request = new FakeRestRequest.Builder(xContentRegistry()).withMethod(RestRequest.Method.DELETE)
                 .withPath(this.getPath)
                 .build();
         FakeRestChannel channel = new FakeRestChannel(request, false, 1);
-        restGetWorkflowAction.handleRequest(request, channel, nodeClient);
+        restDeleteWorkflowAction.handleRequest(request, channel, nodeClient);
         assertEquals(RestStatus.FORBIDDEN, channel.capturedResponse().status());
         assertTrue(channel.capturedResponse().content().utf8ToString().contains("This API is disabled."));
     }
