@@ -113,6 +113,7 @@ public class FlowFrameworkPlugin extends Plugin implements ActionPlugin {
         FlowFrameworkIndicesHandler flowFrameworkIndicesHandler = new FlowFrameworkIndicesHandler(client, clusterService, encryptorUtils);
         WorkflowStepFactory workflowStepFactory = new WorkflowStepFactory(
             settings,
+            threadPool,
             clusterService,
             client,
             mlClient,

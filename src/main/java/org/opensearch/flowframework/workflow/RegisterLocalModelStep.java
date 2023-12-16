@@ -18,6 +18,7 @@ import org.opensearch.flowframework.exception.FlowFrameworkException;
 import org.opensearch.flowframework.indices.FlowFrameworkIndicesHandler;
 import org.opensearch.flowframework.util.ParseUtils;
 import org.opensearch.ml.client.MachineLearningNodeClient;
+import org.opensearch.ml.common.MLTask;
 import org.opensearch.ml.common.model.MLModelConfig;
 import org.opensearch.ml.common.model.MLModelFormat;
 import org.opensearch.ml.common.model.TextEmbeddingModelConfig;
@@ -26,6 +27,7 @@ import org.opensearch.ml.common.model.TextEmbeddingModelConfig.TextEmbeddingMode
 import org.opensearch.ml.common.transport.register.MLRegisterModelInput;
 import org.opensearch.ml.common.transport.register.MLRegisterModelInput.MLRegisterModelInputBuilder;
 import org.opensearch.ml.common.transport.register.MLRegisterModelResponse;
+import org.opensearch.threadpool.ThreadPool;
 
 import java.util.Map;
 import java.util.Set;
@@ -60,17 +62,19 @@ public class RegisterLocalModelStep extends AbstractRetryableWorkflowStep {
     /**
      * Instantiate this class
      * @param settings The OpenSearch settings
+     * @param threadPool The OpenSearch thread pool
      * @param clusterService The cluster service
      * @param mlClient client to instantiate MLClient
      * @param flowFrameworkIndicesHandler FlowFrameworkIndicesHandler class to update system indices
      */
     public RegisterLocalModelStep(
         Settings settings,
+        ThreadPool threadPool,
         ClusterService clusterService,
         MachineLearningNodeClient mlClient,
         FlowFrameworkIndicesHandler flowFrameworkIndicesHandler
     ) {
-        super(settings, clusterService, mlClient, flowFrameworkIndicesHandler);
+        super(settings, threadPool, clusterService, mlClient, flowFrameworkIndicesHandler);
         this.mlClient = mlClient;
         this.flowFrameworkIndicesHandler = flowFrameworkIndicesHandler;
     }
@@ -98,7 +102,6 @@ public class RegisterLocalModelStep extends AbstractRetryableWorkflowStep {
                     currentNodeId,
                     registerLocalModelFuture,
                     taskId,
-                    0,
                     "Local model registration"
                 );
             }
@@ -173,6 +176,11 @@ public class RegisterLocalModelStep extends AbstractRetryableWorkflowStep {
             registerLocalModelFuture.completeExceptionally(e);
         }
         return registerLocalModelFuture;
+    }
+
+    @Override
+    protected String getResourceId(MLTask response) {
+        return response.getModelId();
     }
 
     @Override
