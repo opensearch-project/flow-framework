@@ -1,16 +1,18 @@
 {
     "noop": {
         "inputs":[],
-        "outputs":[]
+        "outputs":[],
+        "required_plugins":[]
     },
     "create_index": {
         "inputs":[
             "index_name",
-            "type"
+            "default_mapping_option"
         ],
         "outputs":[
             "index_name"
-        ]
+        ],
+        "required_plugins":[]
     },
     "create_ingest_pipeline": {
         "inputs":[
@@ -23,7 +25,8 @@
         ],
         "outputs":[
             "pipeline_id"
-        ]
+        ],
+        "required_plugins":[]
     },
     "create_connector": {
         "inputs":[
@@ -37,6 +40,20 @@
         ],
         "outputs":[
             "connector_id"
+        ],
+        "required_plugins":[
+            "opensearch-ml"
+        ]
+    },
+    "delete_connector": {
+        "inputs": [
+            "connector_id"
+        ],
+        "outputs":[
+            "connector_id"
+        ],
+        "required_plugins":[
+            "opensearch-ml"
         ]
     },
     "register_local_model": {
@@ -54,6 +71,9 @@
         "outputs":[
             "model_id",
             "register_model_status"
+        ],
+        "required_plugins":[
+            "opensearch-ml"
         ]
     },
     "register_remote_model": {
@@ -65,6 +85,20 @@
         "outputs": [
             "model_id",
             "register_model_status"
+        ],
+        "required_plugins":[
+            "opensearch-ml"
+        ]
+    },
+    "delete_model": {
+        "inputs": [
+            "model_id"
+        ],
+        "outputs":[
+            "model_id"
+        ],
+        "required_plugins":[
+            "opensearch-ml"
         ]
     },
     "deploy_model": {
@@ -73,15 +107,72 @@
         ],
         "outputs":[
             "deploy_model_status"
+        ],
+        "required_plugins":[
+            "opensearch-ml"
         ]
     },
-    "model_group": {
+    "undeploy_model": {
+        "inputs":[
+            "model_id"
+        ],
+        "outputs":[
+            "success"
+        ],
+        "required_plugins":[
+            "opensearch-ml"
+        ]
+    },
+    "register_model_group": {
         "inputs":[
             "name"
         ],
         "outputs":[
             "model_group_id",
             "model_group_status"
+        ],
+        "required_plugins":[
+            "opensearch-ml"
+        ]
+    },
+    "register_agent": {
+        "inputs":[
+            "name",
+            "type",
+            "tools",
+            "parameters",
+            "memory",
+            "created_time",
+            "last_updated_time",
+            "app_type"
+        ],
+        "outputs":[
+            "agent_id"
+        ],
+        "required_plugins":[
+            "opensearch-ml"
+        ]
+    },
+    "delete_agent": {
+        "inputs": [
+            "agent_id"
+        ],
+        "outputs":[
+            "agent_id"
+        ],
+        "required_plugins":[
+            "opensearch-ml"
+        ]
+    },
+    "create_tool": {
+        "inputs": [
+            "type"
+        ],
+        "outputs": [
+            "tools"
+        ],
+        "required_plugins":[
+            "opensearch-ml"
         ]
     }
 }

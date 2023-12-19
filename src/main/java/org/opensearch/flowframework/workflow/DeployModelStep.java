@@ -11,15 +11,18 @@ package org.opensearch.flowframework.workflow;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.opensearch.ExceptionsHelper;
+import org.opensearch.cluster.service.ClusterService;
+import org.opensearch.common.settings.Settings;
 import org.opensearch.core.action.ActionListener;
-import org.opensearch.core.rest.RestStatus;
 import org.opensearch.flowframework.exception.FlowFrameworkException;
+import org.opensearch.flowframework.indices.FlowFrameworkIndicesHandler;
+import org.opensearch.flowframework.util.ParseUtils;
 import org.opensearch.ml.client.MachineLearningNodeClient;
 import org.opensearch.ml.common.transport.deploy.MLDeployModelResponse;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.util.Collections;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 
 import static org.opensearch.flowframework.common.CommonValue.MODEL_ID;
@@ -27,18 +30,29 @@ import static org.opensearch.flowframework.common.CommonValue.MODEL_ID;
 /**
  * Step to deploy a model
  */
-public class DeployModelStep implements WorkflowStep {
+public class DeployModelStep extends AbstractRetryableWorkflowStep {
     private static final Logger logger = LogManager.getLogger(DeployModelStep.class);
 
-    private MachineLearningNodeClient mlClient;
+    private final MachineLearningNodeClient mlClient;
+    private final FlowFrameworkIndicesHandler flowFrameworkIndicesHandler;
     static final String NAME = "deploy_model";
 
     /**
      * Instantiate this class
+     * @param settings The OpenSearch settings
+     * @param clusterService The cluster service
      * @param mlClient client to instantiate MLClient
+     * @param flowFrameworkIndicesHandler FlowFrameworkIndicesHandler class to update system indices
      */
-    public DeployModelStep(MachineLearningNodeClient mlClient) {
+    public DeployModelStep(
+        Settings settings,
+        ClusterService clusterService,
+        MachineLearningNodeClient mlClient,
+        FlowFrameworkIndicesHandler flowFrameworkIndicesHandler
+    ) {
+        super(settings, clusterService, mlClient, flowFrameworkIndicesHandler);
         this.mlClient = mlClient;
+        this.flowFrameworkIndicesHandler = flowFrameworkIndicesHandler;
     }
 
     @Override
@@ -55,13 +69,10 @@ public class DeployModelStep implements WorkflowStep {
             @Override
             public void onResponse(MLDeployModelResponse mlDeployModelResponse) {
                 logger.info("Model deployment state {}", mlDeployModelResponse.getStatus());
-                deployModelFuture.complete(
-                    new WorkflowData(
-                        Map.ofEntries(Map.entry("deploy_model_status", mlDeployModelResponse.getStatus())),
-                        currentNodeInputs.getWorkflowId(),
-                        currentNodeInputs.getNodeId()
-                    )
-                );
+                String taskId = mlDeployModelResponse.getTaskId();
+
+                // Attempt to retrieve the model ID
+                retryableGetMlTask(currentNodeInputs.getWorkflowId(), currentNodeId, deployModelFuture, taskId, 0, "Deploy model");
             }
 
             @Override
@@ -71,27 +82,24 @@ public class DeployModelStep implements WorkflowStep {
             }
         };
 
-        String modelId = null;
+        Set<String> requiredKeys = Set.of(MODEL_ID);
+        Set<String> optionalKeys = Collections.emptySet();
 
-        // TODO: Recreating the list to get this compiling
-        // Need to refactor the below iteration to pull directly from the maps
-        List<WorkflowData> data = new ArrayList<>();
-        data.add(currentNodeInputs);
-        data.addAll(outputs.values());
+        try {
+            Map<String, Object> inputs = ParseUtils.getInputsFromPreviousSteps(
+                requiredKeys,
+                optionalKeys,
+                currentNodeInputs,
+                outputs,
+                previousNodeInputs
+            );
 
-        for (WorkflowData workflowData : data) {
-            if (workflowData.getContent().containsKey(MODEL_ID)) {
-                modelId = (String) workflowData.getContent().get(MODEL_ID);
-                break;
-            }
-        }
+            String modelId = (String) inputs.get(MODEL_ID);
 
-        if (modelId != null) {
             mlClient.deploy(modelId, actionListener);
-        } else {
-            deployModelFuture.completeExceptionally(new FlowFrameworkException("Model ID is not provided", RestStatus.BAD_REQUEST));
+        } catch (FlowFrameworkException e) {
+            deployModelFuture.completeExceptionally(e);
         }
-
         return deployModelFuture;
     }
 

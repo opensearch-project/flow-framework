@@ -24,7 +24,10 @@ import java.util.Map.Entry;
 import java.util.Objects;
 
 import static org.opensearch.core.xcontent.XContentParserUtils.ensureExpectedToken;
+import static org.opensearch.flowframework.common.CommonValue.TOOLS_ORDER_FIELD;
+import static org.opensearch.flowframework.util.ParseUtils.buildStringToObjectMap;
 import static org.opensearch.flowframework.util.ParseUtils.buildStringToStringMap;
+import static org.opensearch.flowframework.util.ParseUtils.parseStringToObjectMap;
 import static org.opensearch.flowframework.util.ParseUtils.parseStringToStringMap;
 
 /**
@@ -34,7 +37,6 @@ import static org.opensearch.flowframework.util.ParseUtils.parseStringToStringMa
  * and its inputs are used to populate the {@link WorkflowData} input.
  */
 public class WorkflowNode implements ToXContentObject {
-
     /** The template field name for node id */
     public static final String ID_FIELD = "id";
     /** The template field name for node type */
@@ -48,7 +50,7 @@ public class WorkflowNode implements ToXContentObject {
     /** The field defining the timeout value for this node */
     public static final String NODE_TIMEOUT_FIELD = "node_timeout";
     /** The default timeout value if the template doesn't override it */
-    public static final String NODE_TIMEOUT_DEFAULT_VALUE = "10s";
+    public static final String NODE_TIMEOUT_DEFAULT_VALUE = "15s";
 
     private final String id; // unique id
     private final String type; // maps to a WorkflowStep
@@ -82,7 +84,7 @@ public class WorkflowNode implements ToXContentObject {
         xContentBuilder.startObject(USER_INPUTS_FIELD);
         for (Entry<String, Object> e : userInputs.entrySet()) {
             xContentBuilder.field(e.getKey());
-            if (e.getValue() instanceof String) {
+            if (e.getValue() instanceof String || e.getValue() instanceof Number) {
                 xContentBuilder.value(e.getValue());
             } else if (e.getValue() instanceof Map<?, ?>) {
                 buildStringToStringMap(xContentBuilder, (Map<?, ?>) e.getValue());
@@ -92,9 +94,13 @@ public class WorkflowNode implements ToXContentObject {
                     for (PipelineProcessor p : (PipelineProcessor[]) e.getValue()) {
                         xContentBuilder.value(p);
                     }
+                } else if (TOOLS_ORDER_FIELD.equals(e.getKey())) {
+                    for (String t : (String[]) e.getValue()) {
+                        xContentBuilder.value(t);
+                    }
                 } else {
                     for (Map<?, ?> map : (Map<?, ?>[]) e.getValue()) {
-                        buildStringToStringMap(xContentBuilder, map);
+                        buildStringToObjectMap(xContentBuilder, map);
                     }
                 }
                 xContentBuilder.endArray();
@@ -150,12 +156,39 @@ public class WorkflowNode implements ToXContentObject {
                                         processorList.add(PipelineProcessor.parse(parser));
                                     }
                                     userInputs.put(inputFieldName, processorList.toArray(new PipelineProcessor[0]));
-                                } else {
-                                    List<Map<String, String>> mapList = new ArrayList<>();
+                                } else if (TOOLS_ORDER_FIELD.equals(inputFieldName)) {
+                                    List<String> toolsList = new ArrayList<>();
                                     while (parser.nextToken() != XContentParser.Token.END_ARRAY) {
-                                        mapList.add(parseStringToStringMap(parser));
+                                        toolsList.add(parser.text());
+                                    }
+                                    userInputs.put(inputFieldName, toolsList.toArray(new String[0]));
+                                } else {
+                                    List<Map<String, Object>> mapList = new ArrayList<>();
+                                    while (parser.nextToken() != XContentParser.Token.END_ARRAY) {
+                                        mapList.add(parseStringToObjectMap(parser));
                                     }
                                     userInputs.put(inputFieldName, mapList.toArray(new Map[0]));
+                                }
+                                break;
+                            case VALUE_NUMBER:
+                                switch (parser.numberType()) {
+                                    case INT:
+                                        userInputs.put(inputFieldName, parser.intValue());
+                                        break;
+                                    case LONG:
+                                        userInputs.put(inputFieldName, parser.longValue());
+                                        break;
+                                    case FLOAT:
+                                        userInputs.put(inputFieldName, parser.floatValue());
+                                        break;
+                                    case DOUBLE:
+                                        userInputs.put(inputFieldName, parser.doubleValue());
+                                        break;
+                                    case BIG_INTEGER:
+                                        userInputs.put(inputFieldName, parser.bigIntegerValue());
+                                        break;
+                                    default:
+                                        throw new IOException("Unable to parse field [" + inputFieldName + "] in a node object.");
                                 }
                                 break;
                             default:

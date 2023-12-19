@@ -122,7 +122,7 @@ public class ProvisionWorkflowTransportAction extends HandledTransportAction<Wor
                 // Sort and validate graph
                 Workflow provisionWorkflow = template.workflows().get(PROVISION_WORKFLOW);
                 List<ProcessNode> provisionProcessSequence = workflowProcessSorter.sortProcessNodes(provisionWorkflow, workflowId);
-                workflowProcessSorter.validateGraph(provisionProcessSequence);
+                workflowProcessSorter.validate(provisionProcessSequence);
 
                 flowFrameworkIndicesHandler.updateFlowFrameworkSystemIndexDoc(
                     workflowId,
@@ -216,10 +216,10 @@ public class ProvisionWorkflowTransportAction extends HandledTransportAction<Wor
                 ),
                 ActionListener.wrap(updateResponse -> {
                     logger.info("updated workflow {} state to {}", workflowId, State.COMPLETED);
-                }, exception -> { logger.error("Failed to update workflow state : {}", exception.getMessage()); })
+                }, exception -> { logger.error("Failed to update workflow state : {}", exception.getMessage(), exception); })
             );
         } catch (Exception ex) {
-            logger.error("Provisioning failed for workflow {} : {}", workflowId, ex);
+            logger.error("Provisioning failed for workflow: {}", workflowId, ex);
             flowFrameworkIndicesHandler.updateFlowFrameworkSystemIndexDoc(
                 workflowId,
                 ImmutableMap.of(
@@ -233,8 +233,8 @@ public class ProvisionWorkflowTransportAction extends HandledTransportAction<Wor
                     Instant.now().toEpochMilli()
                 ),
                 ActionListener.wrap(updateResponse -> {
-                    logger.info("updated workflow {} state to {}", workflowId, State.COMPLETED);
-                }, exceptionState -> { logger.error("Failed to update workflow state : {}", exceptionState.getMessage()); })
+                    logger.info("updated workflow {} state to {}", workflowId, State.FAILED);
+                }, exceptionState -> { logger.error("Failed to update workflow state : {}", exceptionState.getMessage(), ex); })
             );
         }
     }

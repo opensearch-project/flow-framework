@@ -20,7 +20,7 @@ import org.opensearch.core.xcontent.XContentBuilder;
 import org.opensearch.flowframework.common.FlowFrameworkFeatureEnabledSetting;
 import org.opensearch.flowframework.exception.FlowFrameworkException;
 import org.opensearch.flowframework.transport.GetWorkflowAction;
-import org.opensearch.flowframework.transport.GetWorkflowRequest;
+import org.opensearch.flowframework.transport.WorkflowRequest;
 import org.opensearch.rest.BaseRestHandler;
 import org.opensearch.rest.BytesRestResponse;
 import org.opensearch.rest.RestRequest;
@@ -34,7 +34,7 @@ import static org.opensearch.flowframework.common.CommonValue.WORKFLOW_URI;
 import static org.opensearch.flowframework.common.FlowFrameworkSettings.FLOW_FRAMEWORK_ENABLED;
 
 /**
- * Rest Action to facilitate requests to get a workflow status
+ * Rest Action to facilitate requests to get a stored template
  */
 public class RestGetWorkflowAction extends BaseRestHandler {
 
@@ -56,8 +56,13 @@ public class RestGetWorkflowAction extends BaseRestHandler {
     }
 
     @Override
-    protected BaseRestHandler.RestChannelConsumer prepareRequest(RestRequest request, NodeClient client) throws IOException {
+    public List<Route> routes() {
+        return ImmutableList.of(new Route(RestRequest.Method.GET, String.format(Locale.ROOT, "%s/{%s}", WORKFLOW_URI, WORKFLOW_ID)));
+    }
 
+    @Override
+    protected BaseRestHandler.RestChannelConsumer prepareRequest(RestRequest request, NodeClient client) throws IOException {
+        String workflowId = request.param(WORKFLOW_ID);
         try {
             if (!flowFrameworkFeatureEnabledSetting.isFlowFrameworkEnabled()) {
                 throw new FlowFrameworkException(
@@ -65,30 +70,30 @@ public class RestGetWorkflowAction extends BaseRestHandler {
                     RestStatus.FORBIDDEN
                 );
             }
-
             // Validate content
             if (request.hasContent()) {
-                throw new FlowFrameworkException("No request body present", RestStatus.BAD_REQUEST);
+                // BaseRestHandler will give appropriate error message
+                return channel -> channel.sendResponse(null);
             }
             // Validate params
-            String workflowId = request.param(WORKFLOW_ID);
             if (workflowId == null) {
                 throw new FlowFrameworkException("workflow_id cannot be null", RestStatus.BAD_REQUEST);
             }
 
-            boolean all = request.paramAsBoolean("all", false);
-            GetWorkflowRequest getWorkflowRequest = new GetWorkflowRequest(workflowId, all);
-            return channel -> client.execute(GetWorkflowAction.INSTANCE, getWorkflowRequest, ActionListener.wrap(response -> {
+            WorkflowRequest workflowRequest = new WorkflowRequest(workflowId, null);
+            return channel -> client.execute(GetWorkflowAction.INSTANCE, workflowRequest, ActionListener.wrap(response -> {
                 XContentBuilder builder = response.toXContent(channel.newBuilder(), ToXContent.EMPTY_PARAMS);
                 channel.sendResponse(new BytesRestResponse(RestStatus.OK, builder));
             }, exception -> {
                 try {
-                    FlowFrameworkException ex = new FlowFrameworkException(exception.getMessage(), ExceptionsHelper.status(exception));
+                    FlowFrameworkException ex = exception instanceof FlowFrameworkException
+                        ? (FlowFrameworkException) exception
+                        : new FlowFrameworkException(exception.getMessage(), ExceptionsHelper.status(exception));
                     XContentBuilder exceptionBuilder = ex.toXContent(channel.newErrorBuilder(), ToXContent.EMPTY_PARAMS);
                     channel.sendResponse(new BytesRestResponse(ex.getRestStatus(), exceptionBuilder));
 
                 } catch (IOException e) {
-                    logger.error("Failed to send back provision workflow exception", e);
+                    logger.error("Failed to send back get workflow exception", e);
                     channel.sendResponse(new BytesRestResponse(ExceptionsHelper.status(e), e.getMessage()));
                 }
             }));
@@ -98,13 +103,5 @@ public class RestGetWorkflowAction extends BaseRestHandler {
                 new BytesRestResponse(ex.getRestStatus(), ex.toXContent(channel.newErrorBuilder(), ToXContent.EMPTY_PARAMS))
             );
         }
-    }
-
-    @Override
-    public List<Route> routes() {
-        return ImmutableList.of(
-            // Provision workflow from indexed use case template
-            new Route(RestRequest.Method.GET, String.format(Locale.ROOT, "%s/{%s}/%s", WORKFLOW_URI, WORKFLOW_ID, "_status"))
-        );
     }
 }

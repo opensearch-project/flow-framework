@@ -28,16 +28,28 @@ import org.opensearch.env.NodeEnvironment;
 import org.opensearch.flowframework.common.FlowFrameworkFeatureEnabledSetting;
 import org.opensearch.flowframework.indices.FlowFrameworkIndicesHandler;
 import org.opensearch.flowframework.rest.RestCreateWorkflowAction;
+import org.opensearch.flowframework.rest.RestDeleteWorkflowAction;
+import org.opensearch.flowframework.rest.RestDeprovisionWorkflowAction;
 import org.opensearch.flowframework.rest.RestGetWorkflowAction;
+import org.opensearch.flowframework.rest.RestGetWorkflowStateAction;
 import org.opensearch.flowframework.rest.RestProvisionWorkflowAction;
 import org.opensearch.flowframework.rest.RestSearchWorkflowAction;
+import org.opensearch.flowframework.rest.RestSearchWorkflowStateAction;
 import org.opensearch.flowframework.transport.CreateWorkflowAction;
 import org.opensearch.flowframework.transport.CreateWorkflowTransportAction;
+import org.opensearch.flowframework.transport.DeleteWorkflowAction;
+import org.opensearch.flowframework.transport.DeleteWorkflowTransportAction;
+import org.opensearch.flowframework.transport.DeprovisionWorkflowAction;
+import org.opensearch.flowframework.transport.DeprovisionWorkflowTransportAction;
 import org.opensearch.flowframework.transport.GetWorkflowAction;
+import org.opensearch.flowframework.transport.GetWorkflowStateAction;
+import org.opensearch.flowframework.transport.GetWorkflowStateTransportAction;
 import org.opensearch.flowframework.transport.GetWorkflowTransportAction;
 import org.opensearch.flowframework.transport.ProvisionWorkflowAction;
 import org.opensearch.flowframework.transport.ProvisionWorkflowTransportAction;
 import org.opensearch.flowframework.transport.SearchWorkflowAction;
+import org.opensearch.flowframework.transport.SearchWorkflowStateAction;
+import org.opensearch.flowframework.transport.SearchWorkflowStateTransportAction;
 import org.opensearch.flowframework.transport.SearchWorkflowTransportAction;
 import org.opensearch.flowframework.util.EncryptorUtils;
 import org.opensearch.flowframework.workflow.WorkflowProcessSorter;
@@ -63,6 +75,7 @@ import static org.opensearch.flowframework.common.CommonValue.PROVISION_THREAD_P
 import static org.opensearch.flowframework.common.FlowFrameworkSettings.FLOW_FRAMEWORK_ENABLED;
 import static org.opensearch.flowframework.common.FlowFrameworkSettings.MAX_GET_TASK_REQUEST_RETRY;
 import static org.opensearch.flowframework.common.FlowFrameworkSettings.MAX_WORKFLOWS;
+import static org.opensearch.flowframework.common.FlowFrameworkSettings.MAX_WORKFLOW_STEPS;
 import static org.opensearch.flowframework.common.FlowFrameworkSettings.WORKFLOW_REQUEST_TIMEOUT;
 
 /**
@@ -106,7 +119,13 @@ public class FlowFrameworkPlugin extends Plugin implements ActionPlugin {
             mlClient,
             flowFrameworkIndicesHandler
         );
-        WorkflowProcessSorter workflowProcessSorter = new WorkflowProcessSorter(workflowStepFactory, threadPool);
+        WorkflowProcessSorter workflowProcessSorter = new WorkflowProcessSorter(
+            workflowStepFactory,
+            threadPool,
+            clusterService,
+            client,
+            settings
+        );
 
         return ImmutableList.of(workflowStepFactory, workflowProcessSorter, encryptorUtils, flowFrameworkIndicesHandler);
     }
@@ -123,9 +142,13 @@ public class FlowFrameworkPlugin extends Plugin implements ActionPlugin {
     ) {
         return ImmutableList.of(
             new RestCreateWorkflowAction(flowFrameworkFeatureEnabledSetting, settings, clusterService),
+            new RestDeleteWorkflowAction(flowFrameworkFeatureEnabledSetting),
             new RestProvisionWorkflowAction(flowFrameworkFeatureEnabledSetting),
+            new RestDeprovisionWorkflowAction(flowFrameworkFeatureEnabledSetting),
             new RestSearchWorkflowAction(flowFrameworkFeatureEnabledSetting),
-            new RestGetWorkflowAction(flowFrameworkFeatureEnabledSetting)
+            new RestGetWorkflowStateAction(flowFrameworkFeatureEnabledSetting),
+            new RestGetWorkflowAction(flowFrameworkFeatureEnabledSetting),
+            new RestSearchWorkflowStateAction(flowFrameworkFeatureEnabledSetting)
         );
     }
 
@@ -133,9 +156,13 @@ public class FlowFrameworkPlugin extends Plugin implements ActionPlugin {
     public List<ActionHandler<? extends ActionRequest, ? extends ActionResponse>> getActions() {
         return ImmutableList.of(
             new ActionHandler<>(CreateWorkflowAction.INSTANCE, CreateWorkflowTransportAction.class),
+            new ActionHandler<>(DeleteWorkflowAction.INSTANCE, DeleteWorkflowTransportAction.class),
             new ActionHandler<>(ProvisionWorkflowAction.INSTANCE, ProvisionWorkflowTransportAction.class),
+            new ActionHandler<>(DeprovisionWorkflowAction.INSTANCE, DeprovisionWorkflowTransportAction.class),
             new ActionHandler<>(SearchWorkflowAction.INSTANCE, SearchWorkflowTransportAction.class),
-            new ActionHandler<>(GetWorkflowAction.INSTANCE, GetWorkflowTransportAction.class)
+            new ActionHandler<>(GetWorkflowStateAction.INSTANCE, GetWorkflowStateTransportAction.class),
+            new ActionHandler<>(GetWorkflowAction.INSTANCE, GetWorkflowTransportAction.class),
+            new ActionHandler<>(SearchWorkflowStateAction.INSTANCE, SearchWorkflowStateTransportAction.class)
         );
     }
 
@@ -144,6 +171,7 @@ public class FlowFrameworkPlugin extends Plugin implements ActionPlugin {
         List<Setting<?>> settings = ImmutableList.of(
             FLOW_FRAMEWORK_ENABLED,
             MAX_WORKFLOWS,
+            MAX_WORKFLOW_STEPS,
             WORKFLOW_REQUEST_TIMEOUT,
             MAX_GET_TASK_REQUEST_RETRY
         );
@@ -158,7 +186,7 @@ public class FlowFrameworkPlugin extends Plugin implements ActionPlugin {
                 settings,
                 PROVISION_THREAD_POOL,
                 OpenSearchExecutors.allocatedProcessors(settings),
-                10,
+                100,
                 FLOW_FRAMEWORK_THREAD_POOL_PREFIX + PROVISION_THREAD_POOL
             )
         );

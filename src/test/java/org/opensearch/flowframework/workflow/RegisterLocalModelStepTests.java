@@ -10,12 +10,15 @@ package org.opensearch.flowframework.workflow;
 
 import com.carrotsearch.randomizedtesting.annotations.ThreadLeakScope;
 
+import org.opensearch.action.update.UpdateResponse;
 import org.opensearch.cluster.service.ClusterService;
 import org.opensearch.common.settings.ClusterSettings;
 import org.opensearch.common.settings.Setting;
 import org.opensearch.common.settings.Settings;
 import org.opensearch.core.action.ActionListener;
+import org.opensearch.core.index.shard.ShardId;
 import org.opensearch.flowframework.exception.FlowFrameworkException;
+import org.opensearch.flowframework.indices.FlowFrameworkIndicesHandler;
 import org.opensearch.ml.client.MachineLearningNodeClient;
 import org.opensearch.ml.common.MLTask;
 import org.opensearch.ml.common.MLTaskState;
@@ -34,10 +37,13 @@ import java.util.stream.Stream;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
+import static org.opensearch.action.DocWriteResponse.Result.UPDATED;
 import static org.opensearch.flowframework.common.CommonValue.MODEL_ID;
 import static org.opensearch.flowframework.common.CommonValue.REGISTER_MODEL_STATUS;
+import static org.opensearch.flowframework.common.CommonValue.WORKFLOW_STATE_INDEX;
 import static org.opensearch.flowframework.common.FlowFrameworkSettings.MAX_GET_TASK_REQUEST_RETRY;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
@@ -49,6 +55,7 @@ public class RegisterLocalModelStepTests extends OpenSearchTestCase {
 
     private RegisterLocalModelStep registerLocalModelStep;
     private WorkflowData workflowData;
+    private FlowFrameworkIndicesHandler flowFrameworkIndicesHandler;
 
     @Mock
     MachineLearningNodeClient machineLearningNodeClient;
@@ -56,7 +63,7 @@ public class RegisterLocalModelStepTests extends OpenSearchTestCase {
     @Override
     public void setUp() throws Exception {
         super.setUp();
-
+        this.flowFrameworkIndicesHandler = mock(FlowFrameworkIndicesHandler.class);
         MockitoAnnotations.openMocks(this);
         ClusterService clusterService = mock(ClusterService.class);
         final Set<Setting<?>> settingsSet = Stream.concat(
@@ -69,7 +76,12 @@ public class RegisterLocalModelStepTests extends OpenSearchTestCase {
         ClusterSettings clusterSettings = new ClusterSettings(testMaxRetrySetting, settingsSet);
         when(clusterService.getClusterSettings()).thenReturn(clusterSettings);
 
-        this.registerLocalModelStep = new RegisterLocalModelStep(testMaxRetrySetting, clusterService, machineLearningNodeClient);
+        this.registerLocalModelStep = new RegisterLocalModelStep(
+            testMaxRetrySetting,
+            clusterService,
+            machineLearningNodeClient,
+            flowFrameworkIndicesHandler
+        );
 
         this.workflowData = new WorkflowData(
             Map.ofEntries(
@@ -127,6 +139,12 @@ public class RegisterLocalModelStepTests extends OpenSearchTestCase {
             return null;
         }).when(machineLearningNodeClient).getTask(any(), any());
 
+        doAnswer(invocation -> {
+            ActionListener<UpdateResponse> updateResponseListener = invocation.getArgument(4);
+            updateResponseListener.onResponse(new UpdateResponse(new ShardId(WORKFLOW_STATE_INDEX, "", 1), "id", -2, 0, 0, UPDATED));
+            return null;
+        }).when(flowFrameworkIndicesHandler).updateResourceInStateIndex(anyString(), anyString(), anyString(), anyString(), any());
+
         CompletableFuture<WorkflowData> future = registerLocalModelStep.execute(
             workflowData.getNodeId(),
             workflowData,
@@ -138,7 +156,7 @@ public class RegisterLocalModelStepTests extends OpenSearchTestCase {
         verify(machineLearningNodeClient, times(1)).getTask(any(), any());
 
         assertTrue(future.isDone());
-        assertTrue(!future.isCompletedExceptionally());
+        assertFalse(future.isCompletedExceptionally());
         assertEquals(modelId, future.get().getContent().get(MODEL_ID));
         assertEquals(status, future.get().getContent().get(REGISTER_MODEL_STATUS));
 
@@ -219,7 +237,7 @@ public class RegisterLocalModelStepTests extends OpenSearchTestCase {
     public void testMissingInputs() {
         CompletableFuture<WorkflowData> future = registerLocalModelStep.execute(
             "nodeId",
-            WorkflowData.EMPTY,
+            new WorkflowData(Collections.emptyMap(), "test-id", "test-node-id"),
             Collections.emptyMap(),
             Collections.emptyMap()
         );
@@ -227,7 +245,19 @@ public class RegisterLocalModelStepTests extends OpenSearchTestCase {
         assertTrue(future.isCompletedExceptionally());
         ExecutionException ex = assertThrows(ExecutionException.class, () -> future.get().getContent());
         assertTrue(ex.getCause() instanceof FlowFrameworkException);
-        assertEquals("Required fields are not provided", ex.getCause().getMessage());
+        assertTrue(ex.getCause().getMessage().startsWith("Missing required inputs ["));
+        for (String s : new String[] {
+            "model_format",
+            "name",
+            "model_type",
+            "embedding_dimension",
+            "framework_type",
+            "model_group_id",
+            "version",
+            "url",
+            "model_content_hash_value" }) {
+            assertTrue(ex.getCause().getMessage().contains(s));
+        }
+        assertTrue(ex.getCause().getMessage().endsWith("] in workflow [test-id] node [test-node-id]"));
     }
-
 }

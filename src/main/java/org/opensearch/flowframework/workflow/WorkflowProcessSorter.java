@@ -10,13 +10,21 @@ package org.opensearch.flowframework.workflow;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.opensearch.action.admin.cluster.node.info.NodeInfo;
+import org.opensearch.action.admin.cluster.node.info.NodesInfoRequest;
+import org.opensearch.action.admin.cluster.node.info.PluginsAndModules;
+import org.opensearch.client.Client;
+import org.opensearch.cluster.service.ClusterService;
+import org.opensearch.common.settings.Settings;
 import org.opensearch.common.unit.TimeValue;
+import org.opensearch.core.action.ActionListener;
 import org.opensearch.core.rest.RestStatus;
 import org.opensearch.flowframework.exception.FlowFrameworkException;
 import org.opensearch.flowframework.model.Workflow;
 import org.opensearch.flowframework.model.WorkflowEdge;
 import org.opensearch.flowframework.model.WorkflowNode;
 import org.opensearch.flowframework.model.WorkflowValidator;
+import org.opensearch.plugins.PluginInfo;
 import org.opensearch.threadpool.ThreadPool;
 
 import java.util.ArrayDeque;
@@ -29,9 +37,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.Queue;
 import java.util.Set;
+import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import static org.opensearch.flowframework.common.FlowFrameworkSettings.MAX_WORKFLOW_STEPS;
 import static org.opensearch.flowframework.model.WorkflowNode.NODE_TIMEOUT_DEFAULT_VALUE;
 import static org.opensearch.flowframework.model.WorkflowNode.NODE_TIMEOUT_FIELD;
 import static org.opensearch.flowframework.model.WorkflowNode.USER_INPUTS_FIELD;
@@ -45,16 +55,32 @@ public class WorkflowProcessSorter {
 
     private WorkflowStepFactory workflowStepFactory;
     private ThreadPool threadPool;
+    private Integer maxWorkflowSteps;
+    private ClusterService clusterService;
+    private Client client;
 
     /**
      * Instantiate this class.
      *
      * @param workflowStepFactory The factory which matches template step types to instances.
      * @param threadPool The OpenSearch Thread pool to pass to process nodes.
+     * @param clusterService The OpenSearch cluster service.
+     * @param client The OpenSearch Client
+     * @param settings OpenSerch settings
      */
-    public WorkflowProcessSorter(WorkflowStepFactory workflowStepFactory, ThreadPool threadPool) {
+    public WorkflowProcessSorter(
+        WorkflowStepFactory workflowStepFactory,
+        ThreadPool threadPool,
+        ClusterService clusterService,
+        Client client,
+        Settings settings
+    ) {
         this.workflowStepFactory = workflowStepFactory;
         this.threadPool = threadPool;
+        this.maxWorkflowSteps = MAX_WORKFLOW_STEPS.get(settings);
+        this.clusterService = clusterService;
+        this.client = client;
+        clusterService.getClusterSettings().addSettingsUpdateConsumer(MAX_WORKFLOW_STEPS, it -> maxWorkflowSteps = it);
     }
 
     /**
@@ -64,6 +90,20 @@ public class WorkflowProcessSorter {
      * @return A list of Process Nodes sorted topologically.  All predecessors of any node will occur prior to it in the list.
      */
     public List<ProcessNode> sortProcessNodes(Workflow workflow, String workflowId) {
+        if (workflow.nodes().size() > this.maxWorkflowSteps) {
+            throw new FlowFrameworkException(
+                "Workflow "
+                    + workflowId
+                    + " has "
+                    + workflow.nodes().size()
+                    + " nodes, which exceeds the maximum of "
+                    + this.maxWorkflowSteps
+                    + ". Change the setting ["
+                    + MAX_WORKFLOW_STEPS.getKey()
+                    + "] to increase this.",
+                RestStatus.BAD_REQUEST
+            );
+        }
         List<WorkflowNode> sortedNodes = topologicalSort(workflow.nodes(), workflow.edges());
 
         List<ProcessNode> nodes = new ArrayList<>();
@@ -96,13 +136,75 @@ public class WorkflowProcessSorter {
     }
 
     /**
-     * Validates a sorted workflow, determines if each process node's user inputs and predecessor outputs match the expected workflow step inputs
+     * Validates inputs and ensures the required plugins are installed for each step in a topologically sorted graph
+     * @param processNodes the topologically sorted list of process nodes
+     * @throws Exception if validation fails
+     */
+    public void validate(List<ProcessNode> processNodes) throws Exception {
+        WorkflowValidator validator = WorkflowValidator.parse("mappings/workflow-steps.json");
+        validatePluginsInstalled(processNodes, validator);
+        validateGraph(processNodes, validator);
+    }
+
+    /**
+     * Validates a sorted workflow, determines if each process node's required plugins are currently installed
      * @param processNodes A list of process nodes
+     * @param validator The validation definitions for the workflow steps
      * @throws Exception on validation failure
      */
-    public void validateGraph(List<ProcessNode> processNodes) throws Exception {
+    public void validatePluginsInstalled(List<ProcessNode> processNodes, WorkflowValidator validator) throws Exception {
 
-        WorkflowValidator validator = WorkflowValidator.parse("mappings/workflow-steps.json");
+        // Retrieve node information to ascertain installed plugins
+        NodesInfoRequest nodesInfoRequest = new NodesInfoRequest();
+        nodesInfoRequest.clear().addMetric(NodesInfoRequest.Metric.PLUGINS.metricName());
+        CompletableFuture<List<String>> installedPluginsFuture = new CompletableFuture<>();
+        client.admin().cluster().nodesInfo(nodesInfoRequest, ActionListener.wrap(response -> {
+            List<String> installedPlugins = new ArrayList<>();
+
+            // Retrieve installed plugin names from the local node
+            String localNodeId = clusterService.state().getNodes().getLocalNodeId();
+            NodeInfo info = response.getNodesMap().get(localNodeId);
+            PluginsAndModules plugins = info.getInfo(PluginsAndModules.class);
+            for (PluginInfo pluginInfo : plugins.getPluginInfos()) {
+                installedPlugins.add(pluginInfo.getName());
+            }
+
+            installedPluginsFuture.complete(installedPlugins);
+
+        }, exception -> {
+            logger.error("Failed to retrieve installed plugins");
+            installedPluginsFuture.completeExceptionally(exception);
+        }));
+
+        // Block execution until installed plugin list is returned
+        List<String> installedPlugins = installedPluginsFuture.get();
+
+        // Iterate through process nodes in graph
+        for (ProcessNode processNode : processNodes) {
+
+            // Retrieve required plugins of this node based on type
+            String nodeType = processNode.workflowStep().getName();
+            List<String> requiredPlugins = new ArrayList<>(validator.getWorkflowStepValidators().get(nodeType).getRequiredPlugins());
+            if (!installedPlugins.containsAll(requiredPlugins)) {
+                requiredPlugins.removeAll(installedPlugins);
+                throw new FlowFrameworkException(
+                    "The workflowStep "
+                        + processNode.workflowStep().getName()
+                        + " requires the following plugins to be installed : "
+                        + requiredPlugins.toString(),
+                    RestStatus.BAD_REQUEST
+                );
+            }
+        }
+    }
+
+    /**
+     * Validates a sorted workflow, determines if each process node's user inputs and predecessor outputs match the expected workflow step inputs
+     * @param processNodes A list of process nodes
+     * @param validator The validation definitions for the workflow steps
+     * @throws Exception on validation failure
+     */
+    public void validateGraph(List<ProcessNode> processNodes, WorkflowValidator validator) throws Exception {
 
         // Iterate through process nodes in graph
         for (ProcessNode processNode : processNodes) {

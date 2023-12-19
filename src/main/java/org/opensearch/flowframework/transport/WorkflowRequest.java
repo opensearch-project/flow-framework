@@ -19,7 +19,7 @@ import org.opensearch.flowframework.model.Template;
 import java.io.IOException;
 
 /**
- * Transport Request to create and provision a workflow
+ * Transport Request to create, provision, and deprovision a workflow
  */
 public class WorkflowRequest extends ActionRequest {
 
@@ -39,6 +39,11 @@ public class WorkflowRequest extends ActionRequest {
     private boolean dryRun;
 
     /**
+     * Provision flag
+     */
+    private boolean provision;
+
+    /**
      * Timeout for request
      */
     private TimeValue requestTimeout;
@@ -54,7 +59,7 @@ public class WorkflowRequest extends ActionRequest {
      * @param template the use case template which describes the workflow
      */
     public WorkflowRequest(@Nullable String workflowId, @Nullable Template template) {
-        this(workflowId, template, false, null, null);
+        this(workflowId, template, false, false, null, null);
     }
 
     /**
@@ -70,7 +75,7 @@ public class WorkflowRequest extends ActionRequest {
         @Nullable TimeValue requestTimeout,
         @Nullable Integer maxWorkflows
     ) {
-        this(workflowId, template, false, requestTimeout, maxWorkflows);
+        this(workflowId, template, false, false, requestTimeout, maxWorkflows);
     }
 
     /**
@@ -78,6 +83,7 @@ public class WorkflowRequest extends ActionRequest {
      * @param workflowId the documentId of the workflow
      * @param template the use case template which describes the workflow
      * @param dryRun flag to indicate if validation is necessary
+     * @param provision flag to indicate if provision is necessary
      * @param requestTimeout timeout of the request
      * @param maxWorkflows max number of workflows
      */
@@ -85,12 +91,14 @@ public class WorkflowRequest extends ActionRequest {
         @Nullable String workflowId,
         @Nullable Template template,
         boolean dryRun,
+        boolean provision,
         @Nullable TimeValue requestTimeout,
         @Nullable Integer maxWorkflows
     ) {
         this.workflowId = workflowId;
         this.template = template;
         this.dryRun = dryRun;
+        this.provision = provision;
         this.requestTimeout = requestTimeout;
         this.maxWorkflows = maxWorkflows;
     }
@@ -106,6 +114,7 @@ public class WorkflowRequest extends ActionRequest {
         String templateJson = in.readOptionalString();
         this.template = templateJson == null ? null : Template.parse(templateJson);
         this.dryRun = in.readBoolean();
+        this.provision = in.readBoolean();
         this.requestTimeout = in.readOptionalTimeValue();
         this.maxWorkflows = in.readOptionalInt();
     }
@@ -137,6 +146,14 @@ public class WorkflowRequest extends ActionRequest {
     }
 
     /**
+     * Gets the provision flag
+     * @return the provision boolean
+     */
+    public boolean isProvision() {
+        return this.provision;
+    }
+
+    /**
      * Gets the timeout of the request
      * @return the requestTimeout
      */
@@ -158,6 +175,7 @@ public class WorkflowRequest extends ActionRequest {
         out.writeOptionalString(workflowId);
         out.writeOptionalString(template == null ? null : template.toJson());
         out.writeBoolean(dryRun);
+        out.writeBoolean(provision);
         out.writeOptionalTimeValue(requestTimeout);
         out.writeOptionalInt(maxWorkflows);
     }

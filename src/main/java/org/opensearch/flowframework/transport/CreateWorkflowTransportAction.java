@@ -135,7 +135,28 @@ public class CreateWorkflowTransportAction extends HandledTransportAction<Workfl
                                         user,
                                         ActionListener.wrap(stateResponse -> {
                                             logger.info("create state workflow doc");
-                                            listener.onResponse(new WorkflowResponse(globalContextResponse.getId()));
+                                            if (request.isProvision()) {
+                                                logger.info("provision parameter");
+                                                WorkflowRequest workflowRequest = new WorkflowRequest(globalContextResponse.getId(), null);
+                                                client.execute(
+                                                    ProvisionWorkflowAction.INSTANCE,
+                                                    workflowRequest,
+                                                    ActionListener.wrap(provisionResponse -> {
+                                                        listener.onResponse(new WorkflowResponse(provisionResponse.getWorkflowId()));
+                                                    }, exception -> {
+                                                        if (exception instanceof FlowFrameworkException) {
+                                                            listener.onFailure(exception);
+                                                        } else {
+                                                            listener.onFailure(
+                                                                new FlowFrameworkException(exception.getMessage(), RestStatus.BAD_REQUEST)
+                                                            );
+                                                        }
+                                                        logger.error("Failed to send back provision workflow exception", exception);
+                                                    })
+                                                );
+                                            } else {
+                                                listener.onResponse(new WorkflowResponse(globalContextResponse.getId()));
+                                            }
                                         }, exception -> {
                                             logger.error("Failed to save workflow state : {}", exception.getMessage());
                                             if (exception instanceof FlowFrameworkException) {
@@ -243,8 +264,7 @@ public class CreateWorkflowTransportAction extends HandledTransportAction<Workfl
     private void validateWorkflows(Template template) throws Exception {
         for (Workflow workflow : template.workflows().values()) {
             List<ProcessNode> sortedNodes = workflowProcessSorter.sortProcessNodes(workflow, null);
-            workflowProcessSorter.validateGraph(sortedNodes);
+            workflowProcessSorter.validate(sortedNodes);
         }
     }
-
 }

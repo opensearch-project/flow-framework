@@ -73,10 +73,14 @@ public class CommonValue {
     /** The provision workflow thread pool name */
     public static final String PROVISION_THREAD_POOL = "opensearch_workflow_provision";
 
+    /** Success name field */
+    public static final String SUCCESS = "success";
     /** Index name field */
     public static final String INDEX_NAME = "index_name";
     /** Type field */
     public static final String TYPE = "type";
+    /** default_mapping_option filed */
+    public static final String DEFAULT_MAPPING_OPTION = "default_mapping_option";
     /** ID Field */
     public static final String ID = "id";
     /** Pipeline Id field */
@@ -103,6 +107,8 @@ public class CommonValue {
     public static final String MODEL_VERSION = "model_version";
     /** Model Group Id field */
     public static final String MODEL_GROUP_ID = "model_group_id";
+    /** Model Group Id field */
+    public static final String MODEL_GROUP_STATUS = "model_group_status";
     /** Description field */
     public static final String DESCRIPTION_FIELD = "description";
     /** Connector Id field */
@@ -158,9 +164,28 @@ public class CommonValue {
     public static final String USER_OUTPUTS_FIELD = "user_outputs";
     /** The template field name for template resources created */
     public static final String RESOURCES_CREATED_FIELD = "resources_created";
-    /** The field name for the ResourceCreated's resource ID */
-    public static final String RESOURCE_ID_FIELD = "resource_id";
-    /** The field name for the ResourceCreated's resource name */
+    /** The field name for the step name where a resource is created */
     public static final String WORKFLOW_STEP_NAME = "workflow_step_name";
-
+    /** The field name for the step ID where a resource is created */
+    public static final String WORKFLOW_STEP_ID = "workflow_step_id";
+    /** The field name for the resource type */
+    public static final String RESOURCE_TYPE = "resource_type";
+    /** The field name for the resource id */
+    public static final String RESOURCE_ID = "resource_id";
+    /** The tools field for an agent */
+    public static final String TOOLS_FIELD = "tools";
+    /** The tools order field for an agent */
+    public static final String TOOLS_ORDER_FIELD = "tools_order";
+    /** The memory field for an agent */
+    public static final String MEMORY_FIELD = "memory";
+    /** The app type field for an agent */
+    public static final String APP_TYPE_FIELD = "app_type";
+    /** The agent id of an agent */
+    public static final String AGENT_ID = "agent_id";
+    /** To include field for an agent response */
+    public static final String INCLUDE_OUTPUT_IN_AGENT_RESPONSE = "include_output_in_agent_response";
+    /** The created time field for an agent */
+    public static final String CREATED_TIME = "created_time";
+    /** The last updated time field for an agent */
+    public static final String LAST_UPDATED_TIME_FIELD = "last_updated_time";
 }

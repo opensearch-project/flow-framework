@@ -10,8 +10,11 @@ package org.opensearch.flowframework.workflow;
 
 import com.carrotsearch.randomizedtesting.annotations.ThreadLeakScope;
 
+import org.opensearch.action.update.UpdateResponse;
 import org.opensearch.core.action.ActionListener;
+import org.opensearch.core.index.shard.ShardId;
 import org.opensearch.flowframework.exception.FlowFrameworkException;
+import org.opensearch.flowframework.indices.FlowFrameworkIndicesHandler;
 import org.opensearch.ml.client.MachineLearningNodeClient;
 import org.opensearch.ml.common.MLTaskState;
 import org.opensearch.ml.common.transport.register.MLRegisterModelInput;
@@ -26,10 +29,14 @@ import java.util.concurrent.ExecutionException;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
+import static org.opensearch.action.DocWriteResponse.Result.UPDATED;
 import static org.opensearch.flowframework.common.CommonValue.MODEL_ID;
 import static org.opensearch.flowframework.common.CommonValue.REGISTER_MODEL_STATUS;
+import static org.opensearch.flowframework.common.CommonValue.WORKFLOW_STATE_INDEX;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
@@ -38,6 +45,7 @@ public class RegisterRemoteModelStepTests extends OpenSearchTestCase {
 
     private RegisterRemoteModelStep registerRemoteModelStep;
     private WorkflowData workflowData;
+    private FlowFrameworkIndicesHandler flowFrameworkIndicesHandler;
 
     @Mock
     MachineLearningNodeClient mlNodeClient;
@@ -45,9 +53,9 @@ public class RegisterRemoteModelStepTests extends OpenSearchTestCase {
     @Override
     public void setUp() throws Exception {
         super.setUp();
-
+        this.flowFrameworkIndicesHandler = mock(FlowFrameworkIndicesHandler.class);
         MockitoAnnotations.openMocks(this);
-        this.registerRemoteModelStep = new RegisterRemoteModelStep(mlNodeClient);
+        this.registerRemoteModelStep = new RegisterRemoteModelStep(mlNodeClient, flowFrameworkIndicesHandler);
         this.workflowData = new WorkflowData(
             Map.ofEntries(
                 Map.entry("function_name", "remote"),
@@ -72,6 +80,12 @@ public class RegisterRemoteModelStepTests extends OpenSearchTestCase {
             actionListener.onResponse(output);
             return null;
         }).when(mlNodeClient).register(any(MLRegisterModelInput.class), any());
+
+        doAnswer(invocation -> {
+            ActionListener<UpdateResponse> updateResponseListener = invocation.getArgument(4);
+            updateResponseListener.onResponse(new UpdateResponse(new ShardId(WORKFLOW_STATE_INDEX, "", 1), "id", -2, 0, 0, UPDATED));
+            return null;
+        }).when(flowFrameworkIndicesHandler).updateResourceInStateIndex(anyString(), anyString(), anyString(), anyString(), any());
 
         CompletableFuture<WorkflowData> future = this.registerRemoteModelStep.execute(
             workflowData.getNodeId(),
@@ -113,7 +127,7 @@ public class RegisterRemoteModelStepTests extends OpenSearchTestCase {
     public void testMissingInputs() {
         CompletableFuture<WorkflowData> future = this.registerRemoteModelStep.execute(
             "nodeId",
-            WorkflowData.EMPTY,
+            new WorkflowData(Collections.emptyMap(), "test-id", "test-node-id"),
             Collections.emptyMap(),
             Collections.emptyMap()
         );
@@ -121,7 +135,11 @@ public class RegisterRemoteModelStepTests extends OpenSearchTestCase {
         assertTrue(future.isCompletedExceptionally());
         ExecutionException ex = assertThrows(ExecutionException.class, () -> future.get().getContent());
         assertTrue(ex.getCause() instanceof FlowFrameworkException);
-        assertEquals("Required fields are not provided", ex.getCause().getMessage());
+        assertTrue(ex.getCause().getMessage().startsWith("Missing required inputs ["));
+        for (String s : new String[] { "name", "function_name", "connector_id" }) {
+            assertTrue(ex.getCause().getMessage().contains(s));
+        }
+        assertTrue(ex.getCause().getMessage().endsWith("] in workflow [test-id] node [test-node-id]"));
     }
 
 }

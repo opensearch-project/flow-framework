@@ -29,23 +29,18 @@ import static org.mockito.Mockito.when;
 public class RestGetWorkflowActionTests extends OpenSearchTestCase {
     private RestGetWorkflowAction restGetWorkflowAction;
     private String getPath;
-    private NodeClient nodeClient;
     private FlowFrameworkFeatureEnabledSetting flowFrameworkFeatureEnabledSetting;
+    private NodeClient nodeClient;
 
     @Override
     public void setUp() throws Exception {
         super.setUp();
 
-        this.getPath = String.format(Locale.ROOT, "%s/{%s}/%s", WORKFLOW_URI, "workflow_id", "_status");
+        this.getPath = String.format(Locale.ROOT, "%s/{%s}", WORKFLOW_URI, "workflow_id");
         flowFrameworkFeatureEnabledSetting = mock(FlowFrameworkFeatureEnabledSetting.class);
         when(flowFrameworkFeatureEnabledSetting.isFlowFrameworkEnabled()).thenReturn(true);
         this.restGetWorkflowAction = new RestGetWorkflowAction(flowFrameworkFeatureEnabledSetting);
         this.nodeClient = mock(NodeClient.class);
-    }
-
-    public void testConstructor() {
-        RestGetWorkflowAction getWorkflowAction = new RestGetWorkflowAction(flowFrameworkFeatureEnabledSetting);
-        assertNotNull(getWorkflowAction);
     }
 
     public void testRestGetWorkflowActionName() {
@@ -60,10 +55,23 @@ public class RestGetWorkflowActionTests extends OpenSearchTestCase {
         assertEquals(this.getPath, routes.get(0).getPath());
     }
 
+    public void testInvalidRequestWithContent() {
+        RestRequest request = new FakeRestRequest.Builder(xContentRegistry()).withMethod(RestRequest.Method.GET)
+            .withPath(this.getPath)
+            .withContent(new BytesArray("request body"), MediaTypeRegistry.JSON)
+            .build();
+
+        FakeRestChannel channel = new FakeRestChannel(request, false, 1);
+        IllegalArgumentException ex = expectThrows(IllegalArgumentException.class, () -> {
+            restGetWorkflowAction.handleRequest(request, channel, nodeClient);
+        });
+        assertEquals("request [GET /_plugins/_flow_framework/workflow/{workflow_id}] does not support having a body", ex.getMessage());
+    }
+
     public void testNullWorkflowId() throws Exception {
 
         // Request with no params
-        RestRequest request = new FakeRestRequest.Builder(xContentRegistry()).withMethod(RestRequest.Method.POST)
+        RestRequest request = new FakeRestRequest.Builder(xContentRegistry()).withMethod(RestRequest.Method.GET)
             .withPath(this.getPath)
             .build();
 
@@ -75,25 +83,9 @@ public class RestGetWorkflowActionTests extends OpenSearchTestCase {
         assertTrue(channel.capturedResponse().content().utf8ToString().contains("workflow_id cannot be null"));
     }
 
-    public void testInvalidRequestWithContent() {
-        RestRequest request = new FakeRestRequest.Builder(xContentRegistry()).withMethod(RestRequest.Method.POST)
-            .withPath(this.getPath)
-            .withContent(new BytesArray("request body"), MediaTypeRegistry.JSON)
-            .build();
-
-        FakeRestChannel channel = new FakeRestChannel(request, false, 1);
-        IllegalArgumentException ex = expectThrows(IllegalArgumentException.class, () -> {
-            restGetWorkflowAction.handleRequest(request, channel, nodeClient);
-        });
-        assertEquals(
-            "request [POST /_plugins/_flow_framework/workflow/{workflow_id}/_status] does not support having a body",
-            ex.getMessage()
-        );
-    }
-
     public void testFeatureFlagNotEnabled() throws Exception {
         when(flowFrameworkFeatureEnabledSetting.isFlowFrameworkEnabled()).thenReturn(false);
-        RestRequest request = new FakeRestRequest.Builder(xContentRegistry()).withMethod(RestRequest.Method.POST)
+        RestRequest request = new FakeRestRequest.Builder(xContentRegistry()).withMethod(RestRequest.Method.GET)
                 .withPath(this.getPath)
                 .build();
         FakeRestChannel channel = new FakeRestChannel(request, false, 1);

@@ -12,8 +12,11 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.opensearch.ExceptionsHelper;
 import org.opensearch.core.action.ActionListener;
-import org.opensearch.core.rest.RestStatus;
+import org.opensearch.core.common.util.CollectionUtils;
+import org.opensearch.flowframework.common.WorkflowResources;
 import org.opensearch.flowframework.exception.FlowFrameworkException;
+import org.opensearch.flowframework.indices.FlowFrameworkIndicesHandler;
+import org.opensearch.flowframework.util.ParseUtils;
 import org.opensearch.ml.client.MachineLearningNodeClient;
 import org.opensearch.ml.common.AccessMode;
 import org.opensearch.ml.common.transport.model_group.MLRegisterModelGroupInput;
@@ -21,16 +24,16 @@ import org.opensearch.ml.common.transport.model_group.MLRegisterModelGroupInput.
 import org.opensearch.ml.common.transport.model_group.MLRegisterModelGroupResponse;
 
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 
 import static org.opensearch.flowframework.common.CommonValue.ADD_ALL_BACKEND_ROLES;
 import static org.opensearch.flowframework.common.CommonValue.BACKEND_ROLES_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.DESCRIPTION_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.MODEL_ACCESS_MODE;
+import static org.opensearch.flowframework.common.CommonValue.MODEL_GROUP_STATUS;
 import static org.opensearch.flowframework.common.CommonValue.NAME_FIELD;
 
 /**
@@ -40,16 +43,20 @@ public class ModelGroupStep implements WorkflowStep {
 
     private static final Logger logger = LogManager.getLogger(ModelGroupStep.class);
 
-    private MachineLearningNodeClient mlClient;
+    private final MachineLearningNodeClient mlClient;
 
-    static final String NAME = "model_group";
+    private final FlowFrameworkIndicesHandler flowFrameworkIndicesHandler;
+
+    static final String NAME = WorkflowResources.REGISTER_MODEL_GROUP.getWorkflowStep();
 
     /**
      * Instantiate this class
      * @param mlClient client to instantiate MLClient
+     * @param flowFrameworkIndicesHandler FlowFrameworkIndicesHandler class to update system indices
      */
-    public ModelGroupStep(MachineLearningNodeClient mlClient) {
+    public ModelGroupStep(MachineLearningNodeClient mlClient, FlowFrameworkIndicesHandler flowFrameworkIndicesHandler) {
         this.mlClient = mlClient;
+        this.flowFrameworkIndicesHandler = flowFrameworkIndicesHandler;
     }
 
     @Override
@@ -65,17 +72,38 @@ public class ModelGroupStep implements WorkflowStep {
         ActionListener<MLRegisterModelGroupResponse> actionListener = new ActionListener<>() {
             @Override
             public void onResponse(MLRegisterModelGroupResponse mlRegisterModelGroupResponse) {
-                logger.info("Model group registration successful");
-                registerModelGroupFuture.complete(
-                    new WorkflowData(
-                        Map.ofEntries(
-                            Map.entry("model_group_id", mlRegisterModelGroupResponse.getModelGroupId()),
-                            Map.entry("model_group_status", mlRegisterModelGroupResponse.getStatus())
-                        ),
+                try {
+                    logger.info("Model group registration successful");
+                    String resourceName = WorkflowResources.getResourceByWorkflowStep(getName());
+                    flowFrameworkIndicesHandler.updateResourceInStateIndex(
                         currentNodeInputs.getWorkflowId(),
-                        currentNodeInputs.getNodeId()
-                    )
-                );
+                        currentNodeId,
+                        getName(),
+                        mlRegisterModelGroupResponse.getModelGroupId(),
+                        ActionListener.wrap(updateResponse -> {
+                            logger.info("successfully updated resources created in state index: {}", updateResponse.getIndex());
+                            registerModelGroupFuture.complete(
+                                new WorkflowData(
+                                    Map.ofEntries(
+                                        Map.entry(resourceName, mlRegisterModelGroupResponse.getModelGroupId()),
+                                        Map.entry(MODEL_GROUP_STATUS, mlRegisterModelGroupResponse.getStatus())
+                                    ),
+                                    currentNodeInputs.getWorkflowId(),
+                                    currentNodeId
+                                )
+                            );
+                        }, exception -> {
+                            logger.error("Failed to update new created resource", exception);
+                            registerModelGroupFuture.completeExceptionally(
+                                new FlowFrameworkException(exception.getMessage(), ExceptionsHelper.status(exception))
+                            );
+                        })
+                    );
+
+                } catch (Exception e) {
+                    logger.error("Failed to parse and update new created resource", e);
+                    registerModelGroupFuture.completeExceptionally(new FlowFrameworkException(e.getMessage(), ExceptionsHelper.status(e)));
+                }
             }
 
             @Override
@@ -85,55 +113,29 @@ public class ModelGroupStep implements WorkflowStep {
             }
         };
 
-        String modelGroupName = null;
-        String description = null;
-        List<String> backendRoles = new ArrayList<>();
-        AccessMode modelAccessMode = null;
-        Boolean isAddAllBackendRoles = null;
+        Set<String> requiredKeys = Set.of(NAME_FIELD);
+        Set<String> optionalKeys = Set.of(DESCRIPTION_FIELD, BACKEND_ROLES_FIELD, MODEL_ACCESS_MODE, ADD_ALL_BACKEND_ROLES);
 
-        // TODO: Recreating the list to get this compiling
-        // Need to refactor the below iteration to pull directly from the maps
-        List<WorkflowData> data = new ArrayList<>();
-        data.add(currentNodeInputs);
-        data.addAll(outputs.values());
-
-        for (WorkflowData workflowData : data) {
-            Map<String, Object> content = workflowData.getContent();
-
-            for (Entry<String, Object> entry : content.entrySet()) {
-                switch (entry.getKey()) {
-                    case NAME_FIELD:
-                        modelGroupName = (String) content.get(NAME_FIELD);
-                        break;
-                    case DESCRIPTION_FIELD:
-                        description = (String) content.get(DESCRIPTION_FIELD);
-                        break;
-                    case BACKEND_ROLES_FIELD:
-                        backendRoles = getBackendRoles(content);
-                        break;
-                    case MODEL_ACCESS_MODE:
-                        modelAccessMode = (AccessMode) content.get(MODEL_ACCESS_MODE);
-                        break;
-                    case ADD_ALL_BACKEND_ROLES:
-                        isAddAllBackendRoles = (Boolean) content.get(ADD_ALL_BACKEND_ROLES);
-                        break;
-                    default:
-                        break;
-                }
-            }
-        }
-
-        if (modelGroupName == null) {
-            registerModelGroupFuture.completeExceptionally(
-                new FlowFrameworkException("Model group name is not provided", RestStatus.BAD_REQUEST)
+        try {
+            Map<String, Object> inputs = ParseUtils.getInputsFromPreviousSteps(
+                requiredKeys,
+                optionalKeys,
+                currentNodeInputs,
+                outputs,
+                previousNodeInputs
             );
-        } else {
+            String modelGroupName = (String) inputs.get(NAME_FIELD);
+            String description = (String) inputs.get(DESCRIPTION_FIELD);
+            List<String> backendRoles = getBackendRoles(inputs);
+            AccessMode modelAccessMode = (AccessMode) inputs.get(MODEL_ACCESS_MODE);
+            Boolean isAddAllBackendRoles = (Boolean) inputs.get(ADD_ALL_BACKEND_ROLES);
+
             MLRegisterModelGroupInputBuilder builder = MLRegisterModelGroupInput.builder();
             builder.name(modelGroupName);
             if (description != null) {
                 builder.description(description);
             }
-            if (!backendRoles.isEmpty()) {
+            if (!CollectionUtils.isEmpty(backendRoles)) {
                 builder.backendRoles(backendRoles);
             }
             if (modelAccessMode != null) {
@@ -145,6 +147,8 @@ public class ModelGroupStep implements WorkflowStep {
             MLRegisterModelGroupInput mlInput = builder.build();
 
             mlClient.registerModelGroup(mlInput, actionListener);
+        } catch (FlowFrameworkException e) {
+            registerModelGroupFuture.completeExceptionally(e);
         }
 
         return registerModelGroupFuture;
@@ -157,6 +161,9 @@ public class ModelGroupStep implements WorkflowStep {
 
     @SuppressWarnings("unchecked")
     private List<String> getBackendRoles(Map<String, Object> content) {
-        return (List<String>) content.get(BACKEND_ROLES_FIELD);
+        if (content.containsKey(BACKEND_ROLES_FIELD)) {
+            return (List<String>) content.get(BACKEND_ROLES_FIELD);
+        }
+        return null;
     }
 }
