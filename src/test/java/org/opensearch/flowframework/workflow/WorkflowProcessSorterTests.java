@@ -340,7 +340,7 @@ public class WorkflowProcessSorterTests extends OpenSearchTestCase {
             FlowFrameworkException.class,
             () -> workflowProcessSorter.validateGraph(sortedProcessNodes, validator)
         );
-        assertEquals("Invalid graph, missing the following required inputs : [connector_id]", ex.getMessage());
+        assertEquals("Invalid workflow, node [workflow_step_1] missing the following required inputs : [connector_id]", ex.getMessage());
         assertEquals(RestStatus.BAD_REQUEST, ex.getRestStatus());
     }
 
