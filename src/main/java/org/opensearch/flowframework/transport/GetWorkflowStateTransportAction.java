@@ -77,8 +77,10 @@ public class GetWorkflowStateTransportAction extends HandledTransportAction<GetW
                         WorkflowState workflowState = WorkflowState.parse(parser);
                         listener.onResponse(new GetWorkflowStateResponse(workflowState, request.getAll()));
                     } catch (Exception e) {
-                        logger.error("Failed to parse workflowState" + r.getId(), e);
-                        listener.onFailure(new FlowFrameworkException("Failed to parse workflowState" + r.getId(), RestStatus.BAD_REQUEST));
+                        logger.error("Failed to parse workflowState: " + r.getId(), e);
+                        listener.onFailure(
+                            new FlowFrameworkException("Failed to parse workflowState: " + r.getId(), RestStatus.BAD_REQUEST)
+                        );
                     }
                 } else {
                     listener.onFailure(new FlowFrameworkException("Fail to find workflow", RestStatus.NOT_FOUND));

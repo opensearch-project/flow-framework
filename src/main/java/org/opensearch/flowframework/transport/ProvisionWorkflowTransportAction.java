@@ -138,11 +138,10 @@ public class ProvisionWorkflowTransportAction extends HandledTransportAction<Wor
                     ),
                     ActionListener.wrap(updateResponse -> {
                         logger.info("updated workflow {} state to PROVISIONING", request.getWorkflowId());
+                        listener.onResponse(new WorkflowResponse(workflowId));
                     }, exception -> { logger.error("Failed to update workflow state : {}", exception.getMessage()); })
                 );
 
-                // Respond to rest action then execute provisioning workflow async
-                listener.onResponse(new WorkflowResponse(workflowId));
                 executeWorkflowAsync(workflowId, provisionProcessSequence, listener);
 
             }, exception -> {

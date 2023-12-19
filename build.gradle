@@ -204,6 +204,13 @@ integTest {
     systemProperty "user", System.getProperty("user")
     systemProperty "password", System.getProperty("password")
 
+    // Only rest case can run with remote cluster
+    if (System.getProperty("tests.rest.cluster") != null) {
+        filter {
+            includeTestsMatching "org.opensearch.flowframework.rest.*IT"
+        }
+    }
+
 
     // doFirst delays this block until execution time
     doFirst {
@@ -259,6 +266,25 @@ testClusters.integTest {
         nodes.forEach { node ->
             node.jvmArgs("-agentlib:jdwp=transport=dt_socket,server=n,suspend=y,address=*:${debugPort}")
             debugPort += 1
+        }
+    }
+}
+
+// Remote Integration Tests
+task integTestRemote(type: RestIntegTestTask) {
+    testClassesDirs = sourceSets.test.output.classesDirs
+    classpath = sourceSets.test.runtimeClasspath
+
+    systemProperty "https", System.getProperty("https")
+    systemProperty "user", System.getProperty("user")
+    systemProperty "password", System.getProperty("password")
+    systemProperty 'cluster.number_of_nodes', "${_numNodes}"
+    systemProperty 'tests.security.manager', 'false'
+
+    // Run tests with remote cluster only if rest case is defined
+    if (System.getProperty("tests.rest.cluster") != null) {
+        filter {
+            includeTestsMatching "org.opensearch.flowframework.rest.*IT"
         }
     }
 }
