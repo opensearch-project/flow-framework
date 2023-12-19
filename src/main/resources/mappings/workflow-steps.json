@@ -61,7 +61,6 @@
             "name",
             "version",
             "model_format",
-            "model_group_id",
             "model_content_hash_value",
             "model_type",
             "embedding_dimension",

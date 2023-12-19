@@ -12,6 +12,7 @@ import org.opensearch.Version;
 import org.opensearch.action.get.GetRequest;
 import org.opensearch.action.get.GetResponse;
 import org.opensearch.action.support.ActionFilters;
+import org.opensearch.action.update.UpdateResponse;
 import org.opensearch.client.Client;
 import org.opensearch.common.settings.Settings;
 import org.opensearch.common.util.concurrent.ThreadContext;
@@ -109,6 +110,7 @@ public class ProvisionWorkflowTransportActionTests extends OpenSearchTestCase {
         ActionListener<WorkflowResponse> listener = mock(ActionListener.class);
         WorkflowRequest workflowRequest = new WorkflowRequest(workflowId, null);
 
+        // Bypass client.get and stub success case
         doAnswer(invocation -> {
             ActionListener<GetResponse> responseListener = invocation.getArgument(1);
 
@@ -121,6 +123,13 @@ public class ProvisionWorkflowTransportActionTests extends OpenSearchTestCase {
         }).when(client).get(any(GetRequest.class), any());
 
         when(encryptorUtils.decryptTemplateCredentials(any())).thenReturn(template);
+
+        // Bypass updateFlowFrameworkSystemIndexDoc and stub on response
+        doAnswer(invocation -> {
+            ActionListener<UpdateResponse> actionListener = invocation.getArgument(2);
+            actionListener.onResponse(mock(UpdateResponse.class));
+            return null;
+        }).when(flowFrameworkIndicesHandler).updateFlowFrameworkSystemIndexDoc(any(), any(), any());
 
         provisionWorkflowTransportAction.doExecute(mock(Task.class), workflowRequest, listener);
         ArgumentCaptor<WorkflowResponse> responseCaptor = ArgumentCaptor.forClass(WorkflowResponse.class);

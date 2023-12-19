@@ -252,7 +252,6 @@ public class RegisterLocalModelStepTests extends OpenSearchTestCase {
             "model_type",
             "embedding_dimension",
             "framework_type",
-            "model_group_id",
             "version",
             "url",
             "model_content_hash_value" }) {
