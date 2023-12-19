@@ -56,6 +56,7 @@ public class FlowFrameworkRestApiIT extends FlowFrameworkRestTestCase {
         List<WorkflowNode> provisionNodes = searchHitTemplate.workflows().get(PROVISION_WORKFLOW).nodes();
         for (WorkflowNode node : provisionNodes) {
             if (node.type().equals("create_connector")) {
+                @SuppressWarnings("unchecked")
                 Map<String, String> credentialMap = new HashMap<>((Map<String, String>) node.userInputs().get(CREDENTIAL_FIELD));
                 assertTrue(credentialMap.values().stream().allMatch(x -> x != "12345"));
             }
@@ -108,7 +109,7 @@ public class FlowFrameworkRestApiIT extends FlowFrameworkRestTestCase {
 
         // Attempt provision
         ResponseException exception = expectThrows(ResponseException.class, () -> provisionWorkflow(workflowId));
-        assertTrue(exception.getMessage().contains("Invalid graph, missing the following required inputs : [name]"));
+        assertTrue(exception.getMessage().contains("Invalid graph, missing the following required inputs"));
         getAndAssertWorkflowStatus(workflowId, State.NOT_STARTED, ProvisioningProgress.NOT_STARTED);
 
         // update workflow with updated inputs
@@ -124,7 +125,8 @@ public class FlowFrameworkRestApiIT extends FlowFrameworkRestTestCase {
         // Wait until provisioning has completed successfully before attempting to retrieve created resources
         List<ResourceCreated> resourcesCreated = getResourcesCreated(workflowId, 100);
 
-        // TODO : This template should create 2 resources, model_group_id and model_id, need to fix after feature branch is merged
+        // TODO: This template should create 2 resources, model_group_id and model_id
+        // But RegisterLocalModelStep does not yet update state index
         assertEquals(0, resourcesCreated.size());
     }
 
@@ -171,8 +173,8 @@ public class FlowFrameworkRestApiIT extends FlowFrameworkRestTestCase {
         // Wait until provisioning has completed successfully before attempting to retrieve created resources
         List<ResourceCreated> resourcesCreated = getResourcesCreated(workflowId, 10);
 
-        // TODO : This template should create 2 resources, connector_id and model_id, need to fix after feature branch is merged
-        assertEquals(1, resourcesCreated.size());
+        // This template should create 3 resources, connector_id, regestered model_id and deployed model_id
+        assertEquals(3, resourcesCreated.size());
         assertEquals("create_connector", resourcesCreated.get(0).workflowStepName());
         assertNotNull(resourcesCreated.get(0).resourceId());
     }
