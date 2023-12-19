@@ -1,5 +1,5 @@
 {
-    "name": "registermodelgroup-registerlocalmodel-deploymodel",
+    "name": "registerlocalmodel-deploymodel",
     "description": "test case",
     "use_case": "TEST_CASE",
     "version": {
@@ -14,17 +14,7 @@
         "nodes": [
           {
             "id": "workflow_step_1",
-            "type": "model_group",
-            "user_inputs": {
-              "name": "my-model-group"
-            }
-          },
-          {
-            "id": "workflow_step_2",
             "type": "register_local_model",
-            "previous_node_inputs": {
-              "workflow_step_1": "model_group_id"
-            },
             "user_inputs": {
               "node_timeout": "60s",
               "name": "all-MiniLM-L6-v2",
@@ -40,7 +30,7 @@
             }
           },
           {
-            "id": "workflow_step_3",
+            "id": "workflow_step_2",
             "type": "deploy_model",
             "previous_node_inputs": {
               "workflow_step_2": "model_id"
@@ -51,10 +41,6 @@
           {
             "source": "workflow_step_1",
             "dest": "workflow_step_2"
-          },
-          {
-            "source": "workflow_step_2",
-            "dest": "workflow_step_3"
           }
         ]
       }

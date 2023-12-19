@@ -114,14 +114,13 @@ public class RegisterLocalModelStep extends AbstractRetryableWorkflowStep {
             NAME_FIELD,
             VERSION_FIELD,
             MODEL_FORMAT,
-            MODEL_GROUP_ID,
             MODEL_TYPE,
             EMBEDDING_DIMENSION,
             FRAMEWORK_TYPE,
             MODEL_CONTENT_HASH_VALUE,
             URL
         );
-        Set<String> optionalKeys = Set.of(DESCRIPTION_FIELD, ALL_CONFIG);
+        Set<String> optionalKeys = Set.of(DESCRIPTION_FIELD, MODEL_GROUP_ID, ALL_CONFIG);
 
         try {
             Map<String, Object> inputs = ParseUtils.getInputsFromPreviousSteps(

@@ -236,7 +236,10 @@ public class WorkflowProcessSorter {
             if (!allInputs.containsAll(expectedInputs)) {
                 expectedInputs.removeAll(allInputs);
                 throw new FlowFrameworkException(
-                    "Invalid graph, missing the following required inputs : " + expectedInputs.toString(),
+                    "Invalid workflow, node ["
+                        + processNode.id()
+                        + "] missing the following required inputs : "
+                        + expectedInputs.toString(),
                     RestStatus.BAD_REQUEST
                 );
             }
