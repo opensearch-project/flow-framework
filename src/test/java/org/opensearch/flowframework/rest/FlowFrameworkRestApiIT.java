@@ -109,7 +109,8 @@ public class FlowFrameworkRestApiIT extends FlowFrameworkRestTestCase {
 
         // Attempt provision
         ResponseException exception = expectThrows(ResponseException.class, () -> provisionWorkflow(workflowId));
-        assertTrue(exception.getMessage().contains("Invalid graph, missing the following required inputs"));
+        // TODO: We haven't yet implemented model group step so this entire flow fails
+        assertEquals("Workflow step type [model_group] is not implemented.", exception.getMessage());
         getAndAssertWorkflowStatus(workflowId, State.NOT_STARTED, ProvisioningProgress.NOT_STARTED);
 
         // update workflow with updated inputs
