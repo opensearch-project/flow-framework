@@ -115,8 +115,7 @@ public abstract class FlowFrameworkRestTestCase extends OpenSearchRestTestCase {
             // TODO: figure out know why we need this and we should pursue a better option that doesn't require HTTP5
             Thread.sleep(10000);
             // Ensure .plugins-ml-config is created before proceeding with integration tests
-            assertBusy(() -> { assertTrue(indexExistsWithAdminClient(".plugins-ml-config")); });
-
+            assertBusy(() -> { assertTrue(indexExistsWithAdminClient(".plugins-ml-config")); }, 30, TimeUnit.SECONDS);
         }
 
     }
