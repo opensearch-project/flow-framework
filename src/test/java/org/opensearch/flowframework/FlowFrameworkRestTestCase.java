@@ -10,22 +10,16 @@ package org.opensearch.flowframework;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import org.apache.hc.client5.http.auth.AuthScope;
-import org.apache.hc.client5.http.auth.UsernamePasswordCredentials;
-import org.apache.hc.client5.http.impl.auth.BasicCredentialsProvider;
-import org.apache.hc.client5.http.impl.nio.PoolingAsyncClientConnectionManager;
-import org.apache.hc.client5.http.impl.nio.PoolingAsyncClientConnectionManagerBuilder;
-import org.apache.hc.client5.http.ssl.ClientTlsStrategyBuilder;
-import org.apache.hc.client5.http.ssl.NoopHostnameVerifier;
-import org.apache.hc.core5.function.Factory;
-import org.apache.hc.core5.http.Header;
-import org.apache.hc.core5.http.HttpHeaders;
-import org.apache.hc.core5.http.HttpHost;
-import org.apache.hc.core5.http.message.BasicHeader;
-import org.apache.hc.core5.http.nio.ssl.TlsStrategy;
-import org.apache.hc.core5.reactor.ssl.TlsDetails;
-import org.apache.hc.core5.ssl.SSLContextBuilder;
-import org.apache.hc.core5.util.Timeout;
+import org.apache.http.Header;
+import org.apache.http.HttpHeaders;
+import org.apache.http.HttpHost;
+import org.apache.http.auth.AuthScope;
+import org.apache.http.auth.UsernamePasswordCredentials;
+import org.apache.http.client.CredentialsProvider;
+import org.apache.http.conn.ssl.NoopHostnameVerifier;
+import org.apache.http.impl.client.BasicCredentialsProvider;
+import org.apache.http.message.BasicHeader;
+import org.apache.http.ssl.SSLContextBuilder;
 import org.opensearch.action.search.SearchResponse;
 import org.opensearch.client.Request;
 import org.opensearch.client.Response;
@@ -51,8 +45,6 @@ import org.opensearch.test.rest.OpenSearchRestTestCase;
 import org.junit.AfterClass;
 import org.junit.Before;
 
-import javax.net.ssl.SSLEngine;
-
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -66,8 +58,6 @@ import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
-import static org.opensearch.client.RestClientBuilder.DEFAULT_MAX_CONN_PER_ROUTE;
-import static org.opensearch.client.RestClientBuilder.DEFAULT_MAX_CONN_TOTAL;
 import static org.opensearch.commons.ConfigConstants.OPENSEARCH_SECURITY_SSL_HTTP_ENABLED;
 import static org.opensearch.commons.ConfigConstants.OPENSEARCH_SECURITY_SSL_HTTP_KEYSTORE_FILEPATH;
 import static org.opensearch.commons.ConfigConstants.OPENSEARCH_SECURITY_SSL_HTTP_KEYSTORE_KEYPASSWORD;
@@ -121,6 +111,9 @@ public abstract class FlowFrameworkRestTestCase extends OpenSearchRestTestCase {
             );
             assertEquals(200, response.getStatusLine().getStatusCode());
 
+            // Need a delay here on 2.x or next line consistently fails tests.
+            // TODO: figure out know why we need this and we should pursue a better option that doesn't require HTTP5
+            Thread.sleep(10000);
             // Ensure .plugins-ml-config is created before proceeding with integration tests
             assertBusy(() -> { assertTrue(indexExistsWithAdminClient(".plugins-ml-config")); });
 
@@ -213,7 +206,7 @@ public abstract class FlowFrameworkRestTestCase extends OpenSearchRestTestCase {
     @AfterClass
     protected static void wipeAllSystemIndices() throws IOException {
         Response response = adminClient().performRequest(new Request("GET", "/_cat/indices?format=json&expand_wildcards=all"));
-        MediaType xContentType = MediaType.fromMediaType(response.getEntity().getContentType());
+        MediaType xContentType = MediaType.fromMediaType(response.getEntity().getContentType().getValue());
         try (
             XContentParser parser = xContentType.xContent()
                 .createParser(
@@ -252,27 +245,13 @@ public abstract class FlowFrameworkRestTestCase extends OpenSearchRestTestCase {
                 .orElseThrow(() -> new RuntimeException("user name is missing"));
             String password = Optional.ofNullable(System.getProperty("password"))
                 .orElseThrow(() -> new RuntimeException("password is missing"));
-            BasicCredentialsProvider credentialsProvider = new BasicCredentialsProvider();
-            final AuthScope anyScope = new AuthScope(null, -1);
-            credentialsProvider.setCredentials(anyScope, new UsernamePasswordCredentials(userName, password.toCharArray()));
+            final CredentialsProvider credentialsProvider = new BasicCredentialsProvider();
+            credentialsProvider.setCredentials(AuthScope.ANY, new UsernamePasswordCredentials(userName, password));
             try {
-                final TlsStrategy tlsStrategy = ClientTlsStrategyBuilder.create()
-                    .setHostnameVerifier(NoopHostnameVerifier.INSTANCE)
-                    .setSslContext(SSLContextBuilder.create().loadTrustMaterial(null, (chains, authType) -> true).build())
-                    // See https://issues.apache.org/jira/browse/HTTPCLIENT-2219
-                    .setTlsDetailsFactory(new Factory<SSLEngine, TlsDetails>() {
-                        @Override
-                        public TlsDetails create(final SSLEngine sslEngine) {
-                            return new TlsDetails(sslEngine.getSession(), sslEngine.getApplicationProtocol());
-                        }
-                    })
-                    .build();
-                final PoolingAsyncClientConnectionManager connectionManager = PoolingAsyncClientConnectionManagerBuilder.create()
-                    .setMaxConnPerRoute(DEFAULT_MAX_CONN_PER_ROUTE)
-                    .setMaxConnTotal(DEFAULT_MAX_CONN_TOTAL)
-                    .setTlsStrategy(tlsStrategy)
-                    .build();
-                return httpClientBuilder.setDefaultCredentialsProvider(credentialsProvider).setConnectionManager(connectionManager);
+                return httpClientBuilder.setDefaultCredentialsProvider(credentialsProvider)
+                    // disable the certificate since our testing cluster just uses the default security configuration
+                    .setSSLHostnameVerifier(NoopHostnameVerifier.INSTANCE)
+                    .setSSLContext(SSLContextBuilder.create().loadTrustMaterial(null, (chains, authType) -> true).build());
             } catch (Exception e) {
                 throw new RuntimeException(e);
             }
@@ -284,9 +263,9 @@ public abstract class FlowFrameworkRestTestCase extends OpenSearchRestTestCase {
             CLIENT_SOCKET_TIMEOUT
         );
         builder.setRequestConfigCallback(conf -> {
-            Timeout timeout = Timeout.ofMilliseconds(Math.toIntExact(socketTimeout.getMillis()));
+            int timeout = Math.toIntExact(socketTimeout.getMillis());
             conf.setConnectTimeout(timeout);
-            conf.setResponseTimeout(timeout);
+            conf.setSocketTimeout(timeout);
             return conf;
         });
         if (settings.hasValue(CLIENT_PATH_PREFIX)) {
@@ -404,7 +383,7 @@ public abstract class FlowFrameworkRestTestCase extends OpenSearchRestTestCase {
         assertEquals(RestStatus.OK, TestHelpers.restStatus(restSearchResponse));
 
         // Parse entity content into SearchResponse
-        MediaType mediaType = MediaType.fromMediaType(restSearchResponse.getEntity().getContentType());
+        MediaType mediaType = MediaType.fromMediaType(restSearchResponse.getEntity().getContentType().getValue());
         try (
             XContentParser parser = mediaType.xContent()
                 .createParser(
@@ -454,7 +433,7 @@ public abstract class FlowFrameworkRestTestCase extends OpenSearchRestTestCase {
         Response response = getWorkflowStatus(workflowId, true);
 
         // Parse workflow state from response and retreieve resources created
-        MediaType mediaType = MediaType.fromMediaType(response.getEntity().getContentType());
+        MediaType mediaType = MediaType.fromMediaType(response.getEntity().getContentType().getValue());
         try (
             XContentParser parser = mediaType.xContent()
                 .createParser(

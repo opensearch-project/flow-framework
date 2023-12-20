@@ -12,9 +12,9 @@ import com.google.common.base.Charsets;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Sets;
 import com.google.common.io.Resources;
-import org.apache.hc.core5.http.Header;
-import org.apache.hc.core5.http.HttpEntity;
-import org.apache.hc.core5.http.io.entity.StringEntity;
+import org.apache.http.Header;
+import org.apache.http.HttpEntity;
+import org.apache.http.nio.entity.NStringEntity;
 import org.apache.logging.log4j.util.Strings;
 import org.opensearch.client.Request;
 import org.opensearch.client.RequestOptions;
@@ -47,7 +47,7 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import static org.opensearch.test.OpenSearchTestCase.randomAlphaOfLength;
-import static org.apache.hc.core5.http.ContentType.APPLICATION_JSON;
+import static org.apache.http.entity.ContentType.APPLICATION_JSON;
 
 public class TestHelpers {
 
@@ -74,7 +74,7 @@ public class TestHelpers {
         String jsonEntity,
         List<Header> headers
     ) throws IOException {
-        HttpEntity httpEntity = Strings.isBlank(jsonEntity) ? null : new StringEntity(jsonEntity, APPLICATION_JSON);
+        HttpEntity httpEntity = Strings.isBlank(jsonEntity) ? null : new NStringEntity(jsonEntity, APPLICATION_JSON);
         return makeRequest(client, method, endpoint, params, httpEntity, headers);
     }
 
@@ -117,11 +117,11 @@ public class TestHelpers {
     }
 
     public static HttpEntity toHttpEntity(ToXContentObject object) throws IOException {
-        return new StringEntity(toJsonString(object), APPLICATION_JSON);
+        return new NStringEntity(toJsonString(object), APPLICATION_JSON);
     }
 
     public static HttpEntity toHttpEntity(String jsonString) throws IOException {
-        return new StringEntity(jsonString, APPLICATION_JSON);
+        return new NStringEntity(jsonString, APPLICATION_JSON);
     }
 
     public static RestStatus restStatus(Response response) {
