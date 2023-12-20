@@ -54,7 +54,7 @@ public class WorkflowRequest extends ActionRequest {
     private Integer maxWorkflows;
 
     /**
-     * Instantiates a new WorkflowRequest, defaults validation to false and set requestTimeout and maxWorkflows to null
+     * Instantiates a new WorkflowRequest, set validation to false and set requestTimeout and maxWorkflows to null
      * @param workflowId the documentId of the workflow
      * @param template the use case template which describes the workflow
      */
@@ -63,7 +63,7 @@ public class WorkflowRequest extends ActionRequest {
     }
 
     /**
-     * Instantiates a new WorkflowRequest and defaults validation to false
+     * Instantiates a new WorkflowRequest and set validation to false
      * @param workflowId the documentId of the workflow
      * @param template the use case template which describes the workflow
      * @param requestTimeout timeout of the request

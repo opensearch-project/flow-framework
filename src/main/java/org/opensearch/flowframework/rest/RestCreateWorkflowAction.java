@@ -97,7 +97,14 @@ public class RestCreateWorkflowAction extends AbstractWorkflowAction {
             boolean validation = request.paramAsBoolean(VALIDATION, true);
             boolean provision = request.paramAsBoolean(PROVISION_WORKFLOW, false);
 
-            WorkflowRequest workflowRequest = new WorkflowRequest(workflowId, template, validation, provision, requestTimeout, maxWorkflows);
+            WorkflowRequest workflowRequest = new WorkflowRequest(
+                workflowId,
+                template,
+                validation,
+                provision,
+                requestTimeout,
+                maxWorkflows
+            );
 
             return channel -> client.execute(CreateWorkflowAction.INSTANCE, workflowRequest, ActionListener.wrap(response -> {
                 XContentBuilder builder = response.toXContent(channel.newBuilder(), ToXContent.EMPTY_PARAMS);
