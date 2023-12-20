@@ -95,7 +95,7 @@ public class CreateWorkflowTransportAction extends HandledTransportAction<Workfl
             user
         );
 
-        if (request.isDryRun()) {
+        if (request.isValidation()) {
             try {
                 validateWorkflows(templateWithUser);
             } catch (Exception e) {

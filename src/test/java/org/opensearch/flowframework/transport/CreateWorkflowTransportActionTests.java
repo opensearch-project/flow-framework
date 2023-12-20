@@ -138,7 +138,7 @@ public class CreateWorkflowTransportActionTests extends OpenSearchTestCase {
         );
     }
 
-    public void testDryRunValidation_withoutProvision_Success() {
+    public void testValidation_withoutProvision_Success() {
         Template validTemplate = generateValidTemplate();
 
         @SuppressWarnings("unchecked")
@@ -147,7 +147,7 @@ public class CreateWorkflowTransportActionTests extends OpenSearchTestCase {
         createWorkflowTransportAction.doExecute(mock(Task.class), createNewWorkflow, listener);
     }
 
-    public void testDryRunValidation_Failed() throws Exception {
+    public void testValidation_Failed() throws Exception {
 
         WorkflowNode createConnector = new WorkflowNode(
             "workflow_step_1",
@@ -374,7 +374,7 @@ public class CreateWorkflowTransportActionTests extends OpenSearchTestCase {
         assertEquals("1", responseCaptor.getValue().getWorkflowId());
     }
 
-    public void testCreateWorkflow_withDryRun_withProvision_Success() throws Exception {
+    public void testCreateWorkflow_withValidation_withProvision_Success() throws Exception {
 
         Template validTemplate = generateValidTemplate();
 
@@ -435,7 +435,7 @@ public class CreateWorkflowTransportActionTests extends OpenSearchTestCase {
         assertEquals("1", workflowResponseCaptor.getValue().getWorkflowId());
     }
 
-    public void testCreateWorkflow_withDryRun_withProvision_FailedProvisioning() throws Exception {
+    public void testCreateWorkflow_withValidation_withProvision_FailedProvisioning() throws Exception {
 
         Template validTemplate = generateValidTemplate();
 
