@@ -21,6 +21,7 @@ import org.opensearch.flowframework.model.Template;
 import org.opensearch.flowframework.model.Workflow;
 import org.opensearch.flowframework.model.WorkflowEdge;
 import org.opensearch.flowframework.model.WorkflowNode;
+import org.opensearch.flowframework.model.WorkflowState;
 
 import java.util.Collections;
 import java.util.HashMap;
@@ -168,12 +169,50 @@ public class FlowFrameworkRestApiIT extends FlowFrameworkRestTestCase {
         getAndAssertWorkflowStatus(workflowId, State.PROVISIONING, ProvisioningProgress.IN_PROGRESS);
 
         // Wait until provisioning has completed successfully before attempting to retrieve created resources
-        List<ResourceCreated> resourcesCreated = getResourcesCreated(workflowId, 10);
+        List<ResourceCreated> resourcesCreated = getResourcesCreated(workflowId, 20);
 
         // This template should create 3 resources, connector_id, regestered model_id and deployed model_id
         assertEquals(3, resourcesCreated.size());
         assertEquals("create_connector", resourcesCreated.get(0).workflowStepName());
         assertNotNull(resourcesCreated.get(0).resourceId());
+    }
+
+    public void testCreateAndProvisionAgentFrameworkWorkflow() throws Exception {
+        Template template = TestHelpers.createTemplateFromFile("agent-framework.json");
+
+        // Hit Create Workflow API to create agent-framework template, with template validation check and provision parameter
+        Response response = createWorkflowWithProvision(template);
+        assertEquals(RestStatus.CREATED, TestHelpers.restStatus(response));
+        Map<String, Object> responseMap = entityAsMap(response);
+        String workflowId = (String) responseMap.get(WORKFLOW_ID);
+        getAndAssertWorkflowStatus(workflowId, State.PROVISIONING, ProvisioningProgress.IN_PROGRESS);
+
+        // Hit Search State API with the workflow id created above
+        String query = "{\"query\":{\"ids\":{\"values\":[\"" + workflowId + "\"]}}}";
+        SearchResponse searchResponse = searchWorkflowState(query);
+        assertEquals(1, searchResponse.getHits().getTotalHits().value);
+        String searchHitSource = searchResponse.getHits().getAt(0).getSourceAsString();
+        System.out.println("search string: " + searchHitSource);
+        WorkflowState searchHitWorkflowState = WorkflowState.parse(searchHitSource);
+
+        // Assert based on the agent-framework template
+        List<ResourceCreated> resourcesCreated = searchHitWorkflowState.resourcesCreated();
+        assertEquals(5, resourcesCreated.size());
+        assertEquals("register_agent", resourcesCreated.get(0).workflowStepName());
+        assertNotNull(resourcesCreated.get(0).resourceId());
+
+        // Hit Deprovision API
+        Response deprovisionResponse = deprovisionWorkflow(workflowId);
+        assertEquals(RestStatus.OK, TestHelpers.restStatus(deprovisionResponse));
+        getAndAssertWorkflowStatus(workflowId, State.NOT_STARTED, ProvisioningProgress.NOT_STARTED);
+
+        // Hit Delete API
+        Response deleteResponse = deleteWorkflow(workflowId);
+        assertEquals(RestStatus.OK, TestHelpers.restStatus(deleteResponse));
+
+        // Search this workflow id in global_context index to make sure it's deleted
+        SearchResponse searchResponseAfterDeletion = searchWorkflows(query);
+        assertEquals(0, searchResponse.getHits().getTotalHits().value);
     }
 
 }

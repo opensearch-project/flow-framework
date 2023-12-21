@@ -8,12 +8,15 @@
  */
 package org.opensearch.flowframework.model;
 
+import org.opensearch.common.xcontent.LoggingDeprecationHandler;
+import org.opensearch.common.xcontent.json.JsonXContent;
 import org.opensearch.commons.authuser.User;
 import org.opensearch.core.common.ParsingException;
 import org.opensearch.core.common.io.stream.StreamInput;
 import org.opensearch.core.common.io.stream.StreamOutput;
 import org.opensearch.core.common.io.stream.Writeable;
 import org.opensearch.core.rest.RestStatus;
+import org.opensearch.core.xcontent.NamedXContentRegistry;
 import org.opensearch.core.xcontent.ToXContentObject;
 import org.opensearch.core.xcontent.XContentBuilder;
 import org.opensearch.core.xcontent.XContentParseException;
@@ -391,6 +394,22 @@ public class WorkflowState implements ToXContentObject, Writeable {
             .userOutputs(userOutputs)
             .resourcesCreated(resourcesCreated)
             .build();
+    }
+
+    /**
+     * Parse a JSON workflow state
+     * @param json A string containing a JSON representation of a workflow state
+     * @return A {@link WorkflowState} represented by the JSON
+     * @throws IOException on failure to parse
+     */
+    public static WorkflowState parse(String json) throws IOException {
+        XContentParser parser = JsonXContent.jsonXContent.createParser(
+                NamedXContentRegistry.EMPTY,
+                LoggingDeprecationHandler.INSTANCE,
+                json
+        );
+        ensureExpectedToken(XContentParser.Token.START_OBJECT, parser.nextToken(), parser);
+        return parse(parser);
     }
 
     /**
