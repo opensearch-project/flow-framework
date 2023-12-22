@@ -59,7 +59,7 @@ public class WorkflowRequest extends ActionRequest {
      * @param template the use case template which describes the workflow
      */
     public WorkflowRequest(@Nullable String workflowId, @Nullable Template template) {
-        this(workflowId, template, null, false, null, null);
+        this(workflowId, template, new String[] { "all" }, false, null, null);
     }
 
     /**
@@ -75,7 +75,7 @@ public class WorkflowRequest extends ActionRequest {
         @Nullable TimeValue requestTimeout,
         @Nullable Integer maxWorkflows
     ) {
-        this(workflowId, template, null, false, requestTimeout, maxWorkflows);
+        this(workflowId, template, new String[] { "all" }, false, requestTimeout, maxWorkflows);
     }
 
     /**
