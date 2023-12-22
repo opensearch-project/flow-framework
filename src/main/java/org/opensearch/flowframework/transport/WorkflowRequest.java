@@ -36,7 +36,7 @@ public class WorkflowRequest extends ActionRequest {
     /**
      * Validation flag
      */
-    private boolean validation;
+    private String[] validation;
 
     /**
      * Provision flag
@@ -59,7 +59,7 @@ public class WorkflowRequest extends ActionRequest {
      * @param template the use case template which describes the workflow
      */
     public WorkflowRequest(@Nullable String workflowId, @Nullable Template template) {
-        this(workflowId, template, false, false, null, null);
+        this(workflowId, template, null, false, null, null);
     }
 
     /**
@@ -75,7 +75,7 @@ public class WorkflowRequest extends ActionRequest {
         @Nullable TimeValue requestTimeout,
         @Nullable Integer maxWorkflows
     ) {
-        this(workflowId, template, false, false, requestTimeout, maxWorkflows);
+        this(workflowId, template, null, false, requestTimeout, maxWorkflows);
     }
 
     /**
@@ -90,7 +90,7 @@ public class WorkflowRequest extends ActionRequest {
     public WorkflowRequest(
         @Nullable String workflowId,
         @Nullable Template template,
-        boolean validation,
+        String[] validation,
         boolean provision,
         @Nullable TimeValue requestTimeout,
         @Nullable Integer maxWorkflows
@@ -113,7 +113,7 @@ public class WorkflowRequest extends ActionRequest {
         this.workflowId = in.readOptionalString();
         String templateJson = in.readOptionalString();
         this.template = templateJson == null ? null : Template.parse(templateJson);
-        this.validation = in.readBoolean();
+        this.validation = in.readStringArray();
         this.provision = in.readBoolean();
         this.requestTimeout = in.readOptionalTimeValue();
         this.maxWorkflows = in.readOptionalInt();
@@ -141,7 +141,7 @@ public class WorkflowRequest extends ActionRequest {
      * Gets the validation flag
      * @return the validation boolean
      */
-    public boolean isValidation() {
+    public String[] getValidation() {
         return this.validation;
     }
 
@@ -174,7 +174,7 @@ public class WorkflowRequest extends ActionRequest {
         super.writeTo(out);
         out.writeOptionalString(workflowId);
         out.writeOptionalString(template == null ? null : template.toJson());
-        out.writeBoolean(validation);
+        out.writeStringArray(validation);
         out.writeBoolean(provision);
         out.writeOptionalTimeValue(requestTimeout);
         out.writeOptionalInt(maxWorkflows);

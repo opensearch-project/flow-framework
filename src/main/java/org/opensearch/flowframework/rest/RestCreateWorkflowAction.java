@@ -94,7 +94,7 @@ public class RestCreateWorkflowAction extends AbstractWorkflowAction {
             XContentParser parser = request.contentParser();
             ensureExpectedToken(XContentParser.Token.START_OBJECT, parser.nextToken(), parser);
             Template template = Template.parse(parser);
-            boolean validation = request.paramAsBoolean(VALIDATION, true);
+            String[] validation = request.paramAsStringArray(VALIDATION, new String[] { "all" });
             boolean provision = request.paramAsBoolean(PROVISION_WORKFLOW, false);
 
             WorkflowRequest workflowRequest = new WorkflowRequest(
