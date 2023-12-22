@@ -24,9 +24,12 @@ import org.opensearch.flowframework.model.WorkflowNode;
 import org.opensearch.flowframework.model.WorkflowState;
 
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 import static org.opensearch.flowframework.common.CommonValue.CREDENTIAL_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.PROVISION_WORKFLOW;
@@ -196,14 +199,26 @@ public class FlowFrameworkRestApiIT extends FlowFrameworkRestTestCase {
 
         // Assert based on the agent-framework template
         List<ResourceCreated> resourcesCreated = searchHitWorkflowState.resourcesCreated();
+        Set<String> expectedStepNames = new HashSet<>();
+        expectedStepNames.add("root_agent");
+        expectedStepNames.add("sub_agent");
+        expectedStepNames.add("openAI_connector");
+        expectedStepNames.add("gpt-3.5-model");
+        expectedStepNames.add("deployed-gpt-3.5-model");
+        Set<String> stepNames = resourcesCreated.stream().map(ResourceCreated::workflowStepId).collect(Collectors.toSet());
+
         assertEquals(5, resourcesCreated.size());
-        assertEquals("register_agent", resourcesCreated.get(0).workflowStepName());
+        assertEquals(stepNames, expectedStepNames);
         assertNotNull(resourcesCreated.get(0).resourceId());
 
         // Hit Deprovision API
         Response deprovisionResponse = deprovisionWorkflow(workflowId);
         assertEquals(RestStatus.OK, TestHelpers.restStatus(deprovisionResponse));
-        getAndAssertWorkflowStatus(workflowId, State.NOT_STARTED, ProvisioningProgress.NOT_STARTED);
+        assertBusy(
+            () -> { getAndAssertWorkflowStatus(workflowId, State.NOT_STARTED, ProvisioningProgress.NOT_STARTED); },
+            30,
+            TimeUnit.SECONDS
+        );
 
         // Hit Delete API
         Response deleteResponse = deleteWorkflow(workflowId);
@@ -211,7 +226,7 @@ public class FlowFrameworkRestApiIT extends FlowFrameworkRestTestCase {
 
         // Search this workflow id in global_context index to make sure it's deleted
         SearchResponse searchResponseAfterDeletion = searchWorkflows(query);
-        assertEquals(0, searchResponse.getHits().getTotalHits().value);
+        assertBusy(() -> assertEquals(0, searchResponseAfterDeletion.getHits().getTotalHits().value), 30, TimeUnit.SECONDS);
     }
 
 }

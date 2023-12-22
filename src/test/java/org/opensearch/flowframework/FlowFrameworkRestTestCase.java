@@ -394,7 +394,7 @@ public abstract class FlowFrameworkRestTestCase extends OpenSearchRestTestCase {
     protected Response deleteWorkflow(String workflowId) throws Exception {
         return TestHelpers.makeRequest(
             client(),
-            "POST",
+            "DELETE",
             String.format(Locale.ROOT, "%s/%s", WORKFLOW_URI, workflowId),
             ImmutableMap.of(),
             "",
