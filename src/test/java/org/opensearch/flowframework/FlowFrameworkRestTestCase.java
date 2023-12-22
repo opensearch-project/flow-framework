@@ -319,6 +319,10 @@ public abstract class FlowFrameworkRestTestCase extends OpenSearchRestTestCase {
         return TestHelpers.makeRequest(client(), "POST", WORKFLOW_URI, ImmutableMap.of(), template.toJson(), null);
     }
 
+    protected Response createWorkflowWithProvision(Template template) throws Exception {
+        return TestHelpers.makeRequest(client(), "POST", WORKFLOW_URI + "?provision=true", ImmutableMap.of(), template.toJson(), null);
+    }
+
     /**
      * Helper method to invoke the Create Workflow Rest Action with dry run validation
      * @param template the template to create
@@ -365,6 +369,40 @@ public abstract class FlowFrameworkRestTestCase extends OpenSearchRestTestCase {
     }
 
     /**
+     * Helper method to invoke the Deprovision Workflow Rest Action
+     * @param workflowId the workflow ID to deprovision
+     * @return a rest response
+     * @throws Exception if the request fails
+     */
+    protected Response deprovisionWorkflow(String workflowId) throws Exception {
+        return TestHelpers.makeRequest(
+            client(),
+            "POST",
+            String.format(Locale.ROOT, "%s/%s/%s", WORKFLOW_URI, workflowId, "_deprovision"),
+            ImmutableMap.of(),
+            "",
+            null
+        );
+    }
+
+    /**
+     * Helper method to invoke the Delete Workflow Rest Action
+     * @param workflowId the workflow ID to delete
+     * @return a rest response
+     * @throws Exception if the request fails
+     */
+    protected Response deleteWorkflow(String workflowId) throws Exception {
+        return TestHelpers.makeRequest(
+            client(),
+            "DELETE",
+            String.format(Locale.ROOT, "%s/%s", WORKFLOW_URI, workflowId),
+            ImmutableMap.of(),
+            "",
+            null
+        );
+    }
+
+    /**
      * Helper method to invoke the Get Workflow Rest Action
      * @param workflowId the workflow ID to get the status
      * @param all verbose status flag
@@ -396,6 +434,31 @@ public abstract class FlowFrameworkRestTestCase extends OpenSearchRestTestCase {
             client(),
             "GET",
             String.format(Locale.ROOT, "%s/_search", WORKFLOW_URI),
+            ImmutableMap.of(),
+            query,
+            null
+        );
+        assertEquals(RestStatus.OK, TestHelpers.restStatus(restSearchResponse));
+
+        // Parse entity content into SearchResponse
+        MediaType mediaType = MediaType.fromMediaType(restSearchResponse.getEntity().getContentType());
+        try (
+            XContentParser parser = mediaType.xContent()
+                .createParser(
+                    NamedXContentRegistry.EMPTY,
+                    DeprecationHandler.THROW_UNSUPPORTED_OPERATION,
+                    restSearchResponse.getEntity().getContent()
+                )
+        ) {
+            return SearchResponse.fromXContent(parser);
+        }
+    }
+
+    protected SearchResponse searchWorkflowState(String query) throws Exception {
+        Response restSearchResponse = TestHelpers.makeRequest(
+            client(),
+            "GET",
+            String.format(Locale.ROOT, "%s/state/_search", WORKFLOW_URI),
             ImmutableMap.of(),
             query,
             null
