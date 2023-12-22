@@ -26,6 +26,7 @@ import org.opensearch.flowframework.model.WorkflowState;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 
 import static org.opensearch.flowframework.common.CommonValue.CREDENTIAL_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.PROVISION_WORKFLOW;
@@ -183,14 +184,14 @@ public class FlowFrameworkRestApiIT extends FlowFrameworkRestTestCase {
         assertEquals(RestStatus.CREATED, TestHelpers.restStatus(response));
         Map<String, Object> responseMap = entityAsMap(response);
         String workflowId = (String) responseMap.get(WORKFLOW_ID);
-        getAndAssertWorkflowStatus(workflowId, State.PROVISIONING, ProvisioningProgress.IN_PROGRESS);
+        // wait and ensure state is completed/done
+        assertBusy(() -> { getAndAssertWorkflowStatus(workflowId, State.COMPLETED, ProvisioningProgress.DONE); }, 30, TimeUnit.SECONDS);
 
         // Hit Search State API with the workflow id created above
         String query = "{\"query\":{\"ids\":{\"values\":[\"" + workflowId + "\"]}}}";
         SearchResponse searchResponse = searchWorkflowState(query);
         assertEquals(1, searchResponse.getHits().getTotalHits().value);
         String searchHitSource = searchResponse.getHits().getAt(0).getSourceAsString();
-        System.out.println("search string: " + searchHitSource);
         WorkflowState searchHitWorkflowState = WorkflowState.parse(searchHitSource);
 
         // Assert based on the agent-framework template
