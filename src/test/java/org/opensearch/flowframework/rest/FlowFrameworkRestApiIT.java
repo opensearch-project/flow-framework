@@ -224,9 +224,13 @@ public class FlowFrameworkRestApiIT extends FlowFrameworkRestTestCase {
         Response deleteResponse = deleteWorkflow(workflowId);
         assertEquals(RestStatus.OK, TestHelpers.restStatus(deleteResponse));
 
+        // wait for deletion to complete
+        Thread.sleep(30000);
+
         // Search this workflow id in global_context index to make sure it's deleted
         SearchResponse searchResponseAfterDeletion = searchWorkflows(query);
         assertBusy(() -> assertEquals(0, searchResponseAfterDeletion.getHits().getTotalHits().value), 30, TimeUnit.SECONDS);
+
     }
 
 }
