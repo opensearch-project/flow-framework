@@ -376,12 +376,12 @@ public abstract class FlowFrameworkRestTestCase extends OpenSearchRestTestCase {
      */
     protected Response deprovisionWorkflow(String workflowId) throws Exception {
         return TestHelpers.makeRequest(
-                client(),
-                "POST",
-                String.format(Locale.ROOT, "%s/%s/%s", WORKFLOW_URI, workflowId, "_deprovision"),
-                ImmutableMap.of(),
-                "",
-                null
+            client(),
+            "POST",
+            String.format(Locale.ROOT, "%s/%s/%s", WORKFLOW_URI, workflowId, "_deprovision"),
+            ImmutableMap.of(),
+            "",
+            null
         );
     }
 
@@ -393,12 +393,12 @@ public abstract class FlowFrameworkRestTestCase extends OpenSearchRestTestCase {
      */
     protected Response deleteWorkflow(String workflowId) throws Exception {
         return TestHelpers.makeRequest(
-                client(),
-                "POST",
-                String.format(Locale.ROOT, "%s/%s", WORKFLOW_URI, workflowId),
-                ImmutableMap.of(),
-                "",
-                null
+            client(),
+            "POST",
+            String.format(Locale.ROOT, "%s/%s", WORKFLOW_URI, workflowId),
+            ImmutableMap.of(),
+            "",
+            null
         );
     }
 
@@ -456,24 +456,24 @@ public abstract class FlowFrameworkRestTestCase extends OpenSearchRestTestCase {
 
     protected SearchResponse searchWorkflowState(String query) throws Exception {
         Response restSearchResponse = TestHelpers.makeRequest(
-                client(),
-                "GET",
-                String.format(Locale.ROOT, "%s/state/_search", WORKFLOW_URI),
-                ImmutableMap.of(),
-                query,
-                null
+            client(),
+            "GET",
+            String.format(Locale.ROOT, "%s/state/_search", WORKFLOW_URI),
+            ImmutableMap.of(),
+            query,
+            null
         );
         assertEquals(RestStatus.OK, TestHelpers.restStatus(restSearchResponse));
 
         // Parse entity content into SearchResponse
         MediaType mediaType = MediaType.fromMediaType(restSearchResponse.getEntity().getContentType());
         try (
-                XContentParser parser = mediaType.xContent()
-                        .createParser(
-                                NamedXContentRegistry.EMPTY,
-                                DeprecationHandler.THROW_UNSUPPORTED_OPERATION,
-                                restSearchResponse.getEntity().getContent()
-                        )
+            XContentParser parser = mediaType.xContent()
+                .createParser(
+                    NamedXContentRegistry.EMPTY,
+                    DeprecationHandler.THROW_UNSUPPORTED_OPERATION,
+                    restSearchResponse.getEntity().getContent()
+                )
         ) {
             return SearchResponse.fromXContent(parser);
         }

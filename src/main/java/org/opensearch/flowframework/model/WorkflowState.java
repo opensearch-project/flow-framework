@@ -404,9 +404,9 @@ public class WorkflowState implements ToXContentObject, Writeable {
      */
     public static WorkflowState parse(String json) throws IOException {
         XContentParser parser = JsonXContent.jsonXContent.createParser(
-                NamedXContentRegistry.EMPTY,
-                LoggingDeprecationHandler.INSTANCE,
-                json
+            NamedXContentRegistry.EMPTY,
+            LoggingDeprecationHandler.INSTANCE,
+            json
         );
         ensureExpectedToken(XContentParser.Token.START_OBJECT, parser.nextToken(), parser);
         return parse(parser);
