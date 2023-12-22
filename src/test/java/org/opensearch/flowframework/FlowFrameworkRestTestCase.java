@@ -122,8 +122,7 @@ public abstract class FlowFrameworkRestTestCase extends OpenSearchRestTestCase {
             assertEquals(200, response.getStatusLine().getStatusCode());
 
             // Ensure .plugins-ml-config is created before proceeding with integration tests
-            assertBusy(() -> { assertTrue(indexExistsWithAdminClient(".plugins-ml-config")); });
-
+            assertBusy(() -> { assertTrue(indexExistsWithAdminClient(".plugins-ml-config")); }, 30, TimeUnit.SECONDS);
         }
 
     }

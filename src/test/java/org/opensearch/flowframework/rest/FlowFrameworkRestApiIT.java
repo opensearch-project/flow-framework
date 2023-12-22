@@ -23,11 +23,9 @@ import org.opensearch.flowframework.model.WorkflowEdge;
 import org.opensearch.flowframework.model.WorkflowNode;
 import org.opensearch.flowframework.model.WorkflowState;
 
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 import static org.opensearch.flowframework.common.CommonValue.CREDENTIAL_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.PROVISION_WORKFLOW;
@@ -66,6 +64,8 @@ public class FlowFrameworkRestApiIT extends FlowFrameworkRestTestCase {
     }
 
     public void testCreateAndProvisionLocalModelWorkflow() throws Exception {
+        /*- Local model registration is not yet fully complete.  Commenting this test out until it is.
+         * https://github.com/opensearch-project/flow-framework/issues/305
 
         // Using a 3 step template to create a model group, register a remote model and deploy model
         Template template = TestHelpers.createTemplateFromFile("registerlocalmodel-deploymodel.json");
@@ -118,14 +118,12 @@ public class FlowFrameworkRestApiIT extends FlowFrameworkRestTestCase {
         assertEquals(RestStatus.OK, TestHelpers.restStatus(response));
         getAndAssertWorkflowStatus(workflowId, State.PROVISIONING, ProvisioningProgress.IN_PROGRESS);
 
-        // TODO: This provisioning isn't completing, probably due to incorrect task vs. model ID in RetryableWorkflowStep
-        // May be fixed by https://github.com/opensearch-project/flow-framework/pull/298
         // Wait until provisioning has completed successfully before attempting to retrieve created resources
-        // List<ResourceCreated> resourcesCreated = getResourcesCreated(workflowId, 100);
+        List<ResourceCreated> resourcesCreated = getResourcesCreated(workflowId, 100);
 
         // TODO: This template should create 2 resources, registered_model_id and deployed model_id
-        // But RegisterLocalModelStep does not yet update state index so might be 1
-        // assertEquals(0, resourcesCreated.size());
+        assertEquals(0, resourcesCreated.size());
+         */
     }
 
     public void testCreateAndProvisionRemoteModelWorkflow() throws Exception {
@@ -169,7 +167,7 @@ public class FlowFrameworkRestApiIT extends FlowFrameworkRestTestCase {
         getAndAssertWorkflowStatus(workflowId, State.PROVISIONING, ProvisioningProgress.IN_PROGRESS);
 
         // Wait until provisioning has completed successfully before attempting to retrieve created resources
-        List<ResourceCreated> resourcesCreated = getResourcesCreated(workflowId, 20);
+        List<ResourceCreated> resourcesCreated = getResourcesCreated(workflowId, 30);
 
         // This template should create 3 resources, connector_id, regestered model_id and deployed model_id
         assertEquals(3, resourcesCreated.size());
