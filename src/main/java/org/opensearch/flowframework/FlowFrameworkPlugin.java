@@ -9,6 +9,8 @@
 package org.opensearch.flowframework;
 
 import com.google.common.collect.ImmutableList;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.opensearch.action.ActionRequest;
 import org.opensearch.client.Client;
 import org.opensearch.cluster.metadata.IndexNameExpressionResolver;
@@ -27,6 +29,7 @@ import org.opensearch.env.Environment;
 import org.opensearch.env.NodeEnvironment;
 import org.opensearch.flowframework.common.FlowFrameworkFeatureEnabledSetting;
 import org.opensearch.flowframework.indices.FlowFrameworkIndicesHandler;
+import org.opensearch.flowframework.model.WorkflowValidator;
 import org.opensearch.flowframework.rest.RestCreateWorkflowAction;
 import org.opensearch.flowframework.rest.RestDeleteWorkflowAction;
 import org.opensearch.flowframework.rest.RestDeprovisionWorkflowAction;
@@ -52,6 +55,7 @@ import org.opensearch.flowframework.transport.SearchWorkflowStateAction;
 import org.opensearch.flowframework.transport.SearchWorkflowStateTransportAction;
 import org.opensearch.flowframework.transport.SearchWorkflowTransportAction;
 import org.opensearch.flowframework.util.EncryptorUtils;
+import org.opensearch.flowframework.workflow.CreateIndexStep;
 import org.opensearch.flowframework.workflow.WorkflowProcessSorter;
 import org.opensearch.flowframework.workflow.WorkflowStepFactory;
 import org.opensearch.ml.client.MachineLearningNodeClient;
@@ -66,6 +70,7 @@ import org.opensearch.threadpool.FixedExecutorBuilder;
 import org.opensearch.threadpool.ThreadPool;
 import org.opensearch.watcher.ResourceWatcherService;
 
+import java.io.IOException;
 import java.util.Collection;
 import java.util.List;
 import java.util.function.Supplier;

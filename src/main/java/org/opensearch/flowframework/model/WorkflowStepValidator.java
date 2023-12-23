@@ -27,21 +27,25 @@ public class WorkflowStepValidator {
     private static final String OUTPUTS_FIELD = "outputs";
     /** Required Plugins field name */
     private static final String REQUIRED_PLUGINS = "required_plugins";
+    /** Timeout field name */
+    private static final String TIMEOUT = "timeout";
 
     private List<String> inputs;
     private List<String> outputs;
     private List<String> requiredPlugins;
+    private String timeout;
 
     /**
-     * Intantiate the object representing a Workflow Step validator
+     * Instantiate the object representing a Workflow Step validator
      * @param inputs the workflow step inputs
      * @param outputs the workflow step outputs
      * @param requiredPlugins the required plugins for this workflow step
      */
-    public WorkflowStepValidator(List<String> inputs, List<String> outputs, List<String> requiredPlugins) {
+    public WorkflowStepValidator(List<String> inputs, List<String> outputs, List<String> requiredPlugins, String timeout) {
         this.inputs = inputs;
         this.outputs = outputs;
         this.requiredPlugins = requiredPlugins;
+        this.timeout = timeout;
     }
 
     /**
@@ -54,6 +58,7 @@ public class WorkflowStepValidator {
         List<String> parsedInputs = new ArrayList<>();
         List<String> parsedOutputs = new ArrayList<>();
         List<String> requiredPlugins = new ArrayList<>();
+        String timeout = null;
 
         ensureExpectedToken(XContentParser.Token.START_OBJECT, parser.currentToken(), parser);
         while (parser.nextToken() != XContentParser.Token.END_OBJECT) {
@@ -78,11 +83,14 @@ public class WorkflowStepValidator {
                         requiredPlugins.add(parser.text());
                     }
                     break;
+                case TIMEOUT:
+                    timeout = parser.text();
+                    break;
                 default:
                     throw new IOException("Unable to parse field [" + fieldName + "] in a WorkflowStepValidator object.");
             }
         }
-        return new WorkflowStepValidator(parsedInputs, parsedOutputs, requiredPlugins);
+        return new WorkflowStepValidator(parsedInputs, parsedOutputs, requiredPlugins, timeout);
     }
 
     /**
@@ -103,9 +111,17 @@ public class WorkflowStepValidator {
 
     /**
      * Get the required plugins
-     * @return the outputs
+     * @return the required plugins
      */
     public List<String> getRequiredPlugins() {
         return List.copyOf(requiredPlugins);
+    }
+
+    /**
+     * Get the timeout
+     * @return the timeout
+     */
+    public String getTimeout() {
+        return timeout;
     }
 }

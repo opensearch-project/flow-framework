@@ -27,6 +27,7 @@ import org.opensearch.flowframework.model.WorkflowValidator;
 import org.opensearch.plugins.PluginInfo;
 import org.opensearch.threadpool.ThreadPool;
 
+import java.io.IOException;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -35,6 +36,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Queue;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
@@ -141,7 +143,7 @@ public class WorkflowProcessSorter {
      * @throws Exception if validation fails
      */
     public void validate(List<ProcessNode> processNodes) throws Exception {
-        WorkflowValidator validator = WorkflowValidator.parse("mappings/workflow-steps.json");
+        WorkflowValidator validator = readWorkflowValidator();
         validatePluginsInstalled(processNodes, validator);
         validateGraph(processNodes, validator);
     }
@@ -244,11 +246,17 @@ public class WorkflowProcessSorter {
                 );
             }
         }
-
     }
 
-    private TimeValue parseTimeout(WorkflowNode node) {
-        String timeoutValue = (String) node.userInputs().getOrDefault(NODE_TIMEOUT_FIELD, NODE_TIMEOUT_DEFAULT_VALUE);
+    private WorkflowValidator readWorkflowValidator() throws IOException {
+        return WorkflowValidator.parse("mappings/workflow-steps.json");
+    }
+
+    private TimeValue parseTimeout(WorkflowNode node) throws IOException {
+        WorkflowValidator validator = readWorkflowValidator();
+        String nodeTimeoutValue = Optional.ofNullable(validator.getWorkflowStepValidators().get(node.type()).getTimeout())
+                .orElse(NODE_TIMEOUT_DEFAULT_VALUE);
+        String timeoutValue = (String) node.userInputs().getOrDefault(NODE_TIMEOUT_FIELD, nodeTimeoutValue);
         String fieldName = String.join(".", node.id(), USER_INPUTS_FIELD, NODE_TIMEOUT_FIELD);
         TimeValue timeValue = TimeValue.parseTimeValue(timeoutValue, fieldName);
         if (timeValue.millis() < 0) {
