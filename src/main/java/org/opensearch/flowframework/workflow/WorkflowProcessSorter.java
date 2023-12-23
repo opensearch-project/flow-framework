@@ -120,20 +120,28 @@ public class WorkflowProcessSorter {
                 .map(e -> idToNodeMap.get(e.source()))
                 .collect(Collectors.toList());
 
-            TimeValue nodeTimeout = parseTimeout(node);
-            ProcessNode processNode = new ProcessNode(
-                node.id(),
-                step,
-                node.previousNodeInputs(),
-                data,
-                predecessorNodes,
-                threadPool,
-                nodeTimeout
-            );
-            idToNodeMap.put(processNode.id(), processNode);
-            nodes.add(processNode);
-        }
+            try {
+                TimeValue nodeTimeout = parseTimeout(node);
+                ProcessNode processNode = new ProcessNode(
+                    node.id(),
+                    step,
+                    node.previousNodeInputs(),
+                    data,
+                    predecessorNodes,
+                    threadPool,
+                    nodeTimeout
+                );
+                idToNodeMap.put(processNode.id(), processNode);
+                nodes.add(processNode);
 
+            } catch (IOException e) {
+                logger.error("Failed to read workflow-steps mapping file", e);
+                throw new FlowFrameworkException(
+                    "Workflow " + workflowId + " failed at reading workflow-steps mapping file",
+                    RestStatus.INTERNAL_SERVER_ERROR
+                );
+            }
+        }
         return nodes;
     }
 
@@ -255,7 +263,7 @@ public class WorkflowProcessSorter {
     private TimeValue parseTimeout(WorkflowNode node) throws IOException {
         WorkflowValidator validator = readWorkflowValidator();
         String nodeTimeoutValue = Optional.ofNullable(validator.getWorkflowStepValidators().get(node.type()).getTimeout())
-                .orElse(NODE_TIMEOUT_DEFAULT_VALUE);
+            .orElse(NODE_TIMEOUT_DEFAULT_VALUE);
         String timeoutValue = (String) node.userInputs().getOrDefault(NODE_TIMEOUT_FIELD, nodeTimeoutValue);
         String fieldName = String.join(".", node.id(), USER_INPUTS_FIELD, NODE_TIMEOUT_FIELD);
         TimeValue timeValue = TimeValue.parseTimeValue(timeoutValue, fieldName);

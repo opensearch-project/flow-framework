@@ -22,13 +22,13 @@ public class CommonValue {
     /** Schema Version field name */
     public static final String SCHEMA_VERSION_FIELD = "schema_version";
     /** Global Context Index Name */
-    public static final String GLOBAL_CONTEXT_INDEX = ".plugins-ai-global-context";
+    public static final String GLOBAL_CONTEXT_INDEX = ".plugins-flow-framework-templates";
     /** Global Context index mapping file path */
     public static final String GLOBAL_CONTEXT_INDEX_MAPPING = "mappings/global-context.json";
     /** Global Context index mapping version */
     public static final Integer GLOBAL_CONTEXT_INDEX_VERSION = 1;
     /** Workflow State Index Name */
-    public static final String WORKFLOW_STATE_INDEX = ".plugins-workflow-state";
+    public static final String WORKFLOW_STATE_INDEX = ".plugins-flow-framework-state";
     /** Workflow State index mapping file path */
     public static final String WORKFLOW_STATE_INDEX_MAPPING = "mappings/workflow-state.json";
     /** Workflow State index mapping version */

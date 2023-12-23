@@ -40,6 +40,7 @@ public class WorkflowStepValidator {
      * @param inputs the workflow step inputs
      * @param outputs the workflow step outputs
      * @param requiredPlugins the required plugins for this workflow step
+     * @param timeout the timeout for this workflow step
      */
     public WorkflowStepValidator(List<String> inputs, List<String> outputs, List<String> requiredPlugins, String timeout) {
         this.inputs = inputs;
