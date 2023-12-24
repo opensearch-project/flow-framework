@@ -1,0 +1,201 @@
+{
+  "name": "opensearch-assistant-workflow",
+  "description": "test case",
+  "use_case": "REGISTER_AGENT",
+  "version": {
+    "template": "1.0.0",
+    "compatibility": [
+      "2.12.0",
+      "3.0.0"
+    ]
+  },
+  "workflows": {
+    "provision": {
+      "nodes": [
+        {
+          "id": "openAI_connector",
+          "type": "create_connector",
+          "user_inputs": {
+            "name": "OpenAI Chat Connector",
+            "description": "The connector to public OpenAI model service for GPT 3.5",
+            "protocol": "aws_sigv4",
+            "version": "1",
+            "parameters": {
+              "region": "us-east-1",
+              "service_name": "bedrock",
+              "anthropic_version": "bedrock-2023-05-31",
+              "endpoint": "bedrock.us-east-1.amazonaws.com",
+              "auth": "Sig_V4",
+              "content_type": "application/json",
+              "max_tokens_to_sample": 8000,
+              "temperature": 0.0001
+            },
+            "credential": {
+              "access_key": "<access-key>",
+              "secret_key": "<secret-key>",
+              "session_token": "<token>"
+            },
+            "actions": [
+              {
+                "action_type": "predict",
+                "method": "POST",
+                "url": "https://bedrock-runtime.us-east-1.amazonaws.com/model/anthropic.claude-v2/invoke",
+                "request_body": "{\"prompt\":\"${parameters.prompt}\", \"max_tokens_to_sample\":${parameters.max_tokens_to_sample}, \"temperature\":${parameters.temperature},  \"anthropic_version\":\"${parameters.anthropic_version}\" }"
+              }
+            ]
+          }
+        },
+        {
+          "id": "gpt-3.5-model",
+          "type": "register_remote_model",
+          "previous_node_inputs": {
+            "openAI_connector": "connector_id"
+          },
+          "user_inputs": {
+            "name": "flow-register-remote-test-gpt-3.5-turbo",
+            "function_name": "remote",
+            "description": "test model"
+          }
+        },
+        {
+          "id": "deployed-gpt-3.5-model",
+          "type": "deploy_model",
+          "previous_node_inputs": {
+            "gpt-3.5-model": "model_id"
+          }
+        },
+        {
+          "id": "ml_model_tool",
+          "type": "create_tool",
+          "previous_node_inputs": {
+            "deployed-gpt-3.5-model": "model_id"
+          },
+          "user_inputs": {
+            "name": "MLModelTool",
+            "type": "MLModelTool",
+            "alias": "language_model_tool",
+            "description": "A general tool to answer any question. But it can't handle math problem",
+            "parameters": {
+              "prompt": "Answer the question as best you can.",
+              "response_filter": "choices[0].message.content"
+            }
+          }
+        },
+        {
+          "id": "math_tool",
+          "type": "create_tool",
+          "user_inputs": {
+            "name": "MathTool",
+            "type": "MathTool",
+            "description": "A general tool to calculate any math problem. The action input must be valid math expression, like 2+3",
+            "parameters": {
+              "max_iteration": 5
+            }
+          }
+        },
+        {
+          "id": "sub_agent",
+          "type": "register_agent",
+          "previous_node_inputs": {
+            "math_tool": "tools"
+          },
+          "user_inputs": {
+            "name": "Sub Agent",
+            "type": "cot",
+            "description": "this is a test agent",
+            "parameters": {
+              "hello": "world"
+            },
+            "llm.model_id": "ldzS04kBxRPZ5cnWrqpd",
+            "llm.parameters": {
+              "max_iteration": "5",
+              "stop_when_no_tool_found": "true"
+            },
+            "memory": {
+              "type": "conversation_index"
+            },
+            "app_type": "chatbot",
+            "created_time": 1689793598499,
+            "last_updated_time": 1689793598530
+          }
+        },
+        {
+          "id": "agent_tool",
+          "type": "create_tool",
+          "previous_node_inputs": {
+            "sub_agent": "agent_id"
+          },
+          "user_inputs": {
+            "name": "AgentTool",
+            "type": "AgentTool",
+            "description": "Root Agent Tool",
+            "parameters": {
+              "max_iteration": 5
+            }
+          }
+        },
+        {
+          "id": "root_agent",
+          "type": "register_agent",
+          "previous_node_inputs": {
+            "deployed-gpt-3.5-model": "model_id",
+            "ml_model_tool": "tools",
+            "agent_tool": "tools"
+          },
+          "user_inputs": {
+            "name": "DEMO-Test_Agent_For_CoT",
+            "type": "cot",
+            "description": "this is a test agent",
+            "parameters": {
+              "hello": "world"
+            },
+            "llm.parameters": {
+              "max_iteration": "5",
+              "stop_when_no_tool_found": "true"
+            },
+            "memory": {
+              "type": "conversation_index"
+            },
+            "app_type": "chatbot",
+            "created_time": 1689793598499,
+            "last_updated_time": 1689793598530
+          }
+        }
+      ],
+      "edges": [
+        {
+          "source": "openAI_connector",
+          "dest": "gpt-3.5-model"
+        },
+        {
+          "source": "gpt-3.5-model",
+          "dest": "deployed-gpt-3.5-model"
+        },
+        {
+          "source": "deployed-gpt-3.5-model",
+          "dest": "root_agent"
+        },
+        {
+          "source": "deployed-gpt-3.5-model",
+          "dest": "ml_model_tool"
+        },
+        {
+          "source": "ml_model_tool",
+          "dest": "root_agent"
+        },
+        {
+          "source": "math_tool",
+          "dest": "sub_agent"
+        },
+        {
+          "source": "sub_agent",
+          "dest": "agent_tool"
+        },
+        {
+          "source": "agent_tool",
+          "dest": "root_agent"
+        }
+      ]
+    }
+  }
+}

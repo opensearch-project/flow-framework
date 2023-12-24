@@ -21,10 +21,15 @@ import org.opensearch.flowframework.model.Template;
 import org.opensearch.flowframework.model.Workflow;
 import org.opensearch.flowframework.model.WorkflowEdge;
 import org.opensearch.flowframework.model.WorkflowNode;
+import org.opensearch.flowframework.model.WorkflowState;
 
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 import static org.opensearch.flowframework.common.CommonValue.CREDENTIAL_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.PROVISION_WORKFLOW;
@@ -172,6 +177,60 @@ public class FlowFrameworkRestApiIT extends FlowFrameworkRestTestCase {
         assertEquals(3, resourcesCreated.size());
         assertEquals("create_connector", resourcesCreated.get(0).workflowStepName());
         assertNotNull(resourcesCreated.get(0).resourceId());
+    }
+
+    public void testCreateAndProvisionAgentFrameworkWorkflow() throws Exception {
+        Template template = TestHelpers.createTemplateFromFile("agent-framework.json");
+
+        // Hit Create Workflow API to create agent-framework template, with template validation check and provision parameter
+        Response response = createWorkflowWithProvision(template);
+        assertEquals(RestStatus.CREATED, TestHelpers.restStatus(response));
+        Map<String, Object> responseMap = entityAsMap(response);
+        String workflowId = (String) responseMap.get(WORKFLOW_ID);
+        // wait and ensure state is completed/done
+        assertBusy(() -> { getAndAssertWorkflowStatus(workflowId, State.COMPLETED, ProvisioningProgress.DONE); }, 30, TimeUnit.SECONDS);
+
+        // Hit Search State API with the workflow id created above
+        String query = "{\"query\":{\"ids\":{\"values\":[\"" + workflowId + "\"]}}}";
+        SearchResponse searchResponse = searchWorkflowState(query);
+        assertEquals(1, searchResponse.getHits().getTotalHits().value);
+        String searchHitSource = searchResponse.getHits().getAt(0).getSourceAsString();
+        WorkflowState searchHitWorkflowState = WorkflowState.parse(searchHitSource);
+
+        // Assert based on the agent-framework template
+        List<ResourceCreated> resourcesCreated = searchHitWorkflowState.resourcesCreated();
+        Set<String> expectedStepNames = new HashSet<>();
+        expectedStepNames.add("root_agent");
+        expectedStepNames.add("sub_agent");
+        expectedStepNames.add("openAI_connector");
+        expectedStepNames.add("gpt-3.5-model");
+        expectedStepNames.add("deployed-gpt-3.5-model");
+        Set<String> stepNames = resourcesCreated.stream().map(ResourceCreated::workflowStepId).collect(Collectors.toSet());
+
+        assertEquals(5, resourcesCreated.size());
+        assertEquals(stepNames, expectedStepNames);
+        assertNotNull(resourcesCreated.get(0).resourceId());
+
+        // Hit Deprovision API
+        Response deprovisionResponse = deprovisionWorkflow(workflowId);
+        assertEquals(RestStatus.OK, TestHelpers.restStatus(deprovisionResponse));
+        assertBusy(
+            () -> { getAndAssertWorkflowStatus(workflowId, State.NOT_STARTED, ProvisioningProgress.NOT_STARTED); },
+            30,
+            TimeUnit.SECONDS
+        );
+
+        // Hit Delete API
+        Response deleteResponse = deleteWorkflow(workflowId);
+        assertEquals(RestStatus.OK, TestHelpers.restStatus(deleteResponse));
+
+        // wait for deletion to complete
+        Thread.sleep(30000);
+
+        // Search this workflow id in global_context index to make sure it's deleted
+        SearchResponse searchResponseAfterDeletion = searchWorkflows(query);
+        assertBusy(() -> assertEquals(0, searchResponseAfterDeletion.getHits().getTotalHits().value), 30, TimeUnit.SECONDS);
+
     }
 
 }
