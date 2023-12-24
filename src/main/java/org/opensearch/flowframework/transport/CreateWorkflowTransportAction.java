@@ -37,6 +37,7 @@ import org.opensearch.search.builder.SearchSourceBuilder;
 import org.opensearch.tasks.Task;
 import org.opensearch.transport.TransportService;
 
+import java.util.Arrays;
 import java.util.List;
 
 import static org.opensearch.flowframework.common.CommonValue.PROVISIONING_PROGRESS_FIELD;
@@ -95,7 +96,8 @@ public class CreateWorkflowTransportAction extends HandledTransportAction<Workfl
             user
         );
 
-        if (request.isDryRun()) {
+        String[] validateAll = { "all" };
+        if (Arrays.equals(request.getValidation(), validateAll)) {
             try {
                 validateWorkflows(templateWithUser);
             } catch (Exception e) {
