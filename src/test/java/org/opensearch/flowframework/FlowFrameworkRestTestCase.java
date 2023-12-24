@@ -445,7 +445,7 @@ public abstract class FlowFrameworkRestTestCase extends OpenSearchRestTestCase {
         assertEquals(RestStatus.OK, TestHelpers.restStatus(restSearchResponse));
 
         // Parse entity content into SearchResponse
-        MediaType mediaType = MediaType.fromMediaType(restSearchResponse.getEntity().getContentType());
+        MediaType mediaType = MediaType.fromMediaType(restSearchResponse.getEntity().getContentType().getValue());
         try (
             XContentParser parser = mediaType.xContent()
                 .createParser(
@@ -471,8 +471,8 @@ public abstract class FlowFrameworkRestTestCase extends OpenSearchRestTestCase {
         assertEquals(RestStatus.OK, TestHelpers.restStatus(response));
 
         Map<String, Object> responseMap = entityAsMap(response);
-        assertEquals(stateStatus.name(), (String) responseMap.get(CommonValue.STATE_FIELD));
-        assertEquals(provisioningStatus.name(), (String) responseMap.get(CommonValue.PROVISIONING_PROGRESS_FIELD));
+        assertEquals(stateStatus.name(), responseMap.get(CommonValue.STATE_FIELD));
+        assertEquals(provisioningStatus.name(), responseMap.get(CommonValue.PROVISIONING_PROGRESS_FIELD));
 
     }
 
