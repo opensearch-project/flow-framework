@@ -299,13 +299,13 @@ public abstract class FlowFrameworkRestTestCase extends OpenSearchRestTestCase {
     }
 
     /**
-     * Helper method to invoke the Create Workflow Rest Action with dry run validation
+     * Helper method to invoke the Create Workflow Rest Action with validation
      * @param template the template to create
      * @throws Exception if the request fails
      * @return a rest response
      */
-    protected Response createWorkflowDryRun(Template template) throws Exception {
-        return TestHelpers.makeRequest(client(), "POST", WORKFLOW_URI + "?dryrun=true", ImmutableMap.of(), template.toJson(), null);
+    protected Response createWorkflowValidation(Template template) throws Exception {
+        return TestHelpers.makeRequest(client(), "POST", WORKFLOW_URI, ImmutableMap.of(), template.toJson(), null);
     }
 
     /**

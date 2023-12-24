@@ -149,7 +149,7 @@ public class FlowFrameworkRestApiIT extends FlowFrameworkRestTestCase {
             .build();
 
         // Hit dry run
-        ResponseException exception = expectThrows(ResponseException.class, () -> createWorkflowDryRun(cyclicalTemplate));
+        ResponseException exception = expectThrows(ResponseException.class, () -> createWorkflowValidation(cyclicalTemplate));
         assertTrue(exception.getMessage().contains("Cycle detected: [workflow_step_2->workflow_step_1, workflow_step_1->workflow_step_2]"));
 
         // Hit Create Workflow API with original template
