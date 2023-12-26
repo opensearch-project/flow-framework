@@ -84,7 +84,7 @@ public class WorkflowNode implements ToXContentObject {
         xContentBuilder.startObject(USER_INPUTS_FIELD);
         for (Entry<String, Object> e : userInputs.entrySet()) {
             xContentBuilder.field(e.getKey());
-            if (e.getValue() instanceof String || e.getValue() instanceof Number) {
+            if (e.getValue() instanceof String || e.getValue() instanceof Number || e.getValue() instanceof Boolean) {
                 xContentBuilder.value(e.getValue());
             } else if (e.getValue() instanceof Map<?, ?>) {
                 buildStringToStringMap(xContentBuilder, (Map<?, ?>) e.getValue());
@@ -190,6 +190,9 @@ public class WorkflowNode implements ToXContentObject {
                                     default:
                                         throw new IOException("Unable to parse field [" + inputFieldName + "] in a node object.");
                                 }
+                                break;
+                            case VALUE_BOOLEAN:
+                                userInputs.put(inputFieldName, parser.booleanValue());
                                 break;
                             default:
                                 throw new IOException("Unable to parse field [" + inputFieldName + "] in a node object.");
