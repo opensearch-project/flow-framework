@@ -12,8 +12,7 @@
         "outputs":[
             "index_name"
         ],
-        "required_plugins":[],
-        "timeout": "10s"
+        "required_plugins":[]
     },
     "create_ingest_pipeline": {
         "inputs":[
@@ -27,8 +26,7 @@
         "outputs":[
             "pipeline_id"
         ],
-        "required_plugins":[],
-        "timeout": "10s"
+        "required_plugins":[]
     },
     "create_connector": {
         "inputs":[
@@ -45,8 +43,7 @@
         ],
         "required_plugins":[
             "opensearch-ml"
-        ],
-        "timeout": "10s"
+        ]
     },
     "delete_connector": {
         "inputs": [
@@ -57,8 +54,7 @@
         ],
         "required_plugins":[
             "opensearch-ml"
-        ],
-        "timeout": "10s"
+        ]
     },
     "register_local_model": {
         "inputs":[
@@ -78,7 +74,7 @@
         "required_plugins":[
             "opensearch-ml"
         ],
-        "timeout": "10s"
+        "timeout": "60s"
     },
     "register_remote_model": {
         "inputs": [
@@ -92,8 +88,7 @@
         ],
         "required_plugins":[
             "opensearch-ml"
-        ],
-        "timeout": "10s"
+        ]
     },
     "delete_model": {
         "inputs": [
@@ -104,8 +99,7 @@
         ],
         "required_plugins":[
             "opensearch-ml"
-        ],
-        "timeout": "10s"
+        ]
     },
     "deploy_model": {
         "inputs":[
@@ -128,8 +122,7 @@
         ],
         "required_plugins":[
             "opensearch-ml"
-        ],
-        "timeout": "10s"
+        ]
     },
     "register_model_group": {
         "inputs":[
@@ -141,8 +134,7 @@
         ],
         "required_plugins":[
             "opensearch-ml"
-        ],
-        "timeout": "10s"
+        ]
     },
     "register_agent": {
         "inputs":[
@@ -160,8 +152,7 @@
         ],
         "required_plugins":[
             "opensearch-ml"
-        ],
-        "timeout": "10s"
+        ]
     },
     "delete_agent": {
         "inputs": [
@@ -172,8 +163,7 @@
         ],
         "required_plugins":[
             "opensearch-ml"
-        ],
-        "timeout": "10s"
+        ]
     },
     "create_tool": {
         "inputs": [
@@ -184,7 +174,6 @@
         ],
         "required_plugins":[
             "opensearch-ml"
-        ],
-        "timeout": "10s"
+        ]
     }
 }

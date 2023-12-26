@@ -91,7 +91,7 @@ public class WorkflowProcessSorter {
      * @param workflowId The workflowId associated with the step
      * @return A list of Process Nodes sorted topologically.  All predecessors of any node will occur prior to it in the list.
      */
-    public List<ProcessNode> sortProcessNodes(Workflow workflow, String workflowId) {
+    public List<ProcessNode> sortProcessNodes(Workflow workflow, String workflowId) throws IOException {
         if (workflow.nodes().size() > this.maxWorkflowSteps) {
             throw new FlowFrameworkException(
                 "Workflow "
@@ -120,27 +120,18 @@ public class WorkflowProcessSorter {
                 .map(e -> idToNodeMap.get(e.source()))
                 .collect(Collectors.toList());
 
-            try {
-                TimeValue nodeTimeout = parseTimeout(node);
-                ProcessNode processNode = new ProcessNode(
-                    node.id(),
-                    step,
-                    node.previousNodeInputs(),
-                    data,
-                    predecessorNodes,
-                    threadPool,
-                    nodeTimeout
-                );
-                idToNodeMap.put(processNode.id(), processNode);
-                nodes.add(processNode);
-
-            } catch (IOException e) {
-                logger.error("Failed to read workflow-steps mapping file", e);
-                throw new FlowFrameworkException(
-                    "Workflow " + workflowId + " failed at reading workflow-steps mapping file",
-                    RestStatus.INTERNAL_SERVER_ERROR
-                );
-            }
+            TimeValue nodeTimeout = parseTimeout(node);
+            ProcessNode processNode = new ProcessNode(
+                node.id(),
+                step,
+                node.previousNodeInputs(),
+                data,
+                predecessorNodes,
+                threadPool,
+                nodeTimeout
+            );
+            idToNodeMap.put(processNode.id(), processNode);
+            nodes.add(processNode);
         }
         return nodes;
     }
@@ -151,7 +142,7 @@ public class WorkflowProcessSorter {
      * @throws Exception if validation fails
      */
     public void validate(List<ProcessNode> processNodes) throws Exception {
-        WorkflowValidator validator = readWorkflowValidator();
+        WorkflowValidator validator = readWorkflowValidator(processNodes.get(0).id());
         validatePluginsInstalled(processNodes, validator);
         validateGraph(processNodes, validator);
     }
@@ -256,12 +247,27 @@ public class WorkflowProcessSorter {
         }
     }
 
-    private WorkflowValidator readWorkflowValidator() throws IOException {
-        return WorkflowValidator.parse("mappings/workflow-steps.json");
+    private WorkflowValidator readWorkflowValidator(String workflowId) {
+        try {
+            return WorkflowValidator.parse("mappings/workflow-steps.json");
+        } catch (Exception e) {
+            logger.error("Failed to read workflow-steps mapping file", e);
+            throw new FlowFrameworkException(
+                "Workflow " + workflowId + " failed at reading workflow-steps mapping file",
+                RestStatus.INTERNAL_SERVER_ERROR
+            );
+        }
     }
 
-    private TimeValue parseTimeout(WorkflowNode node) throws IOException {
-        WorkflowValidator validator = readWorkflowValidator();
+    /**
+     * A method for parsing workflow timeout value.
+     * The value could be parsed from node NODE_TIMEOUT_FIELD, the timeout field in workflow-step.json,
+     * or the default NODE_TIMEOUT_DEFAULT_VALUE
+     * @param node the workflow nde
+     * @return the timeout value
+     */
+    protected TimeValue parseTimeout(WorkflowNode node) {
+        WorkflowValidator validator = readWorkflowValidator(node.id());
         String nodeTimeoutValue = Optional.ofNullable(validator.getWorkflowStepValidators().get(node.type()).getTimeout())
             .orElse(NODE_TIMEOUT_DEFAULT_VALUE);
         String timeoutValue = (String) node.userInputs().getOrDefault(NODE_TIMEOUT_FIELD, nodeTimeoutValue);

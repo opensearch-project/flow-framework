@@ -21,6 +21,7 @@ import org.opensearch.cluster.service.ClusterService;
 import org.opensearch.common.settings.ClusterSettings;
 import org.opensearch.common.settings.Setting;
 import org.opensearch.common.settings.Settings;
+import org.opensearch.common.unit.TimeValue;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.core.rest.RestStatus;
 import org.opensearch.core.xcontent.XContentParser;
@@ -508,5 +509,47 @@ public class WorkflowProcessSorterTests extends OpenSearchTestCase {
             "The workflowStep create_connector requires the following plugins to be installed : [opensearch-ml]",
             exception.getMessage()
         );
+    }
+
+    public void testReadWorkflowStepFile_withDefaultTimeout() throws IOException {
+        // read timeout from node NODE_TIMEOUT_FIELD
+        WorkflowNode createConnector = new WorkflowNode(
+            "workflow_step_1",
+            CreateConnectorStep.NAME,
+            Map.of(),
+            Map.ofEntries(
+                Map.entry("name", ""),
+                Map.entry("description", ""),
+                Map.entry("version", ""),
+                Map.entry("protocol", ""),
+                Map.entry("parameters", ""),
+                Map.entry("credential", ""),
+                Map.entry("actions", ""),
+                Map.entry("node_timeout", "50s")
+            )
+        );
+        TimeValue createConnectorTimeout = workflowProcessSorter.parseTimeout(createConnector);
+        assertEquals(createConnectorTimeout.getSeconds(), 50);
+
+        // read timeout from workflow-step.json overwrite value
+        WorkflowNode deployModel = new WorkflowNode(
+            "workflow_step_3",
+            DeployModelStep.NAME,
+            Map.ofEntries(Map.entry("workflow_step_2", "model_id")),
+            Map.of()
+        );
+        TimeValue deployModelTimeout = workflowProcessSorter.parseTimeout(deployModel);
+        assertEquals(deployModelTimeout.getSeconds(), 15);
+
+        // read timeout from NODE_TIMEOUT_DEFAULT_VALUE when there's no node NODE_TIMEOUT_FIELD
+        // and no overwrite timeout value in workflow-step.json
+        WorkflowNode registerModel = new WorkflowNode(
+            "workflow_step_2",
+            RegisterRemoteModelStep.NAME,
+            Map.ofEntries(Map.entry("workflow_step_1", "connector_id")),
+            Map.ofEntries(Map.entry("name", "name"), Map.entry("function_name", "remote"), Map.entry("description", "description"))
+        );
+        TimeValue registerRemoteModelTimeout = workflowProcessSorter.parseTimeout(registerModel);
+        assertEquals(registerRemoteModelTimeout.getSeconds(), 10);
     }
 }
