@@ -73,7 +73,8 @@
         ],
         "required_plugins":[
             "opensearch-ml"
-        ]
+        ],
+        "timeout": "60s"
     },
     "register_remote_model": {
         "inputs": [
@@ -109,7 +110,8 @@
         ],
         "required_plugins":[
             "opensearch-ml"
-        ]
+        ],
+        "timeout": "15s"
     },
     "undeploy_model": {
         "inputs":[

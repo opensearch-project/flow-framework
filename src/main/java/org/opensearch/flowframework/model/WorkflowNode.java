@@ -8,6 +8,7 @@
  */
 package org.opensearch.flowframework.model;
 
+import org.opensearch.common.unit.TimeValue;
 import org.opensearch.core.xcontent.ToXContentObject;
 import org.opensearch.core.xcontent.XContentBuilder;
 import org.opensearch.core.xcontent.XContentParser;
@@ -23,6 +24,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Objects;
 
+import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.opensearch.core.xcontent.XContentParserUtils.ensureExpectedToken;
 import static org.opensearch.flowframework.common.CommonValue.TOOLS_ORDER_FIELD;
 import static org.opensearch.flowframework.util.ParseUtils.buildStringToObjectMap;
@@ -50,7 +52,7 @@ public class WorkflowNode implements ToXContentObject {
     /** The field defining the timeout value for this node */
     public static final String NODE_TIMEOUT_FIELD = "node_timeout";
     /** The default timeout value if the template doesn't override it */
-    public static final String NODE_TIMEOUT_DEFAULT_VALUE = "15s";
+    public static final TimeValue NODE_TIMEOUT_DEFAULT_VALUE = new TimeValue(10, SECONDS);
 
     private final String id; // unique id
     private final String type; // maps to a WorkflowStep
