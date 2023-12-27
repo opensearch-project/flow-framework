@@ -8,7 +8,12 @@
  */
 package org.opensearch.flowframework.model;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import org.opensearch.common.unit.TimeValue;
+import org.opensearch.core.rest.RestStatus;
 import org.opensearch.core.xcontent.XContentParser;
+import org.opensearch.flowframework.exception.FlowFrameworkException;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -20,6 +25,8 @@ import static org.opensearch.core.xcontent.XContentParserUtils.ensureExpectedTok
  * This represents an object of workflow steps json which maps each step to expected inputs and outputs
  */
 public class WorkflowStepValidator {
+
+    private static final Logger logger = LogManager.getLogger(WorkflowStepValidator.class);
 
     /** Inputs field name */
     private static final String INPUTS_FIELD = "inputs";
@@ -33,7 +40,7 @@ public class WorkflowStepValidator {
     private List<String> inputs;
     private List<String> outputs;
     private List<String> requiredPlugins;
-    private String timeout;
+    private TimeValue timeout;
 
     /**
      * Instantiate the object representing a Workflow Step validator
@@ -42,7 +49,7 @@ public class WorkflowStepValidator {
      * @param requiredPlugins the required plugins for this workflow step
      * @param timeout the timeout for this workflow step
      */
-    public WorkflowStepValidator(List<String> inputs, List<String> outputs, List<String> requiredPlugins, String timeout) {
+    public WorkflowStepValidator(List<String> inputs, List<String> outputs, List<String> requiredPlugins, TimeValue timeout) {
         this.inputs = inputs;
         this.outputs = outputs;
         this.requiredPlugins = requiredPlugins;
@@ -59,7 +66,7 @@ public class WorkflowStepValidator {
         List<String> parsedInputs = new ArrayList<>();
         List<String> parsedOutputs = new ArrayList<>();
         List<String> requiredPlugins = new ArrayList<>();
-        String timeout = null;
+        TimeValue timeout = null;
 
         ensureExpectedToken(XContentParser.Token.START_OBJECT, parser.currentToken(), parser);
         while (parser.nextToken() != XContentParser.Token.END_OBJECT) {
@@ -85,7 +92,15 @@ public class WorkflowStepValidator {
                     }
                     break;
                 case TIMEOUT:
-                    timeout = parser.text();
+                    try {
+                        timeout = TimeValue.parseTimeValue(parser.text(), TIMEOUT);
+                    } catch (IllegalArgumentException e) {
+                        logger.error("Failed to parse TIMEOUT value for field [" + fieldName + "]", e);
+                        throw new FlowFrameworkException(
+                            "Failed to parse workflow-step.json file for field [" + fieldName + "]",
+                            RestStatus.INTERNAL_SERVER_ERROR
+                        );
+                    }
                     break;
                 default:
                     throw new IOException("Unable to parse field [" + fieldName + "] in a WorkflowStepValidator object.");
@@ -122,7 +137,7 @@ public class WorkflowStepValidator {
      * Get the timeout
      * @return the timeout
      */
-    public String getTimeout() {
+    public TimeValue getTimeout() {
         return timeout;
     }
 }

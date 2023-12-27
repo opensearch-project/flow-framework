@@ -27,7 +27,6 @@ import org.opensearch.flowframework.model.WorkflowValidator;
 import org.opensearch.plugins.PluginInfo;
 import org.opensearch.threadpool.ThreadPool;
 
-import java.io.IOException;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -91,7 +90,7 @@ public class WorkflowProcessSorter {
      * @param workflowId The workflowId associated with the step
      * @return A list of Process Nodes sorted topologically.  All predecessors of any node will occur prior to it in the list.
      */
-    public List<ProcessNode> sortProcessNodes(Workflow workflow, String workflowId) throws IOException {
+    public List<ProcessNode> sortProcessNodes(Workflow workflow, String workflowId) {
         if (workflow.nodes().size() > this.maxWorkflowSteps) {
             throw new FlowFrameworkException(
                 "Workflow "
@@ -268,18 +267,20 @@ public class WorkflowProcessSorter {
      */
     protected TimeValue parseTimeout(WorkflowNode node) {
         WorkflowValidator validator = readWorkflowValidator(node.id());
-        String nodeTimeoutValue = Optional.ofNullable(validator.getWorkflowStepValidators().get(node.type()).getTimeout())
+        TimeValue nodeTimeoutValue = Optional.ofNullable(validator.getWorkflowStepValidators().get(node.type()).getTimeout())
             .orElse(NODE_TIMEOUT_DEFAULT_VALUE);
-        String timeoutValue = (String) node.userInputs().getOrDefault(NODE_TIMEOUT_FIELD, nodeTimeoutValue);
+        String nodeTimeoutAsString = nodeTimeoutValue.getSeconds() + "s";
+        String timeoutValue = (String) node.userInputs().getOrDefault(NODE_TIMEOUT_FIELD, nodeTimeoutAsString);
         String fieldName = String.join(".", node.id(), USER_INPUTS_FIELD, NODE_TIMEOUT_FIELD);
-        TimeValue timeValue = TimeValue.parseTimeValue(timeoutValue, fieldName);
-        if (timeValue.millis() < 0) {
+        TimeValue userInputTimeValue = TimeValue.parseTimeValue(timeoutValue, fieldName);
+
+        if (userInputTimeValue.millis() < 0) {
             throw new FlowFrameworkException(
                 "Failed to parse timeout value [" + timeoutValue + "] for field [" + fieldName + "]. Must be positive",
                 RestStatus.BAD_REQUEST
             );
         }
-        return timeValue;
+        return userInputTimeValue;
     }
 
     private static List<WorkflowNode> topologicalSort(List<WorkflowNode> workflowNodes, List<WorkflowEdge> workflowEdges) {
