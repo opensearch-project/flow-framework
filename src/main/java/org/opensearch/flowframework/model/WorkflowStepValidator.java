@@ -95,7 +95,7 @@ public class WorkflowStepValidator {
                     try {
                         timeout = TimeValue.parseTimeValue(parser.text(), TIMEOUT);
                     } catch (IllegalArgumentException e) {
-                        logger.error("Failed to parse TIMEOUT value for field [" + fieldName + "]", e);
+                        logger.error("Failed to parse TIMEOUT value for field [{}]", fieldName, e);
                         throw new FlowFrameworkException(
                             "Failed to parse workflow-step.json file for field [" + fieldName + "]",
                             RestStatus.INTERNAL_SERVER_ERROR

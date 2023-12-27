@@ -141,7 +141,7 @@ public class WorkflowProcessSorter {
      * @throws Exception if validation fails
      */
     public void validate(List<ProcessNode> processNodes) throws Exception {
-        WorkflowValidator validator = readWorkflowValidator(processNodes.get(0).id());
+        WorkflowValidator validator = readWorkflowValidator();
         validatePluginsInstalled(processNodes, validator);
         validateGraph(processNodes, validator);
     }
@@ -246,13 +246,13 @@ public class WorkflowProcessSorter {
         }
     }
 
-    private WorkflowValidator readWorkflowValidator(String workflowId) {
+    private WorkflowValidator readWorkflowValidator() {
         try {
             return WorkflowValidator.parse("mappings/workflow-steps.json");
         } catch (Exception e) {
-            logger.error("Failed to read workflow-steps mapping file", e);
+            logger.error("Failed at reading workflow-steps mapping file", e);
             throw new FlowFrameworkException(
-                "Workflow " + workflowId + " failed at reading workflow-steps mapping file",
+                "Failed at reading workflow-steps.json mapping file for a new workflow.",
                 RestStatus.INTERNAL_SERVER_ERROR
             );
         }
@@ -262,11 +262,11 @@ public class WorkflowProcessSorter {
      * A method for parsing workflow timeout value.
      * The value could be parsed from node NODE_TIMEOUT_FIELD, the timeout field in workflow-step.json,
      * or the default NODE_TIMEOUT_DEFAULT_VALUE
-     * @param node the workflow nde
+     * @param node the workflow node
      * @return the timeout value
      */
     protected TimeValue parseTimeout(WorkflowNode node) {
-        WorkflowValidator validator = readWorkflowValidator(node.id());
+        WorkflowValidator validator = readWorkflowValidator();
         TimeValue nodeTimeoutValue = Optional.ofNullable(validator.getWorkflowStepValidators().get(node.type()).getTimeout())
             .orElse(NODE_TIMEOUT_DEFAULT_VALUE);
         String nodeTimeoutAsString = nodeTimeoutValue.getSeconds() + "s";
