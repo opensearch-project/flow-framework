@@ -30,6 +30,7 @@ import java.io.IOException;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -155,13 +156,17 @@ public class RegisterAgentStep implements WorkflowStep {
             String name = (String) inputs.get(NAME_FIELD);
             String description = (String) inputs.get(DESCRIPTION_FIELD);
             String llmModelId = (String) inputs.get(LLM_MODEL_ID);
-            Map<String, String> llmParameters = getStringToStringMap(inputs.get(PARAMETERS_FIELD), LLM_PARAMETERS);
+            Object llmParams = inputs.get(LLM_PARAMETERS);
+            Map<String, String> llmParameters = llmParams == null
+                ? Collections.emptyMap()
+                : getStringToStringMap(llmParams, LLM_PARAMETERS);
             String[] toolsOrder = (String[]) inputs.get(TOOLS_ORDER_FIELD);
             List<MLToolSpec> toolsList = getTools(toolsOrder, previousNodeInputs, outputs);
-            Map<String, String> parameters = getStringToStringMap(inputs.get(PARAMETERS_FIELD), PARAMETERS_FIELD);
+            Object params = inputs.get(PARAMETERS_FIELD);
+            Map<String, String> parameters = params == null ? Collections.emptyMap() : getStringToStringMap(params, PARAMETERS_FIELD);
             MLMemorySpec memory = getMLMemorySpec(inputs.get(MEMORY_FIELD));
-            Instant createdTime = Instant.ofEpochMilli((Long) inputs.get(CREATED_TIME));
-            Instant lastUpdateTime = Instant.ofEpochMilli((Long) inputs.get(LAST_UPDATED_TIME_FIELD));
+            Instant createdTime = Instant.now();
+            Instant lastUpdateTime = createdTime;
             String appType = (String) inputs.get(APP_TYPE_FIELD);
 
             // Case when modelId is present in previous node inputs
@@ -223,7 +228,7 @@ public class RegisterAgentStep implements WorkflowStep {
         List<String> sortedNodes = tools == null ? new ArrayList<>() : Arrays.asList(tools);
         previousNodes.removeAll(sortedNodes);
         sortedNodes.addAll(previousNodes);
-        sortedNodes.forEach((node) -> {
+        sortedNodes.forEach(node -> {
             WorkflowData previousNodeOutput = outputs.get(node);
             if (previousNodeOutput != null && previousNodeOutput.getContent().containsKey(TOOLS_FIELD)) {
                 MLToolSpec mlToolSpec = (MLToolSpec) previousNodeOutput.getContent().get(TOOLS_FIELD);
@@ -235,9 +240,6 @@ public class RegisterAgentStep implements WorkflowStep {
     }
 
     private String getLlmModelId(Map<String, String> previousNodeInputs, Map<String, WorkflowData> outputs) {
-        // Case when modelId is already pass in the template
-        String llmModelId = null;
-
         // Case when modelId is passed through previousSteps
         Optional<String> previousNode = previousNodeInputs.entrySet()
             .stream()
@@ -247,11 +249,15 @@ public class RegisterAgentStep implements WorkflowStep {
 
         if (previousNode.isPresent()) {
             WorkflowData previousNodeOutput = outputs.get(previousNode.get());
-            if (previousNodeOutput != null && previousNodeOutput.getContent().containsKey(MODEL_ID)) {
-                llmModelId = previousNodeOutput.getContent().get(MODEL_ID).toString();
+            if (previousNodeOutput != null) {
+                // Use either llm.model_id (if present) or model_id (backup)
+                Object modelId = previousNodeOutput.getContent().getOrDefault(LLM_MODEL_ID, previousNodeOutput.getContent().get(MODEL_ID));
+                if (modelId != null) {
+                    return modelId.toString();
+                }
             }
         }
-        return llmModelId;
+        return null;
     }
 
     private LLMSpec getLLMSpec(String llmModelId, Map<String, String> llmParameters, String workflowId, String currentNodeId) {
@@ -267,8 +273,7 @@ public class RegisterAgentStep implements WorkflowStep {
             builder.parameters(llmParameters);
         }
 
-        LLMSpec llmSpec = builder.build();
-        return llmSpec;
+        return builder.build();
     }
 
     private MLMemorySpec getMLMemorySpec(Object mlMemory) {
@@ -294,9 +299,6 @@ public class RegisterAgentStep implements WorkflowStep {
             builder.windowSize(windowSize);
         }
 
-        MLMemorySpec mlMemorySpec = builder.build();
-        return mlMemorySpec;
-
+        return builder.build();
     }
-
 }

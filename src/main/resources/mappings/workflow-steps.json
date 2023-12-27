@@ -137,13 +137,7 @@
     "register_agent": {
         "inputs":[
             "name",
-            "type",
-            "tools",
-            "parameters",
-            "memory",
-            "created_time",
-            "last_updated_time",
-            "app_type"
+            "type"
         ],
         "outputs":[
             "agent_id"
