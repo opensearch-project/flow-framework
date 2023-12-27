@@ -8,7 +8,6 @@
  */
 package org.opensearch.flowframework.indices;
 
-import com.google.common.base.Charsets;
 import com.google.common.io.Resources;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -32,7 +31,6 @@ import org.opensearch.commons.authuser.User;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.core.rest.RestStatus;
 import org.opensearch.core.xcontent.ToXContent;
-import org.opensearch.core.xcontent.ToXContentObject;
 import org.opensearch.core.xcontent.XContentBuilder;
 import org.opensearch.flowframework.common.WorkflowResources;
 import org.opensearch.flowframework.exception.FlowFrameworkException;
@@ -47,6 +45,7 @@ import org.opensearch.script.ScriptType;
 
 import java.io.IOException;
 import java.net.URL;
+import java.nio.charset.StandardCharsets;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
@@ -165,7 +164,7 @@ public class FlowFrameworkIndicesHandler {
         String mapping = index.getMapping();
 
         try (ThreadContext.StoredContext threadContext = client.threadPool().getThreadContext().stashContext()) {
-            ActionListener<Boolean> internalListener = ActionListener.runBefore(listener, () -> threadContext.restore());
+            ActionListener<Boolean> internalListener = ActionListener.runBefore(listener, threadContext::restore);
             if (!clusterService.state().metadata().hasIndex(indexName)) {
                 @SuppressWarnings("deprecation")
                 ActionListener<CreateIndexResponse> actionListener = ActionListener.wrap(r -> {
@@ -176,7 +175,7 @@ public class FlowFrameworkIndicesHandler {
                         internalListener.onResponse(false);
                     }
                 }, e -> {
-                    logger.error("Failed to create index " + indexName, e);
+                    logger.error("Failed to create index {}", indexName, e);
                     internalListener.onFailure(new FlowFrameworkException(e.getMessage(), ExceptionsHelper.status(e)));
                 });
                 CreateIndexRequest request = new CreateIndexRequest(indexName).mapping(mapping).settings(indexSettings);
@@ -274,7 +273,7 @@ public class FlowFrameworkIndicesHandler {
         Integer oldVersion = NO_SCHEMA_VERSION;
         Map<String, Object> indexMapping = indexMetaData.mapping().getSourceAsMap();
         Object meta = indexMapping.get(META);
-        if (meta != null && meta instanceof Map) {
+        if (meta instanceof Map) {
             @SuppressWarnings("unchecked")
             Map<String, Object> metaMapping = (Map<String, Object>) meta;
             Object schemaVersion = metaMapping.get(SCHEMA_VERSION_FIELD);
@@ -294,7 +293,7 @@ public class FlowFrameworkIndicesHandler {
      */
     public static String getIndexMappings(String mapping) throws IOException {
         URL url = FlowFrameworkIndicesHandler.class.getClassLoader().getResource(mapping);
-        return Resources.toString(url, Charsets.UTF_8);
+        return Resources.toString(url, StandardCharsets.UTF_8);
     }
 
     /**
@@ -316,7 +315,7 @@ public class FlowFrameworkIndicesHandler {
                 Template templateWithEncryptedCredentials = encryptorUtils.encryptTemplateCredentials(template);
                 request.source(templateWithEncryptedCredentials.toXContent(builder, ToXContent.EMPTY_PARAMS))
                     .setRefreshPolicy(WriteRequest.RefreshPolicy.IMMEDIATE);
-                client.index(request, ActionListener.runBefore(listener, () -> context.restore()));
+                client.index(request, ActionListener.runBefore(listener, context::restore));
             } catch (Exception e) {
                 String errorMessage = "Failed to index global_context index";
                 logger.error(errorMessage);
@@ -372,7 +371,7 @@ public class FlowFrameworkIndicesHandler {
             ) {
                 request.source(state.toXContent(builder, ToXContent.EMPTY_PARAMS)).setRefreshPolicy(WriteRequest.RefreshPolicy.IMMEDIATE);
                 request.id(workflowId);
-                client.index(request, ActionListener.runBefore(listener, () -> context.restore()));
+                client.index(request, ActionListener.runBefore(listener, context::restore));
             } catch (Exception e) {
                 String errorMessage = "Failed to put state index document";
                 logger.error(errorMessage, e);
@@ -408,7 +407,7 @@ public class FlowFrameworkIndicesHandler {
                 Template encryptedTemplate = encryptorUtils.encryptTemplateCredentials(template);
                 request.source(encryptedTemplate.toXContent(builder, ToXContent.EMPTY_PARAMS))
                     .setRefreshPolicy(WriteRequest.RefreshPolicy.IMMEDIATE);
-                client.index(request, ActionListener.runBefore(listener, () -> context.restore()));
+                client.index(request, ActionListener.runBefore(listener, context::restore));
             } catch (Exception e) {
                 String errorMessage = "Failed to update global_context entry : " + documentId;
                 logger.error(errorMessage, e);
@@ -441,7 +440,7 @@ public class FlowFrameworkIndicesHandler {
                 updateRequest.setRefreshPolicy(WriteRequest.RefreshPolicy.IMMEDIATE);
                 updateRequest.retryOnConflict(3);
                 // TODO: decide what condition can be considered as an update conflict and add retry strategy
-                client.update(updateRequest, ActionListener.runBefore(listener, () -> context.restore()));
+                client.update(updateRequest, ActionListener.runBefore(listener, context::restore));
             } catch (Exception e) {
                 String errorMessage = "Failed to update " + WORKFLOW_STATE_INDEX + " entry : " + documentId;
                 logger.error(errorMessage, e);
@@ -475,7 +474,7 @@ public class FlowFrameworkIndicesHandler {
                 updateRequest.setRefreshPolicy(WriteRequest.RefreshPolicy.IMMEDIATE);
                 updateRequest.retryOnConflict(3);
                 // TODO: Implement our own concurrency control to improve on retry mechanism
-                client.update(updateRequest, ActionListener.runBefore(listener, () -> context.restore()));
+                client.update(updateRequest, ActionListener.runBefore(listener, context::restore));
             } catch (Exception e) {
                 logger.error("Failed to update {} entry : {}. {}", indexName, documentId, e.getMessage());
                 listener.onFailure(
@@ -508,7 +507,7 @@ public class FlowFrameworkIndicesHandler {
             resourceId
         );
         XContentBuilder builder = XContentBuilder.builder(XContentType.JSON.xContent());
-        newResource.toXContent(builder, ToXContentObject.EMPTY_PARAMS);
+        newResource.toXContent(builder, ToXContent.EMPTY_PARAMS);
 
         // The script to append a new object to the resources_created array
         Script script = new Script(

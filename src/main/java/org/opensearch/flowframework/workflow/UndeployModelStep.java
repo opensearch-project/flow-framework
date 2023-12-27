@@ -19,7 +19,6 @@ import org.opensearch.flowframework.util.ParseUtils;
 import org.opensearch.ml.client.MachineLearningNodeClient;
 import org.opensearch.ml.common.transport.undeploy.MLUndeployModelsResponse;
 
-import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -55,7 +54,7 @@ public class UndeployModelStep implements WorkflowStep {
         WorkflowData currentNodeInputs,
         Map<String, WorkflowData> outputs,
         Map<String, String> previousNodeInputs
-    ) throws IOException {
+    ) {
         CompletableFuture<WorkflowData> undeployModelFuture = new CompletableFuture<>();
 
         ActionListener<MLUndeployModelsResponse> actionListener = new ActionListener<>() {

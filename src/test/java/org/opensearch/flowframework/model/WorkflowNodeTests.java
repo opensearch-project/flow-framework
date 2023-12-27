@@ -11,6 +11,7 @@ package org.opensearch.flowframework.model;
 import org.opensearch.test.OpenSearchTestCase;
 
 import java.io.IOException;
+import java.util.Collections;
 import java.util.Map;
 
 public class WorkflowNodeTests extends OpenSearchTestCase {
@@ -52,7 +53,7 @@ public class WorkflowNodeTests extends OpenSearchTestCase {
         assertArrayEquals(new String[] { "foo", "bar" }, (String[]) map.get("tools_order"));
 
         // node equality is based only on ID
-        WorkflowNode nodeA2 = new WorkflowNode("A", "a2-type", Map.of(), Map.of("bar", "baz"));
+        WorkflowNode nodeA2 = new WorkflowNode("A", "a2-type", Collections.emptyMap(), Map.of("bar", "baz"));
         assertEquals(nodeA, nodeA2);
 
         WorkflowNode nodeB = new WorkflowNode("B", "b-type", Map.of("A", "foo"), Map.of("baz", "qux"));

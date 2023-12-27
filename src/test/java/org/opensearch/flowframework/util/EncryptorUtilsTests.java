@@ -8,7 +8,6 @@
  */
 package org.opensearch.flowframework.util;
 
-import com.google.common.collect.ImmutableMap;
 import org.opensearch.Version;
 import org.opensearch.action.get.GetRequest;
 import org.opensearch.action.get.GetResponse;
@@ -27,6 +26,7 @@ import org.opensearch.flowframework.model.WorkflowNode;
 import org.opensearch.test.OpenSearchTestCase;
 import org.opensearch.threadpool.ThreadPool;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
@@ -63,11 +63,11 @@ public class EncryptorUtilsTests extends OpenSearchTestCase {
         WorkflowNode nodeA = new WorkflowNode(
             "A",
             "a-type",
-            Map.of(),
+            Collections.emptyMap(),
             Map.of(CREDENTIAL_FIELD, Map.of(testCredentialKey, testCredentialValue))
         );
         List<WorkflowNode> nodes = List.of(nodeA);
-        Workflow workflow = new Workflow(Map.of("key", "value"), nodes, List.of());
+        Workflow workflow = new Workflow(Map.of("key", "value"), nodes, Collections.emptyList());
 
         this.testTemplate = new Template(
             "test",
@@ -76,7 +76,7 @@ public class EncryptorUtilsTests extends OpenSearchTestCase {
             templateVersion,
             compatibilityVersions,
             Map.of("provision", workflow),
-            Map.of(),
+            Collections.emptyMap(),
             TestHelpers.randomUser()
         );
 
@@ -132,7 +132,7 @@ public class EncryptorUtilsTests extends OpenSearchTestCase {
             // Stub get response for success case
             GetResponse getResponse = mock(GetResponse.class);
             when(getResponse.isExists()).thenReturn(true);
-            when(getResponse.getSourceAsMap()).thenReturn(ImmutableMap.of(MASTER_KEY, masterKey));
+            when(getResponse.getSourceAsMap()).thenReturn(Map.of(MASTER_KEY, masterKey));
 
             getRequestActionListener.onResponse(getResponse);
             return null;

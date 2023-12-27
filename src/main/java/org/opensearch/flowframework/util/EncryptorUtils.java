@@ -8,7 +8,6 @@
  */
 package org.opensearch.flowframework.util;
 
-import com.google.common.collect.ImmutableMap;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.opensearch.ExceptionsHelper;
@@ -228,15 +227,15 @@ public class EncryptorUtils {
                 if (!getResponse.isExists()) {
 
                     // Generate new key and index
-                    final String masterKey = generateMasterKey();
+                    final String generatedKey = generateMasterKey();
                     IndexRequest masterKeyIndexRequest = new IndexRequest(CONFIG_INDEX).id(MASTER_KEY)
-                        .source(ImmutableMap.of(MASTER_KEY, masterKey, CREATE_TIME, Instant.now().toEpochMilli()))
+                        .source(Map.ofEntries(Map.entry(MASTER_KEY, generatedKey), Map.entry(CREATE_TIME, Instant.now().toEpochMilli())))
                         .setRefreshPolicy(WriteRequest.RefreshPolicy.IMMEDIATE);
 
                     client.index(masterKeyIndexRequest, ActionListener.wrap(indexResponse -> {
                         // Set generated key to master
                         logger.info("Config has been initialized successfully");
-                        this.masterKey = masterKey;
+                        this.masterKey = generatedKey;
                         listener.onResponse(true);
                     }, indexException -> {
                         logger.error("Failed to index config", indexException);
@@ -246,8 +245,7 @@ public class EncryptorUtils {
                 } else {
                     // Set existing key to master
                     logger.info("Config has already been initialized");
-                    final String masterKey = (String) getResponse.getSourceAsMap().get(MASTER_KEY);
-                    this.masterKey = masterKey;
+                    this.masterKey = (String) getResponse.getSourceAsMap().get(MASTER_KEY);
                     listener.onResponse(true);
                 }
             }, getRequestException -> {

@@ -8,7 +8,6 @@
  */
 package org.opensearch.flowframework.transport;
 
-import com.google.common.collect.ImmutableMap;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.opensearch.ExceptionsHelper;
@@ -38,6 +37,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 
@@ -126,15 +126,11 @@ public class ProvisionWorkflowTransportAction extends HandledTransportAction<Wor
 
                 flowFrameworkIndicesHandler.updateFlowFrameworkSystemIndexDoc(
                     workflowId,
-                    ImmutableMap.of(
-                        STATE_FIELD,
-                        State.PROVISIONING,
-                        PROVISIONING_PROGRESS_FIELD,
-                        ProvisioningProgress.IN_PROGRESS,
-                        PROVISION_START_TIME_FIELD,
-                        Instant.now().toEpochMilli(),
-                        RESOURCES_CREATED_FIELD,
-                        Collections.emptyList()
+                    Map.ofEntries(
+                        Map.entry(STATE_FIELD, State.PROVISIONING),
+                        Map.entry(PROVISIONING_PROGRESS_FIELD, ProvisioningProgress.IN_PROGRESS),
+                        Map.entry(PROVISION_START_TIME_FIELD, Instant.now().toEpochMilli()),
+                        Map.entry(RESOURCES_CREATED_FIELD, Collections.emptyList())
                     ),
                     ActionListener.wrap(updateResponse -> {
                         logger.info("updated workflow {} state to PROVISIONING", request.getWorkflowId());
@@ -206,13 +202,10 @@ public class ProvisionWorkflowTransportAction extends HandledTransportAction<Wor
             logger.info("Provisioning completed successfully for workflow {}", workflowId);
             flowFrameworkIndicesHandler.updateFlowFrameworkSystemIndexDoc(
                 workflowId,
-                ImmutableMap.of(
-                    STATE_FIELD,
-                    State.COMPLETED,
-                    PROVISIONING_PROGRESS_FIELD,
-                    ProvisioningProgress.DONE,
-                    PROVISION_END_TIME_FIELD,
-                    Instant.now().toEpochMilli()
+                Map.ofEntries(
+                    Map.entry(STATE_FIELD, State.COMPLETED),
+                    Map.entry(PROVISIONING_PROGRESS_FIELD, ProvisioningProgress.DONE),
+                    Map.entry(PROVISION_END_TIME_FIELD, Instant.now().toEpochMilli())
                 ),
                 ActionListener.wrap(updateResponse -> {
                     logger.info("updated workflow {} state to {}", workflowId, State.COMPLETED);
@@ -222,15 +215,12 @@ public class ProvisionWorkflowTransportAction extends HandledTransportAction<Wor
             logger.error("Provisioning failed for workflow: {}", workflowId, ex);
             flowFrameworkIndicesHandler.updateFlowFrameworkSystemIndexDoc(
                 workflowId,
-                ImmutableMap.of(
-                    STATE_FIELD,
-                    State.FAILED,
-                    ERROR_FIELD,
-                    ex.getMessage(), // TODO: potentially improve the error message here
-                    PROVISIONING_PROGRESS_FIELD,
-                    ProvisioningProgress.FAILED,
-                    PROVISION_END_TIME_FIELD,
-                    Instant.now().toEpochMilli()
+                Map.ofEntries(
+                    Map.entry(STATE_FIELD, State.FAILED),
+                    // TODO: potentially improve the error message here
+                    Map.entry(ERROR_FIELD, ex.getMessage()),
+                    Map.entry(PROVISIONING_PROGRESS_FIELD, ProvisioningProgress.FAILED),
+                    Map.entry(PROVISION_END_TIME_FIELD, Instant.now().toEpochMilli())
                 ),
                 ActionListener.wrap(updateResponse -> {
                     logger.info("updated workflow {} state to {}", workflowId, State.FAILED);

@@ -8,7 +8,6 @@
  */
 package org.opensearch.flowframework.workflow;
 
-import java.io.IOException;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
@@ -29,7 +28,7 @@ public class NoOpStep implements WorkflowStep {
         WorkflowData currentNodeInputs,
         Map<String, WorkflowData> outputs,
         Map<String, String> previousNodeInputs
-    ) throws IOException {
+    ) {
         return CompletableFuture.completedFuture(WorkflowData.EMPTY);
     }
 
