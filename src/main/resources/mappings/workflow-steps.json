@@ -141,8 +141,6 @@
             "tools",
             "parameters",
             "memory",
-            "created_time",
-            "last_updated_time",
             "app_type"
         ],
         "outputs":[

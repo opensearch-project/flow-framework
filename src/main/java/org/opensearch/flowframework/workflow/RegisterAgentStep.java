@@ -160,8 +160,8 @@ public class RegisterAgentStep implements WorkflowStep {
             List<MLToolSpec> toolsList = getTools(toolsOrder, previousNodeInputs, outputs);
             Map<String, String> parameters = getStringToStringMap(inputs.get(PARAMETERS_FIELD), PARAMETERS_FIELD);
             MLMemorySpec memory = getMLMemorySpec(inputs.get(MEMORY_FIELD));
-            Instant createdTime = Instant.ofEpochMilli((Long) inputs.get(CREATED_TIME));
-            Instant lastUpdateTime = Instant.ofEpochMilli((Long) inputs.get(LAST_UPDATED_TIME_FIELD));
+            Instant createdTime = Instant.now();
+            Instant lastUpdateTime = createdTime;
             String appType = (String) inputs.get(APP_TYPE_FIELD);
 
             // Case when modelId is present in previous node inputs
