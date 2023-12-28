@@ -34,6 +34,7 @@ import org.mockito.MockitoAnnotations;
 
 import static org.opensearch.action.DocWriteResponse.Result.UPDATED;
 import static org.opensearch.flowframework.common.CommonValue.WORKFLOW_STATE_INDEX;
+import static org.opensearch.flowframework.common.WorkflowResources.MODEL_GROUP_ID;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doAnswer;
@@ -69,7 +70,7 @@ public class ModelGroupStepTests extends OpenSearchTestCase {
     }
 
     public void testRegisterModelGroup() throws ExecutionException, InterruptedException, IOException {
-        String modelGroupId = "model_group_id";
+        String modelGroupId = MODEL_GROUP_ID;
         String status = MLTaskState.CREATED.name();
 
         ModelGroupStep modelGroupStep = new ModelGroupStep(machineLearningNodeClient, flowFrameworkIndicesHandler);
@@ -100,7 +101,7 @@ public class ModelGroupStepTests extends OpenSearchTestCase {
         verify(machineLearningNodeClient).registerModelGroup(any(MLRegisterModelGroupInput.class), actionListenerCaptor.capture());
 
         assertTrue(future.isDone());
-        assertEquals(modelGroupId, future.get().getContent().get("model_group_id"));
+        assertEquals(modelGroupId, future.get().getContent().get(MODEL_GROUP_ID));
         assertEquals(status, future.get().getContent().get("model_group_status"));
 
     }

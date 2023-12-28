@@ -14,7 +14,6 @@ import org.opensearch.ExceptionsHelper;
 import org.opensearch.cluster.service.ClusterService;
 import org.opensearch.common.settings.Settings;
 import org.opensearch.core.action.ActionListener;
-import org.opensearch.flowframework.common.WorkflowResources;
 import org.opensearch.flowframework.exception.FlowFrameworkException;
 import org.opensearch.flowframework.indices.FlowFrameworkIndicesHandler;
 import org.opensearch.flowframework.util.ParseUtils;
@@ -38,11 +37,11 @@ import static org.opensearch.flowframework.common.CommonValue.EMBEDDING_DIMENSIO
 import static org.opensearch.flowframework.common.CommonValue.FRAMEWORK_TYPE;
 import static org.opensearch.flowframework.common.CommonValue.MODEL_CONTENT_HASH_VALUE;
 import static org.opensearch.flowframework.common.CommonValue.MODEL_FORMAT;
-import static org.opensearch.flowframework.common.CommonValue.MODEL_GROUP_ID;
 import static org.opensearch.flowframework.common.CommonValue.MODEL_TYPE;
 import static org.opensearch.flowframework.common.CommonValue.NAME_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.URL;
 import static org.opensearch.flowframework.common.CommonValue.VERSION_FIELD;
+import static org.opensearch.flowframework.common.WorkflowResources.MODEL_GROUP_ID;
 
 /**
  * Step to register a local model
@@ -55,7 +54,8 @@ public class RegisterLocalModelStep extends AbstractRetryableWorkflowStep {
 
     private final FlowFrameworkIndicesHandler flowFrameworkIndicesHandler;
 
-    static final String NAME = WorkflowResources.REGISTER_LOCAL_MODEL.getWorkflowStep();
+    /** The name of this step, used as a key in the template and the {@link WorkflowStepFactory} */
+    public static final String NAME = "register_local_model";
 
     /**
      * Instantiate this class

@@ -22,7 +22,6 @@ import org.opensearch.common.util.concurrent.ThreadContext;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.core.index.shard.ShardId;
 import org.opensearch.flowframework.TestHelpers;
-import org.opensearch.flowframework.common.WorkflowResources;
 import org.opensearch.flowframework.indices.FlowFrameworkIndicesHandler;
 import org.opensearch.flowframework.model.Template;
 import org.opensearch.flowframework.model.Workflow;
@@ -52,10 +51,15 @@ import static org.opensearch.flowframework.common.FlowFrameworkSettings.MAX_GET_
 import static org.opensearch.flowframework.common.FlowFrameworkSettings.MAX_WORKFLOWS;
 import static org.opensearch.flowframework.common.FlowFrameworkSettings.MAX_WORKFLOW_STEPS;
 import static org.opensearch.flowframework.common.FlowFrameworkSettings.WORKFLOW_REQUEST_TIMEOUT;
+import static org.opensearch.flowframework.common.WorkflowResources.CONNECTOR_ID;
+import static org.opensearch.flowframework.common.WorkflowResources.CREATE_CONNECTOR;
+import static org.opensearch.flowframework.common.WorkflowResources.DEPLOY_MODEL;
+import static org.opensearch.flowframework.common.WorkflowResources.MODEL_ID;
+import static org.opensearch.flowframework.common.WorkflowResources.REGISTER_REMOTE_MODEL;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.anyInt;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doThrow;
@@ -168,14 +172,14 @@ public class CreateWorkflowTransportActionTests extends OpenSearchTestCase {
         WorkflowNode registerModel = new WorkflowNode(
             "workflow_step_2",
             "register_model",
-            Map.ofEntries(Map.entry("workflow_step_1", "connector_id")),
+            Map.ofEntries(Map.entry("workflow_step_1", CONNECTOR_ID)),
             Map.ofEntries(Map.entry("name", "name"), Map.entry("function_name", "remote"), Map.entry("description", "description"))
         );
 
         WorkflowNode deployModel = new WorkflowNode(
             "workflow_step_3",
             "deploy_model",
-            Map.ofEntries(Map.entry("workflow_step_2", "model_id")),
+            Map.ofEntries(Map.entry("workflow_step_2", MODEL_ID)),
             Collections.emptyMap()
         );
 
@@ -497,7 +501,7 @@ public class CreateWorkflowTransportActionTests extends OpenSearchTestCase {
     private Template generateValidTemplate() {
         WorkflowNode createConnector = new WorkflowNode(
             "workflow_step_1",
-            WorkflowResources.CREATE_CONNECTOR.getWorkflowStep(),
+            CREATE_CONNECTOR.getWorkflowStep(),
             Collections.emptyMap(),
             Map.ofEntries(
                 Map.entry("name", ""),
@@ -511,14 +515,14 @@ public class CreateWorkflowTransportActionTests extends OpenSearchTestCase {
         );
         WorkflowNode registerModel = new WorkflowNode(
             "workflow_step_2",
-            WorkflowResources.REGISTER_REMOTE_MODEL.getWorkflowStep(),
-            Map.ofEntries(Map.entry("workflow_step_1", "connector_id")),
+            REGISTER_REMOTE_MODEL.getWorkflowStep(),
+            Map.ofEntries(Map.entry("workflow_step_1", CONNECTOR_ID)),
             Map.ofEntries(Map.entry("name", "name"), Map.entry("function_name", "remote"), Map.entry("description", "description"))
         );
         WorkflowNode deployModel = new WorkflowNode(
             "workflow_step_3",
-            WorkflowResources.DEPLOY_MODEL.getWorkflowStep(),
-            Map.ofEntries(Map.entry("workflow_step_2", "model_id")),
+            DEPLOY_MODEL.getWorkflowStep(),
+            Map.ofEntries(Map.entry("workflow_step_2", MODEL_ID)),
             Collections.emptyMap()
         );
 

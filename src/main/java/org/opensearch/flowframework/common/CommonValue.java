@@ -15,8 +15,11 @@ public class CommonValue {
 
     private CommonValue() {}
 
+    /*
+     * Constants associated with Global Context
+     */
     /** Default value for no schema version */
-    public static Integer NO_SCHEMA_VERSION = 0;
+    public static final Integer NO_SCHEMA_VERSION = 0;
     /** Index mapping meta field name*/
     public static final String META = "_meta";
     /** Schema Version field name */
@@ -43,18 +46,12 @@ public class CommonValue {
     public static final String MASTER_KEY = "master_key";
     /** Create Time field  name */
     public static final String CREATE_TIME = "create_time";
-
-    /** The template field name for template use case */
-    public static final String USE_CASE_FIELD = "use_case";
-    /** The template field name for template version */
-    public static final String TEMPLATE_FIELD = "template";
-    /** The template field name for template compatibility with OpenSearch versions */
-    public static final String COMPATIBILITY_FIELD = "compatibility";
-    /** The template field name for template workflows */
-    public static final String WORKFLOWS_FIELD = "workflows";
     /** The template field name for the user who created the workflow **/
     public static final String USER_FIELD = "user";
 
+    /*
+     * Constants associated with Rest or Transport actions
+     */
     /** The transport action name prefix */
     public static final String TRANSPORT_ACTION_NAME_PREFIX = "cluster:admin/opensearch/flow_framework/";
     /** The base URI for this plugin's rest actions */
@@ -68,23 +65,25 @@ public class CommonValue {
     /** The field name for provision workflow within a use case template*/
     public static final String PROVISION_WORKFLOW = "provision";
 
+    /*
+     * Constants associated with plugin configuration
+     */
     /** Flow Framework plugin thread pool name prefix */
     public static final String FLOW_FRAMEWORK_THREAD_POOL_PREFIX = "thread_pool.flow_framework.";
     /** The provision workflow thread pool name */
     public static final String PROVISION_THREAD_POOL = "opensearch_workflow_provision";
 
+    /*
+     * Field names common to multiple classes
+     */
     /** Success name field */
     public static final String SUCCESS = "success";
-    /** Index name field */
-    public static final String INDEX_NAME = "index_name";
     /** Type field */
     public static final String TYPE = "type";
     /** default_mapping_option filed */
     public static final String DEFAULT_MAPPING_OPTION = "default_mapping_option";
     /** ID Field */
     public static final String ID = "id";
-    /** Pipeline Id field */
-    public static final String PIPELINE_ID = "pipeline_id";
     /** Processors field */
     public static final String PROCESSORS = "processors";
     /** Field map field */
@@ -93,8 +92,6 @@ public class CommonValue {
     public static final String INPUT_FIELD_NAME = "input_field_name";
     /** Output Field Name field */
     public static final String OUTPUT_FIELD_NAME = "output_field_name";
-    /** Model Id field */
-    public static final String MODEL_ID = "model_id";
     /** Task Id field */
     public static final String TASK_ID = "task_id";
     /** Register Model Status field */
@@ -106,13 +103,9 @@ public class CommonValue {
     /** Model Version field */
     public static final String MODEL_VERSION = "model_version";
     /** Model Group Id field */
-    public static final String MODEL_GROUP_ID = "model_group_id";
-    /** Model Group Id field */
     public static final String MODEL_GROUP_STATUS = "model_group_status";
     /** Description field */
     public static final String DESCRIPTION_FIELD = "description";
-    /** Connector Id field */
-    public static final String CONNECTOR_ID = "connector_id";
     /** Model format field */
     public static final String MODEL_FORMAT = "model_format";
     /** Model content hash value field */
@@ -145,7 +138,24 @@ public class CommonValue {
     public static final String MODEL_ACCESS_MODE = "access_mode";
     /** Add all backend roles */
     public static final String ADD_ALL_BACKEND_ROLES = "add_all_backend_roles";
+    /** The tools field for an agent */
+    public static final String TOOLS_FIELD = "tools";
+    /** The tools order field for an agent */
+    public static final String TOOLS_ORDER_FIELD = "tools_order";
+    /** The memory field for an agent */
+    public static final String MEMORY_FIELD = "memory";
+    /** The app type field for an agent */
+    public static final String APP_TYPE_FIELD = "app_type";
+    /** To include field for an agent response */
+    public static final String INCLUDE_OUTPUT_IN_AGENT_RESPONSE = "include_output_in_agent_response";
+    /** The created time field for an agent */
+    public static final String CREATED_TIME = "created_time";
+    /** The last updated time field for an agent */
+    public static final String LAST_UPDATED_TIME_FIELD = "last_updated_time";
 
+    /*
+     * Constants associated with resource provisioning / state
+     */
     /** The template field name for the associated workflowID **/
     public static final String WORKFLOW_ID_FIELD = "workflow_id";
     /** The template field name for the workflow error **/
@@ -172,20 +182,4 @@ public class CommonValue {
     public static final String RESOURCE_TYPE = "resource_type";
     /** The field name for the resource id */
     public static final String RESOURCE_ID = "resource_id";
-    /** The tools field for an agent */
-    public static final String TOOLS_FIELD = "tools";
-    /** The tools order field for an agent */
-    public static final String TOOLS_ORDER_FIELD = "tools_order";
-    /** The memory field for an agent */
-    public static final String MEMORY_FIELD = "memory";
-    /** The app type field for an agent */
-    public static final String APP_TYPE_FIELD = "app_type";
-    /** The agent id of an agent */
-    public static final String AGENT_ID = "agent_id";
-    /** To include field for an agent response */
-    public static final String INCLUDE_OUTPUT_IN_AGENT_RESPONSE = "include_output_in_agent_response";
-    /** The created time field for an agent */
-    public static final String CREATED_TIME = "created_time";
-    /** The last updated time field for an agent */
-    public static final String LAST_UPDATED_TIME_FIELD = "last_updated_time";
 }

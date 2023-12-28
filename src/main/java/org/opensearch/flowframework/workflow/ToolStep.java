@@ -19,14 +19,14 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 
-import static org.opensearch.flowframework.common.CommonValue.AGENT_ID;
 import static org.opensearch.flowframework.common.CommonValue.DESCRIPTION_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.INCLUDE_OUTPUT_IN_AGENT_RESPONSE;
-import static org.opensearch.flowframework.common.CommonValue.MODEL_ID;
 import static org.opensearch.flowframework.common.CommonValue.NAME_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.PARAMETERS_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.TOOLS_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.TYPE;
+import static org.opensearch.flowframework.common.WorkflowResources.AGENT_ID;
+import static org.opensearch.flowframework.common.WorkflowResources.MODEL_ID;
 
 /**
  * Step to register a tool for an agent

@@ -29,8 +29,8 @@ import java.util.concurrent.ExecutionException;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
-import static org.opensearch.flowframework.common.CommonValue.MODEL_ID;
 import static org.opensearch.flowframework.common.CommonValue.SUCCESS;
+import static org.opensearch.flowframework.common.WorkflowResources.MODEL_ID;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.verify;

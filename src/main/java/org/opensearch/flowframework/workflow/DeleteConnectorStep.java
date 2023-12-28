@@ -22,7 +22,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 
-import static org.opensearch.flowframework.common.CommonValue.CONNECTOR_ID;
+import static org.opensearch.flowframework.common.WorkflowResources.CONNECTOR_ID;
 
 /**
  * Step to delete a connector for a remote model
@@ -33,7 +33,8 @@ public class DeleteConnectorStep implements WorkflowStep {
 
     private MachineLearningNodeClient mlClient;
 
-    static final String NAME = "delete_connector";
+    /** The name of this step, used as a key in the template and the {@link WorkflowStepFactory} */
+    public static final String NAME = "delete_connector";
 
     /**
      * Instantiate this class
@@ -58,7 +59,7 @@ public class DeleteConnectorStep implements WorkflowStep {
             public void onResponse(DeleteResponse deleteResponse) {
                 deleteConnectorFuture.complete(
                     new WorkflowData(
-                        Map.ofEntries(Map.entry("connector_id", deleteResponse.getId())),
+                        Map.ofEntries(Map.entry(CONNECTOR_ID, deleteResponse.getId())),
                         currentNodeInputs.getWorkflowId(),
                         currentNodeInputs.getNodeId()
                     )

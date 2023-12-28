@@ -38,8 +38,8 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import static org.opensearch.core.xcontent.XContentParserUtils.ensureExpectedToken;
-import static org.opensearch.flowframework.common.CommonValue.MODEL_ID;
 import static org.opensearch.flowframework.common.CommonValue.PARAMETERS_FIELD;
+import static org.opensearch.flowframework.common.WorkflowResources.MODEL_ID;
 
 /**
  * Utility methods for Template parsing

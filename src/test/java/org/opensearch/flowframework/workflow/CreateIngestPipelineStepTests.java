@@ -29,6 +29,8 @@ import org.mockito.ArgumentCaptor;
 
 import static org.opensearch.action.DocWriteResponse.Result.UPDATED;
 import static org.opensearch.flowframework.common.CommonValue.WORKFLOW_STATE_INDEX;
+import static org.opensearch.flowframework.common.WorkflowResources.MODEL_ID;
+import static org.opensearch.flowframework.common.WorkflowResources.PIPELINE_ID;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doAnswer;
@@ -57,7 +59,7 @@ public class CreateIngestPipelineStepTests extends OpenSearchTestCase {
                 Map.entry("id", "pipelineId"),
                 Map.entry("description", "some description"),
                 Map.entry("type", "text_embedding"),
-                Map.entry("model_id", "model_id"),
+                Map.entry(MODEL_ID, MODEL_ID),
                 Map.entry("input_field_name", "inputField"),
                 Map.entry("output_field_name", "outputField")
             ),
@@ -66,7 +68,7 @@ public class CreateIngestPipelineStepTests extends OpenSearchTestCase {
         );
 
         // Set output data to returned pipelineId
-        outpuData = new WorkflowData(Map.ofEntries(Map.entry("pipeline_id", "pipelineId")), "test-id", "test-node-id");
+        outpuData = new WorkflowData(Map.ofEntries(Map.entry(PIPELINE_ID, "pipelineId")), "test-id", "test-node-id");
 
         client = mock(Client.class);
         adminClient = mock(AdminClient.class);
@@ -137,10 +139,10 @@ public class CreateIngestPipelineStepTests extends OpenSearchTestCase {
         // Data with missing input and output fields
         WorkflowData incorrectData = new WorkflowData(
             Map.ofEntries(
-                Map.entry("id", "pipeline_id"),
+                Map.entry("id", PIPELINE_ID),
                 Map.entry("description", "some description"),
                 Map.entry("type", "text_embedding"),
-                Map.entry("model_id", "model_id")
+                Map.entry(MODEL_ID, MODEL_ID)
             ),
             "test-id",
             "test-node-id"
