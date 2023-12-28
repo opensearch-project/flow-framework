@@ -163,7 +163,7 @@ dependencies {
         resolutionStrategy {
             force("com.google.guava:guava:33.0.0-jre") // CVE for 31.1
             force("org.eclipse.platform:org.eclipse.core.runtime:3.30.0") // CVE for < 3.29.0
-            force("com.fasterxml.jackson.core:jackson-core:2.16.0") // Dependency Jar Hell
+            force("com.fasterxml.jackson.core:jackson-core:2.16.1") // Dependency Jar Hell
         }
     }
 }
