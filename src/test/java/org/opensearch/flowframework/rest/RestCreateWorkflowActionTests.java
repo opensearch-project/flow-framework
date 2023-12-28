@@ -29,6 +29,7 @@ import org.opensearch.test.OpenSearchTestCase;
 import org.opensearch.test.rest.FakeRestChannel;
 import org.opensearch.test.rest.FakeRestRequest;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -67,8 +68,8 @@ public class RestCreateWorkflowActionTests extends OpenSearchTestCase {
 
         Version templateVersion = Version.fromString("1.0.0");
         List<Version> compatibilityVersions = List.of(Version.fromString("2.0.0"), Version.fromString("3.0.0"));
-        WorkflowNode nodeA = new WorkflowNode("A", "a-type", Map.of(), Map.of("foo", "bar"));
-        WorkflowNode nodeB = new WorkflowNode("B", "b-type", Map.of(), Map.of("baz", "qux"));
+        WorkflowNode nodeA = new WorkflowNode("A", "a-type", Collections.emptyMap(), Map.of("foo", "bar"));
+        WorkflowNode nodeB = new WorkflowNode("B", "b-type", Collections.emptyMap(), Map.of("baz", "qux"));
         WorkflowEdge edgeAB = new WorkflowEdge("A", "B");
         List<WorkflowNode> nodes = List.of(nodeA, nodeB);
         List<WorkflowEdge> edges = List.of(edgeAB);
@@ -81,7 +82,7 @@ public class RestCreateWorkflowActionTests extends OpenSearchTestCase {
             templateVersion,
             compatibilityVersions,
             Map.of("workflow", workflow),
-            Map.of(),
+            Collections.emptyMap(),
             TestHelpers.randomUser()
         );
 

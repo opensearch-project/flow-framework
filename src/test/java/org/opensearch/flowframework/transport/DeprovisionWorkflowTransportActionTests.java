@@ -106,7 +106,7 @@ public class DeprovisionWorkflowTransportActionTests extends OpenSearchTestCase 
             templateVersion,
             compatibilityVersions,
             Map.of(PROVISION_WORKFLOW, workflow),
-            Map.of(),
+            Collections.emptyMap(),
             TestHelpers.randomUser()
         );
         this.getResult = mock(GetResult.class);

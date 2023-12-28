@@ -8,7 +8,6 @@
  */
 package org.opensearch.flowframework;
 
-import com.google.common.collect.ImmutableList;
 import org.opensearch.action.ActionRequest;
 import org.opensearch.client.Client;
 import org.opensearch.cluster.metadata.IndexNameExpressionResolver;
@@ -127,7 +126,7 @@ public class FlowFrameworkPlugin extends Plugin implements ActionPlugin {
             settings
         );
 
-        return ImmutableList.of(workflowStepFactory, workflowProcessSorter, encryptorUtils, flowFrameworkIndicesHandler);
+        return List.of(workflowStepFactory, workflowProcessSorter, encryptorUtils, flowFrameworkIndicesHandler);
     }
 
     @Override
@@ -140,7 +139,7 @@ public class FlowFrameworkPlugin extends Plugin implements ActionPlugin {
         IndexNameExpressionResolver indexNameExpressionResolver,
         Supplier<DiscoveryNodes> nodesInCluster
     ) {
-        return ImmutableList.of(
+        return List.of(
             new RestCreateWorkflowAction(flowFrameworkFeatureEnabledSetting, settings, clusterService),
             new RestDeleteWorkflowAction(flowFrameworkFeatureEnabledSetting),
             new RestProvisionWorkflowAction(flowFrameworkFeatureEnabledSetting),
@@ -154,7 +153,7 @@ public class FlowFrameworkPlugin extends Plugin implements ActionPlugin {
 
     @Override
     public List<ActionHandler<? extends ActionRequest, ? extends ActionResponse>> getActions() {
-        return ImmutableList.of(
+        return List.of(
             new ActionHandler<>(CreateWorkflowAction.INSTANCE, CreateWorkflowTransportAction.class),
             new ActionHandler<>(DeleteWorkflowAction.INSTANCE, DeleteWorkflowTransportAction.class),
             new ActionHandler<>(ProvisionWorkflowAction.INSTANCE, ProvisionWorkflowTransportAction.class),
@@ -168,20 +167,13 @@ public class FlowFrameworkPlugin extends Plugin implements ActionPlugin {
 
     @Override
     public List<Setting<?>> getSettings() {
-        List<Setting<?>> settings = ImmutableList.of(
-            FLOW_FRAMEWORK_ENABLED,
-            MAX_WORKFLOWS,
-            MAX_WORKFLOW_STEPS,
-            WORKFLOW_REQUEST_TIMEOUT,
-            MAX_GET_TASK_REQUEST_RETRY
-        );
-        return settings;
+        return List.of(FLOW_FRAMEWORK_ENABLED, MAX_WORKFLOWS, MAX_WORKFLOW_STEPS, WORKFLOW_REQUEST_TIMEOUT, MAX_GET_TASK_REQUEST_RETRY);
     }
 
     @Override
     public List<ExecutorBuilder<?>> getExecutorBuilders(Settings settings) {
         // TODO : Determine final size/queueSize values for the provision thread pool
-        return ImmutableList.of(
+        return List.of(
             new FixedExecutorBuilder(
                 settings,
                 PROVISION_THREAD_POOL,

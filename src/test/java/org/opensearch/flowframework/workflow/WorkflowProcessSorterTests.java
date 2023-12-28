@@ -285,7 +285,7 @@ public class WorkflowProcessSorterTests extends OpenSearchTestCase {
         WorkflowNode createConnector = new WorkflowNode(
             "workflow_step_1",
             CreateConnectorStep.NAME,
-            Map.of(),
+            Collections.emptyMap(),
             Map.ofEntries(
                 Map.entry("name", ""),
                 Map.entry("description", ""),
@@ -306,13 +306,17 @@ public class WorkflowProcessSorterTests extends OpenSearchTestCase {
             "workflow_step_3",
             DeployModelStep.NAME,
             Map.ofEntries(Map.entry("workflow_step_2", "model_id")),
-            Map.of()
+            Collections.emptyMap()
         );
 
         WorkflowEdge edge1 = new WorkflowEdge(createConnector.id(), registerModel.id());
         WorkflowEdge edge2 = new WorkflowEdge(registerModel.id(), deployModel.id());
 
-        Workflow workflow = new Workflow(Map.of(), List.of(createConnector, registerModel, deployModel), List.of(edge1, edge2));
+        Workflow workflow = new Workflow(
+            Collections.emptyMap(),
+            List.of(createConnector, registerModel, deployModel),
+            List.of(edge1, edge2)
+        );
 
         List<ProcessNode> sortedProcessNodes = workflowProcessSorter.sortProcessNodes(workflow, "123");
         workflowProcessSorter.validateGraph(sortedProcessNodes, validator);
@@ -324,17 +328,17 @@ public class WorkflowProcessSorterTests extends OpenSearchTestCase {
         WorkflowNode registerModel = new WorkflowNode(
             "workflow_step_1",
             RegisterRemoteModelStep.NAME,
-            Map.of(),
+            Collections.emptyMap(),
             Map.ofEntries(Map.entry("name", "name"), Map.entry("function_name", "remote"), Map.entry("description", "description"))
         );
         WorkflowNode deployModel = new WorkflowNode(
             "workflow_step_2",
             DeployModelStep.NAME,
             Map.ofEntries(Map.entry("workflow_step_1", "model_id")),
-            Map.of()
+            Collections.emptyMap()
         );
         WorkflowEdge edge = new WorkflowEdge(registerModel.id(), deployModel.id());
-        Workflow workflow = new Workflow(Map.of(), List.of(registerModel, deployModel), List.of(edge));
+        Workflow workflow = new Workflow(Collections.emptyMap(), List.of(registerModel, deployModel), List.of(edge));
 
         List<ProcessNode> sortedProcessNodes = workflowProcessSorter.sortProcessNodes(workflow, "123");
         FlowFrameworkException ex = expectThrows(
@@ -392,7 +396,7 @@ public class WorkflowProcessSorterTests extends OpenSearchTestCase {
         WorkflowNode createConnector = new WorkflowNode(
             "workflow_step_1",
             CreateConnectorStep.NAME,
-            Map.of(),
+            Collections.emptyMap(),
             Map.ofEntries(
                 Map.entry("name", ""),
                 Map.entry("description", ""),
@@ -413,13 +417,17 @@ public class WorkflowProcessSorterTests extends OpenSearchTestCase {
             "workflow_step_3",
             DeployModelStep.NAME,
             Map.ofEntries(Map.entry("workflow_step_2", "model_id")),
-            Map.of()
+            Collections.emptyMap()
         );
 
         WorkflowEdge edge1 = new WorkflowEdge(createConnector.id(), registerModel.id());
         WorkflowEdge edge2 = new WorkflowEdge(registerModel.id(), deployModel.id());
 
-        Workflow workflow = new Workflow(Map.of(), List.of(createConnector, registerModel, deployModel), List.of(edge1, edge2));
+        Workflow workflow = new Workflow(
+            Collections.emptyMap(),
+            List.of(createConnector, registerModel, deployModel),
+            List.of(edge1, edge2)
+        );
         List<ProcessNode> sortedProcessNodes = workflowProcessSorter.sortProcessNodes(workflow, "123");
 
         workflowProcessSorter.validatePluginsInstalled(sortedProcessNodes, validator);
@@ -470,7 +478,7 @@ public class WorkflowProcessSorterTests extends OpenSearchTestCase {
         WorkflowNode createConnector = new WorkflowNode(
             "workflow_step_1",
             CreateConnectorStep.NAME,
-            Map.of(),
+            Collections.emptyMap(),
             Map.ofEntries(
                 Map.entry("name", ""),
                 Map.entry("description", ""),
@@ -491,13 +499,17 @@ public class WorkflowProcessSorterTests extends OpenSearchTestCase {
             "workflow_step_3",
             DeployModelStep.NAME,
             Map.ofEntries(Map.entry("workflow_step_2", "model_id")),
-            Map.of()
+            Collections.emptyMap()
         );
 
         WorkflowEdge edge1 = new WorkflowEdge(createConnector.id(), registerModel.id());
         WorkflowEdge edge2 = new WorkflowEdge(registerModel.id(), deployModel.id());
 
-        Workflow workflow = new Workflow(Map.of(), List.of(createConnector, registerModel, deployModel), List.of(edge1, edge2));
+        Workflow workflow = new Workflow(
+            Collections.emptyMap(),
+            List.of(createConnector, registerModel, deployModel),
+            List.of(edge1, edge2)
+        );
         List<ProcessNode> sortedProcessNodes = workflowProcessSorter.sortProcessNodes(workflow, "123");
 
         FlowFrameworkException exception = expectThrows(

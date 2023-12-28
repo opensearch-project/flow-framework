@@ -8,7 +8,6 @@
  */
 package org.opensearch.flowframework.workflow;
 
-import java.io.IOException;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
@@ -24,14 +23,13 @@ public interface WorkflowStep {
      * @param outputs WorkflowData content of previous steps.
      * @param previousNodeInputs Input params for this node that come from previous steps
      * @return A CompletableFuture of the building block. This block should return immediately, but not be completed until the step executes, containing either the step's output data or {@link WorkflowData#EMPTY} which may be passed to follow-on steps.
-     * @throws IOException on a failure.
      */
     CompletableFuture<WorkflowData> execute(
         String currentNodeId,
         WorkflowData currentNodeInputs,
         Map<String, WorkflowData> outputs,
         Map<String, String> previousNodeInputs
-    ) throws IOException;
+    );
 
     /**
      * Gets the name of the workflow step.

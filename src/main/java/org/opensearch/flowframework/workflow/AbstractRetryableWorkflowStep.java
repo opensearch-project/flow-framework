@@ -46,7 +46,7 @@ public abstract class AbstractRetryableWorkflowStep implements WorkflowStep {
      * @param mlClient machine learning client
      * @param flowFrameworkIndicesHandler FlowFrameworkIndicesHandler class to update system indices
      */
-    public AbstractRetryableWorkflowStep(
+    protected AbstractRetryableWorkflowStep(
         Settings settings,
         ClusterService clusterService,
         MachineLearningNodeClient mlClient,
@@ -67,7 +67,7 @@ public abstract class AbstractRetryableWorkflowStep implements WorkflowStep {
      * @param retries the current number of request retries
      * @param workflowStep the workflow step which requires a retry get ml task functionality
      */
-    void retryableGetMlTask(
+    protected void retryableGetMlTask(
         String workflowId,
         String nodeId,
         CompletableFuture<WorkflowData> future,

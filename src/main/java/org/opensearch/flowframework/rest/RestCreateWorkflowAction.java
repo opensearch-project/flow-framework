@@ -8,7 +8,6 @@
  */
 package org.opensearch.flowframework.rest;
 
-import com.google.common.collect.ImmutableList;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.opensearch.client.node.NodeClient;
@@ -70,7 +69,7 @@ public class RestCreateWorkflowAction extends AbstractWorkflowAction {
 
     @Override
     public List<Route> routes() {
-        return ImmutableList.of(
+        return List.of(
             // Create new workflow
             new Route(RestRequest.Method.POST, String.format(Locale.ROOT, "%s", WORKFLOW_URI)),
             // Update use case template

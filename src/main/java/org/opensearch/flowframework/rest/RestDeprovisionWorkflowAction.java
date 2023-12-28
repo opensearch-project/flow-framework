@@ -8,7 +8,6 @@
  */
 package org.opensearch.flowframework.rest;
 
-import com.google.common.collect.ImmutableList;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.opensearch.ExceptionsHelper;
@@ -101,7 +100,7 @@ public class RestDeprovisionWorkflowAction extends BaseRestHandler {
 
     @Override
     public List<Route> routes() {
-        return ImmutableList.of(
+        return List.of(
             new Route(RestRequest.Method.POST, String.format(Locale.ROOT, "%s/{%s}/%s", WORKFLOW_URI, WORKFLOW_ID, "_deprovision"))
         );
     }

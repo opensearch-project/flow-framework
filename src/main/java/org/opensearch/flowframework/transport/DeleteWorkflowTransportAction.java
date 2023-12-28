@@ -58,7 +58,7 @@ public class DeleteWorkflowTransportAction extends HandledTransportAction<Workfl
             DeleteRequest deleteRequest = new DeleteRequest(GLOBAL_CONTEXT_INDEX, workflowId);
 
             ThreadContext.StoredContext context = client.threadPool().getThreadContext().stashContext();
-            client.delete(deleteRequest, ActionListener.runBefore(listener, () -> context.restore()));
+            client.delete(deleteRequest, ActionListener.runBefore(listener, context::restore));
         } else {
             listener.onFailure(new FlowFrameworkException("There are no templates in the global context.", RestStatus.NOT_FOUND));
         }
