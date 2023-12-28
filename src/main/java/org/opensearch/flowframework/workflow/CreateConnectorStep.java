@@ -23,7 +23,6 @@ import org.opensearch.ml.common.connector.ConnectorAction.ActionType;
 import org.opensearch.ml.common.transport.connector.MLCreateConnectorInput;
 import org.opensearch.ml.common.transport.connector.MLCreateConnectorResponse;
 
-import java.io.IOException;
 import java.security.AccessController;
 import java.security.PrivilegedActionException;
 import java.security.PrivilegedExceptionAction;
@@ -75,7 +74,7 @@ public class CreateConnectorStep implements WorkflowStep {
         WorkflowData currentNodeInputs,
         Map<String, WorkflowData> outputs,
         Map<String, String> previousNodeInputs
-    ) throws IOException {
+    ) {
         CompletableFuture<WorkflowData> createConnectorFuture = new CompletableFuture<>();
 
         ActionListener<MLCreateConnectorResponse> actionListener = new ActionListener<>() {

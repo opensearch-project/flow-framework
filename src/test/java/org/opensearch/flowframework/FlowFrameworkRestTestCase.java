@@ -8,8 +8,6 @@
  */
 package org.opensearch.flowframework;
 
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
 import org.apache.hc.client5.http.auth.AuthScope;
 import org.apache.hc.client5.http.auth.UsernamePasswordCredentials;
 import org.apache.hc.client5.http.impl.auth.BasicCredentialsProvider;
@@ -95,7 +93,7 @@ public abstract class FlowFrameworkRestTestCase extends OpenSearchRestTestCase {
                 "_cluster/settings",
                 null,
                 "{\"transient\":{\"plugins.flow_framework.enabled\":true}}",
-                ImmutableList.of(new BasicHeader(HttpHeaders.USER_AGENT, ""))
+                List.of(new BasicHeader(HttpHeaders.USER_AGENT, ""))
             );
             assertEquals(200, response.getStatusLine().getStatusCode());
 
@@ -106,7 +104,7 @@ public abstract class FlowFrameworkRestTestCase extends OpenSearchRestTestCase {
                 "_cluster/settings",
                 null,
                 "{\"persistent\":{\"plugins.ml_commons.only_run_on_ml_node\":false}}",
-                ImmutableList.of(new BasicHeader(HttpHeaders.USER_AGENT, ""))
+                List.of(new BasicHeader(HttpHeaders.USER_AGENT, ""))
             );
             assertEquals(200, response.getStatusLine().getStatusCode());
 
@@ -117,7 +115,7 @@ public abstract class FlowFrameworkRestTestCase extends OpenSearchRestTestCase {
                 "_cluster/settings",
                 null,
                 "{\"persistent\":{\"plugins.ml_commons.allow_registering_model_via_url\":true}}",
-                ImmutableList.of(new BasicHeader(HttpHeaders.USER_AGENT, ""))
+                List.of(new BasicHeader(HttpHeaders.USER_AGENT, ""))
             );
             assertEquals(200, response.getStatusLine().getStatusCode());
 
@@ -316,11 +314,11 @@ public abstract class FlowFrameworkRestTestCase extends OpenSearchRestTestCase {
      * @return a rest response
      */
     protected Response createWorkflow(Template template) throws Exception {
-        return TestHelpers.makeRequest(client(), "POST", WORKFLOW_URI, ImmutableMap.of(), template.toJson(), null);
+        return TestHelpers.makeRequest(client(), "POST", WORKFLOW_URI, Collections.emptyMap(), template.toJson(), null);
     }
 
     protected Response createWorkflowWithProvision(Template template) throws Exception {
-        return TestHelpers.makeRequest(client(), "POST", WORKFLOW_URI + "?provision=true", ImmutableMap.of(), template.toJson(), null);
+        return TestHelpers.makeRequest(client(), "POST", WORKFLOW_URI + "?provision=true", Collections.emptyMap(), template.toJson(), null);
     }
 
     /**
@@ -330,7 +328,7 @@ public abstract class FlowFrameworkRestTestCase extends OpenSearchRestTestCase {
      * @return a rest response
      */
     protected Response createWorkflowValidation(Template template) throws Exception {
-        return TestHelpers.makeRequest(client(), "POST", WORKFLOW_URI, ImmutableMap.of(), template.toJson(), null);
+        return TestHelpers.makeRequest(client(), "POST", WORKFLOW_URI, Collections.emptyMap(), template.toJson(), null);
     }
 
     /**
@@ -345,7 +343,7 @@ public abstract class FlowFrameworkRestTestCase extends OpenSearchRestTestCase {
             client(),
             "PUT",
             String.format(Locale.ROOT, "%s/%s", WORKFLOW_URI, workflowId),
-            ImmutableMap.of(),
+            Collections.emptyMap(),
             template.toJson(),
             null
         );
@@ -362,7 +360,7 @@ public abstract class FlowFrameworkRestTestCase extends OpenSearchRestTestCase {
             client(),
             "POST",
             String.format(Locale.ROOT, "%s/%s/%s", WORKFLOW_URI, workflowId, "_provision"),
-            ImmutableMap.of(),
+            Collections.emptyMap(),
             "",
             null
         );
@@ -379,7 +377,7 @@ public abstract class FlowFrameworkRestTestCase extends OpenSearchRestTestCase {
             client(),
             "POST",
             String.format(Locale.ROOT, "%s/%s/%s", WORKFLOW_URI, workflowId, "_deprovision"),
-            ImmutableMap.of(),
+            Collections.emptyMap(),
             "",
             null
         );
@@ -396,7 +394,7 @@ public abstract class FlowFrameworkRestTestCase extends OpenSearchRestTestCase {
             client(),
             "DELETE",
             String.format(Locale.ROOT, "%s/%s", WORKFLOW_URI, workflowId),
-            ImmutableMap.of(),
+            Collections.emptyMap(),
             "",
             null
         );
@@ -414,7 +412,7 @@ public abstract class FlowFrameworkRestTestCase extends OpenSearchRestTestCase {
             client(),
             "GET",
             String.format(Locale.ROOT, "%s/%s/%s?all=%s", WORKFLOW_URI, workflowId, "_status", all),
-            ImmutableMap.of(),
+            Collections.emptyMap(),
             "",
             null
         );
@@ -434,7 +432,7 @@ public abstract class FlowFrameworkRestTestCase extends OpenSearchRestTestCase {
             client(),
             "GET",
             String.format(Locale.ROOT, "%s/_search", WORKFLOW_URI),
-            ImmutableMap.of(),
+            Collections.emptyMap(),
             query,
             null
         );
@@ -459,7 +457,7 @@ public abstract class FlowFrameworkRestTestCase extends OpenSearchRestTestCase {
             client(),
             "GET",
             String.format(Locale.ROOT, "%s/state/_search", WORKFLOW_URI),
-            ImmutableMap.of(),
+            Collections.emptyMap(),
             query,
             null
         );

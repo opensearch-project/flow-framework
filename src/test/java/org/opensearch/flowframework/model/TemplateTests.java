@@ -12,6 +12,7 @@ import org.opensearch.Version;
 import org.opensearch.test.OpenSearchTestCase;
 
 import java.io.IOException;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
@@ -29,8 +30,8 @@ public class TemplateTests extends OpenSearchTestCase {
     public void testTemplate() throws IOException {
         Version templateVersion = Version.fromString("1.2.3");
         List<Version> compatibilityVersion = List.of(Version.fromString("4.5.6"), Version.fromString("7.8.9"));
-        WorkflowNode nodeA = new WorkflowNode("A", "a-type", Map.of(), Map.of("foo", "bar"));
-        WorkflowNode nodeB = new WorkflowNode("B", "b-type", Map.of(), Map.of("baz", "qux"));
+        WorkflowNode nodeA = new WorkflowNode("A", "a-type", Collections.emptyMap(), Map.of("foo", "bar"));
+        WorkflowNode nodeB = new WorkflowNode("B", "b-type", Collections.emptyMap(), Map.of("baz", "qux"));
         WorkflowEdge edgeAB = new WorkflowEdge("A", "B");
         List<WorkflowNode> nodes = List.of(nodeA, nodeB);
         List<WorkflowEdge> edges = List.of(edgeAB);

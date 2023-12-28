@@ -92,7 +92,7 @@ public class GetWorkflowStateTransportAction extends HandledTransportAction<GetW
                     logger.error("Failed to get workflow status of: " + workflowId, e);
                     listener.onFailure(new FlowFrameworkException("Failed to get workflow status of: " + workflowId, RestStatus.NOT_FOUND));
                 }
-            }), () -> context.restore()));
+            }), context::restore));
         } catch (Exception e) {
             logger.error("Failed to get workflow: " + workflowId, e);
             listener.onFailure(new FlowFrameworkException(e.getMessage(), ExceptionsHelper.status(e)));

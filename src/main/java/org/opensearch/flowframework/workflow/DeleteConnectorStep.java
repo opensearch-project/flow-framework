@@ -17,7 +17,6 @@ import org.opensearch.flowframework.exception.FlowFrameworkException;
 import org.opensearch.flowframework.util.ParseUtils;
 import org.opensearch.ml.client.MachineLearningNodeClient;
 
-import java.io.IOException;
 import java.util.Collections;
 import java.util.Map;
 import java.util.Set;
@@ -50,7 +49,7 @@ public class DeleteConnectorStep implements WorkflowStep {
         WorkflowData currentNodeInputs,
         Map<String, WorkflowData> outputs,
         Map<String, String> previousNodeInputs
-    ) throws IOException {
+    ) {
         CompletableFuture<WorkflowData> deleteConnectorFuture = new CompletableFuture<>();
 
         ActionListener<DeleteResponse> actionListener = new ActionListener<>() {

@@ -12,6 +12,7 @@ import org.opensearch.core.xcontent.XContentParser;
 import org.opensearch.test.OpenSearchTestCase;
 
 import java.io.IOException;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
@@ -23,7 +24,7 @@ public class WorkflowTests extends OpenSearchTestCase {
     }
 
     public void testWorkflow() throws IOException {
-        WorkflowNode nodeA = new WorkflowNode("A", "a-type", Map.of(), Map.of("foo", "bar"));
+        WorkflowNode nodeA = new WorkflowNode("A", "a-type", Collections.emptyMap(), Map.of("foo", "bar"));
         WorkflowNode nodeB = new WorkflowNode("B", "b-type", Map.of("A", "foo"), Map.of("baz", "qux"));
         WorkflowEdge edgeAB = new WorkflowEdge("A", "B");
         List<WorkflowNode> nodes = List.of(nodeA, nodeB);

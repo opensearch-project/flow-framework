@@ -8,10 +8,11 @@
  */
 package org.opensearch.flowframework.rest;
 
-import com.google.common.collect.ImmutableList;
 import org.opensearch.flowframework.common.FlowFrameworkFeatureEnabledSetting;
 import org.opensearch.flowframework.model.WorkflowState;
 import org.opensearch.flowframework.transport.SearchWorkflowStateAction;
+
+import java.util.List;
 
 import static org.opensearch.flowframework.common.CommonValue.WORKFLOW_STATE_INDEX;
 import static org.opensearch.flowframework.common.CommonValue.WORKFLOW_URI;
@@ -31,7 +32,7 @@ public class RestSearchWorkflowStateAction extends AbstractSearchWorkflowAction<
      */
     public RestSearchWorkflowStateAction(FlowFrameworkFeatureEnabledSetting flowFrameworkFeatureEnabledSetting) {
         super(
-            ImmutableList.of(SEARCH_WORKFLOW_STATE_PATH),
+            List.of(SEARCH_WORKFLOW_STATE_PATH),
             WORKFLOW_STATE_INDEX,
             WorkflowState.class,
             SearchWorkflowStateAction.INSTANCE,

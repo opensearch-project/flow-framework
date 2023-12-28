@@ -34,6 +34,7 @@ import org.opensearch.test.OpenSearchTestCase;
 import org.opensearch.threadpool.ThreadPool;
 import org.opensearch.transport.TransportService;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -119,8 +120,8 @@ public class CreateWorkflowTransportActionTests extends OpenSearchTestCase {
 
         Version templateVersion = Version.fromString("1.0.0");
         List<Version> compatibilityVersions = List.of(Version.fromString("2.0.0"), Version.fromString("3.0.0"));
-        WorkflowNode nodeA = new WorkflowNode("A", "a-type", Map.of(), Map.of("foo", "bar"));
-        WorkflowNode nodeB = new WorkflowNode("B", "b-type", Map.of(), Map.of("baz", "qux"));
+        WorkflowNode nodeA = new WorkflowNode("A", "a-type", Collections.emptyMap(), Map.of("foo", "bar"));
+        WorkflowNode nodeB = new WorkflowNode("B", "b-type", Collections.emptyMap(), Map.of("baz", "qux"));
         WorkflowEdge edgeAB = new WorkflowEdge("A", "B");
         List<WorkflowNode> nodes = List.of(nodeA, nodeB);
         List<WorkflowEdge> edges = List.of(edgeAB);
@@ -133,7 +134,7 @@ public class CreateWorkflowTransportActionTests extends OpenSearchTestCase {
             templateVersion,
             compatibilityVersions,
             Map.of("workflow", workflow),
-            Map.of(),
+            Collections.emptyMap(),
             TestHelpers.randomUser()
         );
     }
@@ -152,7 +153,7 @@ public class CreateWorkflowTransportActionTests extends OpenSearchTestCase {
         WorkflowNode createConnector = new WorkflowNode(
             "workflow_step_1",
             "create_connector",
-            Map.of(),
+            Collections.emptyMap(),
             Map.ofEntries(
                 Map.entry("name", ""),
                 Map.entry("description", ""),
@@ -175,7 +176,7 @@ public class CreateWorkflowTransportActionTests extends OpenSearchTestCase {
             "workflow_step_3",
             "deploy_model",
             Map.ofEntries(Map.entry("workflow_step_2", "model_id")),
-            Map.of()
+            Collections.emptyMap()
         );
 
         WorkflowEdge edge1 = new WorkflowEdge(createConnector.id(), registerModel.id());
@@ -183,7 +184,7 @@ public class CreateWorkflowTransportActionTests extends OpenSearchTestCase {
         WorkflowEdge cyclicalEdge = new WorkflowEdge(deployModel.id(), createConnector.id());
 
         Workflow workflow = new Workflow(
-            Map.of(),
+            Collections.emptyMap(),
             List.of(createConnector, registerModel, deployModel),
             List.of(edge1, edge2, cyclicalEdge)
         );
@@ -195,7 +196,7 @@ public class CreateWorkflowTransportActionTests extends OpenSearchTestCase {
             Version.fromString("1.0.0"),
             List.of(Version.fromString("2.0.0"), Version.fromString("3.0.0")),
             Map.of("workflow", workflow),
-            Map.of(),
+            Collections.emptyMap(),
             TestHelpers.randomUser()
         );
 
@@ -497,7 +498,7 @@ public class CreateWorkflowTransportActionTests extends OpenSearchTestCase {
         WorkflowNode createConnector = new WorkflowNode(
             "workflow_step_1",
             WorkflowResources.CREATE_CONNECTOR.getWorkflowStep(),
-            Map.of(),
+            Collections.emptyMap(),
             Map.ofEntries(
                 Map.entry("name", ""),
                 Map.entry("description", ""),
@@ -518,13 +519,17 @@ public class CreateWorkflowTransportActionTests extends OpenSearchTestCase {
             "workflow_step_3",
             WorkflowResources.DEPLOY_MODEL.getWorkflowStep(),
             Map.ofEntries(Map.entry("workflow_step_2", "model_id")),
-            Map.of()
+            Collections.emptyMap()
         );
 
         WorkflowEdge edge1 = new WorkflowEdge(createConnector.id(), registerModel.id());
         WorkflowEdge edge2 = new WorkflowEdge(registerModel.id(), deployModel.id());
 
-        Workflow workflow = new Workflow(Map.of(), List.of(createConnector, registerModel, deployModel), List.of(edge1, edge2));
+        Workflow workflow = new Workflow(
+            Collections.emptyMap(),
+            List.of(createConnector, registerModel, deployModel),
+            List.of(edge1, edge2)
+        );
 
         Template validTemplate = new Template(
             "test",
@@ -533,7 +538,7 @@ public class CreateWorkflowTransportActionTests extends OpenSearchTestCase {
             Version.fromString("1.0.0"),
             List.of(Version.fromString("2.0.0"), Version.fromString("3.0.0")),
             Map.of("workflow", workflow),
-            Map.of(),
+            Collections.emptyMap(),
             TestHelpers.randomUser()
         );
 

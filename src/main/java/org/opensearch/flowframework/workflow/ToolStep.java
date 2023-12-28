@@ -14,7 +14,6 @@ import org.opensearch.flowframework.exception.FlowFrameworkException;
 import org.opensearch.flowframework.util.ParseUtils;
 import org.opensearch.ml.common.agent.MLToolSpec;
 
-import java.io.IOException;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
@@ -44,8 +43,7 @@ public class ToolStep implements WorkflowStep {
         WorkflowData currentNodeInputs,
         Map<String, WorkflowData> outputs,
         Map<String, String> previousNodeInputs
-    ) throws IOException {
-
+    ) {
         Set<String> requiredKeys = Set.of(TYPE);
         Set<String> optionalKeys = Set.of(NAME_FIELD, DESCRIPTION_FIELD, PARAMETERS_FIELD, INCLUDE_OUTPUT_IN_AGENT_RESPONSE);
 

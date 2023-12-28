@@ -8,7 +8,6 @@
  */
 package org.opensearch.flowframework.workflow;
 
-import com.google.common.collect.ImmutableList;
 import org.opensearch.action.update.UpdateResponse;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.core.index.shard.ShardId;
@@ -24,6 +23,7 @@ import org.opensearch.test.OpenSearchTestCase;
 
 import java.io.IOException;
 import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
@@ -58,7 +58,7 @@ public class ModelGroupStepTests extends OpenSearchTestCase {
             Map.ofEntries(
                 Map.entry("name", "test"),
                 Map.entry("description", "description"),
-                Map.entry("backend_roles", ImmutableList.of("role-1")),
+                Map.entry("backend_roles", List.of("role-1")),
                 Map.entry("access_mode", AccessMode.PUBLIC),
                 Map.entry("add_all_backend_roles", false)
             ),

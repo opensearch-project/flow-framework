@@ -8,10 +8,11 @@
  */
 package org.opensearch.flowframework.rest;
 
-import com.google.common.collect.ImmutableList;
 import org.opensearch.flowframework.common.FlowFrameworkFeatureEnabledSetting;
 import org.opensearch.flowframework.model.Template;
 import org.opensearch.flowframework.transport.SearchWorkflowAction;
+
+import java.util.List;
 
 import static org.opensearch.flowframework.common.CommonValue.GLOBAL_CONTEXT_INDEX;
 import static org.opensearch.flowframework.common.CommonValue.WORKFLOW_URI;
@@ -31,7 +32,7 @@ public class RestSearchWorkflowAction extends AbstractSearchWorkflowAction<Templ
      */
     public RestSearchWorkflowAction(FlowFrameworkFeatureEnabledSetting flowFrameworkFeatureEnabledSetting) {
         super(
-            ImmutableList.of(SEARCH_WORKFLOW_PATH),
+            List.of(SEARCH_WORKFLOW_PATH),
             GLOBAL_CONTEXT_INDEX,
             Template.class,
             SearchWorkflowAction.INSTANCE,
