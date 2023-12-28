@@ -35,6 +35,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Queue;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
@@ -131,7 +132,6 @@ public class WorkflowProcessSorter {
             idToNodeMap.put(processNode.id(), processNode);
             nodes.add(processNode);
         }
-
         return nodes;
     }
 
@@ -141,7 +141,7 @@ public class WorkflowProcessSorter {
      * @throws Exception if validation fails
      */
     public void validate(List<ProcessNode> processNodes) throws Exception {
-        WorkflowValidator validator = WorkflowValidator.parse("mappings/workflow-steps.json");
+        WorkflowValidator validator = readWorkflowValidator();
         validatePluginsInstalled(processNodes, validator);
         validateGraph(processNodes, validator);
     }
@@ -244,20 +244,43 @@ public class WorkflowProcessSorter {
                 );
             }
         }
-
     }
 
-    private TimeValue parseTimeout(WorkflowNode node) {
-        String timeoutValue = (String) node.userInputs().getOrDefault(NODE_TIMEOUT_FIELD, NODE_TIMEOUT_DEFAULT_VALUE);
+    private WorkflowValidator readWorkflowValidator() {
+        try {
+            return WorkflowValidator.parse("mappings/workflow-steps.json");
+        } catch (Exception e) {
+            logger.error("Failed at reading workflow-steps mapping file", e);
+            throw new FlowFrameworkException(
+                "Failed at reading workflow-steps.json mapping file for a new workflow.",
+                RestStatus.INTERNAL_SERVER_ERROR
+            );
+        }
+    }
+
+    /**
+     * A method for parsing workflow timeout value.
+     * The value could be parsed from node NODE_TIMEOUT_FIELD, the timeout field in workflow-step.json,
+     * or the default NODE_TIMEOUT_DEFAULT_VALUE
+     * @param node the workflow node
+     * @return the timeout value
+     */
+    protected TimeValue parseTimeout(WorkflowNode node) {
+        WorkflowValidator validator = readWorkflowValidator();
+        TimeValue nodeTimeoutValue = Optional.ofNullable(validator.getWorkflowStepValidators().get(node.type()).getTimeout())
+            .orElse(NODE_TIMEOUT_DEFAULT_VALUE);
+        String nodeTimeoutAsString = nodeTimeoutValue.getSeconds() + "s";
+        String timeoutValue = (String) node.userInputs().getOrDefault(NODE_TIMEOUT_FIELD, nodeTimeoutAsString);
         String fieldName = String.join(".", node.id(), USER_INPUTS_FIELD, NODE_TIMEOUT_FIELD);
-        TimeValue timeValue = TimeValue.parseTimeValue(timeoutValue, fieldName);
-        if (timeValue.millis() < 0) {
+        TimeValue userInputTimeValue = TimeValue.parseTimeValue(timeoutValue, fieldName);
+
+        if (userInputTimeValue.millis() < 0) {
             throw new FlowFrameworkException(
                 "Failed to parse timeout value [" + timeoutValue + "] for field [" + fieldName + "]. Must be positive",
                 RestStatus.BAD_REQUEST
             );
         }
-        return timeValue;
+        return userInputTimeValue;
     }
 
     private static List<WorkflowNode> topologicalSort(List<WorkflowNode> workflowNodes, List<WorkflowEdge> workflowEdges) {
