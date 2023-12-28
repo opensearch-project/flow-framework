@@ -38,7 +38,6 @@ import static org.opensearch.flowframework.common.CommonValue.EMBEDDING_DIMENSIO
 import static org.opensearch.flowframework.common.CommonValue.FRAMEWORK_TYPE;
 import static org.opensearch.flowframework.common.CommonValue.MODEL_CONTENT_HASH_VALUE;
 import static org.opensearch.flowframework.common.CommonValue.MODEL_FORMAT;
-import static org.opensearch.flowframework.common.CommonValue.MODEL_GROUP_ID;
 import static org.opensearch.flowframework.common.CommonValue.MODEL_TYPE;
 import static org.opensearch.flowframework.common.CommonValue.NAME_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.URL;
@@ -55,7 +54,8 @@ public class RegisterLocalModelStep extends AbstractRetryableWorkflowStep {
 
     private final FlowFrameworkIndicesHandler flowFrameworkIndicesHandler;
 
-    static final String NAME = WorkflowResources.REGISTER_LOCAL_MODEL.getWorkflowStep();
+    /** The name of this step, used as a key in the template and the {@link WorkflowStepFactory} */
+    public static final String NAME = "register_local_model";
 
     /**
      * Instantiate this class
@@ -120,7 +120,7 @@ public class RegisterLocalModelStep extends AbstractRetryableWorkflowStep {
             MODEL_CONTENT_HASH_VALUE,
             URL
         );
-        Set<String> optionalKeys = Set.of(DESCRIPTION_FIELD, MODEL_GROUP_ID, ALL_CONFIG);
+        Set<String> optionalKeys = Set.of(DESCRIPTION_FIELD, WorkflowResources.MODEL_GROUP_ID, ALL_CONFIG);
 
         try {
             Map<String, Object> inputs = ParseUtils.getInputsFromPreviousSteps(
@@ -135,7 +135,7 @@ public class RegisterLocalModelStep extends AbstractRetryableWorkflowStep {
             String modelVersion = (String) inputs.get(VERSION_FIELD);
             String description = (String) inputs.get(DESCRIPTION_FIELD);
             MLModelFormat modelFormat = MLModelFormat.from((String) inputs.get(MODEL_FORMAT));
-            String modelGroupId = (String) inputs.get(MODEL_GROUP_ID);
+            String modelGroupId = (String) inputs.get(WorkflowResources.MODEL_GROUP_ID);
             String modelContentHashValue = (String) inputs.get(MODEL_CONTENT_HASH_VALUE);
             String modelType = (String) inputs.get(MODEL_TYPE);
             String embeddingDimension = (String) inputs.get(EMBEDDING_DIMENSION);

@@ -42,7 +42,6 @@ import static org.opensearch.flowframework.common.CommonValue.CREATED_TIME;
 import static org.opensearch.flowframework.common.CommonValue.DESCRIPTION_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.LAST_UPDATED_TIME_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.MEMORY_FIELD;
-import static org.opensearch.flowframework.common.CommonValue.MODEL_ID;
 import static org.opensearch.flowframework.common.CommonValue.NAME_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.PARAMETERS_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.TOOLS_FIELD;
@@ -60,10 +59,13 @@ public class RegisterAgentStep implements WorkflowStep {
     private MachineLearningNodeClient mlClient;
     private final FlowFrameworkIndicesHandler flowFrameworkIndicesHandler;
 
-    static final String NAME = WorkflowResources.REGISTER_AGENT.getWorkflowStep();
+    /** The name of this step, used as a key in the template and the {@link WorkflowStepFactory} */
+    public static final String NAME = "register_agent";
 
-    private static final String LLM_MODEL_ID = "llm.model_id";
-    private static final String LLM_PARAMETERS = "llm.parameters";
+    /** The model ID for the LLM */
+    public static final String LLM_MODEL_ID = "llm.model_id";
+    /** The parameters for the LLM */
+    public static final String LLM_PARAMETERS = "llm.parameters";
 
     /**
      * Instantiate this class
@@ -242,7 +244,7 @@ public class RegisterAgentStep implements WorkflowStep {
         // Case when modelId is passed through previousSteps
         Optional<String> previousNode = previousNodeInputs.entrySet()
             .stream()
-            .filter(e -> MODEL_ID.equals(e.getValue()))
+            .filter(e -> WorkflowResources.MODEL_ID.equals(e.getValue()))
             .map(Map.Entry::getKey)
             .findFirst();
 
@@ -250,7 +252,8 @@ public class RegisterAgentStep implements WorkflowStep {
             WorkflowData previousNodeOutput = outputs.get(previousNode.get());
             if (previousNodeOutput != null) {
                 // Use either llm.model_id (if present) or model_id (backup)
-                Object modelId = previousNodeOutput.getContent().getOrDefault(LLM_MODEL_ID, previousNodeOutput.getContent().get(MODEL_ID));
+                Object modelId = previousNodeOutput.getContent()
+                    .getOrDefault(LLM_MODEL_ID, previousNodeOutput.getContent().get(WorkflowResources.MODEL_ID));
                 if (modelId != null) {
                     return modelId.toString();
                 }

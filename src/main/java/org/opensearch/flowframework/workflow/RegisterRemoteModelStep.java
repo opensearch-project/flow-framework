@@ -27,10 +27,8 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 
-import static org.opensearch.flowframework.common.CommonValue.CONNECTOR_ID;
 import static org.opensearch.flowframework.common.CommonValue.DESCRIPTION_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.FUNCTION_NAME;
-import static org.opensearch.flowframework.common.CommonValue.MODEL_GROUP_ID;
 import static org.opensearch.flowframework.common.CommonValue.NAME_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.REGISTER_MODEL_STATUS;
 
@@ -45,7 +43,8 @@ public class RegisterRemoteModelStep implements WorkflowStep {
 
     private final FlowFrameworkIndicesHandler flowFrameworkIndicesHandler;
 
-    static final String NAME = WorkflowResources.REGISTER_REMOTE_MODEL.getWorkflowStep();
+    /** The name of this step, used as a key in the template and the {@link WorkflowStepFactory} */
+    public static final String NAME = "register_remote_model";
 
     /**
      * Instantiate this class
@@ -112,8 +111,8 @@ public class RegisterRemoteModelStep implements WorkflowStep {
             }
         };
 
-        Set<String> requiredKeys = Set.of(NAME_FIELD, FUNCTION_NAME, CONNECTOR_ID);
-        Set<String> optionalKeys = Set.of(MODEL_GROUP_ID, DESCRIPTION_FIELD);
+        Set<String> requiredKeys = Set.of(NAME_FIELD, FUNCTION_NAME, WorkflowResources.CONNECTOR_ID);
+        Set<String> optionalKeys = Set.of(WorkflowResources.MODEL_GROUP_ID, DESCRIPTION_FIELD);
 
         try {
             Map<String, Object> inputs = ParseUtils.getInputsFromPreviousSteps(
@@ -126,9 +125,9 @@ public class RegisterRemoteModelStep implements WorkflowStep {
 
             String modelName = (String) inputs.get(NAME_FIELD);
             FunctionName functionName = FunctionName.from(((String) inputs.get(FUNCTION_NAME)).toUpperCase(Locale.ROOT));
-            String modelGroupId = (String) inputs.get(MODEL_GROUP_ID);
+            String modelGroupId = (String) inputs.get(WorkflowResources.MODEL_GROUP_ID);
             String description = (String) inputs.get(DESCRIPTION_FIELD);
-            String connectorId = (String) inputs.get(CONNECTOR_ID);
+            String connectorId = (String) inputs.get(WorkflowResources.CONNECTOR_ID);
 
             MLRegisterModelInputBuilder builder = MLRegisterModelInput.builder()
                 .functionName(functionName)

@@ -42,7 +42,7 @@ public class CreateIndexStep implements WorkflowStep {
     private final FlowFrameworkIndicesHandler flowFrameworkIndicesHandler;
 
     /** The name of this step, used as a key in the template and the {@link WorkflowStepFactory} */
-    static final String NAME = WorkflowResources.CREATE_INDEX.getWorkflowStep();
+    public static final String NAME = "create_index";
     static Map<String, AtomicBoolean> indexMappingUpdated = new HashMap<>();
 
     /**

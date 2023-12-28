@@ -35,7 +35,6 @@ import static org.opensearch.flowframework.common.CommonValue.DESCRIPTION_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.FIELD_MAP;
 import static org.opensearch.flowframework.common.CommonValue.ID;
 import static org.opensearch.flowframework.common.CommonValue.INPUT_FIELD_NAME;
-import static org.opensearch.flowframework.common.CommonValue.MODEL_ID;
 import static org.opensearch.flowframework.common.CommonValue.OUTPUT_FIELD_NAME;
 import static org.opensearch.flowframework.common.CommonValue.PROCESSORS;
 import static org.opensearch.flowframework.common.CommonValue.TYPE;
@@ -48,7 +47,7 @@ public class CreateIngestPipelineStep implements WorkflowStep {
     private static final Logger logger = LogManager.getLogger(CreateIngestPipelineStep.class);
 
     /** The name of this step, used as a key in the template and the {@link WorkflowStepFactory} */
-    static final String NAME = WorkflowResources.CREATE_INGEST_PIPELINE.getWorkflowStep();
+    public static final String NAME = "create_ingest_pipeline";
 
     // Client to store a pipeline in the cluster state
     private final ClusterAdminClient clusterAdminClient;
@@ -105,8 +104,8 @@ public class CreateIngestPipelineStep implements WorkflowStep {
                     case TYPE:
                         type = (String) content.get(TYPE);
                         break;
-                    case MODEL_ID:
-                        modelId = (String) content.get(MODEL_ID);
+                    case WorkflowResources.MODEL_ID:
+                        modelId = (String) content.get(WorkflowResources.MODEL_ID);
                         break;
                     case INPUT_FIELD_NAME:
                         inputFieldName = (String) content.get(INPUT_FIELD_NAME);
@@ -225,7 +224,7 @@ public class CreateIngestPipelineStep implements WorkflowStep {
             .startArray(PROCESSORS)
             .startObject()
             .startObject(type)
-            .field(MODEL_ID, modelId)
+            .field(WorkflowResources.MODEL_ID, modelId)
             .startObject(FIELD_MAP)
             .field(inputFieldName, outputFieldName)
             .endObject()

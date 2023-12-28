@@ -175,7 +175,7 @@ public class CreateWorkflowTransportActionTests extends OpenSearchTestCase {
         WorkflowNode deployModel = new WorkflowNode(
             "workflow_step_3",
             "deploy_model",
-            Map.ofEntries(Map.entry("workflow_step_2", "model_id")),
+            Map.ofEntries(Map.entry("workflow_step_2", WorkflowResources.MODEL_ID)),
             Collections.emptyMap()
         );
 
@@ -518,7 +518,7 @@ public class CreateWorkflowTransportActionTests extends OpenSearchTestCase {
         WorkflowNode deployModel = new WorkflowNode(
             "workflow_step_3",
             WorkflowResources.DEPLOY_MODEL.getWorkflowStep(),
-            Map.ofEntries(Map.entry("workflow_step_2", "model_id")),
+            Map.ofEntries(Map.entry("workflow_step_2", WorkflowResources.MODEL_ID)),
             Collections.emptyMap()
         );
 

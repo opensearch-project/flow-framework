@@ -55,7 +55,8 @@ public class CreateConnectorStep implements WorkflowStep {
     private MachineLearningNodeClient mlClient;
     private final FlowFrameworkIndicesHandler flowFrameworkIndicesHandler;
 
-    static final String NAME = WorkflowResources.CREATE_CONNECTOR.getWorkflowStep();
+    /** The name of this step, used as a key in the template and the {@link WorkflowStepFactory} */
+    public static final String NAME = "create_connector";
 
     /**
      * Instantiate this class

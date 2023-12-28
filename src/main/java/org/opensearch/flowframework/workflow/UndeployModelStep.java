@@ -14,6 +14,7 @@ import org.opensearch.ExceptionsHelper;
 import org.opensearch.OpenSearchException;
 import org.opensearch.action.FailedNodeException;
 import org.opensearch.core.action.ActionListener;
+import org.opensearch.flowframework.common.WorkflowResources;
 import org.opensearch.flowframework.exception.FlowFrameworkException;
 import org.opensearch.flowframework.util.ParseUtils;
 import org.opensearch.ml.client.MachineLearningNodeClient;
@@ -26,7 +27,6 @@ import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 
-import static org.opensearch.flowframework.common.CommonValue.MODEL_ID;
 import static org.opensearch.flowframework.common.CommonValue.SUCCESS;
 
 /**
@@ -38,7 +38,8 @@ public class UndeployModelStep implements WorkflowStep {
 
     private MachineLearningNodeClient mlClient;
 
-    static final String NAME = "undeploy_model";
+    /** The name of this step, used as a key in the template and the {@link WorkflowStepFactory} */
+    public static final String NAME = "undeploy_model";
 
     /**
      * Instantiate this class
@@ -85,7 +86,7 @@ public class UndeployModelStep implements WorkflowStep {
             }
         };
 
-        Set<String> requiredKeys = Set.of(MODEL_ID);
+        Set<String> requiredKeys = Set.of(WorkflowResources.MODEL_ID);
         Set<String> optionalKeys = Collections.emptySet();
 
         try {
@@ -97,7 +98,7 @@ public class UndeployModelStep implements WorkflowStep {
                 previousNodeInputs
             );
 
-            String modelId = inputs.get(MODEL_ID).toString();
+            String modelId = inputs.get(WorkflowResources.MODEL_ID).toString();
 
             mlClient.undeploy(new String[] { modelId }, null, actionListener);
         } catch (FlowFrameworkException e) {

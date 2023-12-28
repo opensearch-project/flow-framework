@@ -47,7 +47,8 @@ public class ModelGroupStep implements WorkflowStep {
 
     private final FlowFrameworkIndicesHandler flowFrameworkIndicesHandler;
 
-    static final String NAME = WorkflowResources.REGISTER_MODEL_GROUP.getWorkflowStep();
+    /** The name of this step, used as a key in the template and the {@link WorkflowStepFactory} */
+    public static final String NAME = "register_model_group";
 
     /**
      * Instantiate this class
