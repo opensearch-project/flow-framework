@@ -140,7 +140,7 @@ public class FlowFrameworkRestApiIT extends FlowFrameworkRestTestCase {
         Workflow cyclicalWorkflow = new Workflow(
             originalWorkflow.userParams(),
             originalWorkflow.nodes(),
-            List.of(new WorkflowEdge("workflow_step_1", "workflow_step_2"), new WorkflowEdge("workflow_step_2", "workflow_step_1"))
+            List.of(new WorkflowEdge("workflow_step_2", "workflow_step_3"), new WorkflowEdge("workflow_step_3", "workflow_step_2"))
         );
 
         Template cyclicalTemplate = new Template.Builder().name(template.name())
@@ -155,7 +155,10 @@ public class FlowFrameworkRestApiIT extends FlowFrameworkRestTestCase {
 
         // Hit dry run
         ResponseException exception = expectThrows(ResponseException.class, () -> createWorkflowValidation(cyclicalTemplate));
-        assertTrue(exception.getMessage().contains("Cycle detected: [workflow_step_2->workflow_step_1, workflow_step_1->workflow_step_2]"));
+        // output order not guaranteed
+        assertTrue(exception.getMessage().contains("Cycle detected"));
+        assertTrue(exception.getMessage().contains("workflow_step_2->workflow_step_3"));
+        assertTrue(exception.getMessage().contains("workflow_step_3->workflow_step_2"));
 
         // Hit Create Workflow API with original template
         Response response = createWorkflow(template);

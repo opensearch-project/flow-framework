@@ -19,6 +19,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.stream.Collectors;
 
 import static org.opensearch.core.xcontent.XContentParserUtils.ensureExpectedToken;
 
@@ -119,13 +120,14 @@ public class Workflow implements ToXContentObject {
         if (nodes.isEmpty()) {
             throw new IOException("A workflow must have at least one node.");
         }
-        if (edges.isEmpty()) {
-            // infer edges from sequence of nodes
-            // Start iteration at 1, will skip for a one-node array
-            for (int i = 1; i < nodes.size(); i++) {
-                edges.add(new WorkflowEdge(nodes.get(i - 1).id(), nodes.get(i).id()));
-            }
-        }
+        // Iterate the nodes and infer edges from previous node inputs
+        List<WorkflowEdge> inferredEdges = nodes.stream()
+            .flatMap(node -> node.previousNodeInputs().keySet().stream().map(previousNode -> new WorkflowEdge(previousNode, node.id())))
+            .collect(Collectors.toList());
+        // Remove any that are already in edges list
+        inferredEdges.removeAll(edges);
+        // Then add them to the edges
+        edges.addAll(inferredEdges);
         return new Workflow(userParams, nodes, edges);
     }
 
