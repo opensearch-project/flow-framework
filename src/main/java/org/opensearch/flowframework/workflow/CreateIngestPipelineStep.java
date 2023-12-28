@@ -19,7 +19,6 @@ import org.opensearch.common.xcontent.XContentType;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.core.common.bytes.BytesReference;
 import org.opensearch.core.xcontent.XContentBuilder;
-import org.opensearch.flowframework.common.WorkflowResources;
 import org.opensearch.flowframework.exception.FlowFrameworkException;
 import org.opensearch.flowframework.indices.FlowFrameworkIndicesHandler;
 
@@ -35,10 +34,11 @@ import static org.opensearch.flowframework.common.CommonValue.DESCRIPTION_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.FIELD_MAP;
 import static org.opensearch.flowframework.common.CommonValue.ID;
 import static org.opensearch.flowframework.common.CommonValue.INPUT_FIELD_NAME;
-import static org.opensearch.flowframework.common.CommonValue.MODEL_ID;
 import static org.opensearch.flowframework.common.CommonValue.OUTPUT_FIELD_NAME;
 import static org.opensearch.flowframework.common.CommonValue.PROCESSORS;
 import static org.opensearch.flowframework.common.CommonValue.TYPE;
+import static org.opensearch.flowframework.common.WorkflowResources.MODEL_ID;
+import static org.opensearch.flowframework.common.WorkflowResources.getResourceByWorkflowStep;
 
 /**
  * Workflow step to create an ingest pipeline
@@ -48,7 +48,7 @@ public class CreateIngestPipelineStep implements WorkflowStep {
     private static final Logger logger = LogManager.getLogger(CreateIngestPipelineStep.class);
 
     /** The name of this step, used as a key in the template and the {@link WorkflowStepFactory} */
-    static final String NAME = WorkflowResources.CREATE_INGEST_PIPELINE.getWorkflowStep();
+    public static final String NAME = "create_ingest_pipeline";
 
     // Client to store a pipeline in the cluster state
     private final ClusterAdminClient clusterAdminClient;
@@ -143,7 +143,7 @@ public class CreateIngestPipelineStep implements WorkflowStep {
                 logger.info("Created ingest pipeline : " + putPipelineRequest.getId());
 
                 try {
-                    String resourceName = WorkflowResources.getResourceByWorkflowStep(getName());
+                    String resourceName = getResourceByWorkflowStep(getName());
                     flowFrameworkIndicesHandler.updateResourceInStateIndex(
                         currentNodeInputs.getWorkflowId(),
                         currentNodeId,

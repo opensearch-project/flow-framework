@@ -22,7 +22,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 
-import static org.opensearch.flowframework.common.CommonValue.AGENT_ID;
+import static org.opensearch.flowframework.common.WorkflowResources.AGENT_ID;
 
 /**
  * Step to delete a agent for a remote model
@@ -33,7 +33,8 @@ public class DeleteAgentStep implements WorkflowStep {
 
     private MachineLearningNodeClient mlClient;
 
-    static final String NAME = "delete_agent";
+    /** The name of this step, used as a key in the template and the {@link WorkflowStepFactory} */
+    public static final String NAME = "delete_agent";
 
     /**
      * Instantiate this class
@@ -58,7 +59,7 @@ public class DeleteAgentStep implements WorkflowStep {
             public void onResponse(DeleteResponse deleteResponse) {
                 deleteAgentFuture.complete(
                     new WorkflowData(
-                        Map.ofEntries(Map.entry("agent_id", deleteResponse.getId())),
+                        Map.ofEntries(Map.entry(AGENT_ID, deleteResponse.getId())),
                         currentNodeInputs.getWorkflowId(),
                         currentNodeInputs.getNodeId()
                     )

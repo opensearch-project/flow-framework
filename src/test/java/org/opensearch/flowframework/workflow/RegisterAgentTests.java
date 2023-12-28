@@ -34,6 +34,7 @@ import org.mockito.MockitoAnnotations;
 
 import static org.opensearch.action.DocWriteResponse.Result.UPDATED;
 import static org.opensearch.flowframework.common.CommonValue.WORKFLOW_STATE_INDEX;
+import static org.opensearch.flowframework.common.WorkflowResources.AGENT_ID;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doAnswer;
@@ -85,7 +86,7 @@ public class RegisterAgentTests extends OpenSearchTestCase {
     }
 
     public void testRegisterAgent() throws IOException, ExecutionException, InterruptedException {
-        String agentId = "agent_id";
+        String agentId = AGENT_ID;
         RegisterAgentStep registerAgentStep = new RegisterAgentStep(machineLearningNodeClient, flowFrameworkIndicesHandler);
 
         @SuppressWarnings("unchecked")
@@ -114,11 +115,11 @@ public class RegisterAgentTests extends OpenSearchTestCase {
         verify(machineLearningNodeClient).registerAgent(any(MLAgent.class), actionListenerCaptor.capture());
 
         assertTrue(future.isDone());
-        assertEquals(agentId, future.get().getContent().get("agent_id"));
+        assertEquals(agentId, future.get().getContent().get(AGENT_ID));
     }
 
     public void testRegisterAgentFailure() throws IOException {
-        String agentId = "agent_id";
+        String agentId = AGENT_ID;
         RegisterAgentStep registerAgentStep = new RegisterAgentStep(machineLearningNodeClient, flowFrameworkIndicesHandler);
 
         @SuppressWarnings("unchecked")

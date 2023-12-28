@@ -38,10 +38,11 @@ import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
 import static org.opensearch.action.DocWriteResponse.Result.UPDATED;
-import static org.opensearch.flowframework.common.CommonValue.MODEL_ID;
 import static org.opensearch.flowframework.common.CommonValue.REGISTER_MODEL_STATUS;
 import static org.opensearch.flowframework.common.CommonValue.WORKFLOW_STATE_INDEX;
 import static org.opensearch.flowframework.common.FlowFrameworkSettings.MAX_GET_TASK_REQUEST_RETRY;
+import static org.opensearch.flowframework.common.WorkflowResources.MODEL_GROUP_ID;
+import static org.opensearch.flowframework.common.WorkflowResources.MODEL_ID;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doAnswer;
@@ -89,7 +90,7 @@ public class RegisterLocalModelStepTests extends OpenSearchTestCase {
                 Map.entry("version", "1.0.0"),
                 Map.entry("description", "description"),
                 Map.entry("model_format", "TORCH_SCRIPT"),
-                Map.entry("model_group_id", "abcdefg"),
+                Map.entry(MODEL_GROUP_ID, "abcdefg"),
                 Map.entry("model_content_hash_value", "aiwoeifjoaijeofiwe"),
                 Map.entry("model_type", "bert"),
                 Map.entry("embedding_dimension", "384"),

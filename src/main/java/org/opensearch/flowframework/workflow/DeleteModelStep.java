@@ -22,7 +22,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 
-import static org.opensearch.flowframework.common.CommonValue.MODEL_ID;
+import static org.opensearch.flowframework.common.WorkflowResources.MODEL_ID;
 
 /**
  * Step to delete a model for a remote model
@@ -33,7 +33,8 @@ public class DeleteModelStep implements WorkflowStep {
 
     private MachineLearningNodeClient mlClient;
 
-    static final String NAME = "delete_model";
+    /** The name of this step, used as a key in the template and the {@link WorkflowStepFactory} */
+    public static final String NAME = "delete_model";
 
     /**
      * Instantiate this class

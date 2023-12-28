@@ -26,6 +26,7 @@ import java.util.concurrent.ExecutionException;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
+import static org.opensearch.flowframework.common.WorkflowResources.MODEL_ID;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.verify;
@@ -62,13 +63,13 @@ public class DeleteModelStepTests extends OpenSearchTestCase {
         CompletableFuture<WorkflowData> future = deleteModelStep.execute(
             inputData.getNodeId(),
             inputData,
-            Map.of("step_1", new WorkflowData(Map.of("model_id", modelId), "workflowId", "nodeId")),
-            Map.of("step_1", "model_id")
+            Map.of("step_1", new WorkflowData(Map.of(MODEL_ID, modelId), "workflowId", "nodeId")),
+            Map.of("step_1", MODEL_ID)
         );
         verify(machineLearningNodeClient).deleteModel(any(String.class), any());
 
         assertTrue(future.isDone());
-        assertEquals(modelId, future.get().getContent().get("model_id"));
+        assertEquals(modelId, future.get().getContent().get(MODEL_ID));
     }
 
     public void testNoModelIdInOutput() throws IOException {
@@ -99,8 +100,8 @@ public class DeleteModelStepTests extends OpenSearchTestCase {
         CompletableFuture<WorkflowData> future = deleteModelStep.execute(
             inputData.getNodeId(),
             inputData,
-            Map.of("step_1", new WorkflowData(Map.of("model_id", "test"), "workflowId", "nodeId")),
-            Map.of("step_1", "model_id")
+            Map.of("step_1", new WorkflowData(Map.of(MODEL_ID, "test"), "workflowId", "nodeId")),
+            Map.of("step_1", MODEL_ID)
         );
 
         verify(machineLearningNodeClient).deleteModel(any(String.class), any());

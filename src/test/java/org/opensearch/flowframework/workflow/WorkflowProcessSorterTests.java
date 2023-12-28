@@ -55,6 +55,8 @@ import static org.opensearch.flowframework.common.FlowFrameworkSettings.MAX_GET_
 import static org.opensearch.flowframework.common.FlowFrameworkSettings.MAX_WORKFLOWS;
 import static org.opensearch.flowframework.common.FlowFrameworkSettings.MAX_WORKFLOW_STEPS;
 import static org.opensearch.flowframework.common.FlowFrameworkSettings.WORKFLOW_REQUEST_TIMEOUT;
+import static org.opensearch.flowframework.common.WorkflowResources.CONNECTOR_ID;
+import static org.opensearch.flowframework.common.WorkflowResources.MODEL_ID;
 import static org.opensearch.flowframework.model.TemplateTestJsonUtil.edge;
 import static org.opensearch.flowframework.model.TemplateTestJsonUtil.node;
 import static org.opensearch.flowframework.model.TemplateTestJsonUtil.nodeWithType;
@@ -352,13 +354,13 @@ public class WorkflowProcessSorterTests extends OpenSearchTestCase {
         WorkflowNode registerModel = new WorkflowNode(
             "workflow_step_2",
             RegisterRemoteModelStep.NAME,
-            Map.ofEntries(Map.entry("workflow_step_1", "connector_id")),
+            Map.ofEntries(Map.entry("workflow_step_1", CONNECTOR_ID)),
             Map.ofEntries(Map.entry("name", "name"), Map.entry("function_name", "remote"), Map.entry("description", "description"))
         );
         WorkflowNode deployModel = new WorkflowNode(
             "workflow_step_3",
             DeployModelStep.NAME,
-            Map.ofEntries(Map.entry("workflow_step_2", "model_id")),
+            Map.ofEntries(Map.entry("workflow_step_2", MODEL_ID)),
             Collections.emptyMap()
         );
 
@@ -387,7 +389,7 @@ public class WorkflowProcessSorterTests extends OpenSearchTestCase {
         WorkflowNode deployModel = new WorkflowNode(
             "workflow_step_2",
             DeployModelStep.NAME,
-            Map.ofEntries(Map.entry("workflow_step_1", "model_id")),
+            Map.ofEntries(Map.entry("workflow_step_1", MODEL_ID)),
             Collections.emptyMap()
         );
         WorkflowEdge edge = new WorkflowEdge(registerModel.id(), deployModel.id());
@@ -463,13 +465,13 @@ public class WorkflowProcessSorterTests extends OpenSearchTestCase {
         WorkflowNode registerModel = new WorkflowNode(
             "workflow_step_2",
             RegisterRemoteModelStep.NAME,
-            Map.ofEntries(Map.entry("workflow_step_1", "connector_id")),
+            Map.ofEntries(Map.entry("workflow_step_1", CONNECTOR_ID)),
             Map.ofEntries(Map.entry("name", "name"), Map.entry("function_name", "remote"), Map.entry("description", "description"))
         );
         WorkflowNode deployModel = new WorkflowNode(
             "workflow_step_3",
             DeployModelStep.NAME,
-            Map.ofEntries(Map.entry("workflow_step_2", "model_id")),
+            Map.ofEntries(Map.entry("workflow_step_2", MODEL_ID)),
             Collections.emptyMap()
         );
 
@@ -545,13 +547,13 @@ public class WorkflowProcessSorterTests extends OpenSearchTestCase {
         WorkflowNode registerModel = new WorkflowNode(
             "workflow_step_2",
             RegisterRemoteModelStep.NAME,
-            Map.ofEntries(Map.entry("workflow_step_1", "connector_id")),
+            Map.ofEntries(Map.entry("workflow_step_1", CONNECTOR_ID)),
             Map.ofEntries(Map.entry("name", "name"), Map.entry("function_name", "remote"), Map.entry("description", "description"))
         );
         WorkflowNode deployModel = new WorkflowNode(
             "workflow_step_3",
             DeployModelStep.NAME,
-            Map.ofEntries(Map.entry("workflow_step_2", "model_id")),
+            Map.ofEntries(Map.entry("workflow_step_2", MODEL_ID)),
             Collections.emptyMap()
         );
 
@@ -594,27 +596,27 @@ public class WorkflowProcessSorterTests extends OpenSearchTestCase {
             )
         );
         TimeValue createConnectorTimeout = workflowProcessSorter.parseTimeout(createConnector);
-        assertEquals(createConnectorTimeout.getSeconds(), 50);
+        assertEquals(50, createConnectorTimeout.getSeconds());
 
         // read timeout from workflow-step.json overwrite value
         WorkflowNode deployModel = new WorkflowNode(
             "workflow_step_3",
             DeployModelStep.NAME,
-            Map.ofEntries(Map.entry("workflow_step_2", "model_id")),
+            Map.ofEntries(Map.entry("workflow_step_2", MODEL_ID)),
             Map.of()
         );
         TimeValue deployModelTimeout = workflowProcessSorter.parseTimeout(deployModel);
-        assertEquals(deployModelTimeout.getSeconds(), 15);
+        assertEquals(15, deployModelTimeout.getSeconds());
 
         // read timeout from NODE_TIMEOUT_DEFAULT_VALUE when there's no node NODE_TIMEOUT_FIELD
         // and no overwrite timeout value in workflow-step.json
         WorkflowNode registerModel = new WorkflowNode(
             "workflow_step_2",
             RegisterRemoteModelStep.NAME,
-            Map.ofEntries(Map.entry("workflow_step_1", "connector_id")),
+            Map.ofEntries(Map.entry("workflow_step_1", CONNECTOR_ID)),
             Map.ofEntries(Map.entry("name", "name"), Map.entry("function_name", "remote"), Map.entry("description", "description"))
         );
         TimeValue registerRemoteModelTimeout = workflowProcessSorter.parseTimeout(registerModel);
-        assertEquals(registerRemoteModelTimeout.getSeconds(), 10);
+        assertEquals(10, registerRemoteModelTimeout.getSeconds());
     }
 }

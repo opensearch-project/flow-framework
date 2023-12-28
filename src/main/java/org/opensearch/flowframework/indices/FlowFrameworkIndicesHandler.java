@@ -32,7 +32,6 @@ import org.opensearch.core.action.ActionListener;
 import org.opensearch.core.rest.RestStatus;
 import org.opensearch.core.xcontent.ToXContent;
 import org.opensearch.core.xcontent.XContentBuilder;
-import org.opensearch.flowframework.common.WorkflowResources;
 import org.opensearch.flowframework.exception.FlowFrameworkException;
 import org.opensearch.flowframework.model.ProvisioningProgress;
 import org.opensearch.flowframework.model.ResourceCreated;
@@ -60,6 +59,7 @@ import static org.opensearch.flowframework.common.CommonValue.NO_SCHEMA_VERSION;
 import static org.opensearch.flowframework.common.CommonValue.SCHEMA_VERSION_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.WORKFLOW_STATE_INDEX;
 import static org.opensearch.flowframework.common.CommonValue.WORKFLOW_STATE_INDEX_MAPPING;
+import static org.opensearch.flowframework.common.WorkflowResources.getResourceByWorkflowStep;
 
 /**
  * A handler for operations on system indices in the AI Flow Framework plugin
@@ -503,7 +503,7 @@ public class FlowFrameworkIndicesHandler {
         ResourceCreated newResource = new ResourceCreated(
             workflowStepName,
             nodeId,
-            WorkflowResources.getResourceByWorkflowStep(workflowStepName),
+            getResourceByWorkflowStep(workflowStepName),
             resourceId
         );
         XContentBuilder builder = XContentBuilder.builder(XContentType.JSON.xContent());

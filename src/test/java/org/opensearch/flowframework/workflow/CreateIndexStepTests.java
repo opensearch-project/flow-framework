@@ -42,6 +42,7 @@ import org.mockito.MockitoAnnotations;
 import static org.opensearch.action.DocWriteResponse.Result.UPDATED;
 import static org.opensearch.flowframework.common.CommonValue.GLOBAL_CONTEXT_INDEX;
 import static org.opensearch.flowframework.common.CommonValue.WORKFLOW_STATE_INDEX;
+import static org.opensearch.flowframework.common.WorkflowResources.INDEX_NAME;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doAnswer;
@@ -76,7 +77,7 @@ public class CreateIndexStepTests extends OpenSearchTestCase {
         this.flowFrameworkIndicesHandler = mock(FlowFrameworkIndicesHandler.class);
         MockitoAnnotations.openMocks(this);
         inputData = new WorkflowData(
-            Map.ofEntries(Map.entry("index_name", "demo"), Map.entry("default_mapping_option", "knn")),
+            Map.ofEntries(Map.entry(INDEX_NAME, "demo"), Map.entry("default_mapping_option", "knn")),
             "test-id",
             "test-node-id"
         );
@@ -120,7 +121,7 @@ public class CreateIndexStepTests extends OpenSearchTestCase {
 
         assertTrue(future.isDone() && !future.isCompletedExceptionally());
 
-        Map<String, Object> outputData = Map.of("index_name", "demo");
+        Map<String, Object> outputData = Map.of(INDEX_NAME, "demo");
         assertEquals(outputData, future.get().getContent());
 
     }

@@ -26,6 +26,7 @@ import java.util.concurrent.ExecutionException;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
+import static org.opensearch.flowframework.common.WorkflowResources.CONNECTOR_ID;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.verify;
@@ -62,13 +63,13 @@ public class DeleteConnectorStepTests extends OpenSearchTestCase {
         CompletableFuture<WorkflowData> future = deleteConnectorStep.execute(
             inputData.getNodeId(),
             inputData,
-            Map.of("step_1", new WorkflowData(Map.of("connector_id", connectorId), "workflowId", "nodeId")),
-            Map.of("step_1", "connector_id")
+            Map.of("step_1", new WorkflowData(Map.of(CONNECTOR_ID, connectorId), "workflowId", "nodeId")),
+            Map.of("step_1", CONNECTOR_ID)
         );
         verify(machineLearningNodeClient).deleteConnector(any(String.class), any());
 
         assertTrue(future.isDone());
-        assertEquals(connectorId, future.get().getContent().get("connector_id"));
+        assertEquals(connectorId, future.get().getContent().get(CONNECTOR_ID));
     }
 
     public void testNoConnectorIdInOutput() throws IOException {
@@ -99,8 +100,8 @@ public class DeleteConnectorStepTests extends OpenSearchTestCase {
         CompletableFuture<WorkflowData> future = deleteConnectorStep.execute(
             inputData.getNodeId(),
             inputData,
-            Map.of("step_1", new WorkflowData(Map.of("connector_id", "test"), "workflowId", "nodeId")),
-            Map.of("step_1", "connector_id")
+            Map.of("step_1", new WorkflowData(Map.of(CONNECTOR_ID, "test"), "workflowId", "nodeId")),
+            Map.of("step_1", CONNECTOR_ID)
         );
 
         verify(machineLearningNodeClient).deleteConnector(any(String.class), any());

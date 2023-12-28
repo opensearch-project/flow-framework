@@ -51,6 +51,8 @@ import java.util.concurrent.TimeUnit;
 import org.mockito.ArgumentCaptor;
 
 import static org.opensearch.flowframework.common.CommonValue.PROVISION_WORKFLOW;
+import static org.opensearch.flowframework.common.WorkflowResources.CONNECTOR_ID;
+import static org.opensearch.flowframework.common.WorkflowResources.MODEL_ID;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -155,7 +157,7 @@ public class DeprovisionWorkflowTransportActionTests extends OpenSearchTestCase 
             ActionListener<GetWorkflowStateResponse> responseListener = invocation.getArgument(2);
 
             WorkflowState state = WorkflowState.builder()
-                .resourcesCreated(List.of(new ResourceCreated("create_connector", "step_1", "connector_id", "connectorId")))
+                .resourcesCreated(List.of(new ResourceCreated("create_connector", "step_1", CONNECTOR_ID, "connectorId")))
                 .build();
             responseListener.onResponse(new GetWorkflowStateResponse(state, true));
             return null;
@@ -215,7 +217,7 @@ public class DeprovisionWorkflowTransportActionTests extends OpenSearchTestCase 
             ActionListener<GetWorkflowStateResponse> responseListener = invocation.getArgument(2);
 
             WorkflowState state = WorkflowState.builder()
-                .resourcesCreated(List.of(new ResourceCreated("deploy_model", "step_1", "model_id", "modelId")))
+                .resourcesCreated(List.of(new ResourceCreated("deploy_model", "step_1", MODEL_ID, "modelId")))
                 .build();
             responseListener.onResponse(new GetWorkflowStateResponse(state, true));
             return null;
