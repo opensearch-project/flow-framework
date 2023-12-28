@@ -24,7 +24,6 @@ import org.opensearch.common.settings.Settings;
 import org.opensearch.common.unit.TimeValue;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.core.rest.RestStatus;
-import org.opensearch.core.xcontent.XContentParser;
 import org.opensearch.flowframework.common.FlowFrameworkSettings;
 import org.opensearch.flowframework.exception.FlowFrameworkException;
 import org.opensearch.flowframework.indices.FlowFrameworkIndicesHandler;
@@ -59,6 +58,7 @@ import static org.opensearch.flowframework.common.FlowFrameworkSettings.WORKFLOW
 import static org.opensearch.flowframework.model.TemplateTestJsonUtil.edge;
 import static org.opensearch.flowframework.model.TemplateTestJsonUtil.node;
 import static org.opensearch.flowframework.model.TemplateTestJsonUtil.nodeWithType;
+import static org.opensearch.flowframework.model.TemplateTestJsonUtil.nodeWithTypeAndPreviousNodes;
 import static org.opensearch.flowframework.model.TemplateTestJsonUtil.nodeWithTypeAndTimeout;
 import static org.opensearch.flowframework.model.TemplateTestJsonUtil.workflow;
 import static org.mockito.ArgumentMatchers.any;
@@ -72,11 +72,14 @@ public class WorkflowProcessSorterTests extends OpenSearchTestCase {
     private static final String NO_START_NODE_DETECTED = "No start node detected: all nodes have a predecessor.";
     private static final String CYCLE_DETECTED = "Cycle detected:";
 
+    // Wrap parser into workflow
+    private static Workflow parseToWorkflow(String json) throws IOException {
+        return Workflow.parse(TemplateTestJsonUtil.jsonToParser(json));
+    }
+
     // Wrap parser into node list
     private static List<ProcessNode> parseToNodes(String json) throws IOException {
-        XContentParser parser = TemplateTestJsonUtil.jsonToParser(json);
-        Workflow w = Workflow.parse(parser);
-        return workflowProcessSorter.sortProcessNodes(w, "123");
+        return workflowProcessSorter.sortProcessNodes(parseToWorkflow(json), "123");
     }
 
     // Wrap parser into string list
@@ -240,6 +243,56 @@ public class WorkflowProcessSorterTests extends OpenSearchTestCase {
         assertEquals(2, workflow.size());
         assertTrue(workflow.contains("A"));
         assertTrue(workflow.contains("B"));
+    }
+
+    public void testInferredEdges() throws IOException {
+        Workflow w = parseToWorkflow(
+            workflow(List.of(nodeWithTypeAndPreviousNodes("A", "noop"), nodeWithTypeAndPreviousNodes("B", "noop")), Collections.emptyList())
+        );
+        assertTrue(w.edges().isEmpty());
+
+        w = parseToWorkflow(
+            workflow(List.of(nodeWithTypeAndPreviousNodes("A", "noop"), nodeWithTypeAndPreviousNodes("B", "noop")), List.of(edge("B", "A")))
+        );
+        // edge from previous inputs only
+        assertEquals(List.of(new WorkflowEdge("B", "A")), w.edges());
+
+        w = parseToWorkflow(
+            workflow(
+                List.of(nodeWithTypeAndPreviousNodes("A", "noop", "B"), nodeWithTypeAndPreviousNodes("B", "noop")),
+                Collections.emptyList()
+            )
+        );
+        // edge from edges only
+        assertEquals(List.of(new WorkflowEdge("B", "A")), w.edges());
+
+        w = parseToWorkflow(
+            workflow(
+                List.of(
+                    nodeWithTypeAndPreviousNodes("A", "noop", "B"),
+                    nodeWithTypeAndPreviousNodes("B", "noop"),
+                    nodeWithTypeAndPreviousNodes("C", "noop")
+                ),
+                List.of(edge("C", "A"))
+            )
+        );
+        // combine sources, order not guaranteed
+        assertEquals(2, w.edges().size());
+        assertTrue(w.edges().contains(new WorkflowEdge("B", "A")));
+        assertTrue(w.edges().contains(new WorkflowEdge("C", "A")));
+
+        w = parseToWorkflow(
+            workflow(
+                List.of(
+                    nodeWithTypeAndPreviousNodes("A", "noop", "B"),
+                    nodeWithTypeAndPreviousNodes("B", "noop"),
+                    nodeWithTypeAndPreviousNodes("C", "noop")
+                ),
+                List.of(edge("B", "A"))
+            )
+        );
+        // duplicates, only 1
+        assertEquals(List.of(new WorkflowEdge("B", "A")), w.edges());
     }
 
     public void testExceptions() throws IOException {

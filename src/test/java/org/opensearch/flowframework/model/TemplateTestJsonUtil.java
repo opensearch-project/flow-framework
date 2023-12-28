@@ -17,6 +17,7 @@ import org.opensearch.core.xcontent.XContentParser;
 import org.opensearch.flowframework.workflow.NoOpStep;
 
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -51,6 +52,22 @@ public class TemplateTestJsonUtil {
             + "\": \""
             + timeout
             + "\"}}";
+    }
+
+    public static String nodeWithTypeAndPreviousNodes(String id, String type, String... previousNodes) {
+        return "{\""
+            + WorkflowNode.ID_FIELD
+            + "\": \""
+            + id
+            + "\", \""
+            + WorkflowNode.TYPE_FIELD
+            + "\": \""
+            + type
+            + "\", \""
+            + WorkflowNode.PREVIOUS_NODE_INPUTS_FIELD
+            + "\": {"
+            + Arrays.stream(previousNodes).map(n -> "\"" + n + "\": \"output_value\"").collect(Collectors.joining(","))
+            + "}}";
     }
 
     public static String edge(String sourceId, String destId) {
