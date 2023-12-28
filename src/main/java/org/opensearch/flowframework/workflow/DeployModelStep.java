@@ -14,7 +14,6 @@ import org.opensearch.ExceptionsHelper;
 import org.opensearch.cluster.service.ClusterService;
 import org.opensearch.common.settings.Settings;
 import org.opensearch.core.action.ActionListener;
-import org.opensearch.flowframework.common.WorkflowResources;
 import org.opensearch.flowframework.exception.FlowFrameworkException;
 import org.opensearch.flowframework.indices.FlowFrameworkIndicesHandler;
 import org.opensearch.flowframework.util.ParseUtils;
@@ -25,6 +24,8 @@ import java.util.Collections;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
+
+import static org.opensearch.flowframework.common.WorkflowResources.MODEL_ID;
 
 /**
  * Step to deploy a model
@@ -83,7 +84,7 @@ public class DeployModelStep extends AbstractRetryableWorkflowStep {
             }
         };
 
-        Set<String> requiredKeys = Set.of(WorkflowResources.MODEL_ID);
+        Set<String> requiredKeys = Set.of(MODEL_ID);
         Set<String> optionalKeys = Collections.emptySet();
 
         try {
@@ -95,7 +96,7 @@ public class DeployModelStep extends AbstractRetryableWorkflowStep {
                 previousNodeInputs
             );
 
-            String modelId = (String) inputs.get(WorkflowResources.MODEL_ID);
+            String modelId = (String) inputs.get(MODEL_ID);
 
             mlClient.deploy(modelId, actionListener);
         } catch (FlowFrameworkException e) {

@@ -32,6 +32,7 @@ import org.mockito.MockitoAnnotations;
 
 import static org.opensearch.action.DocWriteResponse.Result.UPDATED;
 import static org.opensearch.flowframework.common.CommonValue.WORKFLOW_STATE_INDEX;
+import static org.opensearch.flowframework.common.WorkflowResources.CONNECTOR_ID;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doAnswer;
@@ -107,7 +108,7 @@ public class CreateConnectorStepTests extends OpenSearchTestCase {
 
         verify(machineLearningNodeClient).createConnector(any(MLCreateConnectorInput.class), any());
         assertTrue(future.isDone());
-        assertEquals(connectorId, future.get().getContent().get("connector_id"));
+        assertEquals(connectorId, future.get().getContent().get(CONNECTOR_ID));
 
     }
 

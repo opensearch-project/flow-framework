@@ -19,7 +19,6 @@ import org.opensearch.common.xcontent.XContentType;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.core.common.bytes.BytesReference;
 import org.opensearch.core.xcontent.XContentBuilder;
-import org.opensearch.flowframework.common.WorkflowResources;
 import org.opensearch.flowframework.exception.FlowFrameworkException;
 import org.opensearch.flowframework.indices.FlowFrameworkIndicesHandler;
 
@@ -38,6 +37,8 @@ import static org.opensearch.flowframework.common.CommonValue.INPUT_FIELD_NAME;
 import static org.opensearch.flowframework.common.CommonValue.OUTPUT_FIELD_NAME;
 import static org.opensearch.flowframework.common.CommonValue.PROCESSORS;
 import static org.opensearch.flowframework.common.CommonValue.TYPE;
+import static org.opensearch.flowframework.common.WorkflowResources.MODEL_ID;
+import static org.opensearch.flowframework.common.WorkflowResources.getResourceByWorkflowStep;
 
 /**
  * Workflow step to create an ingest pipeline
@@ -104,8 +105,8 @@ public class CreateIngestPipelineStep implements WorkflowStep {
                     case TYPE:
                         type = (String) content.get(TYPE);
                         break;
-                    case WorkflowResources.MODEL_ID:
-                        modelId = (String) content.get(WorkflowResources.MODEL_ID);
+                    case MODEL_ID:
+                        modelId = (String) content.get(MODEL_ID);
                         break;
                     case INPUT_FIELD_NAME:
                         inputFieldName = (String) content.get(INPUT_FIELD_NAME);
@@ -142,7 +143,7 @@ public class CreateIngestPipelineStep implements WorkflowStep {
                 logger.info("Created ingest pipeline : " + putPipelineRequest.getId());
 
                 try {
-                    String resourceName = WorkflowResources.getResourceByWorkflowStep(getName());
+                    String resourceName = getResourceByWorkflowStep(getName());
                     flowFrameworkIndicesHandler.updateResourceInStateIndex(
                         currentNodeInputs.getWorkflowId(),
                         currentNodeId,
@@ -224,7 +225,7 @@ public class CreateIngestPipelineStep implements WorkflowStep {
             .startArray(PROCESSORS)
             .startObject()
             .startObject(type)
-            .field(WorkflowResources.MODEL_ID, modelId)
+            .field(MODEL_ID, modelId)
             .startObject(FIELD_MAP)
             .field(inputFieldName, outputFieldName)
             .endObject()

@@ -18,7 +18,6 @@ import org.opensearch.cluster.service.ClusterService;
 import org.opensearch.common.settings.Settings;
 import org.opensearch.common.xcontent.json.JsonXContent;
 import org.opensearch.core.action.ActionListener;
-import org.opensearch.flowframework.common.WorkflowResources;
 import org.opensearch.flowframework.exception.FlowFrameworkException;
 import org.opensearch.flowframework.indices.FlowFrameworkIndicesHandler;
 
@@ -30,6 +29,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import static org.opensearch.flowframework.common.CommonValue.DEFAULT_MAPPING_OPTION;
+import static org.opensearch.flowframework.common.WorkflowResources.getResourceByWorkflowStep;
 
 /**
  * Step to create an index
@@ -71,7 +71,7 @@ public class CreateIndexStep implements WorkflowStep {
             @Override
             public void onResponse(CreateIndexResponse createIndexResponse) {
                 try {
-                    String resourceName = WorkflowResources.getResourceByWorkflowStep(getName());
+                    String resourceName = getResourceByWorkflowStep(getName());
                     logger.info("created index: {}", createIndexResponse.index());
                     flowFrameworkIndicesHandler.updateResourceInStateIndex(
                         currentNodeInputs.getWorkflowId(),
@@ -120,7 +120,7 @@ public class CreateIndexStep implements WorkflowStep {
         try {
             for (WorkflowData workflowData : data) {
                 Map<String, Object> content = workflowData.getContent();
-                index = (String) content.get(WorkflowResources.getResourceByWorkflowStep(getName()));
+                index = (String) content.get(getResourceByWorkflowStep(getName()));
                 defaultMappingOption = (String) content.get(DEFAULT_MAPPING_OPTION);
                 if (index != null && defaultMappingOption != null && settings != null) {
                     break;

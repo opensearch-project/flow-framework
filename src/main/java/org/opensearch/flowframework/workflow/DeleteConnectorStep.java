@@ -13,7 +13,6 @@ import org.apache.logging.log4j.Logger;
 import org.opensearch.ExceptionsHelper;
 import org.opensearch.action.delete.DeleteResponse;
 import org.opensearch.core.action.ActionListener;
-import org.opensearch.flowframework.common.WorkflowResources;
 import org.opensearch.flowframework.exception.FlowFrameworkException;
 import org.opensearch.flowframework.util.ParseUtils;
 import org.opensearch.ml.client.MachineLearningNodeClient;
@@ -22,6 +21,8 @@ import java.util.Collections;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
+
+import static org.opensearch.flowframework.common.WorkflowResources.CONNECTOR_ID;
 
 /**
  * Step to delete a connector for a remote model
@@ -58,7 +59,7 @@ public class DeleteConnectorStep implements WorkflowStep {
             public void onResponse(DeleteResponse deleteResponse) {
                 deleteConnectorFuture.complete(
                     new WorkflowData(
-                        Map.ofEntries(Map.entry("connector_id", deleteResponse.getId())),
+                        Map.ofEntries(Map.entry(CONNECTOR_ID, deleteResponse.getId())),
                         currentNodeInputs.getWorkflowId(),
                         currentNodeInputs.getNodeId()
                     )
@@ -72,7 +73,7 @@ public class DeleteConnectorStep implements WorkflowStep {
             }
         };
 
-        Set<String> requiredKeys = Set.of(WorkflowResources.CONNECTOR_ID);
+        Set<String> requiredKeys = Set.of(CONNECTOR_ID);
         Set<String> optionalKeys = Collections.emptySet();
 
         try {
@@ -83,7 +84,7 @@ public class DeleteConnectorStep implements WorkflowStep {
                 outputs,
                 previousNodeInputs
             );
-            String connectorId = (String) inputs.get(WorkflowResources.CONNECTOR_ID);
+            String connectorId = (String) inputs.get(CONNECTOR_ID);
 
             mlClient.deleteConnector(connectorId, actionListener);
         } catch (FlowFrameworkException e) {

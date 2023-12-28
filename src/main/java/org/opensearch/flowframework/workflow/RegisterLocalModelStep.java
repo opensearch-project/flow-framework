@@ -14,7 +14,6 @@ import org.opensearch.ExceptionsHelper;
 import org.opensearch.cluster.service.ClusterService;
 import org.opensearch.common.settings.Settings;
 import org.opensearch.core.action.ActionListener;
-import org.opensearch.flowframework.common.WorkflowResources;
 import org.opensearch.flowframework.exception.FlowFrameworkException;
 import org.opensearch.flowframework.indices.FlowFrameworkIndicesHandler;
 import org.opensearch.flowframework.util.ParseUtils;
@@ -42,6 +41,7 @@ import static org.opensearch.flowframework.common.CommonValue.MODEL_TYPE;
 import static org.opensearch.flowframework.common.CommonValue.NAME_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.URL;
 import static org.opensearch.flowframework.common.CommonValue.VERSION_FIELD;
+import static org.opensearch.flowframework.common.WorkflowResources.MODEL_GROUP_ID;
 
 /**
  * Step to register a local model
@@ -120,7 +120,7 @@ public class RegisterLocalModelStep extends AbstractRetryableWorkflowStep {
             MODEL_CONTENT_HASH_VALUE,
             URL
         );
-        Set<String> optionalKeys = Set.of(DESCRIPTION_FIELD, WorkflowResources.MODEL_GROUP_ID, ALL_CONFIG);
+        Set<String> optionalKeys = Set.of(DESCRIPTION_FIELD, MODEL_GROUP_ID, ALL_CONFIG);
 
         try {
             Map<String, Object> inputs = ParseUtils.getInputsFromPreviousSteps(
@@ -135,7 +135,7 @@ public class RegisterLocalModelStep extends AbstractRetryableWorkflowStep {
             String modelVersion = (String) inputs.get(VERSION_FIELD);
             String description = (String) inputs.get(DESCRIPTION_FIELD);
             MLModelFormat modelFormat = MLModelFormat.from((String) inputs.get(MODEL_FORMAT));
-            String modelGroupId = (String) inputs.get(WorkflowResources.MODEL_GROUP_ID);
+            String modelGroupId = (String) inputs.get(MODEL_GROUP_ID);
             String modelContentHashValue = (String) inputs.get(MODEL_CONTENT_HASH_VALUE);
             String modelType = (String) inputs.get(MODEL_TYPE);
             String embeddingDimension = (String) inputs.get(EMBEDDING_DIMENSION);

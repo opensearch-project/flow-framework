@@ -14,7 +14,6 @@ import org.opensearch.ExceptionsHelper;
 import org.opensearch.common.Nullable;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.core.rest.RestStatus;
-import org.opensearch.flowframework.common.WorkflowResources;
 import org.opensearch.flowframework.exception.FlowFrameworkException;
 import org.opensearch.flowframework.indices.FlowFrameworkIndicesHandler;
 import org.opensearch.flowframework.util.ParseUtils;
@@ -47,6 +46,8 @@ import static org.opensearch.flowframework.common.CommonValue.PARAMETERS_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.TOOLS_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.TOOLS_ORDER_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.TYPE;
+import static org.opensearch.flowframework.common.WorkflowResources.MODEL_ID;
+import static org.opensearch.flowframework.common.WorkflowResources.getResourceByWorkflowStep;
 import static org.opensearch.flowframework.util.ParseUtils.getStringToStringMap;
 
 /**
@@ -93,7 +94,7 @@ public class RegisterAgentStep implements WorkflowStep {
             @Override
             public void onResponse(MLRegisterAgentResponse mlRegisterAgentResponse) {
                 try {
-                    String resourceName = WorkflowResources.getResourceByWorkflowStep(getName());
+                    String resourceName = getResourceByWorkflowStep(getName());
                     logger.info("Agent registration successful for the agent {}", mlRegisterAgentResponse.getAgentId());
                     flowFrameworkIndicesHandler.updateResourceInStateIndex(
                         workflowId,
@@ -244,7 +245,7 @@ public class RegisterAgentStep implements WorkflowStep {
         // Case when modelId is passed through previousSteps
         Optional<String> previousNode = previousNodeInputs.entrySet()
             .stream()
-            .filter(e -> WorkflowResources.MODEL_ID.equals(e.getValue()))
+            .filter(e -> MODEL_ID.equals(e.getValue()))
             .map(Map.Entry::getKey)
             .findFirst();
 
@@ -252,8 +253,7 @@ public class RegisterAgentStep implements WorkflowStep {
             WorkflowData previousNodeOutput = outputs.get(previousNode.get());
             if (previousNodeOutput != null) {
                 // Use either llm.model_id (if present) or model_id (backup)
-                Object modelId = previousNodeOutput.getContent()
-                    .getOrDefault(LLM_MODEL_ID, previousNodeOutput.getContent().get(WorkflowResources.MODEL_ID));
+                Object modelId = previousNodeOutput.getContent().getOrDefault(LLM_MODEL_ID, previousNodeOutput.getContent().get(MODEL_ID));
                 if (modelId != null) {
                     return modelId.toString();
                 }

@@ -10,7 +10,6 @@ package org.opensearch.flowframework.workflow;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.opensearch.flowframework.common.WorkflowResources;
 import org.opensearch.flowframework.exception.FlowFrameworkException;
 import org.opensearch.flowframework.util.ParseUtils;
 import org.opensearch.ml.common.agent.MLToolSpec;
@@ -26,6 +25,8 @@ import static org.opensearch.flowframework.common.CommonValue.NAME_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.PARAMETERS_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.TOOLS_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.TYPE;
+import static org.opensearch.flowframework.common.WorkflowResources.AGENT_ID;
+import static org.opensearch.flowframework.common.WorkflowResources.MODEL_ID;
 
 /**
  * Step to register a tool for an agent
@@ -108,29 +109,29 @@ public class ToolStep implements WorkflowStep {
         Map<String, String> parametersMap = (Map<String, String>) parameters;
         Optional<String> previousNodeModel = previousNodeInputs.entrySet()
             .stream()
-            .filter(e -> WorkflowResources.MODEL_ID.equals(e.getValue()))
+            .filter(e -> MODEL_ID.equals(e.getValue()))
             .map(Map.Entry::getKey)
             .findFirst();
 
         Optional<String> previousNodeAgent = previousNodeInputs.entrySet()
             .stream()
-            .filter(e -> WorkflowResources.AGENT_ID.equals(e.getValue()))
+            .filter(e -> AGENT_ID.equals(e.getValue()))
             .map(Map.Entry::getKey)
             .findFirst();
 
         // Case when modelId is passed through previousSteps and not present already in parameters
-        if (previousNodeModel.isPresent() && !parametersMap.containsKey(WorkflowResources.MODEL_ID)) {
+        if (previousNodeModel.isPresent() && !parametersMap.containsKey(MODEL_ID)) {
             WorkflowData previousNodeOutput = outputs.get(previousNodeModel.get());
-            if (previousNodeOutput != null && previousNodeOutput.getContent().containsKey(WorkflowResources.MODEL_ID)) {
-                parametersMap.put(WorkflowResources.MODEL_ID, previousNodeOutput.getContent().get(WorkflowResources.MODEL_ID).toString());
+            if (previousNodeOutput != null && previousNodeOutput.getContent().containsKey(MODEL_ID)) {
+                parametersMap.put(MODEL_ID, previousNodeOutput.getContent().get(MODEL_ID).toString());
             }
         }
 
         // Case when agentId is passed through previousSteps and not present already in parameters
-        if (previousNodeAgent.isPresent() && !parametersMap.containsKey(WorkflowResources.AGENT_ID)) {
+        if (previousNodeAgent.isPresent() && !parametersMap.containsKey(AGENT_ID)) {
             WorkflowData previousNodeOutput = outputs.get(previousNodeAgent.get());
-            if (previousNodeOutput != null && previousNodeOutput.getContent().containsKey(WorkflowResources.AGENT_ID)) {
-                parametersMap.put(WorkflowResources.AGENT_ID, previousNodeOutput.getContent().get(WorkflowResources.AGENT_ID).toString());
+            if (previousNodeOutput != null && previousNodeOutput.getContent().containsKey(AGENT_ID)) {
+                parametersMap.put(AGENT_ID, previousNodeOutput.getContent().get(AGENT_ID).toString());
             }
         }
 

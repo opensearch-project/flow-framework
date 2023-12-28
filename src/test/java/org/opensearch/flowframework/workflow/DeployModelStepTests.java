@@ -46,9 +46,9 @@ import static org.opensearch.flowframework.common.CommonValue.WORKFLOW_STATE_IND
 import static org.opensearch.flowframework.common.FlowFrameworkSettings.MAX_GET_TASK_REQUEST_RETRY;
 import static org.opensearch.flowframework.common.WorkflowResources.MODEL_ID;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.anyString;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doAnswer;
-import static org.mockito.Mockito.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -83,7 +83,7 @@ public class DeployModelStepTests extends OpenSearchTestCase {
         when(clusterService.getClusterSettings()).thenReturn(clusterSettings);
 
         this.deployModel = new DeployModelStep(testMaxRetrySetting, clusterService, machineLearningNodeClient, flowFrameworkIndicesHandler);
-        this.inputData = new WorkflowData(Map.ofEntries(Map.entry("model_id", "modelId")), "test-id", "test-node-id");
+        this.inputData = new WorkflowData(Map.ofEntries(Map.entry(MODEL_ID, "modelId")), "test-id", "test-node-id");
 
     }
 

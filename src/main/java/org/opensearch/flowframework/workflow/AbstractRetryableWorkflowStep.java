@@ -16,7 +16,6 @@ import org.opensearch.common.settings.Settings;
 import org.opensearch.common.util.concurrent.FutureUtils;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.core.rest.RestStatus;
-import org.opensearch.flowframework.common.WorkflowResources;
 import org.opensearch.flowframework.exception.FlowFrameworkException;
 import org.opensearch.flowframework.indices.FlowFrameworkIndicesHandler;
 import org.opensearch.ml.client.MachineLearningNodeClient;
@@ -28,6 +27,8 @@ import java.util.stream.Stream;
 
 import static org.opensearch.flowframework.common.CommonValue.REGISTER_MODEL_STATUS;
 import static org.opensearch.flowframework.common.FlowFrameworkSettings.MAX_GET_TASK_REQUEST_RETRY;
+import static org.opensearch.flowframework.common.WorkflowResources.DEPLOY_MODEL;
+import static org.opensearch.flowframework.common.WorkflowResources.getResourceByWorkflowStep;
 
 /**
  * Abstract retryable workflow step
@@ -90,9 +91,9 @@ public abstract class AbstractRetryableWorkflowStep implements WorkflowStep {
             } else {
                 try {
                     logger.info(workflowStep + " successful for {} and modelId {}", workflowId, response.getModelId());
-                    String resourceName = WorkflowResources.getResourceByWorkflowStep(getName());
+                    String resourceName = getResourceByWorkflowStep(getName());
                     String id;
-                    if (getName().equals(WorkflowResources.DEPLOY_MODEL.getWorkflowStep())) {
+                    if (getName().equals(DEPLOY_MODEL.getWorkflowStep())) {
                         id = response.getModelId();
                     } else {
                         id = response.getTaskId();

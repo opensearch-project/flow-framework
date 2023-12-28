@@ -13,7 +13,6 @@ import org.apache.logging.log4j.Logger;
 import org.opensearch.ExceptionsHelper;
 import org.opensearch.action.delete.DeleteResponse;
 import org.opensearch.core.action.ActionListener;
-import org.opensearch.flowframework.common.WorkflowResources;
 import org.opensearch.flowframework.exception.FlowFrameworkException;
 import org.opensearch.flowframework.util.ParseUtils;
 import org.opensearch.ml.client.MachineLearningNodeClient;
@@ -22,6 +21,8 @@ import java.util.Collections;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
+
+import static org.opensearch.flowframework.common.WorkflowResources.AGENT_ID;
 
 /**
  * Step to delete a agent for a remote model
@@ -58,7 +59,7 @@ public class DeleteAgentStep implements WorkflowStep {
             public void onResponse(DeleteResponse deleteResponse) {
                 deleteAgentFuture.complete(
                     new WorkflowData(
-                        Map.ofEntries(Map.entry("agent_id", deleteResponse.getId())),
+                        Map.ofEntries(Map.entry(AGENT_ID, deleteResponse.getId())),
                         currentNodeInputs.getWorkflowId(),
                         currentNodeInputs.getNodeId()
                     )
@@ -72,7 +73,7 @@ public class DeleteAgentStep implements WorkflowStep {
             }
         };
 
-        Set<String> requiredKeys = Set.of(WorkflowResources.AGENT_ID);
+        Set<String> requiredKeys = Set.of(AGENT_ID);
         Set<String> optionalKeys = Collections.emptySet();
 
         try {
@@ -83,7 +84,7 @@ public class DeleteAgentStep implements WorkflowStep {
                 outputs,
                 previousNodeInputs
             );
-            String agentId = (String) inputs.get(WorkflowResources.AGENT_ID);
+            String agentId = (String) inputs.get(AGENT_ID);
 
             mlClient.deleteAgent(agentId, actionListener);
         } catch (FlowFrameworkException e) {

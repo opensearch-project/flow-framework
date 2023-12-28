@@ -26,6 +26,7 @@ import java.util.concurrent.ExecutionException;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
+import static org.opensearch.flowframework.common.WorkflowResources.AGENT_ID;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.verify;
@@ -62,13 +63,13 @@ public class DeleteAgentStepTests extends OpenSearchTestCase {
         CompletableFuture<WorkflowData> future = deleteAgentStep.execute(
             inputData.getNodeId(),
             inputData,
-            Map.of("step_1", new WorkflowData(Map.of("agent_id", agentId), "workflowId", "nodeId")),
-            Map.of("step_1", "agent_id")
+            Map.of("step_1", new WorkflowData(Map.of(AGENT_ID, agentId), "workflowId", "nodeId")),
+            Map.of("step_1", AGENT_ID)
         );
         verify(machineLearningNodeClient).deleteAgent(any(String.class), any());
 
         assertTrue(future.isDone());
-        assertEquals(agentId, future.get().getContent().get("agent_id"));
+        assertEquals(agentId, future.get().getContent().get(AGENT_ID));
     }
 
     public void testNoAgentIdInOutput() throws IOException {
@@ -99,8 +100,8 @@ public class DeleteAgentStepTests extends OpenSearchTestCase {
         CompletableFuture<WorkflowData> future = deleteAgentStep.execute(
             inputData.getNodeId(),
             inputData,
-            Map.of("step_1", new WorkflowData(Map.of("agent_id", "test"), "workflowId", "nodeId")),
-            Map.of("step_1", "agent_id")
+            Map.of("step_1", new WorkflowData(Map.of(AGENT_ID, "test"), "workflowId", "nodeId")),
+            Map.of("step_1", AGENT_ID)
         );
 
         verify(machineLearningNodeClient).deleteAgent(any(String.class), any());

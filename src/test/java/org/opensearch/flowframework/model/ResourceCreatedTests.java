@@ -8,11 +8,14 @@
  */
 package org.opensearch.flowframework.model;
 
-import org.opensearch.flowframework.common.WorkflowResources;
 import org.opensearch.flowframework.exception.FlowFrameworkException;
 import org.opensearch.test.OpenSearchTestCase;
 
 import java.io.IOException;
+
+import static org.opensearch.flowframework.common.WorkflowResources.CONNECTOR_ID;
+import static org.opensearch.flowframework.common.WorkflowResources.CREATE_CONNECTOR;
+import static org.opensearch.flowframework.common.WorkflowResources.getResourceByWorkflowStep;
 
 public class ResourceCreatedTests extends OpenSearchTestCase {
 
@@ -22,12 +25,12 @@ public class ResourceCreatedTests extends OpenSearchTestCase {
     }
 
     public void testParseFeature() throws IOException {
-        String workflowStepName = WorkflowResources.CREATE_CONNECTOR.getWorkflowStep();
-        String resourceType = WorkflowResources.getResourceByWorkflowStep(workflowStepName);
+        String workflowStepName = CREATE_CONNECTOR.getWorkflowStep();
+        String resourceType = getResourceByWorkflowStep(workflowStepName);
         ResourceCreated resourceCreated = new ResourceCreated(workflowStepName, "workflow_step_1", resourceType, "L85p1IsBbfF");
         assertEquals(workflowStepName, resourceCreated.workflowStepName());
         assertEquals("workflow_step_1", resourceCreated.workflowStepId());
-        assertEquals("connector_id", resourceCreated.resourceType());
+        assertEquals(CONNECTOR_ID, resourceCreated.resourceType());
         assertEquals("L85p1IsBbfF", resourceCreated.resourceId());
 
         String expectedJson =
