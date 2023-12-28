@@ -72,7 +72,7 @@ public class ProcessNodeTests extends OpenSearchTestCase {
                 return "test";
             }
         },
-            Map.of(),
+            Collections.emptyMap(),
             new WorkflowData(Map.of("test", "input"), Map.of("foo", "bar"), "test-id", "test-node-id"),
             List.of(successfulNode),
             testThreadPool,
@@ -116,7 +116,7 @@ public class ProcessNodeTests extends OpenSearchTestCase {
             public String getName() {
                 return "test";
             }
-        }, Map.of(), WorkflowData.EMPTY, Collections.emptyList(), testThreadPool, TimeValue.timeValueMillis(250));
+        }, Collections.emptyMap(), WorkflowData.EMPTY, Collections.emptyList(), testThreadPool, TimeValue.timeValueMillis(250));
         assertEquals("B", nodeB.id());
         assertEquals("test", nodeB.workflowStep().getName());
         assertEquals(WorkflowData.EMPTY, nodeB.input());
@@ -147,7 +147,7 @@ public class ProcessNodeTests extends OpenSearchTestCase {
             public String getName() {
                 return "sleepy";
             }
-        }, Map.of(), WorkflowData.EMPTY, Collections.emptyList(), testThreadPool, TimeValue.timeValueMillis(100));
+        }, Collections.emptyMap(), WorkflowData.EMPTY, Collections.emptyList(), testThreadPool, TimeValue.timeValueMillis(100));
         assertEquals("Zzz", nodeZ.id());
         assertEquals("sleepy", nodeZ.workflowStep().getName());
         assertEquals(WorkflowData.EMPTY, nodeZ.input());
@@ -179,7 +179,7 @@ public class ProcessNodeTests extends OpenSearchTestCase {
             public String getName() {
                 return "test";
             }
-        }, Map.of(), WorkflowData.EMPTY, List.of(successfulNode, failedNode), testThreadPool, TimeValue.timeValueSeconds(15));
+        }, Collections.emptyMap(), WorkflowData.EMPTY, List.of(successfulNode, failedNode), testThreadPool, TimeValue.timeValueSeconds(15));
         assertEquals("E", nodeE.id());
         assertEquals("test", nodeE.workflowStep().getName());
         assertEquals(WorkflowData.EMPTY, nodeE.input());

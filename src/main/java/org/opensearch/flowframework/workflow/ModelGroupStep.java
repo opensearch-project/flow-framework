@@ -23,7 +23,7 @@ import org.opensearch.ml.common.transport.model_group.MLRegisterModelGroupInput;
 import org.opensearch.ml.common.transport.model_group.MLRegisterModelGroupInput.MLRegisterModelGroupInputBuilder;
 import org.opensearch.ml.common.transport.model_group.MLRegisterModelGroupResponse;
 
-import java.io.IOException;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -65,8 +65,7 @@ public class ModelGroupStep implements WorkflowStep {
         WorkflowData currentNodeInputs,
         Map<String, WorkflowData> outputs,
         Map<String, String> previousNodeInputs
-    ) throws IOException {
-
+    ) {
         CompletableFuture<WorkflowData> registerModelGroupFuture = new CompletableFuture<>();
 
         ActionListener<MLRegisterModelGroupResponse> actionListener = new ActionListener<>() {
@@ -164,6 +163,6 @@ public class ModelGroupStep implements WorkflowStep {
         if (content.containsKey(BACKEND_ROLES_FIELD)) {
             return (List<String>) content.get(BACKEND_ROLES_FIELD);
         }
-        return null;
+        return Collections.emptyList();
     }
 }

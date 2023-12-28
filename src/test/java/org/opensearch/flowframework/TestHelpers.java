@@ -8,9 +8,6 @@
  */
 package org.opensearch.flowframework;
 
-import com.google.common.base.Charsets;
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Sets;
 import com.google.common.io.Resources;
 import org.apache.http.Header;
 import org.apache.http.HttpEntity;
@@ -40,6 +37,8 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.net.URL;
+import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -53,7 +52,7 @@ public class TestHelpers {
 
     public static Template createTemplateFromFile(String fileName) throws IOException {
         URL url = TestHelpers.class.getClassLoader().getResource("template/" + fileName);
-        String json = Resources.toString(url, Charsets.UTF_8);
+        String json = Resources.toString(url, StandardCharsets.UTF_8);
         return Template.parse(json);
     }
 
@@ -140,19 +139,12 @@ public class TestHelpers {
     }
 
     public static User randomUser() {
-        return new User(
-            randomAlphaOfLength(8),
-            ImmutableList.of(randomAlphaOfLength(10)),
-            ImmutableList.of("all_access"),
-            ImmutableList.of("attribute=test")
-        );
+        return new User(randomAlphaOfLength(8), List.of(randomAlphaOfLength(10)), List.of("all_access"), List.of("attribute=test"));
     }
 
     public static ClusterSettings clusterSetting(Settings settings, Setting<?>... setting) {
-        final Set<Setting<?>> settingsSet = Stream.concat(
-            ClusterSettings.BUILT_IN_CLUSTER_SETTINGS.stream(),
-            Sets.newHashSet(setting).stream()
-        ).collect(Collectors.toSet());
+        final Set<Setting<?>> settingsSet = Stream.concat(ClusterSettings.BUILT_IN_CLUSTER_SETTINGS.stream(), Arrays.stream(setting))
+            .collect(Collectors.toSet());
         ClusterSettings clusterSettings = new ClusterSettings(settings, settingsSet);
         return clusterSettings;
     }

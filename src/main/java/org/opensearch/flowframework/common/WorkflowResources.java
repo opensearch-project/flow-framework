@@ -91,7 +91,7 @@ public enum WorkflowResources {
                 }
             }
         }
-        logger.error("Unable to find resource type for step: " + workflowStep);
+        logger.error("Unable to find resource type for step: {}", workflowStep);
         throw new FlowFrameworkException("Unable to find resource type for step: " + workflowStep, RestStatus.BAD_REQUEST);
     }
 
@@ -109,7 +109,7 @@ public enum WorkflowResources {
                 }
             }
         }
-        logger.error("Unable to find deprovision step for step: " + workflowStep);
+        logger.error("Unable to find deprovision step for step: {}", workflowStep);
         throw new FlowFrameworkException("Unable to find deprovision step for step: " + workflowStep, RestStatus.BAD_REQUEST);
     }
 

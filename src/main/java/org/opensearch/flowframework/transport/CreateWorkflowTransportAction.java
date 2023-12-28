@@ -8,7 +8,6 @@
  */
 package org.opensearch.flowframework.transport;
 
-import com.google.common.collect.ImmutableMap;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.opensearch.ExceptionsHelper;
@@ -39,6 +38,7 @@ import org.opensearch.transport.TransportService;
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 
 import static org.opensearch.flowframework.common.CommonValue.PROVISIONING_PROGRESS_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.STATE_FIELD;
@@ -101,12 +101,10 @@ public class CreateWorkflowTransportAction extends HandledTransportAction<Workfl
             try {
                 validateWorkflows(templateWithUser);
             } catch (Exception e) {
-                if (e instanceof FlowFrameworkException) {
-                    logger.error("Workflow validation failed for template : " + templateWithUser.name());
-                    listener.onFailure(e);
-                } else {
-                    listener.onFailure(new FlowFrameworkException(e.getMessage(), ExceptionsHelper.status(e)));
-                }
+                logger.error("Workflow validation failed for template: {}", templateWithUser.name());
+                listener.onFailure(
+                    e instanceof FlowFrameworkException ? e : new FlowFrameworkException(e.getMessage(), ExceptionsHelper.status(e))
+                );
                 return;
             }
         }
@@ -209,7 +207,10 @@ public class CreateWorkflowTransportAction extends HandledTransportAction<Workfl
                 ActionListener.wrap(response -> {
                     flowFrameworkIndicesHandler.updateFlowFrameworkSystemIndexDoc(
                         request.getWorkflowId(),
-                        ImmutableMap.of(STATE_FIELD, State.NOT_STARTED, PROVISIONING_PROGRESS_FIELD, ProvisioningProgress.NOT_STARTED),
+                        Map.ofEntries(
+                            Map.entry(STATE_FIELD, State.NOT_STARTED),
+                            Map.entry(PROVISIONING_PROGRESS_FIELD, ProvisioningProgress.NOT_STARTED)
+                        ),
                         ActionListener.wrap(updateResponse -> {
                             logger.info("updated workflow {} state to {}", request.getWorkflowId(), State.NOT_STARTED.name());
                             listener.onResponse(new WorkflowResponse(request.getWorkflowId()));
@@ -251,13 +252,9 @@ public class CreateWorkflowTransportAction extends HandledTransportAction<Workfl
             SearchRequest searchRequest = new SearchRequest(CommonValue.GLOBAL_CONTEXT_INDEX).source(searchSourceBuilder);
 
             client.search(searchRequest, ActionListener.wrap(searchResponse -> {
-                if (searchResponse.getHits().getTotalHits().value >= maxWorkflow) {
-                    internalListener.onResponse(false);
-                } else {
-                    internalListener.onResponse(true);
-                }
+                internalListener.onResponse(searchResponse.getHits().getTotalHits().value < maxWorkflow);
             }, exception -> {
-                logger.error("Unable to fetch the workflows {}", exception);
+                logger.error("Unable to fetch the workflows", exception);
                 internalListener.onFailure(new FlowFrameworkException("Unable to fetch the workflows", RestStatus.BAD_REQUEST));
             }));
         }
