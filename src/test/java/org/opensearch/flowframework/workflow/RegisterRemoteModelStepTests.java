@@ -30,9 +30,10 @@ import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
 import static org.opensearch.action.DocWriteResponse.Result.UPDATED;
-import static org.opensearch.flowframework.common.CommonValue.MODEL_ID;
 import static org.opensearch.flowframework.common.CommonValue.REGISTER_MODEL_STATUS;
 import static org.opensearch.flowframework.common.CommonValue.WORKFLOW_STATE_INDEX;
+import static org.opensearch.flowframework.common.WorkflowResources.CONNECTOR_ID;
+import static org.opensearch.flowframework.common.WorkflowResources.MODEL_ID;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doAnswer;
@@ -61,7 +62,7 @@ public class RegisterRemoteModelStepTests extends OpenSearchTestCase {
                 Map.entry("function_name", "remote"),
                 Map.entry("name", "xyz"),
                 Map.entry("description", "description"),
-                Map.entry("connector_id", "abcdefg")
+                Map.entry(CONNECTOR_ID, "abcdefg")
             ),
             "test-id",
             "test-node-id"
@@ -136,7 +137,7 @@ public class RegisterRemoteModelStepTests extends OpenSearchTestCase {
         ExecutionException ex = assertThrows(ExecutionException.class, () -> future.get().getContent());
         assertTrue(ex.getCause() instanceof FlowFrameworkException);
         assertTrue(ex.getCause().getMessage().startsWith("Missing required inputs ["));
-        for (String s : new String[] { "name", "function_name", "connector_id" }) {
+        for (String s : new String[] { "name", "function_name", CONNECTOR_ID }) {
             assertTrue(ex.getCause().getMessage().contains(s));
         }
         assertTrue(ex.getCause().getMessage().endsWith("] in workflow [test-id] node [test-node-id]"));

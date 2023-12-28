@@ -12,6 +12,18 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.opensearch.core.rest.RestStatus;
 import org.opensearch.flowframework.exception.FlowFrameworkException;
+import org.opensearch.flowframework.workflow.CreateConnectorStep;
+import org.opensearch.flowframework.workflow.CreateIndexStep;
+import org.opensearch.flowframework.workflow.CreateIngestPipelineStep;
+import org.opensearch.flowframework.workflow.DeleteAgentStep;
+import org.opensearch.flowframework.workflow.DeleteConnectorStep;
+import org.opensearch.flowframework.workflow.DeleteModelStep;
+import org.opensearch.flowframework.workflow.DeployModelStep;
+import org.opensearch.flowframework.workflow.ModelGroupStep;
+import org.opensearch.flowframework.workflow.RegisterAgentStep;
+import org.opensearch.flowframework.workflow.RegisterLocalModelStep;
+import org.opensearch.flowframework.workflow.RegisterRemoteModelStep;
+import org.opensearch.flowframework.workflow.UndeployModelStep;
 
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -22,22 +34,35 @@ import java.util.stream.Stream;
  */
 public enum WorkflowResources {
 
-    /** official workflow step name for creating a connector and associated created resource */
-    CREATE_CONNECTOR("create_connector", "connector_id", "delete_connector"),
-    /** official workflow step name for registering a remote model and associated created resource */
-    REGISTER_REMOTE_MODEL("register_remote_model", "model_id", "delete_model"),
-    /** official workflow step name for registering a local model and associated created resource */
-    REGISTER_LOCAL_MODEL("register_local_model", "model_id", "delete_model"),
-    /** official workflow step name for registering a model group and associated created resource */
-    REGISTER_MODEL_GROUP("register_model_group", "model_group_id", null), // TODO
-    /** official workflow step name for deploying a model and associated created resource */
-    DEPLOY_MODEL("deploy_model", "model_id", "undeploy_model"),
-    /** official workflow step name for creating an ingest-pipeline and associated created resource */
-    CREATE_INGEST_PIPELINE("create_ingest_pipeline", "pipeline_id", null), // TODO
-    /** official workflow step name for creating an index and associated created resource */
-    CREATE_INDEX("create_index", "index_name", null), // TODO
-    /** official workflow step name for register an agent and the associated created resource */
-    REGISTER_AGENT("register_agent", "agent_id", "delete_agent");
+    /** Workflow steps for creating/deleting a connector and associated created resource */
+    CREATE_CONNECTOR(CreateConnectorStep.NAME, WorkflowResources.CONNECTOR_ID, DeleteConnectorStep.NAME),
+    /** Workflow steps for registering/deleting a remote model and associated created resource */
+    REGISTER_REMOTE_MODEL(RegisterRemoteModelStep.NAME, WorkflowResources.MODEL_ID, DeleteModelStep.NAME),
+    /** Workflow steps for registering/deleting a local model and associated created resource */
+    REGISTER_LOCAL_MODEL(RegisterLocalModelStep.NAME, WorkflowResources.MODEL_ID, DeleteModelStep.NAME),
+    /** Workflow steps for registering a model group and associated created resource */
+    REGISTER_MODEL_GROUP(ModelGroupStep.NAME, WorkflowResources.MODEL_GROUP_ID, null), // TODO delete step
+    /** Workflow steps for deploying/undeploying a model and associated created resource */
+    DEPLOY_MODEL(DeployModelStep.NAME, WorkflowResources.MODEL_ID, UndeployModelStep.NAME),
+    /** Workflow steps for creating an ingest-pipeline and associated created resource */
+    CREATE_INGEST_PIPELINE(CreateIngestPipelineStep.NAME, WorkflowResources.PIPELINE_ID, null), // TODO delete step
+    /** Workflow steps for creating an index and associated created resource */
+    CREATE_INDEX(CreateIndexStep.NAME, WorkflowResources.INDEX_NAME, null), // TODO delete step
+    /** Workflow steps for registering/deleting an agent and the associated created resource */
+    REGISTER_AGENT(RegisterAgentStep.NAME, WorkflowResources.AGENT_ID, DeleteAgentStep.NAME);
+
+    /** Connector Id for a remote model connector */
+    public static final String CONNECTOR_ID = "connector_id";
+    /** Model Id for an ML model */
+    public static final String MODEL_ID = "model_id";
+    /** Model Group Id */
+    public static final String MODEL_GROUP_ID = "model_group_id";
+    /** Pipeline Id for Ingest Pipeline */
+    public static final String PIPELINE_ID = "pipeline_id";
+    /** Index name */
+    public static final String INDEX_NAME = "index_name";
+    /** Agent Id */
+    public static final String AGENT_ID = "agent_id";
 
     private final String workflowStep;
     private final String resourceCreated;

@@ -30,7 +30,6 @@ import static org.opensearch.flowframework.common.CommonValue.WORKFLOW_STEP_NAME
 /**
  * This represents an object in the WorkflowState {@link WorkflowState}.
  */
-// TODO: create an enum to add the resource name itself for each step example (create_connector_step -> connector)
 public class ResourceCreated implements ToXContentObject, Writeable {
 
     private static final Logger logger = LogManager.getLogger(ResourceCreated.class);

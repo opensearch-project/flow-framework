@@ -12,7 +12,6 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.opensearch.ExceptionsHelper;
 import org.opensearch.core.action.ActionListener;
-import org.opensearch.flowframework.common.WorkflowResources;
 import org.opensearch.flowframework.exception.FlowFrameworkException;
 import org.opensearch.flowframework.indices.FlowFrameworkIndicesHandler;
 import org.opensearch.flowframework.util.ParseUtils;
@@ -27,12 +26,13 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 
-import static org.opensearch.flowframework.common.CommonValue.CONNECTOR_ID;
 import static org.opensearch.flowframework.common.CommonValue.DESCRIPTION_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.FUNCTION_NAME;
-import static org.opensearch.flowframework.common.CommonValue.MODEL_GROUP_ID;
 import static org.opensearch.flowframework.common.CommonValue.NAME_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.REGISTER_MODEL_STATUS;
+import static org.opensearch.flowframework.common.WorkflowResources.CONNECTOR_ID;
+import static org.opensearch.flowframework.common.WorkflowResources.MODEL_GROUP_ID;
+import static org.opensearch.flowframework.common.WorkflowResources.getResourceByWorkflowStep;
 
 /**
  * Step to register a remote model
@@ -45,7 +45,8 @@ public class RegisterRemoteModelStep implements WorkflowStep {
 
     private final FlowFrameworkIndicesHandler flowFrameworkIndicesHandler;
 
-    static final String NAME = WorkflowResources.REGISTER_REMOTE_MODEL.getWorkflowStep();
+    /** The name of this step, used as a key in the template and the {@link WorkflowStepFactory} */
+    public static final String NAME = "register_remote_model";
 
     /**
      * Instantiate this class
@@ -73,7 +74,7 @@ public class RegisterRemoteModelStep implements WorkflowStep {
 
                 try {
                     logger.info("Remote Model registration successful");
-                    String resourceName = WorkflowResources.getResourceByWorkflowStep(getName());
+                    String resourceName = getResourceByWorkflowStep(getName());
                     flowFrameworkIndicesHandler.updateResourceInStateIndex(
                         currentNodeInputs.getWorkflowId(),
                         currentNodeId,

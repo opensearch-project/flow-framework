@@ -26,8 +26,8 @@ import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 
-import static org.opensearch.flowframework.common.CommonValue.MODEL_ID;
 import static org.opensearch.flowframework.common.CommonValue.SUCCESS;
+import static org.opensearch.flowframework.common.WorkflowResources.MODEL_ID;
 
 /**
  * Step to undeploy model
@@ -38,7 +38,8 @@ public class UndeployModelStep implements WorkflowStep {
 
     private MachineLearningNodeClient mlClient;
 
-    static final String NAME = "undeploy_model";
+    /** The name of this step, used as a key in the template and the {@link WorkflowStepFactory} */
+    public static final String NAME = "undeploy_model";
 
     /**
      * Instantiate this class

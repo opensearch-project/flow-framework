@@ -14,7 +14,6 @@ import org.opensearch.ExceptionsHelper;
 import org.opensearch.common.Nullable;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.core.rest.RestStatus;
-import org.opensearch.flowframework.common.WorkflowResources;
 import org.opensearch.flowframework.exception.FlowFrameworkException;
 import org.opensearch.flowframework.indices.FlowFrameworkIndicesHandler;
 import org.opensearch.flowframework.util.ParseUtils;
@@ -42,12 +41,13 @@ import static org.opensearch.flowframework.common.CommonValue.CREATED_TIME;
 import static org.opensearch.flowframework.common.CommonValue.DESCRIPTION_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.LAST_UPDATED_TIME_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.MEMORY_FIELD;
-import static org.opensearch.flowframework.common.CommonValue.MODEL_ID;
 import static org.opensearch.flowframework.common.CommonValue.NAME_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.PARAMETERS_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.TOOLS_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.TOOLS_ORDER_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.TYPE;
+import static org.opensearch.flowframework.common.WorkflowResources.MODEL_ID;
+import static org.opensearch.flowframework.common.WorkflowResources.getResourceByWorkflowStep;
 import static org.opensearch.flowframework.util.ParseUtils.getStringToStringMap;
 
 /**
@@ -60,10 +60,13 @@ public class RegisterAgentStep implements WorkflowStep {
     private MachineLearningNodeClient mlClient;
     private final FlowFrameworkIndicesHandler flowFrameworkIndicesHandler;
 
-    static final String NAME = WorkflowResources.REGISTER_AGENT.getWorkflowStep();
+    /** The name of this step, used as a key in the template and the {@link WorkflowStepFactory} */
+    public static final String NAME = "register_agent";
 
-    private static final String LLM_MODEL_ID = "llm.model_id";
-    private static final String LLM_PARAMETERS = "llm.parameters";
+    /** The model ID for the LLM */
+    public static final String LLM_MODEL_ID = "llm.model_id";
+    /** The parameters for the LLM */
+    public static final String LLM_PARAMETERS = "llm.parameters";
 
     /**
      * Instantiate this class
@@ -91,7 +94,7 @@ public class RegisterAgentStep implements WorkflowStep {
             @Override
             public void onResponse(MLRegisterAgentResponse mlRegisterAgentResponse) {
                 try {
-                    String resourceName = WorkflowResources.getResourceByWorkflowStep(getName());
+                    String resourceName = getResourceByWorkflowStep(getName());
                     logger.info("Agent registration successful for the agent {}", mlRegisterAgentResponse.getAgentId());
                     flowFrameworkIndicesHandler.updateResourceInStateIndex(
                         workflowId,
