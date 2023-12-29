@@ -60,7 +60,7 @@ public class RegisterRemoteModelStepTests extends OpenSearchTestCase {
         this.registerRemoteModelStep = new RegisterRemoteModelStep(mlNodeClient, flowFrameworkIndicesHandler);
         this.workflowData = new WorkflowData(
             Map.ofEntries(
-                Map.entry("function_name", "remote"),
+                Map.entry("function_name", "ignored"),
                 Map.entry("name", "xyz"),
                 Map.entry("description", "description"),
                 Map.entry(CONNECTOR_ID, "abcdefg")
@@ -128,7 +128,6 @@ public class RegisterRemoteModelStepTests extends OpenSearchTestCase {
 
         WorkflowData deployWorkflowData = new WorkflowData(
             Map.ofEntries(
-                Map.entry("function_name", "remote"),
                 Map.entry("name", "xyz"),
                 Map.entry("description", "description"),
                 Map.entry(CONNECTOR_ID, "abcdefg"),
@@ -188,7 +187,7 @@ public class RegisterRemoteModelStepTests extends OpenSearchTestCase {
         ExecutionException ex = assertThrows(ExecutionException.class, () -> future.get().getContent());
         assertTrue(ex.getCause() instanceof FlowFrameworkException);
         assertTrue(ex.getCause().getMessage().startsWith("Missing required inputs ["));
-        for (String s : new String[] { "name", "function_name", CONNECTOR_ID }) {
+        for (String s : new String[] { "name", CONNECTOR_ID }) {
             assertTrue(ex.getCause().getMessage().contains(s));
         }
         assertTrue(ex.getCause().getMessage().endsWith("] in workflow [test-id] node [test-node-id]"));

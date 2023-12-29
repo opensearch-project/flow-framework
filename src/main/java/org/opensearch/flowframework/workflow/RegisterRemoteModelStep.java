@@ -22,14 +22,12 @@ import org.opensearch.ml.common.transport.register.MLRegisterModelInput;
 import org.opensearch.ml.common.transport.register.MLRegisterModelInput.MLRegisterModelInputBuilder;
 import org.opensearch.ml.common.transport.register.MLRegisterModelResponse;
 
-import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 
 import static org.opensearch.flowframework.common.CommonValue.DEPLOY_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.DESCRIPTION_FIELD;
-import static org.opensearch.flowframework.common.CommonValue.FUNCTION_NAME;
 import static org.opensearch.flowframework.common.CommonValue.NAME_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.REGISTER_MODEL_STATUS;
 import static org.opensearch.flowframework.common.WorkflowResources.CONNECTOR_ID;
@@ -70,7 +68,7 @@ public class RegisterRemoteModelStep implements WorkflowStep {
 
         CompletableFuture<WorkflowData> registerRemoteModelFuture = new CompletableFuture<>();
 
-        Set<String> requiredKeys = Set.of(NAME_FIELD, FUNCTION_NAME, CONNECTOR_ID);
+        Set<String> requiredKeys = Set.of(NAME_FIELD, CONNECTOR_ID);
         Set<String> optionalKeys = Set.of(MODEL_GROUP_ID, DESCRIPTION_FIELD, DEPLOY_FIELD);
 
         try {
@@ -83,14 +81,13 @@ public class RegisterRemoteModelStep implements WorkflowStep {
             );
 
             String modelName = (String) inputs.get(NAME_FIELD);
-            FunctionName functionName = FunctionName.from(((String) inputs.get(FUNCTION_NAME)).toUpperCase(Locale.ROOT));
             String modelGroupId = (String) inputs.get(MODEL_GROUP_ID);
             String description = (String) inputs.get(DESCRIPTION_FIELD);
             String connectorId = (String) inputs.get(CONNECTOR_ID);
             final Boolean deploy = (Boolean) inputs.get(DEPLOY_FIELD);
 
             MLRegisterModelInputBuilder builder = MLRegisterModelInput.builder()
-                .functionName(functionName)
+                .functionName(FunctionName.REMOTE)
                 .modelName(modelName)
                 .connectorId(connectorId);
 
