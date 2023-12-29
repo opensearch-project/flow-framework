@@ -11,6 +11,7 @@ package org.opensearch.flowframework.workflow;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.opensearch.ExceptionsHelper;
+import org.opensearch.action.update.UpdateResponse;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.flowframework.exception.FlowFrameworkException;
 import org.opensearch.flowframework.indices.FlowFrameworkIndicesHandler;
@@ -21,13 +22,12 @@ import org.opensearch.ml.common.transport.register.MLRegisterModelInput;
 import org.opensearch.ml.common.transport.register.MLRegisterModelInput.MLRegisterModelInputBuilder;
 import org.opensearch.ml.common.transport.register.MLRegisterModelResponse;
 
-import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 
+import static org.opensearch.flowframework.common.CommonValue.DEPLOY_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.DESCRIPTION_FIELD;
-import static org.opensearch.flowframework.common.CommonValue.FUNCTION_NAME;
 import static org.opensearch.flowframework.common.CommonValue.NAME_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.REGISTER_MODEL_STATUS;
 import static org.opensearch.flowframework.common.WorkflowResources.CONNECTOR_ID;
@@ -68,53 +68,8 @@ public class RegisterRemoteModelStep implements WorkflowStep {
 
         CompletableFuture<WorkflowData> registerRemoteModelFuture = new CompletableFuture<>();
 
-        ActionListener<MLRegisterModelResponse> actionListener = new ActionListener<>() {
-            @Override
-            public void onResponse(MLRegisterModelResponse mlRegisterModelResponse) {
-
-                try {
-                    logger.info("Remote Model registration successful");
-                    String resourceName = getResourceByWorkflowStep(getName());
-                    flowFrameworkIndicesHandler.updateResourceInStateIndex(
-                        currentNodeInputs.getWorkflowId(),
-                        currentNodeId,
-                        getName(),
-                        mlRegisterModelResponse.getModelId(),
-                        ActionListener.wrap(response -> {
-                            logger.info("successfully updated resources created in state index: {}", response.getIndex());
-                            registerRemoteModelFuture.complete(
-                                new WorkflowData(
-                                    Map.ofEntries(
-                                        Map.entry(resourceName, mlRegisterModelResponse.getModelId()),
-                                        Map.entry(REGISTER_MODEL_STATUS, mlRegisterModelResponse.getStatus())
-                                    ),
-                                    currentNodeInputs.getWorkflowId(),
-                                    currentNodeInputs.getNodeId()
-                                )
-                            );
-                        }, exception -> {
-                            logger.error("Failed to update new created resource", exception);
-                            registerRemoteModelFuture.completeExceptionally(
-                                new FlowFrameworkException(exception.getMessage(), ExceptionsHelper.status(exception))
-                            );
-                        })
-                    );
-
-                } catch (Exception e) {
-                    logger.error("Failed to parse and update new created resource", e);
-                    registerRemoteModelFuture.completeExceptionally(new FlowFrameworkException(e.getMessage(), ExceptionsHelper.status(e)));
-                }
-            }
-
-            @Override
-            public void onFailure(Exception e) {
-                logger.error("Failed to register remote model");
-                registerRemoteModelFuture.completeExceptionally(new FlowFrameworkException(e.getMessage(), ExceptionsHelper.status(e)));
-            }
-        };
-
-        Set<String> requiredKeys = Set.of(NAME_FIELD, FUNCTION_NAME, CONNECTOR_ID);
-        Set<String> optionalKeys = Set.of(MODEL_GROUP_ID, DESCRIPTION_FIELD);
+        Set<String> requiredKeys = Set.of(NAME_FIELD, CONNECTOR_ID);
+        Set<String> optionalKeys = Set.of(MODEL_GROUP_ID, DESCRIPTION_FIELD, DEPLOY_FIELD);
 
         try {
             Map<String, Object> inputs = ParseUtils.getInputsFromPreviousSteps(
@@ -126,13 +81,13 @@ public class RegisterRemoteModelStep implements WorkflowStep {
             );
 
             String modelName = (String) inputs.get(NAME_FIELD);
-            FunctionName functionName = FunctionName.from(((String) inputs.get(FUNCTION_NAME)).toUpperCase(Locale.ROOT));
             String modelGroupId = (String) inputs.get(MODEL_GROUP_ID);
             String description = (String) inputs.get(DESCRIPTION_FIELD);
             String connectorId = (String) inputs.get(CONNECTOR_ID);
+            final Boolean deploy = (Boolean) inputs.get(DEPLOY_FIELD);
 
             MLRegisterModelInputBuilder builder = MLRegisterModelInput.builder()
-                .functionName(functionName)
+                .functionName(FunctionName.REMOTE)
                 .modelName(modelName)
                 .connectorId(connectorId);
 
@@ -142,9 +97,82 @@ public class RegisterRemoteModelStep implements WorkflowStep {
             if (description != null) {
                 builder.description(description);
             }
+            if (deploy != null) {
+                builder.deployModel(deploy);
+            }
             MLRegisterModelInput mlInput = builder.build();
 
-            mlClient.register(mlInput, actionListener);
+            mlClient.register(mlInput, new ActionListener<MLRegisterModelResponse>() {
+                @Override
+                public void onResponse(MLRegisterModelResponse mlRegisterModelResponse) {
+
+                    try {
+                        logger.info("Remote Model registration successful");
+                        String resourceName = getResourceByWorkflowStep(getName());
+                        flowFrameworkIndicesHandler.updateResourceInStateIndex(
+                            currentNodeInputs.getWorkflowId(),
+                            currentNodeId,
+                            getName(),
+                            mlRegisterModelResponse.getModelId(),
+                            ActionListener.wrap(response -> {
+                                // If we deployed, simulate the deploy step has been called
+                                if (Boolean.TRUE.equals(deploy)) {
+                                    flowFrameworkIndicesHandler.updateResourceInStateIndex(
+                                        currentNodeInputs.getWorkflowId(),
+                                        currentNodeId,
+                                        DeployModelStep.NAME,
+                                        mlRegisterModelResponse.getModelId(),
+                                        ActionListener.wrap(deployUpdateResponse -> {
+                                            completeRegisterFuture(deployUpdateResponse, resourceName, mlRegisterModelResponse);
+                                        }, deployUpdateException -> {
+                                            logger.error("Failed to update simulated deploy step resource", deployUpdateException);
+                                            registerRemoteModelFuture.completeExceptionally(
+                                                new FlowFrameworkException(
+                                                    deployUpdateException.getMessage(),
+                                                    ExceptionsHelper.status(deployUpdateException)
+                                                )
+                                            );
+                                        })
+                                    );
+                                } else {
+                                    completeRegisterFuture(response, resourceName, mlRegisterModelResponse);
+                                }
+                            }, exception -> {
+                                logger.error("Failed to update new created resource", exception);
+                                registerRemoteModelFuture.completeExceptionally(
+                                    new FlowFrameworkException(exception.getMessage(), ExceptionsHelper.status(exception))
+                                );
+                            })
+                        );
+
+                    } catch (Exception e) {
+                        logger.error("Failed to parse and update new created resource", e);
+                        registerRemoteModelFuture.completeExceptionally(
+                            new FlowFrameworkException(e.getMessage(), ExceptionsHelper.status(e))
+                        );
+                    }
+                }
+
+                void completeRegisterFuture(UpdateResponse response, String resourceName, MLRegisterModelResponse mlRegisterModelResponse) {
+                    logger.info("successfully updated resources created in state index: {}", response.getIndex());
+                    registerRemoteModelFuture.complete(
+                        new WorkflowData(
+                            Map.ofEntries(
+                                Map.entry(resourceName, mlRegisterModelResponse.getModelId()),
+                                Map.entry(REGISTER_MODEL_STATUS, mlRegisterModelResponse.getStatus())
+                            ),
+                            currentNodeInputs.getWorkflowId(),
+                            currentNodeInputs.getNodeId()
+                        )
+                    );
+                }
+
+                @Override
+                public void onFailure(Exception e) {
+                    logger.error("Failed to register remote model");
+                    registerRemoteModelFuture.completeExceptionally(new FlowFrameworkException(e.getMessage(), ExceptionsHelper.status(e)));
+                }
+            });
 
         } catch (FlowFrameworkException e) {
             registerRemoteModelFuture.completeExceptionally(e);
