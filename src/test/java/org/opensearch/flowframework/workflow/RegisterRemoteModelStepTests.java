@@ -30,6 +30,7 @@ import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
 import static org.opensearch.action.DocWriteResponse.Result.UPDATED;
+import static org.opensearch.flowframework.common.CommonValue.DEPLOY_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.REGISTER_MODEL_STATUS;
 import static org.opensearch.flowframework.common.CommonValue.WORKFLOW_STATE_INDEX;
 import static org.opensearch.flowframework.common.WorkflowResources.CONNECTOR_ID;
@@ -59,7 +60,7 @@ public class RegisterRemoteModelStepTests extends OpenSearchTestCase {
         this.registerRemoteModelStep = new RegisterRemoteModelStep(mlNodeClient, flowFrameworkIndicesHandler);
         this.workflowData = new WorkflowData(
             Map.ofEntries(
-                Map.entry("function_name", "remote"),
+                Map.entry("function_name", "ignored"),
                 Map.entry("name", "xyz"),
                 Map.entry("description", "description"),
                 Map.entry(CONNECTOR_ID, "abcdefg")
@@ -96,12 +97,61 @@ public class RegisterRemoteModelStepTests extends OpenSearchTestCase {
         );
 
         verify(mlNodeClient, times(1)).register(any(MLRegisterModelInput.class), any());
+        // only updates register resource
+        verify(flowFrameworkIndicesHandler, times(1)).updateResourceInStateIndex(anyString(), anyString(), anyString(), anyString(), any());
 
         assertTrue(future.isDone());
-        assertTrue(!future.isCompletedExceptionally());
+        assertFalse(future.isCompletedExceptionally());
         assertEquals(modelId, future.get().getContent().get(MODEL_ID));
         assertEquals(status, future.get().getContent().get(REGISTER_MODEL_STATUS));
 
+    }
+
+    public void testRegisterAndDeployRemoteModelSuccess() throws Exception {
+
+        String taskId = "abcd";
+        String modelId = "efgh";
+        String status = MLTaskState.CREATED.name();
+
+        doAnswer(invocation -> {
+            ActionListener<MLRegisterModelResponse> actionListener = invocation.getArgument(1);
+            MLRegisterModelResponse output = new MLRegisterModelResponse(taskId, status, modelId);
+            actionListener.onResponse(output);
+            return null;
+        }).when(mlNodeClient).register(any(MLRegisterModelInput.class), any());
+
+        doAnswer(invocation -> {
+            ActionListener<UpdateResponse> updateResponseListener = invocation.getArgument(4);
+            updateResponseListener.onResponse(new UpdateResponse(new ShardId(WORKFLOW_STATE_INDEX, "", 1), "id", -2, 0, 0, UPDATED));
+            return null;
+        }).when(flowFrameworkIndicesHandler).updateResourceInStateIndex(anyString(), anyString(), anyString(), anyString(), any());
+
+        WorkflowData deployWorkflowData = new WorkflowData(
+            Map.ofEntries(
+                Map.entry("name", "xyz"),
+                Map.entry("description", "description"),
+                Map.entry(CONNECTOR_ID, "abcdefg"),
+                Map.entry(DEPLOY_FIELD, true)
+            ),
+            "test-id",
+            "test-node-id"
+        );
+
+        CompletableFuture<WorkflowData> future = this.registerRemoteModelStep.execute(
+            deployWorkflowData.getNodeId(),
+            deployWorkflowData,
+            Collections.emptyMap(),
+            Collections.emptyMap()
+        );
+
+        verify(mlNodeClient, times(1)).register(any(MLRegisterModelInput.class), any());
+        // updates both register and deploy resources
+        verify(flowFrameworkIndicesHandler, times(2)).updateResourceInStateIndex(anyString(), anyString(), anyString(), anyString(), any());
+
+        assertTrue(future.isDone());
+        assertFalse(future.isCompletedExceptionally());
+        assertEquals(modelId, future.get().getContent().get(MODEL_ID));
+        assertEquals(status, future.get().getContent().get(REGISTER_MODEL_STATUS));
     }
 
     public void testRegisterRemoteModelFailure() {
@@ -137,7 +187,7 @@ public class RegisterRemoteModelStepTests extends OpenSearchTestCase {
         ExecutionException ex = assertThrows(ExecutionException.class, () -> future.get().getContent());
         assertTrue(ex.getCause() instanceof FlowFrameworkException);
         assertTrue(ex.getCause().getMessage().startsWith("Missing required inputs ["));
-        for (String s : new String[] { "name", "function_name", CONNECTOR_ID }) {
+        for (String s : new String[] { "name", CONNECTOR_ID }) {
             assertTrue(ex.getCause().getMessage().contains(s));
         }
         assertTrue(ex.getCause().getMessage().endsWith("] in workflow [test-id] node [test-node-id]"));

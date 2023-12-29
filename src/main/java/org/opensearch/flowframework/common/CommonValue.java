@@ -106,6 +106,8 @@ public class CommonValue {
     public static final String MODEL_GROUP_STATUS = "model_group_status";
     /** Description field */
     public static final String DESCRIPTION_FIELD = "description";
+    /** Description field */
+    public static final String DEPLOY_FIELD = "deploy";
     /** Model format field */
     public static final String MODEL_FORMAT = "model_format";
     /** Model content hash value field */
