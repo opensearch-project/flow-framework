@@ -176,10 +176,44 @@ public class FlowFrameworkRestApiIT extends FlowFrameworkRestTestCase {
         // Wait until provisioning has completed successfully before attempting to retrieve created resources
         List<ResourceCreated> resourcesCreated = getResourcesCreated(workflowId, 30);
 
-        // This template should create 3 resources, connector_id, regestered model_id and deployed model_id
+        // This template should create 3 resources, connector_id, registered model_id and deployed model_id
         assertEquals(3, resourcesCreated.size());
         assertEquals("create_connector", resourcesCreated.get(0).workflowStepName());
         assertNotNull(resourcesCreated.get(0).resourceId());
+        assertEquals("register_remote_model", resourcesCreated.get(1).workflowStepName());
+        assertNotNull(resourcesCreated.get(1).resourceId());
+        assertEquals("deploy_model", resourcesCreated.get(2).workflowStepName());
+        assertNotNull(resourcesCreated.get(2).resourceId());
+    }
+
+    public void testCreateAndProvisionDeployedRemoteModelWorkflow() throws Exception {
+
+        // Using a 2 step template to create a connector, register remote model with deploy=true param set
+        Template template = TestHelpers.createTemplateFromFile("createconnector-registerdeployremotemodel.json");
+
+        Response response = createWorkflow(template);
+        assertEquals(RestStatus.CREATED, TestHelpers.restStatus(response));
+
+        Map<String, Object> responseMap = entityAsMap(response);
+        String workflowId = (String) responseMap.get(WORKFLOW_ID);
+        getAndAssertWorkflowStatus(workflowId, State.NOT_STARTED, ProvisioningProgress.NOT_STARTED);
+
+        // Hit Provision API and assert status
+        response = provisionWorkflow(workflowId);
+        assertEquals(RestStatus.OK, TestHelpers.restStatus(response));
+        getAndAssertWorkflowStatus(workflowId, State.PROVISIONING, ProvisioningProgress.IN_PROGRESS);
+
+        // Wait until provisioning has completed successfully before attempting to retrieve created resources
+        List<ResourceCreated> resourcesCreated = getResourcesCreated(workflowId, 30);
+
+        // This template should create 3 resources, connector_id, registered model_id and deployed model_id
+        assertEquals(3, resourcesCreated.size());
+        assertEquals("create_connector", resourcesCreated.get(0).workflowStepName());
+        assertNotNull(resourcesCreated.get(0).resourceId());
+        assertEquals("register_remote_model", resourcesCreated.get(1).workflowStepName());
+        assertNotNull(resourcesCreated.get(1).resourceId());
+        assertEquals("deploy_model", resourcesCreated.get(2).workflowStepName());
+        assertNotNull(resourcesCreated.get(2).resourceId());
     }
 
     public void testCreateAndProvisionAgentFrameworkWorkflow() throws Exception {
