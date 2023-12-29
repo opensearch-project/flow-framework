@@ -79,7 +79,6 @@
     "register_remote_model": {
         "inputs": [
             "name",
-            "function_name",
             "connector_id"
         ],
         "outputs": [
