@@ -125,8 +125,9 @@ public abstract class AbstractRetryableWorkflowStep implements WorkflowStep {
                             future.completeExceptionally(new FlowFrameworkException(errorMessage, RestStatus.BAD_REQUEST));
                             break;
                         case CANCELLED:
-                            logger.error("{} task was cancelled.", workflowStep);
-                            FutureUtils.cancel(future);
+                            errorMessage = workflowStep + " task was cancelled.";
+                            logger.error(errorMessage);
+                            future.completeExceptionally(new FlowFrameworkException(errorMessage, RestStatus.REQUEST_TIMEOUT));
                             break;
                         default:
                             // Task started or running, do nothing
