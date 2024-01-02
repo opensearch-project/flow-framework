@@ -23,6 +23,7 @@ import org.opensearch.flowframework.model.WorkflowEdge;
 import org.opensearch.flowframework.model.WorkflowNode;
 import org.opensearch.flowframework.model.WorkflowState;
 
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -68,8 +69,6 @@ public class FlowFrameworkRestApiIT extends FlowFrameworkRestTestCase {
     }
 
     public void testCreateAndProvisionLocalModelWorkflow() throws Exception {
-        /*- Local model registration is not yet fully complete.  Commenting this test out until it is.
-         * https://github.com/opensearch-project/flow-framework/issues/305
 
         // Using a 3 step template to create a model group, register a remote model and deploy model
         Template template = TestHelpers.createTemplateFromFile("registerlocalmodel-deploymodel.json");
@@ -125,9 +124,12 @@ public class FlowFrameworkRestApiIT extends FlowFrameworkRestTestCase {
         // Wait until provisioning has completed successfully before attempting to retrieve created resources
         List<ResourceCreated> resourcesCreated = getResourcesCreated(workflowId, 100);
 
-        // TODO: This template should create 2 resources, registered_model_id and deployed model_id
-        assertEquals(0, resourcesCreated.size());
-         */
+        // This template should create 2 resources, registered_model_id and deployed model_id
+        assertEquals(2, resourcesCreated.size());
+        assertEquals("register_local_model", resourcesCreated.get(0).workflowStepName());
+        assertNotNull(resourcesCreated.get(0).resourceId());
+        assertEquals("deploy_model", resourcesCreated.get(1).workflowStepName());
+        assertNotNull(resourcesCreated.get(1).resourceId());
     }
 
     public void testCreateAndProvisionRemoteModelWorkflow() throws Exception {
