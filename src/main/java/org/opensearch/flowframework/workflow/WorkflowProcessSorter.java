@@ -222,14 +222,14 @@ public class WorkflowProcessSorter {
                 .collect(Collectors.toList());
 
             // Retrieve all the user input data from this node
-            List<String> currentNodeUserInputs = new ArrayList<String>(processNode.input().getContent().keySet());
+            List<String> currentNodeUserInputs = new ArrayList<>(processNode.input().getContent().keySet());
 
             // Combine both predecessor outputs and current node user inputs
             List<String> allInputs = Stream.concat(predecessorOutputs.stream(), currentNodeUserInputs.stream())
                 .collect(Collectors.toList());
 
             // Retrieve list of required inputs from the current process node and compare
-            List<String> expectedInputs = new ArrayList<String>(
+            List<String> expectedInputs = new ArrayList<>(
                 validator.getWorkflowStepValidators().get(processNode.workflowStep().getName()).getInputs()
             );
 
@@ -321,8 +321,9 @@ public class WorkflowProcessSorter {
         // L <- Empty list that will contain the sorted elements
         List<WorkflowNode> sortedNodes = new ArrayList<>();
         // S <- Set of all nodes with no incoming edge
-        Queue<WorkflowNode> sourceNodes = new ArrayDeque<>();
-        workflowNodes.stream().filter(n -> !predecessorEdges.containsKey(n)).forEach(n -> sourceNodes.add(n));
+        Queue<WorkflowNode> sourceNodes = workflowNodes.stream()
+            .filter(n -> !predecessorEdges.containsKey(n))
+            .collect(ArrayDeque::new, ArrayDeque::add, ArrayDeque::addAll);
         if (sourceNodes.isEmpty()) {
             throw new FlowFrameworkException("No start node detected: all nodes have a predecessor.", RestStatus.BAD_REQUEST);
         }
@@ -340,7 +341,7 @@ public class WorkflowProcessSorter {
                 // remove edge e from the graph
                 graph.remove(e);
                 // if m has no other incoming edges then
-                if (!predecessorEdges.get(m).stream().anyMatch(i -> graph.contains(i))) {
+                if (predecessorEdges.get(m).stream().noneMatch(graph::contains)) {
                     // insert m into S
                     sourceNodes.add(m);
                 }
