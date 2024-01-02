@@ -19,15 +19,16 @@ import org.opensearch.core.rest.RestStatus;
 import org.opensearch.flowframework.exception.FlowFrameworkException;
 import org.opensearch.flowframework.indices.FlowFrameworkIndicesHandler;
 import org.opensearch.ml.client.MachineLearningNodeClient;
-import org.opensearch.ml.common.MLTaskState;
+import org.opensearch.ml.common.MLTask;
+import org.opensearch.threadpool.ThreadPool;
 
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
-import java.util.stream.Stream;
+import java.util.concurrent.atomic.AtomicInteger;
 
+import static org.opensearch.flowframework.common.CommonValue.PROVISION_THREAD_POOL;
 import static org.opensearch.flowframework.common.CommonValue.REGISTER_MODEL_STATUS;
 import static org.opensearch.flowframework.common.FlowFrameworkSettings.MAX_GET_TASK_REQUEST_RETRY;
-import static org.opensearch.flowframework.common.WorkflowResources.DEPLOY_MODEL;
 import static org.opensearch.flowframework.common.WorkflowResources.getResourceByWorkflowStep;
 
 /**
@@ -39,20 +40,24 @@ public abstract class AbstractRetryableWorkflowStep implements WorkflowStep {
     protected volatile Integer maxRetry;
     private final MachineLearningNodeClient mlClient;
     private final FlowFrameworkIndicesHandler flowFrameworkIndicesHandler;
+    private ThreadPool threadPool;
 
     /**
      * Instantiates a new Retryable workflow step
      * @param settings Environment settings
+     * @param threadPool The OpenSearch thread pool
      * @param clusterService the cluster service
      * @param mlClient machine learning client
      * @param flowFrameworkIndicesHandler FlowFrameworkIndicesHandler class to update system indices
      */
     protected AbstractRetryableWorkflowStep(
         Settings settings,
+        ThreadPool threadPool,
         ClusterService clusterService,
         MachineLearningNodeClient mlClient,
         FlowFrameworkIndicesHandler flowFrameworkIndicesHandler
     ) {
+        this.threadPool = threadPool;
         this.maxRetry = MAX_GET_TASK_REQUEST_RETRY.get(settings);
         clusterService.getClusterSettings().addSettingsUpdateConsumer(MAX_GET_TASK_REQUEST_RETRY, it -> maxRetry = it);
         this.mlClient = mlClient;
@@ -65,7 +70,6 @@ public abstract class AbstractRetryableWorkflowStep implements WorkflowStep {
      * @param nodeId the workflow node id
      * @param future the workflow step future
      * @param taskId the ml task id
-     * @param retries the current number of request retries
      * @param workflowStep the workflow step which requires a retry get ml task functionality
      */
     protected void retryableGetMlTask(
@@ -73,74 +77,86 @@ public abstract class AbstractRetryableWorkflowStep implements WorkflowStep {
         String nodeId,
         CompletableFuture<WorkflowData> future,
         String taskId,
-        int retries,
         String workflowStep
     ) {
-        mlClient.getTask(taskId, ActionListener.wrap(response -> {
-            MLTaskState currentState = response.getState();
-            if (currentState != MLTaskState.COMPLETED) {
-                if (Stream.of(MLTaskState.FAILED, MLTaskState.COMPLETED_WITH_ERROR).anyMatch(x -> x == currentState)) {
-                    // Model registration failed or completed with errors
-                    String errorMessage = workflowStep + " failed with error : " + response.getError();
+        AtomicInteger retries = new AtomicInteger();
+        CompletableFuture.runAsync(() -> {
+            while (retries.getAndIncrement() < this.maxRetry && !future.isDone()) {
+                mlClient.getTask(taskId, ActionListener.wrap(response -> {
+                    switch (response.getState()) {
+                        case COMPLETED:
+                            try {
+                                String resourceName = getResourceByWorkflowStep(getName());
+                                String id = getResourceId(response);
+                                logger.info("{} successful for {} and {} {}", workflowStep, workflowId, resourceName, id);
+                                flowFrameworkIndicesHandler.updateResourceInStateIndex(
+                                    workflowId,
+                                    nodeId,
+                                    getName(),
+                                    id,
+                                    ActionListener.wrap(updateResponse -> {
+                                        logger.info("successfully updated resources created in state index: {}", updateResponse.getIndex());
+                                        future.complete(
+                                            new WorkflowData(
+                                                Map.ofEntries(
+                                                    Map.entry(resourceName, id),
+                                                    Map.entry(REGISTER_MODEL_STATUS, response.getState().name())
+                                                ),
+                                                workflowId,
+                                                nodeId
+                                            )
+                                        );
+                                    }, exception -> {
+                                        logger.error("Failed to update new created resource", exception);
+                                        future.completeExceptionally(
+                                            new FlowFrameworkException(exception.getMessage(), ExceptionsHelper.status(exception))
+                                        );
+                                    })
+                                );
+                            } catch (Exception e) {
+                                logger.error("Failed to parse and update new created resource", e);
+                                future.completeExceptionally(new FlowFrameworkException(e.getMessage(), ExceptionsHelper.status(e)));
+                            }
+                            break;
+                        case FAILED:
+                        case COMPLETED_WITH_ERROR:
+                            String errorMessage = workflowStep + " failed with error : " + response.getError();
+                            logger.error(errorMessage);
+                            future.completeExceptionally(new FlowFrameworkException(errorMessage, RestStatus.BAD_REQUEST));
+                            break;
+                        case CANCELLED:
+                            errorMessage = workflowStep + " task was cancelled.";
+                            logger.error(errorMessage);
+                            future.completeExceptionally(new FlowFrameworkException(errorMessage, RestStatus.REQUEST_TIMEOUT));
+                            break;
+                        default:
+                            // Task started or running, do nothing
+                    }
+                }, exception -> {
+                    String errorMessage = workflowStep + " failed with error : " + exception.getMessage();
                     logger.error(errorMessage);
                     future.completeExceptionally(new FlowFrameworkException(errorMessage, RestStatus.BAD_REQUEST));
-                } else {
-                    // Task still in progress, attempt retry
-                    throw new IllegalStateException(workflowStep + " is not yet completed");
-                }
-            } else {
-                try {
-                    logger.info(workflowStep + " successful for {} and modelId {}", workflowId, response.getModelId());
-                    String resourceName = getResourceByWorkflowStep(getName());
-                    String id;
-                    if (getName().equals(DEPLOY_MODEL.getWorkflowStep())) {
-                        id = response.getModelId();
-                    } else {
-                        id = response.getTaskId();
-                    }
-                    flowFrameworkIndicesHandler.updateResourceInStateIndex(
-                        workflowId,
-                        nodeId,
-                        getName(),
-                        id,
-                        ActionListener.wrap(updateResponse -> {
-                            logger.info("successfully updated resources created in state index: {}", updateResponse.getIndex());
-                            future.complete(
-                                new WorkflowData(
-                                    Map.ofEntries(
-                                        Map.entry(resourceName, response.getModelId()),
-                                        Map.entry(REGISTER_MODEL_STATUS, response.getState().name())
-                                    ),
-                                    workflowId,
-                                    nodeId
-                                )
-                            );
-                        }, exception -> {
-                            logger.error("Failed to update new created resource", exception);
-                            future.completeExceptionally(
-                                new FlowFrameworkException(exception.getMessage(), ExceptionsHelper.status(exception))
-                            );
-                        })
-                    );
-                } catch (Exception e) {
-                    logger.error("Failed to parse and update new created resource", e);
-                    future.completeExceptionally(new FlowFrameworkException(e.getMessage(), ExceptionsHelper.status(e)));
-                }
-            }
-        }, exception -> {
-            if (retries < maxRetry) {
-                // Sleep thread prior to retrying request
+                }));
+                // Wait long enough for future to possibly complete
                 try {
                     Thread.sleep(5000);
-                } catch (Exception e) {
+                } catch (InterruptedException e) {
                     FutureUtils.cancel(future);
+                    Thread.currentThread().interrupt();
                 }
-                retryableGetMlTask(workflowId, nodeId, future, taskId, retries + 1, workflowStep);
-            } else {
-                logger.error("Failed to retrieve" + workflowStep + ",maximum retries exceeded");
-                future.completeExceptionally(new FlowFrameworkException(exception.getMessage(), ExceptionsHelper.status(exception)));
             }
-        }));
+            if (!future.isDone()) {
+                String errorMessage = workflowStep + " did not complete after " + maxRetry + " retries";
+                logger.error(errorMessage);
+                future.completeExceptionally(new FlowFrameworkException(errorMessage, RestStatus.REQUEST_TIMEOUT));
+            }
+        }, threadPool.executor(PROVISION_THREAD_POOL));
     }
 
+    /**
+     * Returns the resourceId associated with the task
+     * @param response The Task response
+     * @return the resource ID, such as a model id
+     */
+    protected abstract String getResourceId(MLTask response);
 }

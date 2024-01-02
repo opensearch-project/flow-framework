@@ -20,6 +20,7 @@ import org.opensearch.flowframework.indices.FlowFrameworkIndicesHandler;
 import org.opensearch.flowframework.workflow.WorkflowStepFactory;
 import org.opensearch.ml.client.MachineLearningNodeClient;
 import org.opensearch.test.OpenSearchTestCase;
+import org.opensearch.threadpool.ThreadPool;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -71,6 +72,7 @@ public class WorkflowValidatorTests extends OpenSearchTestCase {
 
     public void testWorkflowStepFactoryHasValidators() throws IOException {
 
+        ThreadPool threadPool = mock(ThreadPool.class);
         ClusterService clusterService = mock(ClusterService.class);
         ClusterAdminClient clusterAdminClient = mock(ClusterAdminClient.class);
         AdminClient adminClient = mock(AdminClient.class);
@@ -89,6 +91,7 @@ public class WorkflowValidatorTests extends OpenSearchTestCase {
 
         WorkflowStepFactory workflowStepFactory = new WorkflowStepFactory(
             Settings.EMPTY,
+            threadPool,
             clusterService,
             client,
             mlClient,

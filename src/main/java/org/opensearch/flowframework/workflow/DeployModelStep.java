@@ -18,7 +18,9 @@ import org.opensearch.flowframework.exception.FlowFrameworkException;
 import org.opensearch.flowframework.indices.FlowFrameworkIndicesHandler;
 import org.opensearch.flowframework.util.ParseUtils;
 import org.opensearch.ml.client.MachineLearningNodeClient;
+import org.opensearch.ml.common.MLTask;
 import org.opensearch.ml.common.transport.deploy.MLDeployModelResponse;
+import org.opensearch.threadpool.ThreadPool;
 
 import java.util.Collections;
 import java.util.Map;
@@ -42,17 +44,19 @@ public class DeployModelStep extends AbstractRetryableWorkflowStep {
     /**
      * Instantiate this class
      * @param settings The OpenSearch settings
+     * @param threadPool The OpenSearch thread pool
      * @param clusterService The cluster service
      * @param mlClient client to instantiate MLClient
      * @param flowFrameworkIndicesHandler FlowFrameworkIndicesHandler class to update system indices
      */
     public DeployModelStep(
         Settings settings,
+        ThreadPool threadPool,
         ClusterService clusterService,
         MachineLearningNodeClient mlClient,
         FlowFrameworkIndicesHandler flowFrameworkIndicesHandler
     ) {
-        super(settings, clusterService, mlClient, flowFrameworkIndicesHandler);
+        super(settings, threadPool, clusterService, mlClient, flowFrameworkIndicesHandler);
         this.mlClient = mlClient;
         this.flowFrameworkIndicesHandler = flowFrameworkIndicesHandler;
     }
@@ -74,7 +78,7 @@ public class DeployModelStep extends AbstractRetryableWorkflowStep {
                 String taskId = mlDeployModelResponse.getTaskId();
 
                 // Attempt to retrieve the model ID
-                retryableGetMlTask(currentNodeInputs.getWorkflowId(), currentNodeId, deployModelFuture, taskId, 0, "Deploy model");
+                retryableGetMlTask(currentNodeInputs.getWorkflowId(), currentNodeId, deployModelFuture, taskId, "Deploy model");
             }
 
             @Override
@@ -103,6 +107,11 @@ public class DeployModelStep extends AbstractRetryableWorkflowStep {
             deployModelFuture.completeExceptionally(e);
         }
         return deployModelFuture;
+    }
+
+    @Override
+    protected String getResourceId(MLTask response) {
+        return response.getModelId();
     }
 
     @Override
