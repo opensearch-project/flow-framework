@@ -70,6 +70,7 @@ public abstract class AbstractRetryableWorkflowStep implements WorkflowStep {
      * @param nodeId the workflow node id
      * @param future the workflow step future
      * @param taskId the ml task id
+     * @param deploy the deployment flag
      * @param workflowStep the workflow step which requires a retry get ml task functionality
      */
     protected void retryableGetMlTask(
@@ -77,6 +78,7 @@ public abstract class AbstractRetryableWorkflowStep implements WorkflowStep {
         String nodeId,
         CompletableFuture<WorkflowData> future,
         String taskId,
+        Boolean deploy,
         String workflowStep
     ) {
         AtomicInteger retries = new AtomicInteger();
@@ -96,16 +98,50 @@ public abstract class AbstractRetryableWorkflowStep implements WorkflowStep {
                                     id,
                                     ActionListener.wrap(updateResponse -> {
                                         logger.info("successfully updated resources created in state index: {}", updateResponse.getIndex());
-                                        future.complete(
-                                            new WorkflowData(
-                                                Map.ofEntries(
-                                                    Map.entry(resourceName, id),
-                                                    Map.entry(REGISTER_MODEL_STATUS, response.getState().name())
-                                                ),
+                                        if (workflowStep == "Local model registration" && Boolean.TRUE.equals(deploy)) {
+
+                                            flowFrameworkIndicesHandler.updateResourceInStateIndex(
                                                 workflowId,
-                                                nodeId
-                                            )
-                                        );
+                                                nodeId,
+                                                DeployModelStep.NAME,
+                                                id,
+                                                ActionListener.wrap(deployUpdateResponse -> {
+                                                    logger.info(
+                                                        "successfully updated resources created in state index: {}",
+                                                        updateResponse.getIndex()
+                                                    );
+                                                    future.complete(
+                                                        new WorkflowData(
+                                                            Map.ofEntries(
+                                                                Map.entry(resourceName, id),
+                                                                Map.entry(REGISTER_MODEL_STATUS, response.getState().name())
+                                                            ),
+                                                            workflowId,
+                                                            nodeId
+                                                        )
+                                                    );
+                                                }, deployUpdateException -> {
+                                                    logger.error("Failed to update simulated deploy step resource", deployUpdateException);
+                                                    future.completeExceptionally(
+                                                        new FlowFrameworkException(
+                                                            deployUpdateException.getMessage(),
+                                                            ExceptionsHelper.status(deployUpdateException)
+                                                        )
+                                                    );
+                                                })
+                                            );
+                                        } else {
+                                            future.complete(
+                                                new WorkflowData(
+                                                    Map.ofEntries(
+                                                        Map.entry(resourceName, id),
+                                                        Map.entry(REGISTER_MODEL_STATUS, response.getState().name())
+                                                    ),
+                                                    workflowId,
+                                                    nodeId
+                                                )
+                                            );
+                                        }
                                     }, exception -> {
                                         logger.error("Failed to update new created resource", exception);
                                         future.completeExceptionally(

@@ -78,7 +78,7 @@ public class DeployModelStep extends AbstractRetryableWorkflowStep {
                 String taskId = mlDeployModelResponse.getTaskId();
 
                 // Attempt to retrieve the model ID
-                retryableGetMlTask(currentNodeInputs.getWorkflowId(), currentNodeId, deployModelFuture, taskId, "Deploy model");
+                retryableGetMlTask(currentNodeInputs.getWorkflowId(), currentNodeId, deployModelFuture, taskId, false, "Deploy model");
             }
 
             @Override
