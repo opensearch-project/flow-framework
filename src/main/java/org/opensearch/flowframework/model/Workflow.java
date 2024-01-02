@@ -123,6 +123,7 @@ public class Workflow implements ToXContentObject {
         // Iterate the nodes and infer edges from previous node inputs
         List<WorkflowEdge> inferredEdges = nodes.stream()
             .flatMap(node -> node.previousNodeInputs().keySet().stream().map(previousNode -> new WorkflowEdge(previousNode, node.id())))
+            .distinct()
             .collect(Collectors.toList());
         // Remove any that are already in edges list
         inferredEdges.removeAll(edges);
