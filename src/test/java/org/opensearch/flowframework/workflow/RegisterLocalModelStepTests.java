@@ -109,6 +109,7 @@ public class RegisterLocalModelStepTests extends OpenSearchTestCase {
                 Map.entry("name", "xyz"),
                 Map.entry("version", "1.0.0"),
                 Map.entry("description", "description"),
+                Map.entry("function_name", "SPARSE_TOKENIZE"),
                 Map.entry("model_format", "TORCH_SCRIPT"),
                 Map.entry(MODEL_GROUP_ID, "abcdefg"),
                 Map.entry("model_content_hash_value", "aiwoeifjoaijeofiwe"),
