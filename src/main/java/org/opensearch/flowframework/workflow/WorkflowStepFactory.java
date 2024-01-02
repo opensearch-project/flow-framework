@@ -15,6 +15,7 @@ import org.opensearch.core.rest.RestStatus;
 import org.opensearch.flowframework.exception.FlowFrameworkException;
 import org.opensearch.flowframework.indices.FlowFrameworkIndicesHandler;
 import org.opensearch.ml.client.MachineLearningNodeClient;
+import org.opensearch.threadpool.ThreadPool;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -31,6 +32,7 @@ public class WorkflowStepFactory {
      * Instantiate this class.
      *
      * @param settings The OpenSearch settings
+     * @param threadPool The OpenSearch thread pool
      * @param clusterService The OpenSearch cluster service
      * @param client The OpenSearch client steps can use
      * @param mlClient Machine Learning client to perform ml operations
@@ -38,6 +40,7 @@ public class WorkflowStepFactory {
      */
     public WorkflowStepFactory(
         Settings settings,
+        ThreadPool threadPool,
         ClusterService clusterService,
         Client client,
         MachineLearningNodeClient mlClient,
@@ -48,11 +51,14 @@ public class WorkflowStepFactory {
         stepMap.put(CreateIngestPipelineStep.NAME, () -> new CreateIngestPipelineStep(client, flowFrameworkIndicesHandler));
         stepMap.put(
             RegisterLocalModelStep.NAME,
-            () -> new RegisterLocalModelStep(settings, clusterService, mlClient, flowFrameworkIndicesHandler)
+            () -> new RegisterLocalModelStep(settings, threadPool, clusterService, mlClient, flowFrameworkIndicesHandler)
         );
         stepMap.put(RegisterRemoteModelStep.NAME, () -> new RegisterRemoteModelStep(mlClient, flowFrameworkIndicesHandler));
         stepMap.put(DeleteModelStep.NAME, () -> new DeleteModelStep(mlClient));
-        stepMap.put(DeployModelStep.NAME, () -> new DeployModelStep(settings, clusterService, mlClient, flowFrameworkIndicesHandler));
+        stepMap.put(
+            DeployModelStep.NAME,
+            () -> new DeployModelStep(settings, threadPool, clusterService, mlClient, flowFrameworkIndicesHandler)
+        );
         stepMap.put(UndeployModelStep.NAME, () -> new UndeployModelStep(mlClient));
         stepMap.put(CreateConnectorStep.NAME, () -> new CreateConnectorStep(mlClient, flowFrameworkIndicesHandler));
         stepMap.put(DeleteConnectorStep.NAME, () -> new DeleteConnectorStep(mlClient));
