@@ -38,6 +38,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 
@@ -213,12 +214,19 @@ public class ProvisionWorkflowTransportAction extends HandledTransportAction<Wor
             );
         } catch (Exception ex) {
             logger.error("Provisioning failed for workflow: {}", workflowId, ex);
+            String errorMessage;
+            if (ex instanceof CancellationException) {
+                errorMessage = "A step in the workflow was cancelled.";
+            } else if (ex.getCause() != null) {
+                errorMessage = ex.getCause().getMessage();
+            } else {
+                errorMessage = ex.getMessage();
+            }
             flowFrameworkIndicesHandler.updateFlowFrameworkSystemIndexDoc(
                 workflowId,
                 Map.ofEntries(
                     Map.entry(STATE_FIELD, State.FAILED),
-                    // TODO: potentially improve the error message here
-                    Map.entry(ERROR_FIELD, ex.getMessage()),
+                    Map.entry(ERROR_FIELD, errorMessage),
                     Map.entry(PROVISIONING_PROGRESS_FIELD, ProvisioningProgress.FAILED),
                     Map.entry(PROVISION_END_TIME_FIELD, Instant.now().toEpochMilli())
                 ),

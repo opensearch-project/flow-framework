@@ -22,6 +22,7 @@ import org.opensearch.common.settings.ClusterSettings;
 import org.opensearch.common.settings.Setting;
 import org.opensearch.common.settings.Settings;
 import org.opensearch.common.unit.TimeValue;
+import org.opensearch.common.util.concurrent.OpenSearchExecutors;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.core.rest.RestStatus;
 import org.opensearch.flowframework.common.FlowFrameworkSettings;
@@ -35,6 +36,7 @@ import org.opensearch.flowframework.model.WorkflowValidator;
 import org.opensearch.ml.client.MachineLearningNodeClient;
 import org.opensearch.plugins.PluginInfo;
 import org.opensearch.test.OpenSearchTestCase;
+import org.opensearch.threadpool.FixedExecutorBuilder;
 import org.opensearch.threadpool.TestThreadPool;
 import org.opensearch.threadpool.ThreadPool;
 import org.junit.AfterClass;
@@ -50,6 +52,8 @@ import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import static org.opensearch.flowframework.common.CommonValue.FLOW_FRAMEWORK_THREAD_POOL_PREFIX;
+import static org.opensearch.flowframework.common.CommonValue.PROVISION_THREAD_POOL;
 import static org.opensearch.flowframework.common.FlowFrameworkSettings.FLOW_FRAMEWORK_ENABLED;
 import static org.opensearch.flowframework.common.FlowFrameworkSettings.MAX_GET_TASK_REQUEST_RETRY;
 import static org.opensearch.flowframework.common.FlowFrameworkSettings.MAX_WORKFLOWS;
@@ -111,9 +115,19 @@ public class WorkflowProcessSorterTests extends OpenSearchTestCase {
 
         when(client.admin()).thenReturn(adminClient);
 
-        testThreadPool = new TestThreadPool(WorkflowProcessSorterTests.class.getName());
+        testThreadPool = new TestThreadPool(
+            WorkflowProcessSorterTests.class.getName(),
+            new FixedExecutorBuilder(
+                Settings.EMPTY,
+                PROVISION_THREAD_POOL,
+                OpenSearchExecutors.allocatedProcessors(Settings.EMPTY),
+                100,
+                FLOW_FRAMEWORK_THREAD_POOL_PREFIX + PROVISION_THREAD_POOL
+            )
+        );
         WorkflowStepFactory factory = new WorkflowStepFactory(
             Settings.EMPTY,
+            testThreadPool,
             clusterService,
             client,
             mlClient,
