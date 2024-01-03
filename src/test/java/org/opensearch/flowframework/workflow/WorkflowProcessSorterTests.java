@@ -12,6 +12,8 @@ import org.opensearch.action.admin.cluster.node.info.NodeInfo;
 import org.opensearch.action.admin.cluster.node.info.NodesInfoRequest;
 import org.opensearch.action.admin.cluster.node.info.NodesInfoResponse;
 import org.opensearch.action.admin.cluster.node.info.PluginsAndModules;
+import org.opensearch.action.admin.cluster.state.ClusterStateRequest;
+import org.opensearch.action.admin.cluster.state.ClusterStateResponse;
 import org.opensearch.client.AdminClient;
 import org.opensearch.client.Client;
 import org.opensearch.client.ClusterAdminClient;
@@ -426,12 +428,19 @@ public class WorkflowProcessSorterTests extends OpenSearchTestCase {
         when(client.admin()).thenReturn(adminClient);
         when(adminClient.cluster()).thenReturn(clusterAdminClient);
 
-        // Mock and stub the clusterservice to get the local node
-        ClusterState clusterState = mock(ClusterState.class);
-        DiscoveryNodes discoveryNodes = mock(DiscoveryNodes.class);
-        when(clusterService.state()).thenReturn(clusterState);
-        when(clusterState.getNodes()).thenReturn(discoveryNodes);
-        when(discoveryNodes.getLocalNodeId()).thenReturn("123");
+        // Stub cluster state request
+        doAnswer(invocation -> {
+            ActionListener<ClusterStateResponse> listener = invocation.getArgument(1);
+
+            ClusterStateResponse response = mock(ClusterStateResponse.class);
+            ClusterState clusterState = mock(ClusterState.class);
+            DiscoveryNodes discoveryNodes = mock(DiscoveryNodes.class);
+            when(response.getState()).thenReturn(clusterState);
+            when(clusterState.nodes()).thenReturn(discoveryNodes);
+            when(discoveryNodes.getLocalNodeId()).thenReturn("123");
+            listener.onResponse(response);
+            return null;
+        }).when(clusterAdminClient).state(any(ClusterStateRequest.class), any());
 
         // Stub cluster admin client's node info request
         doAnswer(invocation -> {
@@ -510,12 +519,19 @@ public class WorkflowProcessSorterTests extends OpenSearchTestCase {
         when(client.admin()).thenReturn(adminClient);
         when(adminClient.cluster()).thenReturn(clusterAdminClient);
 
-        // Mock and stub the clusterservice to get the local node
-        ClusterState clusterState = mock(ClusterState.class);
-        DiscoveryNodes discoveryNodes = mock(DiscoveryNodes.class);
-        when(clusterService.state()).thenReturn(clusterState);
-        when(clusterState.getNodes()).thenReturn(discoveryNodes);
-        when(discoveryNodes.getLocalNodeId()).thenReturn("123");
+        // Stub cluster state request
+        doAnswer(invocation -> {
+            ActionListener<ClusterStateResponse> listener = invocation.getArgument(1);
+
+            ClusterStateResponse response = mock(ClusterStateResponse.class);
+            ClusterState clusterState = mock(ClusterState.class);
+            DiscoveryNodes discoveryNodes = mock(DiscoveryNodes.class);
+            when(response.getState()).thenReturn(clusterState);
+            when(clusterState.nodes()).thenReturn(discoveryNodes);
+            when(discoveryNodes.getLocalNodeId()).thenReturn("123");
+            listener.onResponse(response);
+            return null;
+        }).when(clusterAdminClient).state(any(ClusterStateRequest.class), any());
 
         // Stub cluster admin client's node info request
         doAnswer(invocation -> {

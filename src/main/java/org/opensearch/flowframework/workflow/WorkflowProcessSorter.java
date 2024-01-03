@@ -10,9 +10,9 @@ package org.opensearch.flowframework.workflow;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.opensearch.action.admin.cluster.node.info.NodeInfo;
 import org.opensearch.action.admin.cluster.node.info.NodesInfoRequest;
 import org.opensearch.action.admin.cluster.node.info.PluginsAndModules;
+import org.opensearch.action.admin.cluster.state.ClusterStateRequest;
 import org.opensearch.client.Client;
 import org.opensearch.cluster.service.ClusterService;
 import org.opensearch.common.settings.Settings;
@@ -79,9 +79,9 @@ public class WorkflowProcessSorter {
         this.workflowStepFactory = workflowStepFactory;
         this.threadPool = threadPool;
         this.maxWorkflowSteps = MAX_WORKFLOW_STEPS.get(settings);
+        clusterService.getClusterSettings().addSettingsUpdateConsumer(MAX_WORKFLOW_STEPS, it -> maxWorkflowSteps = it);
         this.clusterService = clusterService;
         this.client = client;
-        clusterService.getClusterSettings().addSettingsUpdateConsumer(MAX_WORKFLOW_STEPS, it -> maxWorkflowSteps = it);
     }
 
     /**
@@ -153,31 +153,45 @@ public class WorkflowProcessSorter {
      * @throws Exception on validation failure
      */
     public void validatePluginsInstalled(List<ProcessNode> processNodes, WorkflowValidator validator) throws Exception {
+        final CompletableFuture<List<String>> installedPluginsFuture = new CompletableFuture<>();
 
-        // Retrieve node information to ascertain installed plugins
-        NodesInfoRequest nodesInfoRequest = new NodesInfoRequest();
-        nodesInfoRequest.clear().addMetric(NodesInfoRequest.Metric.PLUGINS.metricName());
-        CompletableFuture<List<String>> installedPluginsFuture = new CompletableFuture<>();
-        client.admin().cluster().nodesInfo(nodesInfoRequest, ActionListener.wrap(response -> {
-            List<String> installedPlugins = new ArrayList<>();
+        ClusterStateRequest clusterStateRequest = new ClusterStateRequest();
+        clusterStateRequest.clear().nodes(true).local(true);
+        client.admin().cluster().state(clusterStateRequest, ActionListener.wrap(stateResponse -> {
+            final String localNodeId = stateResponse.getState().nodes().getLocalNodeId();
 
-            // Retrieve installed plugin names from the local node
-            String localNodeId = clusterService.state().getNodes().getLocalNodeId();
-            NodeInfo info = response.getNodesMap().get(localNodeId);
-            PluginsAndModules plugins = info.getInfo(PluginsAndModules.class);
-            for (PluginInfo pluginInfo : plugins.getPluginInfos()) {
-                installedPlugins.add(pluginInfo.getName());
-            }
-
-            installedPluginsFuture.complete(installedPlugins);
-
-        }, exception -> {
-            logger.error("Failed to retrieve installed plugins");
-            installedPluginsFuture.completeExceptionally(exception);
+            NodesInfoRequest nodesInfoRequest = new NodesInfoRequest();
+            nodesInfoRequest.clear().addMetric(NodesInfoRequest.Metric.PLUGINS.metricName());
+            client.admin().cluster().nodesInfo(nodesInfoRequest, ActionListener.wrap(infoResponse -> {
+                // Retrieve installed plugin names from the local node
+                try {
+                    installedPluginsFuture.complete(
+                        infoResponse.getNodesMap()
+                            .get(localNodeId)
+                            .getInfo(PluginsAndModules.class)
+                            .getPluginInfos()
+                            .stream()
+                            .map(PluginInfo::getName)
+                            .collect(Collectors.toList())
+                    );
+                } catch (Exception e) {
+                    logger.error("Failed to retrieve installed plugins from local node");
+                    installedPluginsFuture.completeExceptionally(e);
+                }
+            }, infoException -> {
+                logger.error("Failed to retrieve installed plugins");
+                installedPluginsFuture.completeExceptionally(infoException);
+            }));
+        }, stateException -> {
+            logger.error("Failed to retrieve cluster state");
+            installedPluginsFuture.completeExceptionally(stateException);
         }));
 
         // Block execution until installed plugin list is returned
-        List<String> installedPlugins = installedPluginsFuture.get();
+        List<String> installedPlugins = installedPluginsFuture.orTimeout(
+            NODE_TIMEOUT_DEFAULT_VALUE.duration(),
+            NODE_TIMEOUT_DEFAULT_VALUE.timeUnit()
+        ).get();
 
         // Iterate through process nodes in graph
         for (ProcessNode processNode : processNodes) {
