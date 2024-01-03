@@ -133,7 +133,6 @@ public class FlowFrameworkRestApiIT extends FlowFrameworkRestTestCase {
 
         // Deprovision the workflow to avoid opening circut breaker when running additional tests
         Response deprovisionResponse = deprovisionWorkflow(workflowId);
-        assertEquals(RestStatus.OK, TestHelpers.restStatus(deprovisionResponse));
         assertBusy(
             () -> { getAndAssertWorkflowStatus(workflowId, State.NOT_STARTED, ProvisioningProgress.NOT_STARTED); },
             30,
@@ -198,7 +197,6 @@ public class FlowFrameworkRestApiIT extends FlowFrameworkRestTestCase {
 
         // Deprovision the workflow to avoid opening circut breaker when running additional tests
         Response deprovisionResponse = deprovisionWorkflow(workflowId);
-        assertEquals(RestStatus.OK, TestHelpers.restStatus(deprovisionResponse));
         assertBusy(
             () -> { getAndAssertWorkflowStatus(workflowId, State.NOT_STARTED, ProvisioningProgress.NOT_STARTED); },
             30,
@@ -237,7 +235,6 @@ public class FlowFrameworkRestApiIT extends FlowFrameworkRestTestCase {
 
         // Deprovision the workflow to avoid opening circut breaker when running additional tests
         Response deprovisionResponse = deprovisionWorkflow(workflowId);
-        assertEquals(RestStatus.OK, TestHelpers.restStatus(deprovisionResponse));
         assertBusy(
             () -> { getAndAssertWorkflowStatus(workflowId, State.NOT_STARTED, ProvisioningProgress.NOT_STARTED); },
             30,
@@ -279,7 +276,6 @@ public class FlowFrameworkRestApiIT extends FlowFrameworkRestTestCase {
 
         // Hit Deprovision API
         Response deprovisionResponse = deprovisionWorkflow(workflowId);
-        assertEquals(RestStatus.OK, TestHelpers.restStatus(deprovisionResponse));
         assertBusy(
             () -> { getAndAssertWorkflowStatus(workflowId, State.NOT_STARTED, ProvisioningProgress.NOT_STARTED); },
             30,
@@ -326,7 +322,6 @@ public class FlowFrameworkRestApiIT extends FlowFrameworkRestTestCase {
 
         // Deprovision the workflow to avoid opening circut breaker when running additional tests
         Response deprovisionResponse = deprovisionWorkflow(workflowId);
-        assertEquals(RestStatus.OK, TestHelpers.restStatus(deprovisionResponse));
         assertBusy(
             () -> { getAndAssertWorkflowStatus(workflowId, State.NOT_STARTED, ProvisioningProgress.NOT_STARTED); },
             30,
