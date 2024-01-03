@@ -16,7 +16,7 @@
           "id": "workflow_step_1",
           "type": "register_local_model",
           "user_inputs": {
-            "node_timeout": "100s",
+            "node_timeout": "60s",
             "name": "all-MiniLM-L6-v2",
             "version": "1.0.0",
             "description": "test model",
@@ -33,7 +33,7 @@
           "id": "workflow_step_2",
           "type": "deploy_model",
           "user_inputs": {
-            "node_timeout": "100s"
+            "node_timeout": "60s"
           },
           "previous_node_inputs": {
             "workflow_step_1": "model_id"

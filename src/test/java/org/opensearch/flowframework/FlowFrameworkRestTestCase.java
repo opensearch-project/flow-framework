@@ -119,6 +119,17 @@ public abstract class FlowFrameworkRestTestCase extends OpenSearchRestTestCase {
             );
             assertEquals(200, response.getStatusLine().getStatusCode());
 
+            // Set ML native memory threshold to 100 to avoid opening the circuit breaker during tests
+            response = TestHelpers.makeRequest(
+                client(),
+                "PUT",
+                "_cluster/settings",
+                null,
+                "{\"persistent\":{\"plugins.ml_commons.native_memory_threshold\":100}}",
+                List.of(new BasicHeader(HttpHeaders.USER_AGENT, ""))
+            );
+            assertEquals(200, response.getStatusLine().getStatusCode());
+
             // Ensure .plugins-ml-config is created before proceeding with integration tests
             assertBusy(() -> { assertTrue(indexExistsWithAdminClient(".plugins-ml-config")); }, 30, TimeUnit.SECONDS);
         }
