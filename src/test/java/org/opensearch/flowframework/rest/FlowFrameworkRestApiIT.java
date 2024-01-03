@@ -70,7 +70,7 @@ public class FlowFrameworkRestApiIT extends FlowFrameworkRestTestCase {
 
     public void testCreateAndProvisionLocalModelWorkflow() throws Exception {
 
-        // Using a 3 step template to create a model group, register a remote model and deploy model
+        // Using a 2 step template to register a local model and deploy model
         Template template = TestHelpers.createTemplateFromFile("registerlocalmodel-deploymodel.json");
 
         // Remove deploy model input to test validation
