@@ -130,6 +130,15 @@ public class FlowFrameworkRestApiIT extends FlowFrameworkRestTestCase {
         assertNotNull(resourcesCreated.get(0).resourceId());
         assertEquals("deploy_model", resourcesCreated.get(1).workflowStepName());
         assertNotNull(resourcesCreated.get(1).resourceId());
+
+        // Deprovision the workflow to avoid opening circut breaker when running additional tests
+        Response deprovisionResponse = deprovisionWorkflow(workflowId);
+        assertEquals(RestStatus.OK, TestHelpers.restStatus(deprovisionResponse));
+        assertBusy(
+            () -> { getAndAssertWorkflowStatus(workflowId, State.NOT_STARTED, ProvisioningProgress.NOT_STARTED); },
+            30,
+            TimeUnit.SECONDS
+        );
     }
 
     public void testCreateAndProvisionRemoteModelWorkflow() throws Exception {
@@ -186,6 +195,15 @@ public class FlowFrameworkRestApiIT extends FlowFrameworkRestTestCase {
         assertNotNull(resourcesCreated.get(1).resourceId());
         assertEquals("deploy_model", resourcesCreated.get(2).workflowStepName());
         assertNotNull(resourcesCreated.get(2).resourceId());
+
+        // Deprovision the workflow to avoid opening circut breaker when running additional tests
+        Response deprovisionResponse = deprovisionWorkflow(workflowId);
+        assertEquals(RestStatus.OK, TestHelpers.restStatus(deprovisionResponse));
+        assertBusy(
+            () -> { getAndAssertWorkflowStatus(workflowId, State.NOT_STARTED, ProvisioningProgress.NOT_STARTED); },
+            30,
+            TimeUnit.SECONDS
+        );
     }
 
     public void testCreateAndProvisionDeployedRemoteModelWorkflow() throws Exception {
@@ -216,6 +234,15 @@ public class FlowFrameworkRestApiIT extends FlowFrameworkRestTestCase {
         assertNotNull(resourcesCreated.get(1).resourceId());
         assertEquals("deploy_model", resourcesCreated.get(2).workflowStepName());
         assertNotNull(resourcesCreated.get(2).resourceId());
+
+        // Deprovision the workflow to avoid opening circut breaker when running additional tests
+        Response deprovisionResponse = deprovisionWorkflow(workflowId);
+        assertEquals(RestStatus.OK, TestHelpers.restStatus(deprovisionResponse));
+        assertBusy(
+            () -> { getAndAssertWorkflowStatus(workflowId, State.NOT_STARTED, ProvisioningProgress.NOT_STARTED); },
+            30,
+            TimeUnit.SECONDS
+        );
     }
 
     public void testCreateAndProvisionAgentFrameworkWorkflow() throws Exception {
@@ -296,6 +323,15 @@ public class FlowFrameworkRestApiIT extends FlowFrameworkRestTestCase {
         assertNotNull(resourcesCreated.get(0).resourceId());
         assertEquals("deploy_model", resourcesCreated.get(1).workflowStepName());
         assertNotNull(resourcesCreated.get(1).resourceId());
+
+        // Deprovision the workflow to avoid opening circut breaker when running additional tests
+        Response deprovisionResponse = deprovisionWorkflow(workflowId);
+        assertEquals(RestStatus.OK, TestHelpers.restStatus(deprovisionResponse));
+        assertBusy(
+            () -> { getAndAssertWorkflowStatus(workflowId, State.NOT_STARTED, ProvisioningProgress.NOT_STARTED); },
+            30,
+            TimeUnit.SECONDS
+        );
     }
 
 }

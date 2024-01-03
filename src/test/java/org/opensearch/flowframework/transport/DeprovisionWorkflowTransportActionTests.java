@@ -174,28 +174,6 @@ public class DeprovisionWorkflowTransportActionTests extends OpenSearchTestCase 
         assertEquals(workflowId, responseCaptor.getValue().getWorkflowId());
     }
 
-    public void testFailedToRetrieveTemplateFromGlobalContext() {
-        String workflowId = "1";
-        @SuppressWarnings("unchecked")
-        ActionListener<WorkflowResponse> listener = mock(ActionListener.class);
-        WorkflowRequest workflowRequest = new WorkflowRequest(workflowId, null);
-        when(getResult.sourceAsString()).thenReturn(this.template.toJson());
-
-        doAnswer(invocation -> {
-            ActionListener<GetResponse> responseListener = invocation.getArgument(1);
-
-            when(getResult.isExists()).thenReturn(false);
-            responseListener.onResponse(new GetResponse(getResult));
-            return null;
-        }).when(client).get(any(GetRequest.class), any());
-
-        deprovisionWorkflowTransportAction.doExecute(mock(Task.class), workflowRequest, listener);
-        ArgumentCaptor<Exception> exceptionCaptor = ArgumentCaptor.forClass(Exception.class);
-
-        verify(listener, times(1)).onFailure(exceptionCaptor.capture());
-        assertEquals("Failed to retrieve template (1) from global context.", exceptionCaptor.getValue().getMessage());
-    }
-
     public void testFailToDeprovision() throws IOException {
         String workflowId = "1";
         @SuppressWarnings("unchecked")

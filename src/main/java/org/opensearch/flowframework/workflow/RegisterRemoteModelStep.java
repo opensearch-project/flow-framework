@@ -119,7 +119,7 @@ public class RegisterRemoteModelStep implements WorkflowStep {
                                 if (Boolean.TRUE.equals(deploy)) {
                                     flowFrameworkIndicesHandler.updateResourceInStateIndex(
                                         currentNodeInputs.getWorkflowId(),
-                                        currentNodeId,
+                                        currentNodeId + "-deploy",
                                         DeployModelStep.NAME,
                                         mlRegisterModelResponse.getModelId(),
                                         ActionListener.wrap(deployUpdateResponse -> {

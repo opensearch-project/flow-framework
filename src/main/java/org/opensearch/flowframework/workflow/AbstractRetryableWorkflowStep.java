@@ -102,7 +102,7 @@ public abstract class AbstractRetryableWorkflowStep implements WorkflowStep {
 
                                             flowFrameworkIndicesHandler.updateResourceInStateIndex(
                                                 workflowId,
-                                                nodeId,
+                                                nodeId + "-deploy",
                                                 DeployModelStep.NAME,
                                                 id,
                                                 ActionListener.wrap(deployUpdateResponse -> {
