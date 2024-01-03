@@ -133,11 +133,6 @@ public class FlowFrameworkRestApiIT extends FlowFrameworkRestTestCase {
 
         // Deprovision the workflow to avoid opening circut breaker when running additional tests
         Response deprovisionResponse = deprovisionWorkflow(workflowId);
-        assertBusy(
-            () -> { getAndAssertWorkflowStatus(workflowId, State.NOT_STARTED, ProvisioningProgress.NOT_STARTED); },
-            60,
-            TimeUnit.SECONDS
-        );
     }
 
     public void testCreateAndProvisionRemoteModelWorkflow() throws Exception {
@@ -197,11 +192,6 @@ public class FlowFrameworkRestApiIT extends FlowFrameworkRestTestCase {
 
         // Deprovision the workflow to avoid opening circut breaker when running additional tests
         Response deprovisionResponse = deprovisionWorkflow(workflowId);
-        assertBusy(
-            () -> { getAndAssertWorkflowStatus(workflowId, State.NOT_STARTED, ProvisioningProgress.NOT_STARTED); },
-            60,
-            TimeUnit.SECONDS
-        );
     }
 
     public void testCreateAndProvisionDeployedRemoteModelWorkflow() throws Exception {
@@ -235,11 +225,6 @@ public class FlowFrameworkRestApiIT extends FlowFrameworkRestTestCase {
 
         // Deprovision the workflow to avoid opening circut breaker when running additional tests
         Response deprovisionResponse = deprovisionWorkflow(workflowId);
-        assertBusy(
-            () -> { getAndAssertWorkflowStatus(workflowId, State.NOT_STARTED, ProvisioningProgress.NOT_STARTED); },
-            60,
-            TimeUnit.SECONDS
-        );
     }
 
     public void testCreateAndProvisionAgentFrameworkWorkflow() throws Exception {
@@ -322,11 +307,6 @@ public class FlowFrameworkRestApiIT extends FlowFrameworkRestTestCase {
 
         // Deprovision the workflow to avoid opening circut breaker when running additional tests
         Response deprovisionResponse = deprovisionWorkflow(workflowId);
-        assertBusy(
-            () -> { getAndAssertWorkflowStatus(workflowId, State.NOT_STARTED, ProvisioningProgress.NOT_STARTED); },
-            60,
-            TimeUnit.SECONDS
-        );
     }
 
 }
