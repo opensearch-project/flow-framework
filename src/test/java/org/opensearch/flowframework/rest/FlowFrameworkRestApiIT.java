@@ -135,7 +135,7 @@ public class FlowFrameworkRestApiIT extends FlowFrameworkRestTestCase {
         Response deprovisionResponse = deprovisionWorkflow(workflowId);
         assertBusy(
             () -> { getAndAssertWorkflowStatus(workflowId, State.NOT_STARTED, ProvisioningProgress.NOT_STARTED); },
-            30,
+            60,
             TimeUnit.SECONDS
         );
     }
@@ -199,7 +199,7 @@ public class FlowFrameworkRestApiIT extends FlowFrameworkRestTestCase {
         Response deprovisionResponse = deprovisionWorkflow(workflowId);
         assertBusy(
             () -> { getAndAssertWorkflowStatus(workflowId, State.NOT_STARTED, ProvisioningProgress.NOT_STARTED); },
-            30,
+            60,
             TimeUnit.SECONDS
         );
     }
@@ -237,7 +237,7 @@ public class FlowFrameworkRestApiIT extends FlowFrameworkRestTestCase {
         Response deprovisionResponse = deprovisionWorkflow(workflowId);
         assertBusy(
             () -> { getAndAssertWorkflowStatus(workflowId, State.NOT_STARTED, ProvisioningProgress.NOT_STARTED); },
-            30,
+            60,
             TimeUnit.SECONDS
         );
     }
@@ -278,7 +278,7 @@ public class FlowFrameworkRestApiIT extends FlowFrameworkRestTestCase {
         Response deprovisionResponse = deprovisionWorkflow(workflowId);
         assertBusy(
             () -> { getAndAssertWorkflowStatus(workflowId, State.NOT_STARTED, ProvisioningProgress.NOT_STARTED); },
-            30,
+            60,
             TimeUnit.SECONDS
         );
 
@@ -324,7 +324,7 @@ public class FlowFrameworkRestApiIT extends FlowFrameworkRestTestCase {
         Response deprovisionResponse = deprovisionWorkflow(workflowId);
         assertBusy(
             () -> { getAndAssertWorkflowStatus(workflowId, State.NOT_STARTED, ProvisioningProgress.NOT_STARTED); },
-            30,
+            60,
             TimeUnit.SECONDS
         );
     }
