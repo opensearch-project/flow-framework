@@ -119,13 +119,13 @@ public abstract class FlowFrameworkRestTestCase extends OpenSearchRestTestCase {
             );
             assertEquals(200, response.getStatusLine().getStatusCode());
 
-            // Set ML native memory threshold to 100 to avoid opening the circuit breaker during tests
+            // Set ML jvm heap memory threshold to 100 to avoid opening the circuit breaker during tests
             response = TestHelpers.makeRequest(
                 client(),
                 "PUT",
                 "_cluster/settings",
                 null,
-                "{\"persistent\":{\"plugins.ml_commons.native_memory_threshold\":100}}",
+                "{\"persistent\":{\"plugins.ml_commons.jvm_heap_memory_threshold\":100}}",
                 List.of(new BasicHeader(HttpHeaders.USER_AGENT, ""))
             );
             assertEquals(200, response.getStatusLine().getStatusCode());

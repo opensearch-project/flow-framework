@@ -69,13 +69,10 @@ public class FlowFrameworkRestApiIT extends FlowFrameworkRestTestCase {
     }
 
     public void testCreateAndProvisionLocalModelWorkflow() throws Exception {
-
         // Using a 2 step template to register a local model and deploy model
         Template template = TestHelpers.createTemplateFromFile("registerlocalmodel-deploymodel.json");
-
         // Remove deploy model input to test validation
         Workflow originalWorkflow = template.workflows().get(PROVISION_WORKFLOW);
-
         List<WorkflowNode> modifiednodes = originalWorkflow.nodes()
             .stream()
             .map(
@@ -84,9 +81,7 @@ public class FlowFrameworkRestApiIT extends FlowFrameworkRestTestCase {
                     : n
             )
             .collect(Collectors.toList());
-
         Workflow missingInputs = new Workflow(originalWorkflow.userParams(), modifiednodes, originalWorkflow.edges());
-
         Template templateWithMissingInputs = new Template.Builder().name(template.name())
             .description(template.description())
             .useCase(template.useCase())
@@ -96,34 +91,27 @@ public class FlowFrameworkRestApiIT extends FlowFrameworkRestTestCase {
             .uiMetadata(template.getUiMetadata())
             .user(template.getUser())
             .build();
-
         // Hit Create Workflow API with invalid template
         Response response = createWorkflow(templateWithMissingInputs);
         assertEquals(RestStatus.CREATED, TestHelpers.restStatus(response));
-
         // Retrieve workflow ID
         Map<String, Object> responseMap = entityAsMap(response);
-        String registerAndDeployWorkflowId = (String) responseMap.get(WORKFLOW_ID);
-        getAndAssertWorkflowStatus(registerAndDeployWorkflowId, State.NOT_STARTED, ProvisioningProgress.NOT_STARTED);
-
+        String workflowId = (String) responseMap.get(WORKFLOW_ID);
+        getAndAssertWorkflowStatus(workflowId, State.NOT_STARTED, ProvisioningProgress.NOT_STARTED);
         // Attempt provision
-        ResponseException exception = expectThrows(ResponseException.class, () -> provisionWorkflow(registerAndDeployWorkflowId));
+        ResponseException exception = expectThrows(ResponseException.class, () -> provisionWorkflow(workflowId));
         assertTrue(exception.getMessage().contains("Invalid workflow, node [workflow_step_1] missing the following required inputs"));
-        getAndAssertWorkflowStatus(registerAndDeployWorkflowId, State.NOT_STARTED, ProvisioningProgress.NOT_STARTED);
-
+        getAndAssertWorkflowStatus(workflowId, State.NOT_STARTED, ProvisioningProgress.NOT_STARTED);
         // update workflow with updated inputs
-        response = updateWorkflow(registerAndDeployWorkflowId, template);
+        response = updateWorkflow(workflowId, template);
         assertEquals(RestStatus.CREATED, TestHelpers.restStatus(response));
-        getAndAssertWorkflowStatus(registerAndDeployWorkflowId, State.NOT_STARTED, ProvisioningProgress.NOT_STARTED);
-
+        getAndAssertWorkflowStatus(workflowId, State.NOT_STARTED, ProvisioningProgress.NOT_STARTED);
         // Reattempt Provision
-        response = provisionWorkflow(registerAndDeployWorkflowId);
+        response = provisionWorkflow(workflowId);
         assertEquals(RestStatus.OK, TestHelpers.restStatus(response));
-        getAndAssertWorkflowStatus(registerAndDeployWorkflowId, State.PROVISIONING, ProvisioningProgress.IN_PROGRESS);
-
+        getAndAssertWorkflowStatus(workflowId, State.PROVISIONING, ProvisioningProgress.IN_PROGRESS);
         // Wait until provisioning has completed successfully before attempting to retrieve created resources
-        List<ResourceCreated> resourcesCreated = getResourcesCreated(registerAndDeployWorkflowId, 100);
-
+        List<ResourceCreated> resourcesCreated = getResourcesCreated(workflowId, 100);
         // This template should create 2 resources, registered_model_id and deployed model_id
         assertEquals(2, resourcesCreated.size());
         assertEquals("register_local_model", resourcesCreated.get(0).workflowStepName());
@@ -132,38 +120,7 @@ public class FlowFrameworkRestApiIT extends FlowFrameworkRestTestCase {
         assertNotNull(resourcesCreated.get(1).resourceId());
 
         // Deprovision the workflow to avoid opening circut breaker when running additional tests
-        Response deprovisionResponse = deprovisionWorkflow(registerAndDeployWorkflowId);
-
-        // wait for deprovision to complete
-        Thread.sleep(5000);
-
-        // Combined local model registration and deploy
-        template = TestHelpers.createTemplateFromFile("registerlocalmodel-deployflag.json");
-
-        response = createWorkflow(template);
-        assertEquals(RestStatus.CREATED, TestHelpers.restStatus(response));
-
-        responseMap = entityAsMap(response);
-        String combinedRegisterWorkflowId = (String) responseMap.get(WORKFLOW_ID);
-        getAndAssertWorkflowStatus(combinedRegisterWorkflowId, State.NOT_STARTED, ProvisioningProgress.NOT_STARTED);
-
-        // Hit Provision API and assert status
-        response = provisionWorkflow(combinedRegisterWorkflowId);
-        assertEquals(RestStatus.OK, TestHelpers.restStatus(response));
-        getAndAssertWorkflowStatus(combinedRegisterWorkflowId, State.PROVISIONING, ProvisioningProgress.IN_PROGRESS);
-
-        // Wait until provisioning has completed successfully before attempting to retrieve created resources
-        resourcesCreated = getResourcesCreated(combinedRegisterWorkflowId, 100);
-
-        // This template should create 2 resources, registered model_id and deployed model_id
-        assertEquals(2, resourcesCreated.size());
-        assertEquals("register_local_model", resourcesCreated.get(0).workflowStepName());
-        assertNotNull(resourcesCreated.get(0).resourceId());
-        assertEquals("deploy_model", resourcesCreated.get(1).workflowStepName());
-        assertNotNull(resourcesCreated.get(1).resourceId());
-
-        // Deprovision the workflow to avoid opening circut breaker when running additional tests
-        deprovisionResponse = deprovisionWorkflow(combinedRegisterWorkflowId);
+        Response deprovisionResponse = deprovisionWorkflow(workflowId);
 
         // wait for deprovision to complete
         Thread.sleep(5000);
@@ -318,6 +275,33 @@ public class FlowFrameworkRestApiIT extends FlowFrameworkRestTestCase {
         SearchResponse searchResponseAfterDeletion = searchWorkflows(query);
         assertBusy(() -> assertEquals(0, searchResponseAfterDeletion.getHits().getTotalHits().value), 30, TimeUnit.SECONDS);
 
+    }
+
+    public void testCreateAndProvisionRegisterLocalModelWithDeployFlag() throws Exception {
+        Template template = TestHelpers.createTemplateFromFile("registerlocalmodel-deployflag.json");
+        Response response = createWorkflow(template);
+        assertEquals(RestStatus.CREATED, TestHelpers.restStatus(response));
+        Map<String, Object> responseMap = entityAsMap(response);
+        String workflowId = (String) responseMap.get(WORKFLOW_ID);
+        getAndAssertWorkflowStatus(workflowId, State.NOT_STARTED, ProvisioningProgress.NOT_STARTED);
+        // Hit Provision API and assert status
+        response = provisionWorkflow(workflowId);
+        assertEquals(RestStatus.OK, TestHelpers.restStatus(response));
+        getAndAssertWorkflowStatus(workflowId, State.PROVISIONING, ProvisioningProgress.IN_PROGRESS);
+        // Wait until provisioning has completed successfully before attempting to retrieve created resources
+        List<ResourceCreated> resourcesCreated = getResourcesCreated(workflowId, 100);
+        // This template should create 2 resources, registered model_id and deployed model_id
+        assertEquals(2, resourcesCreated.size());
+        assertEquals("register_local_model", resourcesCreated.get(0).workflowStepName());
+        assertNotNull(resourcesCreated.get(0).resourceId());
+        assertEquals("deploy_model", resourcesCreated.get(1).workflowStepName());
+        assertNotNull(resourcesCreated.get(1).resourceId());
+
+        // Deprovision the workflow to avoid opening circut breaker when running additional tests
+        Response deprovisionResponse = deprovisionWorkflow(workflowId);
+
+        // wait for deprovision to complete
+        Thread.sleep(5000);
     }
 
 }
