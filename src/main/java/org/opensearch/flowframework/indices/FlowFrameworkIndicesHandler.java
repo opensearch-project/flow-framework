@@ -512,7 +512,7 @@ public class FlowFrameworkIndicesHandler {
             ScriptType.INLINE,
             "painless",
             "ctx._source.resources_created.add(params.newResource)",
-            Collections.singletonMap("newResource", newResource)
+            Collections.singletonMap("newResource", newResource.resourceMap())
         );
 
         updateFlowFrameworkSystemIndexDocWithScript(WORKFLOW_STATE_INDEX, workflowId, script, ActionListener.wrap(updateResponse -> {
