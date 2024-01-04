@@ -8,11 +8,17 @@
  */
 package org.opensearch.flowframework.common;
 
+import org.opensearch.cluster.service.ClusterService;
 import org.opensearch.common.settings.Setting;
+import org.opensearch.common.settings.Settings;
 import org.opensearch.common.unit.TimeValue;
 
 /** The common settings of flow framework  */
 public class FlowFrameworkSettings {
+
+    private volatile Boolean isFlowFrameworkEnabled;
+    /** The maximum number of transport request retries */
+    protected volatile Integer maxRetry;
 
     private FlowFrameworkSettings() {}
 
@@ -65,4 +71,27 @@ public class FlowFrameworkSettings {
         Setting.Property.NodeScope,
         Setting.Property.Dynamic
     );
+
+    /**
+     * Instantiate this class.
+     *
+     * @param clusterService OpenSearch cluster service
+     * @param settings OpenSearch settings
+     */
+    public FlowFrameworkSettings(ClusterService clusterService, Settings settings) {
+        // Currently this is just an on/off switch for the entire plugin's API.
+        // If desired more fine-tuned feature settings can be added below.
+        this.isFlowFrameworkEnabled = FLOW_FRAMEWORK_ENABLED.get(settings);
+        this.maxRetry = MAX_GET_TASK_REQUEST_RETRY.get(settings);
+        clusterService.getClusterSettings().addSettingsUpdateConsumer(FLOW_FRAMEWORK_ENABLED, it -> isFlowFrameworkEnabled = it);
+        clusterService.getClusterSettings().addSettingsUpdateConsumer(MAX_GET_TASK_REQUEST_RETRY, it -> maxRetry = it);
+    }
+
+    /**
+     * Whether the flow framework feature is enabled. If disabled, no REST APIs will be availble.
+     * @return whether Flow Framework is enabled.
+     */
+    public boolean isFlowFrameworkEnabled() {
+        return isFlowFrameworkEnabled;
+    }
 }

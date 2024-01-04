@@ -18,7 +18,7 @@ import org.opensearch.core.rest.RestStatus;
 import org.opensearch.core.xcontent.ToXContent;
 import org.opensearch.core.xcontent.XContentBuilder;
 import org.opensearch.core.xcontent.XContentParser;
-import org.opensearch.flowframework.common.FlowFrameworkFeatureEnabledSetting;
+import org.opensearch.flowframework.common.FlowFrameworkSettings;
 import org.opensearch.flowframework.exception.FlowFrameworkException;
 import org.opensearch.flowframework.model.Template;
 import org.opensearch.flowframework.transport.CreateWorkflowAction;
@@ -45,7 +45,7 @@ public class RestCreateWorkflowAction extends AbstractWorkflowAction {
     private static final Logger logger = LogManager.getLogger(RestCreateWorkflowAction.class);
     private static final String CREATE_WORKFLOW_ACTION = "create_workflow_action";
 
-    private FlowFrameworkFeatureEnabledSetting flowFrameworkFeatureEnabledSetting;
+    private FlowFrameworkSettings flowFrameworkFeatureEnabledSetting;
 
     /**
      * Instantiates a new RestCreateWorkflowAction
@@ -54,7 +54,7 @@ public class RestCreateWorkflowAction extends AbstractWorkflowAction {
      * @param clusterService clusterService
      */
     public RestCreateWorkflowAction(
-        FlowFrameworkFeatureEnabledSetting flowFrameworkFeatureEnabledSetting,
+        FlowFrameworkSettings flowFrameworkFeatureEnabledSetting,
         Settings settings,
         ClusterService clusterService
     ) {

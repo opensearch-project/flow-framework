@@ -16,7 +16,7 @@ import org.opensearch.core.action.ActionListener;
 import org.opensearch.core.rest.RestStatus;
 import org.opensearch.core.xcontent.ToXContent;
 import org.opensearch.core.xcontent.XContentBuilder;
-import org.opensearch.flowframework.common.FlowFrameworkFeatureEnabledSetting;
+import org.opensearch.flowframework.common.FlowFrameworkSettings;
 import org.opensearch.flowframework.exception.FlowFrameworkException;
 import org.opensearch.flowframework.transport.DeleteWorkflowAction;
 import org.opensearch.flowframework.transport.WorkflowRequest;
@@ -39,13 +39,13 @@ public class RestDeleteWorkflowAction extends BaseRestHandler {
 
     private static final String DELETE_WORKFLOW_ACTION = "delete_workflow";
     private static final Logger logger = LogManager.getLogger(RestDeleteWorkflowAction.class);
-    private FlowFrameworkFeatureEnabledSetting flowFrameworkFeatureEnabledSetting;
+    private FlowFrameworkSettings flowFrameworkFeatureEnabledSetting;
 
     /**
      * Instantiates a new RestDeleteWorkflowAction
      * @param flowFrameworkFeatureEnabledSetting Whether this API is enabled
      */
-    public RestDeleteWorkflowAction(FlowFrameworkFeatureEnabledSetting flowFrameworkFeatureEnabledSetting) {
+    public RestDeleteWorkflowAction(FlowFrameworkSettings flowFrameworkFeatureEnabledSetting) {
         this.flowFrameworkFeatureEnabledSetting = flowFrameworkFeatureEnabledSetting;
     }
 

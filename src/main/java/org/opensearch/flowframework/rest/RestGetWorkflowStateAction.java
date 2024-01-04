@@ -16,7 +16,7 @@ import org.opensearch.core.action.ActionListener;
 import org.opensearch.core.rest.RestStatus;
 import org.opensearch.core.xcontent.ToXContent;
 import org.opensearch.core.xcontent.XContentBuilder;
-import org.opensearch.flowframework.common.FlowFrameworkFeatureEnabledSetting;
+import org.opensearch.flowframework.common.FlowFrameworkSettings;
 import org.opensearch.flowframework.exception.FlowFrameworkException;
 import org.opensearch.flowframework.transport.GetWorkflowStateAction;
 import org.opensearch.flowframework.transport.GetWorkflowStateRequest;
@@ -39,13 +39,13 @@ public class RestGetWorkflowStateAction extends BaseRestHandler {
 
     private static final String GET_WORKFLOW_STATE_ACTION = "get_workflow_state";
     private static final Logger logger = LogManager.getLogger(RestGetWorkflowStateAction.class);
-    private FlowFrameworkFeatureEnabledSetting flowFrameworkFeatureEnabledSetting;
+    private FlowFrameworkSettings flowFrameworkFeatureEnabledSetting;
 
     /**
      * Instantiates a new RestGetWorkflowStateAction
      * @param flowFrameworkFeatureEnabledSetting Whether this API is enabled
      */
-    public RestGetWorkflowStateAction(FlowFrameworkFeatureEnabledSetting flowFrameworkFeatureEnabledSetting) {
+    public RestGetWorkflowStateAction(FlowFrameworkSettings flowFrameworkFeatureEnabledSetting) {
         this.flowFrameworkFeatureEnabledSetting = flowFrameworkFeatureEnabledSetting;
     }
 
