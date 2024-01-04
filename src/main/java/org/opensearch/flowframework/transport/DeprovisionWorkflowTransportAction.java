@@ -37,6 +37,7 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Iterator;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -111,7 +112,7 @@ public class DeprovisionWorkflowTransportAction extends HandledTransportAction<W
                 final Map<String, ResourceCreated> resourceMap = response.getWorkflowState()
                     .resourcesCreated()
                     .stream()
-                    .collect(Collectors.toMap(ResourceCreated::workflowStepId, Function.identity()));
+                    .collect(Collectors.toMap(ResourceCreated::workflowStepId, Function.identity(), (u, m) -> u, LinkedHashMap::new));
 
                 // Now finally do the deprovision
                 executeDeprovisionSequence(workflowId, resourceMap, listener);
