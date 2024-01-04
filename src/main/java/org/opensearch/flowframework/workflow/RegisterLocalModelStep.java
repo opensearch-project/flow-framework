@@ -65,6 +65,7 @@ public class RegisterLocalModelStep extends AbstractRetryableWorkflowStep {
      * @param threadPool The OpenSearch thread pool
      * @param mlClient client to instantiate MLClient
      * @param flowFrameworkIndicesHandler FlowFrameworkIndicesHandler class to update system indices
+     * @param flowFrameworkSettings settings of flow framework
      */
     public RegisterLocalModelStep(
         ThreadPool threadPool,

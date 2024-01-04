@@ -100,6 +100,7 @@ public class WorkflowProcessSorterTests extends OpenSearchTestCase {
     private static Client client = mock(Client.class);
     private static ClusterService clusterService = mock(ClusterService.class);
     private static WorkflowValidator validator;
+    private static FlowFrameworkSettings flowFrameworkSettings;
 
     @BeforeClass
     public static void setup() throws IOException {
@@ -115,6 +116,9 @@ public class WorkflowProcessSorterTests extends OpenSearchTestCase {
         ClusterSettings clusterSettings = new ClusterSettings(settings, settingsSet);
         when(clusterService.getClusterSettings()).thenReturn(clusterSettings);
 
+        flowFrameworkSettings = mock(FlowFrameworkSettings.class);
+        when(flowFrameworkSettings.isFlowFrameworkEnabled()).thenReturn(true);
+
         when(client.admin()).thenReturn(adminClient);
 
         testThreadPool = new TestThreadPool(
@@ -128,12 +132,12 @@ public class WorkflowProcessSorterTests extends OpenSearchTestCase {
             )
         );
         WorkflowStepFactory factory = new WorkflowStepFactory(
-            Settings.EMPTY,
             testThreadPool,
             clusterService,
             client,
             mlClient,
-            flowFrameworkIndicesHandler
+            flowFrameworkIndicesHandler,
+                flowFrameworkSettings
         );
         workflowProcessSorter = new WorkflowProcessSorter(factory, testThreadPool, clusterService, client, settings);
         validator = WorkflowValidator.parse("mappings/workflow-steps.json");

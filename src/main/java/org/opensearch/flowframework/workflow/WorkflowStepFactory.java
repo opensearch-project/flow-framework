@@ -32,15 +32,14 @@ public class WorkflowStepFactory {
     /**
      * Instantiate this class.
      *
-     * @param settings The OpenSearch settings
      * @param threadPool The OpenSearch thread pool
      * @param clusterService The OpenSearch cluster service
      * @param client The OpenSearch client steps can use
      * @param mlClient Machine Learning client to perform ml operations
      * @param flowFrameworkIndicesHandler FlowFrameworkIndicesHandler class to update system indices
+     * @param flowFrameworkSettings common settings of the plugin
      */
     public WorkflowStepFactory(
-        Settings settings,
         ThreadPool threadPool,
         ClusterService clusterService,
         Client client,

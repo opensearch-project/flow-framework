@@ -1,11 +1,3 @@
-/*
- * Copyright OpenSearch Contributors
- * SPDX-License-Identifier: Apache-2.0
- *
- * The OpenSearch Contributors require contributions made to
- * this file be licensed under the Apache-2.0 license or a
- * compatible open source license.
- */
 package org.opensearch.flowframework.common;
 
 import org.opensearch.cluster.service.ClusterService;
@@ -15,6 +7,7 @@ import org.opensearch.common.settings.Settings;
 import org.opensearch.test.OpenSearchTestCase;
 
 import java.io.IOException;
+import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -22,13 +15,12 @@ import java.util.stream.Stream;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-public class FlowFrameworkFeatureEnabledSettingTests extends OpenSearchTestCase {
-
+public class FlowFrameworkSettingsTests extends OpenSearchTestCase {
     private Settings settings;
     private ClusterSettings clusterSettings;
     private ClusterService clusterService;
 
-    private FlowFrameworkFeatureEnabledSetting flowFrameworkFeatureEnabledSetting;
+    private FlowFrameworkSettings flowFrameworkSettings;
 
     @Override
     public void setUp() throws Exception {
@@ -36,13 +28,13 @@ public class FlowFrameworkFeatureEnabledSettingTests extends OpenSearchTestCase 
 
         settings = Settings.builder().build();
         final Set<Setting<?>> settingsSet = Stream.concat(
-            ClusterSettings.BUILT_IN_CLUSTER_SETTINGS.stream(),
-            Stream.of(FlowFrameworkSettings.FLOW_FRAMEWORK_ENABLED)
+                ClusterSettings.BUILT_IN_CLUSTER_SETTINGS.stream(),
+                Stream.of(FlowFrameworkSettings.FLOW_FRAMEWORK_ENABLED, FlowFrameworkSettings.MAX_GET_TASK_REQUEST_RETRY)
         ).collect(Collectors.toSet());
         clusterSettings = new ClusterSettings(settings, settingsSet);
         clusterService = mock(ClusterService.class);
         when(clusterService.getClusterSettings()).thenReturn(clusterSettings);
-        flowFrameworkFeatureEnabledSetting = new FlowFrameworkFeatureEnabledSetting(clusterService, settings);
+        flowFrameworkSettings = new FlowFrameworkSettings(clusterService, settings);
     }
 
     @Override
@@ -51,6 +43,7 @@ public class FlowFrameworkFeatureEnabledSettingTests extends OpenSearchTestCase 
     }
 
     public void testSettings() throws IOException {
-        assertFalse(flowFrameworkFeatureEnabledSetting.isFlowFrameworkEnabled());
+        assertFalse(flowFrameworkSettings.isFlowFrameworkEnabled());
+        assertEquals(Optional.of(5), Optional.ofNullable(flowFrameworkSettings.getMaxRetry()));
     }
 }

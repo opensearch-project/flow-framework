@@ -45,6 +45,7 @@ public abstract class AbstractRetryableWorkflowStep implements WorkflowStep {
      * @param threadPool The OpenSearch thread pool
      * @param mlClient machine learning client
      * @param flowFrameworkIndicesHandler FlowFrameworkIndicesHandler class to update system indices
+     * @param flowFrameworkSettings settings of flow framework
      */
     protected AbstractRetryableWorkflowStep(
         ThreadPool threadPool,

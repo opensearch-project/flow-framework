@@ -16,6 +16,7 @@ import org.opensearch.common.settings.ClusterSettings;
 import org.opensearch.common.settings.Setting;
 import org.opensearch.common.settings.Settings;
 import org.opensearch.core.xcontent.XContentParser;
+import org.opensearch.flowframework.common.FlowFrameworkSettings;
 import org.opensearch.flowframework.indices.FlowFrameworkIndicesHandler;
 import org.opensearch.flowframework.workflow.WorkflowStepFactory;
 import org.opensearch.ml.client.MachineLearningNodeClient;
@@ -40,6 +41,7 @@ public class WorkflowValidatorTests extends OpenSearchTestCase {
 
     private String validWorkflowStepJson;
     private String invalidWorkflowStepJson;
+    private FlowFrameworkSettings flowFrameworkSettings;
 
     @Override
     public void setUp() throws Exception {
@@ -48,6 +50,10 @@ public class WorkflowValidatorTests extends OpenSearchTestCase {
             "{\"workflow_step_1\":{\"inputs\":[\"input_1\",\"input_2\"],\"outputs\":[\"output_1\"]},\"workflow_step_2\":{\"inputs\":[\"input_1\",\"input_2\",\"input_3\"],\"outputs\":[\"output_1\",\"output_2\",\"output_3\"]}}";
         invalidWorkflowStepJson =
             "{\"workflow_step_1\":{\"bad_field\":[\"input_1\",\"input_2\"],\"outputs\":[\"output_1\"]},\"workflow_step_2\":{\"inputs\":[\"input_1\",\"input_2\",\"input_3\"],\"outputs\":[\"output_1\",\"output_2\",\"output_3\"]}}";
+
+
+        flowFrameworkSettings = mock(FlowFrameworkSettings.class);
+        when(flowFrameworkSettings.isFlowFrameworkEnabled()).thenReturn(true);
     }
 
     public void testParseWorkflowValidator() throws IOException {
@@ -90,12 +96,12 @@ public class WorkflowValidatorTests extends OpenSearchTestCase {
         when(clusterService.getClusterSettings()).thenReturn(clusterSettings);
 
         WorkflowStepFactory workflowStepFactory = new WorkflowStepFactory(
-            Settings.EMPTY,
             threadPool,
             clusterService,
             client,
             mlClient,
-            flowFrameworkIndicesHandler
+            flowFrameworkIndicesHandler,
+                flowFrameworkSettings
         );
 
         // Read in workflow-steps.json

@@ -18,9 +18,7 @@ public class FlowFrameworkSettings {
 
     private volatile Boolean isFlowFrameworkEnabled;
     /** The maximum number of transport request retries */
-    protected volatile Integer maxRetry;
-
-    private FlowFrameworkSettings() {}
+    private volatile Integer maxRetry;
 
     /** The upper limit of max workflows that can be created  */
     public static final int MAX_WORKFLOWS_LIMIT = 10000;
