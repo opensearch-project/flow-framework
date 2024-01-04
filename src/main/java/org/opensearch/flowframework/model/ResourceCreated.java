@@ -13,15 +13,13 @@ import org.apache.logging.log4j.Logger;
 import org.opensearch.core.common.io.stream.StreamInput;
 import org.opensearch.core.common.io.stream.StreamOutput;
 import org.opensearch.core.common.io.stream.Writeable;
-import org.opensearch.core.rest.RestStatus;
 import org.opensearch.core.xcontent.ToXContentObject;
 import org.opensearch.core.xcontent.XContentBuilder;
 import org.opensearch.core.xcontent.XContentParser;
-import org.opensearch.flowframework.exception.FlowFrameworkException;
 
 import java.io.IOException;
+import java.util.Map;
 
-import static org.opensearch.core.xcontent.XContentParserUtils.ensureExpectedToken;
 import static org.opensearch.flowframework.common.CommonValue.RESOURCE_ID;
 import static org.opensearch.flowframework.common.CommonValue.RESOURCE_TYPE;
 import static org.opensearch.flowframework.common.CommonValue.WORKFLOW_STEP_ID;
@@ -34,10 +32,7 @@ public class ResourceCreated implements ToXContentObject, Writeable {
 
     private static final Logger logger = LogManager.getLogger(ResourceCreated.class);
 
-    private final String workflowStepName;
-    private final String workflowStepId;
-    private final String resourceType;
-    private final String resourceId;
+    private final Map<String, String> resourceMap;
 
     /**
      * Create this resources created object with given workflow step name, ID and resource ID.
@@ -47,10 +42,14 @@ public class ResourceCreated implements ToXContentObject, Writeable {
      * @param resourceId The resources ID for relating to the created resource
      */
     public ResourceCreated(String workflowStepName, String workflowStepId, String resourceType, String resourceId) {
-        this.workflowStepName = workflowStepName;
-        this.workflowStepId = workflowStepId;
-        this.resourceType = resourceType;
-        this.resourceId = resourceId;
+        this(
+            Map.ofEntries(
+                Map.entry(WORKFLOW_STEP_NAME, workflowStepName),
+                Map.entry(WORKFLOW_STEP_ID, workflowStepId),
+                Map.entry(RESOURCE_TYPE, resourceType),
+                Map.entry(RESOURCE_ID, resourceId)
+            )
+        );
     }
 
     /**
@@ -59,28 +58,21 @@ public class ResourceCreated implements ToXContentObject, Writeable {
      * @throws IOException if failed to read input stream
      */
     public ResourceCreated(StreamInput input) throws IOException {
-        this.workflowStepName = input.readString();
-        this.workflowStepId = input.readString();
-        this.resourceType = input.readString();
-        this.resourceId = input.readString();
+        this(input.readMap(StreamInput::readString, StreamInput::readString));
+    }
+
+    private ResourceCreated(Map<String, String> map) {
+        this.resourceMap = Map.copyOf(map);
     }
 
     @Override
     public XContentBuilder toXContent(XContentBuilder builder, Params params) throws IOException {
-        XContentBuilder xContentBuilder = builder.startObject()
-            .field(WORKFLOW_STEP_NAME, workflowStepName)
-            .field(WORKFLOW_STEP_ID, workflowStepId)
-            .field(RESOURCE_TYPE, resourceType)
-            .field(RESOURCE_ID, resourceId);
-        return xContentBuilder.endObject();
+        return builder.map(resourceMap);
     }
 
     @Override
     public void writeTo(StreamOutput out) throws IOException {
-        out.writeString(workflowStepName);
-        out.writeString(workflowStepId);
-        out.writeString(resourceType);
-        out.writeString(resourceId);
+        out.writeMap(resourceMap, StreamOutput::writeString, StreamOutput::writeString);
     }
 
     /**
@@ -89,7 +81,7 @@ public class ResourceCreated implements ToXContentObject, Writeable {
      * @return the resourceId.
      */
     public String resourceId() {
-        return resourceId;
+        return resourceMap.get(RESOURCE_ID);
     }
 
     /**
@@ -98,7 +90,7 @@ public class ResourceCreated implements ToXContentObject, Writeable {
      * @return the resource type.
      */
     public String resourceType() {
-        return resourceType;
+        return resourceMap.get(RESOURCE_TYPE);
     }
 
     /**
@@ -107,7 +99,7 @@ public class ResourceCreated implements ToXContentObject, Writeable {
      * @return the workflowStepName.
      */
     public String workflowStepName() {
-        return workflowStepName;
+        return resourceMap.get(WORKFLOW_STEP_NAME);
     }
 
     /**
@@ -116,7 +108,16 @@ public class ResourceCreated implements ToXContentObject, Writeable {
      * @return the workflowStepId.
      */
     public String workflowStepId() {
-        return workflowStepId;
+        return resourceMap.get(WORKFLOW_STEP_ID);
+    }
+
+    /**
+     * Gets the map of resource values
+     *
+     * @return a map with the resource values
+     */
+    public Map<String, String> resourceMap() {
+        return resourceMap;
     }
 
     /**
@@ -127,62 +128,11 @@ public class ResourceCreated implements ToXContentObject, Writeable {
      * @throws IOException if content can't be parsed correctly
      */
     public static ResourceCreated parse(XContentParser parser) throws IOException {
-        String workflowStepName = null;
-        String workflowStepId = null;
-        String resourceType = null;
-        String resourceId = null;
-
-        ensureExpectedToken(XContentParser.Token.START_OBJECT, parser.currentToken(), parser);
-        while (parser.nextToken() != XContentParser.Token.END_OBJECT) {
-            String fieldName = parser.currentName();
-            parser.nextToken();
-
-            switch (fieldName) {
-                case WORKFLOW_STEP_NAME:
-                    workflowStepName = parser.text();
-                    break;
-                case WORKFLOW_STEP_ID:
-                    workflowStepId = parser.text();
-                    break;
-                case RESOURCE_TYPE:
-                    resourceType = parser.text();
-                    break;
-                case RESOURCE_ID:
-                    resourceId = parser.text();
-                    break;
-                default:
-                    throw new IOException("Unable to parse field [" + fieldName + "] in a resources_created object.");
-            }
-        }
-        if (workflowStepName == null) {
-            logger.error("Resource created object failed parsing: workflowStepName: {}", workflowStepName);
-            throw new FlowFrameworkException("A ResourceCreated object requires workflowStepName", RestStatus.BAD_REQUEST);
-        }
-        if (workflowStepId == null) {
-            logger.error("Resource created object failed parsing: workflowStepId: {}", workflowStepId);
-            throw new FlowFrameworkException("A ResourceCreated object requires workflowStepId", RestStatus.BAD_REQUEST);
-        }
-        if (resourceType == null) {
-            logger.error("Resource created object failed parsing: resourceType: {}", resourceType);
-            throw new FlowFrameworkException("A ResourceCreated object requires resourceType", RestStatus.BAD_REQUEST);
-        }
-        if (resourceId == null) {
-            logger.error("Resource created object failed parsing: resourceId: {}", resourceId);
-            throw new FlowFrameworkException("A ResourceCreated object requires resourceId", RestStatus.BAD_REQUEST);
-        }
-        return new ResourceCreated(workflowStepName, workflowStepId, resourceType, resourceId);
+        return new ResourceCreated(parser.mapStrings());
     }
 
     @Override
     public String toString() {
-        return "resources_Created [workflow_step_name="
-            + workflowStepName
-            + ", workflow_step_id="
-            + workflowStepId
-            + ", resource_type="
-            + resourceType
-            + ", resource_id="
-            + resourceId
-            + "]";
+        return "resources_Created [" + resourceMap + "]";
     }
 }
