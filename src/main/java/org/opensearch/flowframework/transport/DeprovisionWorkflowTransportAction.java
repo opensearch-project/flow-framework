@@ -262,7 +262,7 @@ public class DeprovisionWorkflowTransportAction extends HandledTransportAction<W
         ResourceCreated resource = null;
         if (pos > 0) {
             for (ResourceCreated resourceCreated : resourcesCreated) {
-                if (resourceCreated.workflowStepId() == deprovisionId.substring(0, pos)) {
+                if (resourceCreated.workflowStepId().equals(deprovisionId.substring(0, pos))) {
                     resource = resourceCreated;
                 }
             }
