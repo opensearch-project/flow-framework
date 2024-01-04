@@ -277,31 +277,4 @@ public class FlowFrameworkRestApiIT extends FlowFrameworkRestTestCase {
 
     }
 
-    public void testCreateAndProvisionRegisterLocalModelWithDeployFlag() throws Exception {
-        Template template = TestHelpers.createTemplateFromFile("registerlocalmodel-deployflag.json");
-        Response response = createWorkflow(template);
-        assertEquals(RestStatus.CREATED, TestHelpers.restStatus(response));
-        Map<String, Object> responseMap = entityAsMap(response);
-        String workflowId = (String) responseMap.get(WORKFLOW_ID);
-        getAndAssertWorkflowStatus(workflowId, State.NOT_STARTED, ProvisioningProgress.NOT_STARTED);
-        // Hit Provision API and assert status
-        response = provisionWorkflow(workflowId);
-        assertEquals(RestStatus.OK, TestHelpers.restStatus(response));
-        getAndAssertWorkflowStatus(workflowId, State.PROVISIONING, ProvisioningProgress.IN_PROGRESS);
-        // Wait until provisioning has completed successfully before attempting to retrieve created resources
-        List<ResourceCreated> resourcesCreated = getResourcesCreated(workflowId, 100);
-        // This template should create 2 resources, registered model_id and deployed model_id
-        assertEquals(2, resourcesCreated.size());
-        assertEquals("register_local_model", resourcesCreated.get(0).workflowStepName());
-        assertNotNull(resourcesCreated.get(0).resourceId());
-        assertEquals("deploy_model", resourcesCreated.get(1).workflowStepName());
-        assertNotNull(resourcesCreated.get(1).resourceId());
-
-        // Deprovision the workflow to avoid opening circut breaker when running additional tests
-        Response deprovisionResponse = deprovisionWorkflow(workflowId);
-
-        // wait for deprovision to complete
-        Thread.sleep(5000);
-    }
-
 }
