@@ -37,7 +37,11 @@ public class FlowFrameworkSettingsTests extends OpenSearchTestCase {
         settings = Settings.builder().build();
         final Set<Setting<?>> settingsSet = Stream.concat(
             ClusterSettings.BUILT_IN_CLUSTER_SETTINGS.stream(),
-            Stream.of(FlowFrameworkSettings.FLOW_FRAMEWORK_ENABLED, FlowFrameworkSettings.MAX_GET_TASK_REQUEST_RETRY)
+            Stream.of(
+                FlowFrameworkSettings.FLOW_FRAMEWORK_ENABLED,
+                FlowFrameworkSettings.MAX_GET_TASK_REQUEST_RETRY,
+                FlowFrameworkSettings.MAX_WORKFLOW_STEPS
+            )
         ).collect(Collectors.toSet());
         clusterSettings = new ClusterSettings(settings, settingsSet);
         clusterService = mock(ClusterService.class);
@@ -53,5 +57,6 @@ public class FlowFrameworkSettingsTests extends OpenSearchTestCase {
     public void testSettings() throws IOException {
         assertFalse(flowFrameworkSettings.isFlowFrameworkEnabled());
         assertEquals(Optional.of(5), Optional.ofNullable(flowFrameworkSettings.getMaxRetry()));
+        assertEquals(Optional.of(50), Optional.ofNullable(flowFrameworkSettings.getMaxWorkflowSteps()));
     }
 }

@@ -124,7 +124,7 @@ public class FlowFrameworkPlugin extends Plugin implements ActionPlugin {
             threadPool,
             clusterService,
             client,
-            settings
+            flowFrameworkSettings
         );
 
         return List.of(workflowStepFactory, workflowProcessSorter, encryptorUtils, flowFrameworkIndicesHandler);

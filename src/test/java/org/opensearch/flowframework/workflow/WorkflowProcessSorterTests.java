@@ -118,6 +118,7 @@ public class WorkflowProcessSorterTests extends OpenSearchTestCase {
 
         flowFrameworkSettings = mock(FlowFrameworkSettings.class);
         when(flowFrameworkSettings.isFlowFrameworkEnabled()).thenReturn(true);
+        when(flowFrameworkSettings.getMaxWorkflowSteps()).thenReturn(5);
 
         when(client.admin()).thenReturn(adminClient);
 
@@ -139,7 +140,7 @@ public class WorkflowProcessSorterTests extends OpenSearchTestCase {
             flowFrameworkIndicesHandler,
             flowFrameworkSettings
         );
-        workflowProcessSorter = new WorkflowProcessSorter(factory, testThreadPool, clusterService, client, settings);
+        workflowProcessSorter = new WorkflowProcessSorter(factory, testThreadPool, clusterService, client, flowFrameworkSettings);
         validator = WorkflowValidator.parse("mappings/workflow-steps.json");
     }
 
