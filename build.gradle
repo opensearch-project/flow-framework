@@ -151,10 +151,12 @@ dependencies {
     implementation 'org.junit.jupiter:junit-jupiter:5.10.1'
     implementation "com.google.guava:guava:33.0.0-jre"
     api group: 'org.opensearch', name:'opensearch-ml-client', version: "${opensearch_build}"
+    api group: 'org.opensearch.client', name: 'opensearch-rest-client', version: "${opensearch_version}"
     implementation group: 'org.apache.commons', name: 'commons-lang3', version: '3.14.0'
     implementation "org.opensearch:common-utils:${common_utils_version}"
     implementation 'com.amazonaws:aws-encryption-sdk-java:2.4.1'
     implementation 'org.bouncycastle:bcprov-jdk18on:1.77'
+    api "org.apache.httpcomponents.core5:httpcore5:5.2.2"
 
     // ZipArchive dependencies used for integration tests
     zipArchive group: 'org.opensearch.plugin', name:'opensearch-ml-plugin', version: "${opensearch_build}"
