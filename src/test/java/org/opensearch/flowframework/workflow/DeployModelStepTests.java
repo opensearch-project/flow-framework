@@ -95,6 +95,7 @@ public class DeployModelStepTests extends OpenSearchTestCase {
 
         flowFrameworkSettings = mock(FlowFrameworkSettings.class);
         when(flowFrameworkSettings.isFlowFrameworkEnabled()).thenReturn(true);
+        when(flowFrameworkSettings.getMaxRetry()).thenReturn(5);
 
         testThreadPool = new TestThreadPool(
             DeployModelStepTests.class.getName(),

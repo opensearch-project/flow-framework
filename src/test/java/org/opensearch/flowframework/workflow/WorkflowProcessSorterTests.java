@@ -137,7 +137,7 @@ public class WorkflowProcessSorterTests extends OpenSearchTestCase {
             client,
             mlClient,
             flowFrameworkIndicesHandler,
-                flowFrameworkSettings
+            flowFrameworkSettings
         );
         workflowProcessSorter = new WorkflowProcessSorter(factory, testThreadPool, clusterService, client, settings);
         validator = WorkflowValidator.parse("mappings/workflow-steps.json");

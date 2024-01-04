@@ -1,3 +1,11 @@
+/*
+ * Copyright OpenSearch Contributors
+ * SPDX-License-Identifier: Apache-2.0
+ *
+ * The OpenSearch Contributors require contributions made to
+ * this file be licensed under the Apache-2.0 license or a
+ * compatible open source license.
+ */
 package org.opensearch.flowframework.common;
 
 import org.opensearch.cluster.service.ClusterService;
@@ -28,8 +36,8 @@ public class FlowFrameworkSettingsTests extends OpenSearchTestCase {
 
         settings = Settings.builder().build();
         final Set<Setting<?>> settingsSet = Stream.concat(
-                ClusterSettings.BUILT_IN_CLUSTER_SETTINGS.stream(),
-                Stream.of(FlowFrameworkSettings.FLOW_FRAMEWORK_ENABLED, FlowFrameworkSettings.MAX_GET_TASK_REQUEST_RETRY)
+            ClusterSettings.BUILT_IN_CLUSTER_SETTINGS.stream(),
+            Stream.of(FlowFrameworkSettings.FLOW_FRAMEWORK_ENABLED, FlowFrameworkSettings.MAX_GET_TASK_REQUEST_RETRY)
         ).collect(Collectors.toSet());
         clusterSettings = new ClusterSettings(settings, settingsSet);
         clusterService = mock(ClusterService.class);

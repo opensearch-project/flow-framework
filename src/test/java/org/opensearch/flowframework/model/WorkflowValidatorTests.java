@@ -51,7 +51,6 @@ public class WorkflowValidatorTests extends OpenSearchTestCase {
         invalidWorkflowStepJson =
             "{\"workflow_step_1\":{\"bad_field\":[\"input_1\",\"input_2\"],\"outputs\":[\"output_1\"]},\"workflow_step_2\":{\"inputs\":[\"input_1\",\"input_2\",\"input_3\"],\"outputs\":[\"output_1\",\"output_2\",\"output_3\"]}}";
 
-
         flowFrameworkSettings = mock(FlowFrameworkSettings.class);
         when(flowFrameworkSettings.isFlowFrameworkEnabled()).thenReturn(true);
     }
@@ -101,7 +100,7 @@ public class WorkflowValidatorTests extends OpenSearchTestCase {
             client,
             mlClient,
             flowFrameworkIndicesHandler,
-                flowFrameworkSettings
+            flowFrameworkSettings
         );
 
         // Read in workflow-steps.json
