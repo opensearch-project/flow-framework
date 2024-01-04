@@ -45,18 +45,16 @@ public class DeployModelStep extends AbstractRetryableWorkflowStep {
      * Instantiate this class
      * @param settings The OpenSearch settings
      * @param threadPool The OpenSearch thread pool
-     * @param clusterService The cluster service
      * @param mlClient client to instantiate MLClient
      * @param flowFrameworkIndicesHandler FlowFrameworkIndicesHandler class to update system indices
      */
     public DeployModelStep(
         Settings settings,
         ThreadPool threadPool,
-        ClusterService clusterService,
         MachineLearningNodeClient mlClient,
         FlowFrameworkIndicesHandler flowFrameworkIndicesHandler
     ) {
-        super(settings, threadPool, clusterService, mlClient, flowFrameworkIndicesHandler);
+        super(settings, threadPool, mlClient, flowFrameworkIndicesHandler);
         this.mlClient = mlClient;
         this.flowFrameworkIndicesHandler = flowFrameworkIndicesHandler;
     }

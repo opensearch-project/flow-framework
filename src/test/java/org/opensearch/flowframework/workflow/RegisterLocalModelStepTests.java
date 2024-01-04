@@ -99,7 +99,6 @@ public class RegisterLocalModelStepTests extends OpenSearchTestCase {
         this.registerLocalModelStep = new RegisterLocalModelStep(
             testMaxRetrySetting,
             testThreadPool,
-            clusterService,
             machineLearningNodeClient,
             flowFrameworkIndicesHandler
         );

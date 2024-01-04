@@ -104,7 +104,6 @@ public class DeployModelStepTests extends OpenSearchTestCase {
         this.deployModel = new DeployModelStep(
             testMaxRetrySetting,
             testThreadPool,
-            clusterService,
             machineLearningNodeClient,
             flowFrameworkIndicesHandler
         );

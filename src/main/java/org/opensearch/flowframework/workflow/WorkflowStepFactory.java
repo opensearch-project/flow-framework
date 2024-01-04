@@ -51,13 +51,13 @@ public class WorkflowStepFactory {
         stepMap.put(CreateIngestPipelineStep.NAME, () -> new CreateIngestPipelineStep(client, flowFrameworkIndicesHandler));
         stepMap.put(
             RegisterLocalModelStep.NAME,
-            () -> new RegisterLocalModelStep(settings, threadPool, clusterService, mlClient, flowFrameworkIndicesHandler)
+            () -> new RegisterLocalModelStep(settings, threadPool, mlClient, flowFrameworkIndicesHandler)
         );
         stepMap.put(RegisterRemoteModelStep.NAME, () -> new RegisterRemoteModelStep(mlClient, flowFrameworkIndicesHandler));
         stepMap.put(DeleteModelStep.NAME, () -> new DeleteModelStep(mlClient));
         stepMap.put(
             DeployModelStep.NAME,
-            () -> new DeployModelStep(settings, threadPool, clusterService, mlClient, flowFrameworkIndicesHandler)
+            () -> new DeployModelStep(settings, threadPool, mlClient, flowFrameworkIndicesHandler)
         );
         stepMap.put(UndeployModelStep.NAME, () -> new UndeployModelStep(mlClient));
         stepMap.put(CreateConnectorStep.NAME, () -> new CreateConnectorStep(mlClient, flowFrameworkIndicesHandler));

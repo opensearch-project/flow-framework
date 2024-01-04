@@ -53,13 +53,11 @@ public abstract class AbstractRetryableWorkflowStep implements WorkflowStep {
     protected AbstractRetryableWorkflowStep(
         Settings settings,
         ThreadPool threadPool,
-        ClusterService clusterService,
         MachineLearningNodeClient mlClient,
         FlowFrameworkIndicesHandler flowFrameworkIndicesHandler
     ) {
         this.threadPool = threadPool;
         this.maxRetry = MAX_GET_TASK_REQUEST_RETRY.get(settings);
-        clusterService.getClusterSettings().addSettingsUpdateConsumer(MAX_GET_TASK_REQUEST_RETRY, it -> maxRetry = it);
         this.mlClient = mlClient;
         this.flowFrameworkIndicesHandler = flowFrameworkIndicesHandler;
     }
