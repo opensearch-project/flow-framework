@@ -9,12 +9,14 @@
 package org.opensearch.flowframework.model;
 
 import org.opensearch.common.io.stream.BytesStreamOutput;
+import org.opensearch.commons.authuser.User;
 import org.opensearch.core.common.bytes.BytesReference;
 import org.opensearch.core.common.io.stream.BytesStreamInput;
 import org.opensearch.test.OpenSearchTestCase;
 
 import java.io.IOException;
 import java.time.Instant;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
@@ -32,6 +34,7 @@ public class WorkflowStateTests extends OpenSearchTestCase {
         String provisioningProgress = "progress";
         Instant provisionStartTime = Instant.now().minusSeconds(2);
         Instant provisionEndTime = Instant.now();
+        User user = new User("user", Collections.emptyList(), Collections.emptyList(), Collections.emptyList());
         Map<String, Object> userOutputs = Map.of("foo", Map.of("bar", "baz"));
         List<ResourceCreated> resourcesCreated = List.of(new ResourceCreated("name", "stepId", "type", "id"));
 
@@ -42,8 +45,7 @@ public class WorkflowStateTests extends OpenSearchTestCase {
             .provisioningProgress(provisioningProgress)
             .provisionStartTime(provisionStartTime)
             .provisionEndTime(provisionEndTime)
-            // TODO test this
-            // .user(user)
+            .user(user)
             .userOutputs(userOutputs)
             .resourcesCreated(resourcesCreated)
             .build();
@@ -54,6 +56,7 @@ public class WorkflowStateTests extends OpenSearchTestCase {
         assertEquals(provisioningProgress, wfs.getProvisioningProgress());
         assertEquals(provisionStartTime, wfs.getProvisionStartTime());
         assertEquals(provisionEndTime, wfs.getProvisionEndTime());
+        assertEquals("user", wfs.getUser().getName());
         assertEquals(1, wfs.userOutputs().size());
         assertEquals("baz", ((Map<?, ?>) wfs.userOutputs().get("foo")).get("bar"));
         assertEquals(1, wfs.resourcesCreated().size());
@@ -74,6 +77,7 @@ public class WorkflowStateTests extends OpenSearchTestCase {
                 assertEquals(provisioningProgress, wfs.getProvisioningProgress());
                 assertEquals(provisionStartTime, wfs.getProvisionStartTime());
                 assertEquals(provisionEndTime, wfs.getProvisionEndTime());
+                assertEquals("user", wfs.getUser().getName());
                 assertEquals(1, wfs.userOutputs().size());
                 assertEquals("baz", ((Map<?, ?>) wfs.userOutputs().get("foo")).get("bar"));
                 assertEquals(1, wfs.resourcesCreated().size());
