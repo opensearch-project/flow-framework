@@ -24,10 +24,8 @@ import org.opensearch.flowframework.indices.FlowFrameworkIndicesHandler;
 import org.opensearch.flowframework.model.ProvisioningProgress;
 import org.opensearch.flowframework.model.ResourceCreated;
 import org.opensearch.flowframework.model.State;
-import org.opensearch.flowframework.util.EncryptorUtils;
 import org.opensearch.flowframework.workflow.ProcessNode;
 import org.opensearch.flowframework.workflow.WorkflowData;
-import org.opensearch.flowframework.workflow.WorkflowProcessSorter;
 import org.opensearch.flowframework.workflow.WorkflowStepFactory;
 import org.opensearch.tasks.Task;
 import org.opensearch.threadpool.ThreadPool;
@@ -37,12 +35,10 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Iterator;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
-import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import static org.opensearch.flowframework.common.CommonValue.PROVISIONING_PROGRESS_FIELD;
@@ -63,10 +59,8 @@ public class DeprovisionWorkflowTransportAction extends HandledTransportAction<W
 
     private final ThreadPool threadPool;
     private final Client client;
-    private final WorkflowProcessSorter workflowProcessSorter;
     private final WorkflowStepFactory workflowStepFactory;
     private final FlowFrameworkIndicesHandler flowFrameworkIndicesHandler;
-    private final EncryptorUtils encryptorUtils;
 
     /**
      * Instantiates a new ProvisionWorkflowTransportAction
@@ -74,10 +68,8 @@ public class DeprovisionWorkflowTransportAction extends HandledTransportAction<W
      * @param actionFilters action filters
      * @param threadPool The OpenSearch thread pool
      * @param client The node client to retrieve a stored use case template
-     * @param workflowProcessSorter Utility class to generate a togologically sorted list of Process nodes
      * @param workflowStepFactory The factory instantiating workflow steps
      * @param flowFrameworkIndicesHandler Class to handle all internal system indices actions
-     * @param encryptorUtils Utility class to handle encryption/decryption
      */
     @Inject
     public DeprovisionWorkflowTransportAction(
@@ -85,18 +77,14 @@ public class DeprovisionWorkflowTransportAction extends HandledTransportAction<W
         ActionFilters actionFilters,
         ThreadPool threadPool,
         Client client,
-        WorkflowProcessSorter workflowProcessSorter,
         WorkflowStepFactory workflowStepFactory,
-        FlowFrameworkIndicesHandler flowFrameworkIndicesHandler,
-        EncryptorUtils encryptorUtils
+        FlowFrameworkIndicesHandler flowFrameworkIndicesHandler
     ) {
         super(DeprovisionWorkflowAction.NAME, transportService, actionFilters, WorkflowRequest::new);
         this.threadPool = threadPool;
         this.client = client;
-        this.workflowProcessSorter = workflowProcessSorter;
         this.workflowStepFactory = workflowStepFactory;
         this.flowFrameworkIndicesHandler = flowFrameworkIndicesHandler;
-        this.encryptorUtils = encryptorUtils;
     }
 
     @Override
@@ -108,14 +96,9 @@ public class DeprovisionWorkflowTransportAction extends HandledTransportAction<W
         try (ThreadContext.StoredContext context = client.threadPool().getThreadContext().stashContext()) {
             client.execute(GetWorkflowStateAction.INSTANCE, getStateRequest, ActionListener.wrap(response -> {
                 context.restore();
-                // Get a map of step id to created resources
-                final Map<String, ResourceCreated> resourceMap = response.getWorkflowState()
-                    .resourcesCreated()
-                    .stream()
-                    .collect(Collectors.toMap(ResourceCreated::workflowStepId, Function.identity(), (u, m) -> u, LinkedHashMap::new));
 
-                // Now finally do the deprovision
-                executeDeprovisionSequence(workflowId, resourceMap, listener);
+                // Retrieve resources from workflow state and deprovision
+                executeDeprovisionSequence(workflowId, response.getWorkflowState().resourcesCreated(), listener);
             }, exception -> {
                 String message = "Failed to get workflow state for workflow " + workflowId;
                 logger.error(message, exception);
@@ -130,17 +113,16 @@ public class DeprovisionWorkflowTransportAction extends HandledTransportAction<W
 
     private void executeDeprovisionSequence(
         String workflowId,
-        Map<String, ResourceCreated> resourceMap,
+        List<ResourceCreated> resourcesCreated,
         ActionListener<WorkflowResponse> listener
     ) {
 
         // Create a list of ProcessNodes with the corresponding deprovision workflow steps
         List<ProcessNode> deprovisionProcessSequence = new ArrayList<>();
-        for (Map.Entry<String, ResourceCreated> resource : resourceMap.entrySet()) {
-            String workflowStepId = resource.getKey();
-            ResourceCreated resourceCreated = resource.getValue();
+        for (ResourceCreated resource : resourcesCreated) {
+            String workflowStepId = resource.workflowStepId();
 
-            String stepName = resourceCreated.workflowStepName();
+            String stepName = resource.workflowStepName();
             String deprovisionStep = getDeprovisionStepByWorkflowStep(stepName);
             // Unimplemented steps presently return null, so skip
             if (deprovisionStep == null) {
@@ -153,11 +135,7 @@ public class DeprovisionWorkflowTransportAction extends HandledTransportAction<W
                     deprovisionStepId,
                     workflowStepFactory.createStep(deprovisionStep),
                     Collections.emptyMap(),
-                    new WorkflowData(
-                        Map.of(getResourceByWorkflowStep(stepName), resourceCreated.resourceId()),
-                        workflowId,
-                        deprovisionStepId
-                    ),
+                    new WorkflowData(Map.of(getResourceByWorkflowStep(stepName), resource.resourceId()), workflowId, deprovisionStepId),
                     Collections.emptyList(),
                     this.threadPool,
                     TimeValue.ZERO
@@ -175,7 +153,7 @@ public class DeprovisionWorkflowTransportAction extends HandledTransportAction<W
             Iterator<ProcessNode> iter = deprovisionProcessSequence.iterator();
             while (iter.hasNext()) {
                 ProcessNode deprovisionNode = iter.next();
-                ResourceCreated resource = getResourceFromDeprovisionNode(deprovisionNode, resourceMap);
+                ResourceCreated resource = getResourceFromDeprovisionNode(deprovisionNode, resourcesCreated);
                 String resourceNameAndId = getResourceNameAndId(resource);
                 CompletableFuture<WorkflowData> deprovisionFuture = deprovisionNode.execute();
                 try {
@@ -221,7 +199,7 @@ public class DeprovisionWorkflowTransportAction extends HandledTransportAction<W
         }
         // Get corresponding resources
         List<ResourceCreated> remainingResources = deprovisionProcessSequence.stream()
-            .map(pn -> getResourceFromDeprovisionNode(pn, resourceMap))
+            .map(pn -> getResourceFromDeprovisionNode(pn, resourcesCreated))
             .collect(Collectors.toList());
         logger.info("Resources remaining: {}", remainingResources);
         updateWorkflowState(workflowId, remainingResources, listener);
@@ -278,10 +256,18 @@ public class DeprovisionWorkflowTransportAction extends HandledTransportAction<W
         }
     }
 
-    private static ResourceCreated getResourceFromDeprovisionNode(ProcessNode deprovisionNode, Map<String, ResourceCreated> resourceMap) {
+    private static ResourceCreated getResourceFromDeprovisionNode(ProcessNode deprovisionNode, List<ResourceCreated> resourcesCreated) {
         String deprovisionId = deprovisionNode.id();
         int pos = deprovisionId.indexOf(DEPROVISION_SUFFIX);
-        return pos > 0 ? resourceMap.get(deprovisionId.substring(0, pos)) : null;
+        ResourceCreated resource = null;
+        if (pos > 0) {
+            for (ResourceCreated resourceCreated : resourcesCreated) {
+                if (resourceCreated.workflowStepId() == deprovisionId.substring(0, pos)) {
+                    resource = resourceCreated;
+                }
+            }
+        }
+        return resource;
     }
 
     private static String getResourceNameAndId(ResourceCreated resource) {
