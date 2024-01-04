@@ -18,6 +18,7 @@ import org.opensearch.common.settings.Settings;
 import org.opensearch.common.util.concurrent.OpenSearchExecutors;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.core.index.shard.ShardId;
+import org.opensearch.flowframework.common.FlowFrameworkSettings;
 import org.opensearch.flowframework.exception.FlowFrameworkException;
 import org.opensearch.flowframework.indices.FlowFrameworkIndicesHandler;
 import org.opensearch.ml.client.MachineLearningNodeClient;
@@ -66,6 +67,7 @@ public class RegisterLocalModelStepTests extends OpenSearchTestCase {
     private RegisterLocalModelStep registerLocalModelStep;
     private WorkflowData workflowData;
     private FlowFrameworkIndicesHandler flowFrameworkIndicesHandler;
+    private FlowFrameworkSettings flowFrameworkSettings;
 
     @Mock
     MachineLearningNodeClient machineLearningNodeClient;
@@ -86,6 +88,9 @@ public class RegisterLocalModelStepTests extends OpenSearchTestCase {
         ClusterSettings clusterSettings = new ClusterSettings(testMaxRetrySetting, settingsSet);
         when(clusterService.getClusterSettings()).thenReturn(clusterSettings);
 
+        flowFrameworkSettings = mock(FlowFrameworkSettings.class);
+        when(flowFrameworkSettings.isFlowFrameworkEnabled()).thenReturn(true);
+
         testThreadPool = new TestThreadPool(
             RegisterLocalModelStepTests.class.getName(),
             new FixedExecutorBuilder(
@@ -97,10 +102,10 @@ public class RegisterLocalModelStepTests extends OpenSearchTestCase {
             )
         );
         this.registerLocalModelStep = new RegisterLocalModelStep(
-            testMaxRetrySetting,
             testThreadPool,
             machineLearningNodeClient,
-            flowFrameworkIndicesHandler
+            flowFrameworkIndicesHandler,
+            flowFrameworkSettings
         );
 
         this.workflowData = new WorkflowData(

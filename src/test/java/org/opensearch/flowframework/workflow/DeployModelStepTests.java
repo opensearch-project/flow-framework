@@ -19,6 +19,7 @@ import org.opensearch.common.util.concurrent.OpenSearchExecutors;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.core.index.shard.ShardId;
 import org.opensearch.core.rest.RestStatus;
+import org.opensearch.flowframework.common.FlowFrameworkSettings;
 import org.opensearch.flowframework.exception.FlowFrameworkException;
 import org.opensearch.flowframework.indices.FlowFrameworkIndicesHandler;
 import org.opensearch.ml.client.MachineLearningNodeClient;
@@ -73,6 +74,7 @@ public class DeployModelStepTests extends OpenSearchTestCase {
 
     private DeployModelStep deployModel;
     private FlowFrameworkIndicesHandler flowFrameworkIndicesHandler;
+    private FlowFrameworkSettings flowFrameworkSettings;
 
     @Override
     public void setUp() throws Exception {
@@ -91,6 +93,9 @@ public class DeployModelStepTests extends OpenSearchTestCase {
         ClusterSettings clusterSettings = new ClusterSettings(testMaxRetrySetting, settingsSet);
         when(clusterService.getClusterSettings()).thenReturn(clusterSettings);
 
+        flowFrameworkSettings = mock(FlowFrameworkSettings.class);
+        when(flowFrameworkSettings.isFlowFrameworkEnabled()).thenReturn(true);
+
         testThreadPool = new TestThreadPool(
             DeployModelStepTests.class.getName(),
             new FixedExecutorBuilder(
@@ -102,10 +107,10 @@ public class DeployModelStepTests extends OpenSearchTestCase {
             )
         );
         this.deployModel = new DeployModelStep(
-            testMaxRetrySetting,
             testThreadPool,
             machineLearningNodeClient,
-            flowFrameworkIndicesHandler
+            flowFrameworkIndicesHandler,
+            flowFrameworkSettings
         );
         this.inputData = new WorkflowData(Map.ofEntries(Map.entry("model_id", "modelId")), "test-id", "test-node-id");
     }

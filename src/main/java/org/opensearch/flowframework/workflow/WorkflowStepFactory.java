@@ -12,6 +12,7 @@ import org.opensearch.client.Client;
 import org.opensearch.cluster.service.ClusterService;
 import org.opensearch.common.settings.Settings;
 import org.opensearch.core.rest.RestStatus;
+import org.opensearch.flowframework.common.FlowFrameworkSettings;
 import org.opensearch.flowframework.exception.FlowFrameworkException;
 import org.opensearch.flowframework.indices.FlowFrameworkIndicesHandler;
 import org.opensearch.ml.client.MachineLearningNodeClient;
@@ -44,20 +45,21 @@ public class WorkflowStepFactory {
         ClusterService clusterService,
         Client client,
         MachineLearningNodeClient mlClient,
-        FlowFrameworkIndicesHandler flowFrameworkIndicesHandler
+        FlowFrameworkIndicesHandler flowFrameworkIndicesHandler,
+        FlowFrameworkSettings flowFrameworkSettings
     ) {
         stepMap.put(NoOpStep.NAME, NoOpStep::new);
         stepMap.put(CreateIndexStep.NAME, () -> new CreateIndexStep(clusterService, client, flowFrameworkIndicesHandler));
         stepMap.put(CreateIngestPipelineStep.NAME, () -> new CreateIngestPipelineStep(client, flowFrameworkIndicesHandler));
         stepMap.put(
             RegisterLocalModelStep.NAME,
-            () -> new RegisterLocalModelStep(settings, threadPool, mlClient, flowFrameworkIndicesHandler)
+            () -> new RegisterLocalModelStep(threadPool, mlClient, flowFrameworkIndicesHandler, flowFrameworkSettings)
         );
         stepMap.put(RegisterRemoteModelStep.NAME, () -> new RegisterRemoteModelStep(mlClient, flowFrameworkIndicesHandler));
         stepMap.put(DeleteModelStep.NAME, () -> new DeleteModelStep(mlClient));
         stepMap.put(
             DeployModelStep.NAME,
-            () -> new DeployModelStep(settings, threadPool, mlClient, flowFrameworkIndicesHandler)
+            () -> new DeployModelStep(threadPool, mlClient, flowFrameworkIndicesHandler, flowFrameworkSettings)
         );
         stepMap.put(UndeployModelStep.NAME, () -> new UndeployModelStep(mlClient));
         stepMap.put(CreateConnectorStep.NAME, () -> new CreateConnectorStep(mlClient, flowFrameworkIndicesHandler));

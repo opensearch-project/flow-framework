@@ -117,7 +117,8 @@ public class FlowFrameworkPlugin extends Plugin implements ActionPlugin {
             clusterService,
             client,
             mlClient,
-            flowFrameworkIndicesHandler
+            flowFrameworkIndicesHandler,
+            flowFrameworkSettings
         );
         WorkflowProcessSorter workflowProcessSorter = new WorkflowProcessSorter(
             workflowStepFactory,

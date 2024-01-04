@@ -11,9 +11,8 @@ package org.opensearch.flowframework.workflow;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.opensearch.ExceptionsHelper;
-import org.opensearch.cluster.service.ClusterService;
-import org.opensearch.common.settings.Settings;
 import org.opensearch.core.action.ActionListener;
+import org.opensearch.flowframework.common.FlowFrameworkSettings;
 import org.opensearch.flowframework.exception.FlowFrameworkException;
 import org.opensearch.flowframework.indices.FlowFrameworkIndicesHandler;
 import org.opensearch.flowframework.util.ParseUtils;
@@ -43,18 +42,17 @@ public class DeployModelStep extends AbstractRetryableWorkflowStep {
 
     /**
      * Instantiate this class
-     * @param settings The OpenSearch settings
      * @param threadPool The OpenSearch thread pool
      * @param mlClient client to instantiate MLClient
      * @param flowFrameworkIndicesHandler FlowFrameworkIndicesHandler class to update system indices
      */
     public DeployModelStep(
-        Settings settings,
         ThreadPool threadPool,
         MachineLearningNodeClient mlClient,
-        FlowFrameworkIndicesHandler flowFrameworkIndicesHandler
+        FlowFrameworkIndicesHandler flowFrameworkIndicesHandler,
+        FlowFrameworkSettings flowFrameworkSettings
     ) {
-        super(settings, threadPool, mlClient, flowFrameworkIndicesHandler);
+        super(threadPool, mlClient, flowFrameworkIndicesHandler, flowFrameworkSettings);
         this.mlClient = mlClient;
         this.flowFrameworkIndicesHandler = flowFrameworkIndicesHandler;
     }

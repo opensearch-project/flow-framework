@@ -94,4 +94,12 @@ public class FlowFrameworkSettings {
     public boolean isFlowFrameworkEnabled() {
         return isFlowFrameworkEnabled;
     }
+
+    /**
+     * Getter for max retry count
+     * @return count of max retry
+     */
+    public Integer getMaxRetry() {
+        return maxRetry;
+    }
 }
