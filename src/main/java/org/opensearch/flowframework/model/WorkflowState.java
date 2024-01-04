@@ -111,7 +111,12 @@ public class WorkflowState implements ToXContentObject, Writeable {
         // TODO: fix error: cannot access Response issue when integrating with access control
         // this.user = input.readBoolean() ? new User(input) : null;
         this.userOutputs = input.readBoolean() ? input.readMap() : null;
-        this.resourcesCreated = input.readList(ResourceCreated::new);
+
+        int resourceCount = input.readVInt();
+        this.resourcesCreated = new ArrayList<>(resourceCount);
+        for (int r = 0; r < resourceCount; r++) {
+            resourcesCreated.add(new ResourceCreated(input));
+        }
     }
 
     /**
@@ -292,11 +297,14 @@ public class WorkflowState implements ToXContentObject, Writeable {
         output.writeOptionalInstant(provisionStartTime);
         output.writeOptionalInstant(provisionEndTime);
 
+        /*- TODO: fix error: cannot access Response issue when integrating with access control
         if (user != null) {
+            output.writeBoolean(true);
             user.writeTo(output);
         } else {
             output.writeBoolean(false);
         }
+        */
 
         if (userOutputs != null) {
             output.writeBoolean(true);
@@ -304,7 +312,11 @@ public class WorkflowState implements ToXContentObject, Writeable {
         } else {
             output.writeBoolean(false);
         }
-        output.writeList(resourcesCreated);
+
+        output.writeVInt(resourcesCreated.size());
+        for (ResourceCreated resource : resourcesCreated) {
+            resource.writeTo(output);
+        }
     }
 
     /**

@@ -506,8 +506,6 @@ public class FlowFrameworkIndicesHandler {
             getResourceByWorkflowStep(workflowStepName),
             resourceId
         );
-        XContentBuilder builder = XContentBuilder.builder(XContentType.JSON.xContent());
-        newResource.toXContent(builder, ToXContent.EMPTY_PARAMS);
 
         // The script to append a new object to the resources_created array
         Script script = new Script(
