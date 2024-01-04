@@ -133,6 +133,9 @@ public class FlowFrameworkRestApiIT extends FlowFrameworkRestTestCase {
 
         // Deprovision the workflow to avoid opening circut breaker when running additional tests
         Response deprovisionResponse = deprovisionWorkflow(workflowId);
+
+        // wait for deprovision to complete
+        Thread.sleep(5000);
     }
 
     public void testCreateAndProvisionRemoteModelWorkflow() throws Exception {
@@ -192,6 +195,9 @@ public class FlowFrameworkRestApiIT extends FlowFrameworkRestTestCase {
 
         // Deprovision the workflow to avoid opening circut breaker when running additional tests
         Response deprovisionResponse = deprovisionWorkflow(workflowId);
+
+        // wait for deprovision to complete
+        Thread.sleep(5000);
     }
 
     public void testCreateAndProvisionDeployedRemoteModelWorkflow() throws Exception {
@@ -225,6 +231,9 @@ public class FlowFrameworkRestApiIT extends FlowFrameworkRestTestCase {
 
         // Deprovision the workflow to avoid opening circut breaker when running additional tests
         Response deprovisionResponse = deprovisionWorkflow(workflowId);
+
+        // wait for deprovision to complete
+        Thread.sleep(5000);
     }
 
     public void testCreateAndProvisionAgentFrameworkWorkflow() throws Exception {
@@ -307,6 +316,9 @@ public class FlowFrameworkRestApiIT extends FlowFrameworkRestTestCase {
 
         // Deprovision the workflow to avoid opening circut breaker when running additional tests
         Response deprovisionResponse = deprovisionWorkflow(workflowId);
+
+        // wait for deprovision to complete
+        Thread.sleep(5000);
     }
 
 }
