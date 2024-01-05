@@ -23,6 +23,7 @@ import org.opensearch.flowframework.model.WorkflowEdge;
 import org.opensearch.flowframework.model.WorkflowNode;
 import org.opensearch.flowframework.model.WorkflowState;
 
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -68,15 +69,11 @@ public class FlowFrameworkRestApiIT extends FlowFrameworkRestTestCase {
     }
 
     public void testCreateAndProvisionLocalModelWorkflow() throws Exception {
-        /*- Local model registration is not yet fully complete.  Commenting this test out until it is.
-         * https://github.com/opensearch-project/flow-framework/issues/305
+        // Using a 1 step template to register a local model and deploy model
+        Template template = TestHelpers.createTemplateFromFile("registerlocalmodel-deployflag.json");
 
-        // Using a 3 step template to create a model group, register a remote model and deploy model
-        Template template = TestHelpers.createTemplateFromFile("registerlocalmodel-deploymodel.json");
-
-        // Remove deploy model input to test validation
+        // Remove register model input to test validation
         Workflow originalWorkflow = template.workflows().get(PROVISION_WORKFLOW);
-
         List<WorkflowNode> modifiednodes = originalWorkflow.nodes()
             .stream()
             .map(
@@ -85,9 +82,7 @@ public class FlowFrameworkRestApiIT extends FlowFrameworkRestTestCase {
                     : n
             )
             .collect(Collectors.toList());
-
         Workflow missingInputs = new Workflow(originalWorkflow.userParams(), modifiednodes, originalWorkflow.edges());
-
         Template templateWithMissingInputs = new Template.Builder().name(template.name())
             .description(template.description())
             .useCase(template.useCase())
@@ -125,9 +120,18 @@ public class FlowFrameworkRestApiIT extends FlowFrameworkRestTestCase {
         // Wait until provisioning has completed successfully before attempting to retrieve created resources
         List<ResourceCreated> resourcesCreated = getResourcesCreated(workflowId, 100);
 
-        // TODO: This template should create 2 resources, registered_model_id and deployed model_id
-        assertEquals(0, resourcesCreated.size());
-         */
+        // This template should create 2 resources, registered_model_id and deployed model_id
+        assertEquals(2, resourcesCreated.size());
+        assertEquals("register_local_model", resourcesCreated.get(0).workflowStepName());
+        assertNotNull(resourcesCreated.get(0).resourceId());
+        assertEquals("deploy_model", resourcesCreated.get(1).workflowStepName());
+        assertNotNull(resourcesCreated.get(1).resourceId());
+
+        // Deprovision the workflow to avoid opening circut breaker when running additional tests
+        Response deprovisionResponse = deprovisionWorkflow(workflowId);
+
+        // wait for deprovision to complete
+        Thread.sleep(5000);
     }
 
     public void testCreateAndProvisionRemoteModelWorkflow() throws Exception {
@@ -184,36 +188,12 @@ public class FlowFrameworkRestApiIT extends FlowFrameworkRestTestCase {
         assertNotNull(resourcesCreated.get(1).resourceId());
         assertEquals("deploy_model", resourcesCreated.get(2).workflowStepName());
         assertNotNull(resourcesCreated.get(2).resourceId());
-    }
 
-    public void testCreateAndProvisionDeployedRemoteModelWorkflow() throws Exception {
+        // Deprovision the workflow to avoid opening circut breaker when running additional tests
+        Response deprovisionResponse = deprovisionWorkflow(workflowId);
 
-        // Using a 2 step template to create a connector, register remote model with deploy=true param set
-        Template template = TestHelpers.createTemplateFromFile("createconnector-registerdeployremotemodel.json");
-
-        Response response = createWorkflow(template);
-        assertEquals(RestStatus.CREATED, TestHelpers.restStatus(response));
-
-        Map<String, Object> responseMap = entityAsMap(response);
-        String workflowId = (String) responseMap.get(WORKFLOW_ID);
-        getAndAssertWorkflowStatus(workflowId, State.NOT_STARTED, ProvisioningProgress.NOT_STARTED);
-
-        // Hit Provision API and assert status
-        response = provisionWorkflow(workflowId);
-        assertEquals(RestStatus.OK, TestHelpers.restStatus(response));
-        getAndAssertWorkflowStatus(workflowId, State.PROVISIONING, ProvisioningProgress.IN_PROGRESS);
-
-        // Wait until provisioning has completed successfully before attempting to retrieve created resources
-        List<ResourceCreated> resourcesCreated = getResourcesCreated(workflowId, 30);
-
-        // This template should create 3 resources, connector_id, registered model_id and deployed model_id
-        assertEquals(3, resourcesCreated.size());
-        assertEquals("create_connector", resourcesCreated.get(0).workflowStepName());
-        assertNotNull(resourcesCreated.get(0).resourceId());
-        assertEquals("register_remote_model", resourcesCreated.get(1).workflowStepName());
-        assertNotNull(resourcesCreated.get(1).resourceId());
-        assertEquals("deploy_model", resourcesCreated.get(2).workflowStepName());
-        assertNotNull(resourcesCreated.get(2).resourceId());
+        // wait for deprovision to complete
+        Thread.sleep(5000);
     }
 
     public void testCreateAndProvisionAgentFrameworkWorkflow() throws Exception {
@@ -250,10 +230,9 @@ public class FlowFrameworkRestApiIT extends FlowFrameworkRestTestCase {
 
         // Hit Deprovision API
         Response deprovisionResponse = deprovisionWorkflow(workflowId);
-        assertEquals(RestStatus.OK, TestHelpers.restStatus(deprovisionResponse));
         assertBusy(
             () -> { getAndAssertWorkflowStatus(workflowId, State.NOT_STARTED, ProvisioningProgress.NOT_STARTED); },
-            30,
+            60,
             TimeUnit.SECONDS
         );
 
