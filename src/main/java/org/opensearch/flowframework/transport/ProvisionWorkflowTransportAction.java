@@ -48,10 +48,10 @@ import static org.opensearch.flowframework.common.CommonValue.GLOBAL_CONTEXT_IND
 import static org.opensearch.flowframework.common.CommonValue.PROVISIONING_PROGRESS_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.PROVISION_END_TIME_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.PROVISION_START_TIME_FIELD;
-import static org.opensearch.flowframework.common.CommonValue.PROVISION_THREAD_POOL;
 import static org.opensearch.flowframework.common.CommonValue.PROVISION_WORKFLOW;
 import static org.opensearch.flowframework.common.CommonValue.RESOURCES_CREATED_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.STATE_FIELD;
+import static org.opensearch.flowframework.common.CommonValue.WORKFLOW_THREAD_POOL;
 
 /**
  * Transport Action to provision a workflow from a stored use case template
@@ -169,7 +169,7 @@ public class ProvisionWorkflowTransportAction extends HandledTransportAction<Wor
      */
     private void executeWorkflowAsync(String workflowId, List<ProcessNode> workflowSequence, ActionListener<WorkflowResponse> listener) {
         try {
-            threadPool.executor(PROVISION_THREAD_POOL).execute(() -> { executeWorkflow(workflowSequence, workflowId); });
+            threadPool.executor(WORKFLOW_THREAD_POOL).execute(() -> { executeWorkflow(workflowSequence, workflowId); });
         } catch (Exception exception) {
             listener.onFailure(new FlowFrameworkException(exception.getMessage(), ExceptionsHelper.status(exception)));
         }

@@ -70,7 +70,7 @@ import java.util.List;
 import java.util.function.Supplier;
 
 import static org.opensearch.flowframework.common.CommonValue.FLOW_FRAMEWORK_THREAD_POOL_PREFIX;
-import static org.opensearch.flowframework.common.CommonValue.PROVISION_THREAD_POOL;
+import static org.opensearch.flowframework.common.CommonValue.WORKFLOW_THREAD_POOL;
 import static org.opensearch.flowframework.common.FlowFrameworkSettings.FLOW_FRAMEWORK_ENABLED;
 import static org.opensearch.flowframework.common.FlowFrameworkSettings.MAX_GET_TASK_REQUEST_RETRY;
 import static org.opensearch.flowframework.common.FlowFrameworkSettings.MAX_WORKFLOWS;
@@ -173,14 +173,13 @@ public class FlowFrameworkPlugin extends Plugin implements ActionPlugin {
 
     @Override
     public List<ExecutorBuilder<?>> getExecutorBuilders(Settings settings) {
-        // TODO : Determine final size/queueSize values for the provision thread pool
         return List.of(
             new FixedExecutorBuilder(
                 settings,
-                PROVISION_THREAD_POOL,
+                WORKFLOW_THREAD_POOL,
                 OpenSearchExecutors.allocatedProcessors(settings),
                 100,
-                FLOW_FRAMEWORK_THREAD_POOL_PREFIX + PROVISION_THREAD_POOL
+                FLOW_FRAMEWORK_THREAD_POOL_PREFIX + WORKFLOW_THREAD_POOL
             )
         );
     }
