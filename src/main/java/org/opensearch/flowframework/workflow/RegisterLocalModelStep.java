@@ -26,7 +26,6 @@ import org.opensearch.ml.common.model.TextEmbeddingModelConfig.FrameworkType;
 import org.opensearch.ml.common.model.TextEmbeddingModelConfig.TextEmbeddingModelConfigBuilder;
 import org.opensearch.ml.common.transport.register.MLRegisterModelInput;
 import org.opensearch.ml.common.transport.register.MLRegisterModelInput.MLRegisterModelInputBuilder;
-import org.opensearch.ml.common.transport.register.MLRegisterModelResponse;
 import org.opensearch.threadpool.ThreadPool;
 
 import java.util.Map;
@@ -34,6 +33,7 @@ import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 
 import static org.opensearch.flowframework.common.CommonValue.ALL_CONFIG;
+import static org.opensearch.flowframework.common.CommonValue.DEPLOY_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.DESCRIPTION_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.EMBEDDING_DIMENSION;
 import static org.opensearch.flowframework.common.CommonValue.FRAMEWORK_TYPE;
@@ -42,9 +42,11 @@ import static org.opensearch.flowframework.common.CommonValue.MODEL_CONTENT_HASH
 import static org.opensearch.flowframework.common.CommonValue.MODEL_FORMAT;
 import static org.opensearch.flowframework.common.CommonValue.MODEL_TYPE;
 import static org.opensearch.flowframework.common.CommonValue.NAME_FIELD;
+import static org.opensearch.flowframework.common.CommonValue.REGISTER_MODEL_STATUS;
 import static org.opensearch.flowframework.common.CommonValue.URL;
 import static org.opensearch.flowframework.common.CommonValue.VERSION_FIELD;
 import static org.opensearch.flowframework.common.WorkflowResources.MODEL_GROUP_ID;
+import static org.opensearch.flowframework.common.WorkflowResources.getResourceByWorkflowStep;
 
 /**
  * Step to register a local model
@@ -88,30 +90,6 @@ public class RegisterLocalModelStep extends AbstractRetryableWorkflowStep {
 
         CompletableFuture<WorkflowData> registerLocalModelFuture = new CompletableFuture<>();
 
-        ActionListener<MLRegisterModelResponse> actionListener = new ActionListener<>() {
-            @Override
-            public void onResponse(MLRegisterModelResponse mlRegisterModelResponse) {
-                logger.info("Local Model registration task creation successful");
-
-                String taskId = mlRegisterModelResponse.getTaskId();
-
-                // Attempt to retrieve the model ID
-                retryableGetMlTask(
-                    currentNodeInputs.getWorkflowId(),
-                    currentNodeId,
-                    registerLocalModelFuture,
-                    taskId,
-                    "Local model registration"
-                );
-            }
-
-            @Override
-            public void onFailure(Exception e) {
-                logger.error("Failed to register local model");
-                registerLocalModelFuture.completeExceptionally(new FlowFrameworkException(e.getMessage(), ExceptionsHelper.status(e)));
-            }
-        };
-
         Set<String> requiredKeys = Set.of(
             NAME_FIELD,
             VERSION_FIELD,
@@ -122,7 +100,7 @@ public class RegisterLocalModelStep extends AbstractRetryableWorkflowStep {
             MODEL_CONTENT_HASH_VALUE,
             URL
         );
-        Set<String> optionalKeys = Set.of(DESCRIPTION_FIELD, MODEL_GROUP_ID, ALL_CONFIG, FUNCTION_NAME);
+        Set<String> optionalKeys = Set.of(DESCRIPTION_FIELD, MODEL_GROUP_ID, ALL_CONFIG, FUNCTION_NAME, DEPLOY_FIELD);
 
         try {
             Map<String, Object> inputs = ParseUtils.getInputsFromPreviousSteps(
@@ -145,6 +123,7 @@ public class RegisterLocalModelStep extends AbstractRetryableWorkflowStep {
             String allConfig = (String) inputs.get(ALL_CONFIG);
             String url = (String) inputs.get(URL);
             String functionName = (String) inputs.get(FUNCTION_NAME);
+            final Boolean deploy = (Boolean) inputs.get(DEPLOY_FIELD);
 
             // Create Model configuration
             TextEmbeddingModelConfigBuilder modelConfigBuilder = TextEmbeddingModelConfig.builder()
@@ -173,10 +152,80 @@ public class RegisterLocalModelStep extends AbstractRetryableWorkflowStep {
             if (functionName != null) {
                 mlInputBuilder.functionName(FunctionName.from(functionName));
             }
+            if (deploy != null) {
+                mlInputBuilder.deployModel(deploy);
+            }
 
             MLRegisterModelInput mlInput = mlInputBuilder.build();
 
-            mlClient.register(mlInput, actionListener);
+            mlClient.register(mlInput, ActionListener.wrap(response -> {
+                logger.info("Local Model registration task creation successful");
+
+                String taskId = response.getTaskId();
+
+                // Attempt to retrieve the model ID
+                retryableGetMlTask(
+                    currentNodeInputs.getWorkflowId(),
+                    currentNodeId,
+                    registerLocalModelFuture,
+                    taskId,
+                    "Local model registration",
+                    ActionListener.wrap(mlTask -> {
+
+                        // Registered Model Resource has been updated
+                        String resourceName = getResourceByWorkflowStep(getName());
+                        String id = getResourceId(mlTask);
+
+                        if (Boolean.TRUE.equals(deploy)) {
+
+                            // Simulate Model deployment step and update resources created
+                            flowFrameworkIndicesHandler.updateResourceInStateIndex(
+                                currentNodeInputs.getWorkflowId(),
+                                currentNodeId,
+                                DeployModelStep.NAME,
+                                id,
+                                ActionListener.wrap(deployUpdateResponse -> {
+                                    logger.info(
+                                        "successfully updated resources created in state index: {}",
+                                        deployUpdateResponse.getIndex()
+                                    );
+                                    registerLocalModelFuture.complete(
+                                        new WorkflowData(
+                                            Map.ofEntries(
+                                                Map.entry(resourceName, id),
+                                                Map.entry(REGISTER_MODEL_STATUS, mlTask.getState().name())
+                                            ),
+                                            currentNodeInputs.getWorkflowId(),
+                                            currentNodeId
+                                        )
+                                    );
+                                }, deployUpdateException -> {
+                                    logger.error("Failed to update simulated deploy step resource", deployUpdateException);
+                                    registerLocalModelFuture.completeExceptionally(
+                                        new FlowFrameworkException(
+                                            deployUpdateException.getMessage(),
+                                            ExceptionsHelper.status(deployUpdateException)
+                                        )
+                                    );
+                                })
+                            );
+                        } else {
+                            registerLocalModelFuture.complete(
+                                new WorkflowData(
+                                    Map.ofEntries(Map.entry(resourceName, id), Map.entry(REGISTER_MODEL_STATUS, mlTask.getState().name())),
+                                    currentNodeInputs.getWorkflowId(),
+                                    currentNodeId
+                                )
+                            );
+                        }
+                    }, exception -> { registerLocalModelFuture.completeExceptionally(exception); })
+                );
+            }, exception -> {
+                logger.error("Failed to register local model");
+                registerLocalModelFuture.completeExceptionally(
+                    new FlowFrameworkException(exception.getMessage(), ExceptionsHelper.status(exception))
+                );
+            }));
         } catch (FlowFrameworkException e) {
             registerLocalModelFuture.completeExceptionally(e);
         }

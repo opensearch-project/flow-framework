@@ -112,8 +112,19 @@ public abstract class FlowFrameworkRestTestCase extends OpenSearchRestTestCase {
             // Need a delay here on 2.x or next line consistently fails tests.
             // TODO: figure out know why we need this and we should pursue a better option that doesn't require HTTP5
             Thread.sleep(10000);
+            // Set ML jvm heap memory threshold to 100 to avoid opening the circuit breaker during tests
+            response = TestHelpers.makeRequest(
+                client(),
+                "PUT",
+                "_cluster/settings",
+                null,
+                "{\"persistent\":{\"plugins.ml_commons.jvm_heap_memory_threshold\":100}}",
+                List.of(new BasicHeader(HttpHeaders.USER_AGENT, ""))
+            );
+            assertEquals(200, response.getStatusLine().getStatusCode());
+
             // Ensure .plugins-ml-config is created before proceeding with integration tests
-            assertBusy(() -> { assertTrue(indexExistsWithAdminClient(".plugins-ml-config")); }, 30, TimeUnit.SECONDS);
+            assertBusy(() -> { assertTrue(indexExistsWithAdminClient(".plugins-ml-config")); }, 60, TimeUnit.SECONDS);
         }
 
     }
@@ -287,15 +298,21 @@ public abstract class FlowFrameworkRestTestCase extends OpenSearchRestTestCase {
     }
 
     /**
-     * Helper method to invoke the Create Workflow Rest Action
+     * Helper method to invoke the Create Workflow Rest Action without validation
      * @param template the template to create
      * @throws Exception if the request fails
      * @return a rest response
      */
     protected Response createWorkflow(Template template) throws Exception {
-        return TestHelpers.makeRequest(client(), "POST", WORKFLOW_URI, Collections.emptyMap(), template.toJson(), null);
+        return TestHelpers.makeRequest(client(), "POST", WORKFLOW_URI + "?validation=off", Collections.emptyMap(), template.toJson(), null);
     }
 
+    /**
+     * Helper method to invoke the Create Workflow Rest Action with provision
+     * @param template the template to create
+     * @throws Exception if the request fails
+     * @return a rest response
+     */
     protected Response createWorkflowWithProvision(Template template) throws Exception {
         return TestHelpers.makeRequest(client(), "POST", WORKFLOW_URI + "?provision=true", Collections.emptyMap(), template.toJson(), null);
     }

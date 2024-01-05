@@ -21,12 +21,10 @@ import org.opensearch.ml.client.MachineLearningNodeClient;
 import org.opensearch.ml.common.MLTask;
 import org.opensearch.threadpool.ThreadPool;
 
-import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.opensearch.flowframework.common.CommonValue.PROVISION_THREAD_POOL;
-import static org.opensearch.flowframework.common.CommonValue.REGISTER_MODEL_STATUS;
 import static org.opensearch.flowframework.common.WorkflowResources.getResourceByWorkflowStep;
 
 /**
@@ -66,13 +64,15 @@ public abstract class AbstractRetryableWorkflowStep implements WorkflowStep {
      * @param future the workflow step future
      * @param taskId the ml task id
      * @param workflowStep the workflow step which requires a retry get ml task functionality
+     * @param mlTaskListener the ML Task Listener
      */
     protected void retryableGetMlTask(
         String workflowId,
         String nodeId,
         CompletableFuture<WorkflowData> future,
         String taskId,
-        String workflowStep
+        String workflowStep,
+        ActionListener<MLTask> mlTaskListener
     ) {
         AtomicInteger retries = new AtomicInteger();
         CompletableFuture.runAsync(() -> {
@@ -91,38 +91,29 @@ public abstract class AbstractRetryableWorkflowStep implements WorkflowStep {
                                     id,
                                     ActionListener.wrap(updateResponse -> {
                                         logger.info("successfully updated resources created in state index: {}", updateResponse.getIndex());
-                                        future.complete(
-                                            new WorkflowData(
-                                                Map.ofEntries(
-                                                    Map.entry(resourceName, id),
-                                                    Map.entry(REGISTER_MODEL_STATUS, response.getState().name())
-                                                ),
-                                                workflowId,
-                                                nodeId
-                                            )
-                                        );
+                                        mlTaskListener.onResponse(response);
                                     }, exception -> {
                                         logger.error("Failed to update new created resource", exception);
-                                        future.completeExceptionally(
+                                        mlTaskListener.onFailure(
                                             new FlowFrameworkException(exception.getMessage(), ExceptionsHelper.status(exception))
                                         );
                                     })
                                 );
                             } catch (Exception e) {
                                 logger.error("Failed to parse and update new created resource", e);
-                                future.completeExceptionally(new FlowFrameworkException(e.getMessage(), ExceptionsHelper.status(e)));
+                                mlTaskListener.onFailure(new FlowFrameworkException(e.getMessage(), ExceptionsHelper.status(e)));
                             }
                             break;
                         case FAILED:
                         case COMPLETED_WITH_ERROR:
                             String errorMessage = workflowStep + " failed with error : " + response.getError();
                             logger.error(errorMessage);
-                            future.completeExceptionally(new FlowFrameworkException(errorMessage, RestStatus.BAD_REQUEST));
+                            mlTaskListener.onFailure(new FlowFrameworkException(errorMessage, RestStatus.BAD_REQUEST));
                             break;
                         case CANCELLED:
                             errorMessage = workflowStep + " task was cancelled.";
                             logger.error(errorMessage);
-                            future.completeExceptionally(new FlowFrameworkException(errorMessage, RestStatus.REQUEST_TIMEOUT));
+                            mlTaskListener.onFailure(new FlowFrameworkException(errorMessage, RestStatus.REQUEST_TIMEOUT));
                             break;
                         default:
                             // Task started or running, do nothing
@@ -130,7 +121,7 @@ public abstract class AbstractRetryableWorkflowStep implements WorkflowStep {
                 }, exception -> {
                     String errorMessage = workflowStep + " failed with error : " + exception.getMessage();
                     logger.error(errorMessage);
-                    future.completeExceptionally(new FlowFrameworkException(errorMessage, RestStatus.BAD_REQUEST));
+                    mlTaskListener.onFailure(new FlowFrameworkException(errorMessage, RestStatus.BAD_REQUEST));
                 }));
                 // Wait long enough for future to possibly complete
                 try {
@@ -143,7 +134,7 @@ public abstract class AbstractRetryableWorkflowStep implements WorkflowStep {
             if (!future.isDone()) {
                 String errorMessage = workflowStep + " did not complete after " + maxRetry + " retries";
                 logger.error(errorMessage);
-                future.completeExceptionally(new FlowFrameworkException(errorMessage, RestStatus.REQUEST_TIMEOUT));
+                mlTaskListener.onFailure(new FlowFrameworkException(errorMessage, RestStatus.REQUEST_TIMEOUT));
             }
         }, threadPool.executor(PROVISION_THREAD_POOL));
     }

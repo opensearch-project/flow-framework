@@ -26,7 +26,9 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 
+import static org.opensearch.flowframework.common.CommonValue.REGISTER_MODEL_STATUS;
 import static org.opensearch.flowframework.common.WorkflowResources.MODEL_ID;
+import static org.opensearch.flowframework.common.WorkflowResources.getResourceByWorkflowStep;
 
 /**
  * Step to deploy a model
@@ -75,7 +77,29 @@ public class DeployModelStep extends AbstractRetryableWorkflowStep {
                 String taskId = mlDeployModelResponse.getTaskId();
 
                 // Attempt to retrieve the model ID
-                retryableGetMlTask(currentNodeInputs.getWorkflowId(), currentNodeId, deployModelFuture, taskId, "Deploy model");
+                retryableGetMlTask(
+                    currentNodeInputs.getWorkflowId(),
+                    currentNodeId,
+                    deployModelFuture,
+                    taskId,
+                    "Deploy model",
+                    ActionListener.wrap(mlTask -> {
+                        // Deployed Model Resource has been updated
+                        String resourceName = getResourceByWorkflowStep(getName());
+                        String id = getResourceId(mlTask);
+                        deployModelFuture.complete(
+                            new WorkflowData(
+                                Map.ofEntries(Map.entry(resourceName, id), Map.entry(REGISTER_MODEL_STATUS, mlTask.getState().name())),
+                                currentNodeInputs.getWorkflowId(),
+                                currentNodeId
+                            )
+                        );
+                    },
+                        e -> {
+                            deployModelFuture.completeExceptionally(new FlowFrameworkException(e.getMessage(), ExceptionsHelper.status(e)));
+                        }
+                    )
+                );
             }
 
             @Override
