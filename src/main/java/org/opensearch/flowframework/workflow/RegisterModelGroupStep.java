@@ -39,9 +39,9 @@ import static org.opensearch.flowframework.common.WorkflowResources.getResourceB
 /**
  * Step to register a model group
  */
-public class ModelGroupStep implements WorkflowStep {
+public class RegisterModelGroupStep implements WorkflowStep {
 
-    private static final Logger logger = LogManager.getLogger(ModelGroupStep.class);
+    private static final Logger logger = LogManager.getLogger(RegisterModelGroupStep.class);
 
     private final MachineLearningNodeClient mlClient;
 
@@ -55,7 +55,7 @@ public class ModelGroupStep implements WorkflowStep {
      * @param mlClient client to instantiate MLClient
      * @param flowFrameworkIndicesHandler FlowFrameworkIndicesHandler class to update system indices
      */
-    public ModelGroupStep(MachineLearningNodeClient mlClient, FlowFrameworkIndicesHandler flowFrameworkIndicesHandler) {
+    public RegisterModelGroupStep(MachineLearningNodeClient mlClient, FlowFrameworkIndicesHandler flowFrameworkIndicesHandler) {
         this.mlClient = mlClient;
         this.flowFrameworkIndicesHandler = flowFrameworkIndicesHandler;
     }
