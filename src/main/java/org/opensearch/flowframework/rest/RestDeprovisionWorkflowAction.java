@@ -16,7 +16,7 @@ import org.opensearch.core.action.ActionListener;
 import org.opensearch.core.rest.RestStatus;
 import org.opensearch.core.xcontent.ToXContent;
 import org.opensearch.core.xcontent.XContentBuilder;
-import org.opensearch.flowframework.common.FlowFrameworkFeatureEnabledSetting;
+import org.opensearch.flowframework.common.FlowFrameworkSettings;
 import org.opensearch.flowframework.exception.FlowFrameworkException;
 import org.opensearch.flowframework.transport.DeprovisionWorkflowAction;
 import org.opensearch.flowframework.transport.WorkflowRequest;
@@ -39,13 +39,13 @@ public class RestDeprovisionWorkflowAction extends BaseRestHandler {
 
     private static final String DEPROVISION_WORKFLOW_ACTION = "deprovision_workflow";
     private static final Logger logger = LogManager.getLogger(RestDeprovisionWorkflowAction.class);
-    private final FlowFrameworkFeatureEnabledSetting flowFrameworkFeatureEnabledSetting;
+    private final FlowFrameworkSettings flowFrameworkFeatureEnabledSetting;
 
     /**
      * Instantiates a new RestDeprovisionWorkflowAction
      * @param flowFrameworkFeatureEnabledSetting Whether this API is enabled
      */
-    public RestDeprovisionWorkflowAction(FlowFrameworkFeatureEnabledSetting flowFrameworkFeatureEnabledSetting) {
+    public RestDeprovisionWorkflowAction(FlowFrameworkSettings flowFrameworkFeatureEnabledSetting) {
         this.flowFrameworkFeatureEnabledSetting = flowFrameworkFeatureEnabledSetting;
     }
 

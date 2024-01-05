@@ -15,7 +15,7 @@ import org.opensearch.core.action.ActionListener;
 import org.opensearch.core.rest.RestStatus;
 import org.opensearch.core.xcontent.ToXContent;
 import org.opensearch.core.xcontent.XContentBuilder;
-import org.opensearch.flowframework.common.FlowFrameworkFeatureEnabledSetting;
+import org.opensearch.flowframework.common.FlowFrameworkSettings;
 import org.opensearch.flowframework.exception.FlowFrameworkException;
 import org.opensearch.flowframework.transport.ProvisionWorkflowAction;
 import org.opensearch.flowframework.transport.WorkflowRequest;
@@ -40,14 +40,14 @@ public class RestProvisionWorkflowAction extends BaseRestHandler {
 
     private static final String PROVISION_WORKFLOW_ACTION = "provision_workflow_action";
 
-    private FlowFrameworkFeatureEnabledSetting flowFrameworkFeatureEnabledSetting;
+    private FlowFrameworkSettings flowFrameworkFeatureEnabledSetting;
 
     /**
      * Instantiates a new RestProvisionWorkflowAction
      *
      * @param flowFrameworkFeatureEnabledSetting Whether this API is enabled
      */
-    public RestProvisionWorkflowAction(FlowFrameworkFeatureEnabledSetting flowFrameworkFeatureEnabledSetting) {
+    public RestProvisionWorkflowAction(FlowFrameworkSettings flowFrameworkFeatureEnabledSetting) {
         this.flowFrameworkFeatureEnabledSetting = flowFrameworkFeatureEnabledSetting;
     }
 
