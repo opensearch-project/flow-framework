@@ -28,6 +28,7 @@ import org.opensearch.flowframework.model.Workflow;
 import org.opensearch.flowframework.util.EncryptorUtils;
 import org.opensearch.flowframework.workflow.ProcessNode;
 import org.opensearch.flowframework.workflow.WorkflowProcessSorter;
+import org.opensearch.plugins.PluginsService;
 import org.opensearch.tasks.Task;
 import org.opensearch.threadpool.ThreadPool;
 import org.opensearch.transport.TransportService;
@@ -64,6 +65,7 @@ public class ProvisionWorkflowTransportAction extends HandledTransportAction<Wor
     private final WorkflowProcessSorter workflowProcessSorter;
     private final FlowFrameworkIndicesHandler flowFrameworkIndicesHandler;
     private final EncryptorUtils encryptorUtils;
+    private final PluginsService pluginsService;
 
     /**
      * Instantiates a new ProvisionWorkflowTransportAction
@@ -74,6 +76,7 @@ public class ProvisionWorkflowTransportAction extends HandledTransportAction<Wor
      * @param workflowProcessSorter Utility class to generate a togologically sorted list of Process nodes
      * @param flowFrameworkIndicesHandler Class to handle all internal system indices actions
      * @param encryptorUtils Utility class to handle encryption/decryption
+     * @param pluginsService The Plugins Service
      */
     @Inject
     public ProvisionWorkflowTransportAction(
@@ -83,7 +86,8 @@ public class ProvisionWorkflowTransportAction extends HandledTransportAction<Wor
         Client client,
         WorkflowProcessSorter workflowProcessSorter,
         FlowFrameworkIndicesHandler flowFrameworkIndicesHandler,
-        EncryptorUtils encryptorUtils
+        EncryptorUtils encryptorUtils,
+        PluginsService pluginsService
     ) {
         super(ProvisionWorkflowAction.NAME, transportService, actionFilters, WorkflowRequest::new);
         this.threadPool = threadPool;
@@ -91,6 +95,7 @@ public class ProvisionWorkflowTransportAction extends HandledTransportAction<Wor
         this.workflowProcessSorter = workflowProcessSorter;
         this.flowFrameworkIndicesHandler = flowFrameworkIndicesHandler;
         this.encryptorUtils = encryptorUtils;
+        this.pluginsService = pluginsService;
     }
 
     @Override
@@ -123,7 +128,7 @@ public class ProvisionWorkflowTransportAction extends HandledTransportAction<Wor
                 // Sort and validate graph
                 Workflow provisionWorkflow = template.workflows().get(PROVISION_WORKFLOW);
                 List<ProcessNode> provisionProcessSequence = workflowProcessSorter.sortProcessNodes(provisionWorkflow, workflowId);
-                workflowProcessSorter.validate(provisionProcessSequence);
+                workflowProcessSorter.validate(provisionProcessSequence, pluginsService);
 
                 flowFrameworkIndicesHandler.updateFlowFrameworkSystemIndexDoc(
                     workflowId,

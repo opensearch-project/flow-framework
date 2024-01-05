@@ -29,6 +29,7 @@ import org.opensearch.flowframework.model.WorkflowNode;
 import org.opensearch.flowframework.util.EncryptorUtils;
 import org.opensearch.flowframework.workflow.WorkflowProcessSorter;
 import org.opensearch.index.get.GetResult;
+import org.opensearch.plugins.PluginsService;
 import org.opensearch.tasks.Task;
 import org.opensearch.test.OpenSearchTestCase;
 import org.opensearch.threadpool.ThreadPool;
@@ -57,6 +58,7 @@ public class ProvisionWorkflowTransportActionTests extends OpenSearchTestCase {
     private Template template;
     private FlowFrameworkIndicesHandler flowFrameworkIndicesHandler;
     private EncryptorUtils encryptorUtils;
+    private PluginsService pluginsService;
 
     @Override
     public void setUp() throws Exception {
@@ -66,6 +68,7 @@ public class ProvisionWorkflowTransportActionTests extends OpenSearchTestCase {
         this.workflowProcessSorter = mock(WorkflowProcessSorter.class);
         this.flowFrameworkIndicesHandler = mock(FlowFrameworkIndicesHandler.class);
         this.encryptorUtils = mock(EncryptorUtils.class);
+        this.pluginsService = mock(PluginsService.class);
 
         this.provisionWorkflowTransportAction = new ProvisionWorkflowTransportAction(
             mock(TransportService.class),
@@ -74,7 +77,8 @@ public class ProvisionWorkflowTransportActionTests extends OpenSearchTestCase {
             client,
             workflowProcessSorter,
             flowFrameworkIndicesHandler,
-            encryptorUtils
+            encryptorUtils,
+            pluginsService
         );
 
         Version templateVersion = Version.fromString("1.0.0");
