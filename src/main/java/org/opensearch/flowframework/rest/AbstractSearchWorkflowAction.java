@@ -15,7 +15,7 @@ import org.opensearch.client.node.NodeClient;
 import org.opensearch.core.rest.RestStatus;
 import org.opensearch.core.xcontent.ToXContent;
 import org.opensearch.core.xcontent.ToXContentObject;
-import org.opensearch.flowframework.common.FlowFrameworkFeatureEnabledSetting;
+import org.opensearch.flowframework.common.FlowFrameworkSettings;
 import org.opensearch.flowframework.exception.FlowFrameworkException;
 import org.opensearch.rest.BaseRestHandler;
 import org.opensearch.rest.BytesRestResponse;
@@ -48,7 +48,7 @@ public abstract class AbstractSearchWorkflowAction<T extends ToXContentObject> e
     /** Search action type*/
     protected final ActionType<SearchResponse> actionType;
     /** Settings to enable FlowFramework API*/
-    protected final FlowFrameworkFeatureEnabledSetting flowFrameworkFeatureEnabledSetting;
+    protected final FlowFrameworkSettings flowFrameworkFeatureEnabledSetting;
 
     /**
      * Instantiates a new AbstractSearchWorkflowAction
@@ -63,7 +63,7 @@ public abstract class AbstractSearchWorkflowAction<T extends ToXContentObject> e
         String index,
         Class<T> clazz,
         ActionType<SearchResponse> actionType,
-        FlowFrameworkFeatureEnabledSetting flowFrameworkFeatureEnabledSetting
+        FlowFrameworkSettings flowFrameworkFeatureEnabledSetting
     ) {
         this.urlPaths = urlPaths;
         this.index = index;

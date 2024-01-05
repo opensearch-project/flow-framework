@@ -24,7 +24,7 @@ import org.opensearch.core.common.io.stream.NamedWriteableRegistry;
 import org.opensearch.core.xcontent.NamedXContentRegistry;
 import org.opensearch.env.Environment;
 import org.opensearch.env.NodeEnvironment;
-import org.opensearch.flowframework.common.FlowFrameworkFeatureEnabledSetting;
+import org.opensearch.flowframework.common.FlowFrameworkSettings;
 import org.opensearch.flowframework.indices.FlowFrameworkIndicesHandler;
 import org.opensearch.flowframework.rest.RestCreateWorkflowAction;
 import org.opensearch.flowframework.rest.RestDeleteWorkflowAction;
@@ -82,7 +82,7 @@ import static org.opensearch.flowframework.common.FlowFrameworkSettings.WORKFLOW
  */
 public class FlowFrameworkPlugin extends Plugin implements ActionPlugin {
 
-    private FlowFrameworkFeatureEnabledSetting flowFrameworkFeatureEnabledSetting;
+    private FlowFrameworkSettings flowFrameworkSettings;
 
     private ClusterService clusterService;
 
@@ -107,24 +107,24 @@ public class FlowFrameworkPlugin extends Plugin implements ActionPlugin {
     ) {
         Settings settings = environment.settings();
         this.clusterService = clusterService;
-        flowFrameworkFeatureEnabledSetting = new FlowFrameworkFeatureEnabledSetting(clusterService, settings);
+        flowFrameworkSettings = new FlowFrameworkSettings(clusterService, settings);
         MachineLearningNodeClient mlClient = new MachineLearningNodeClient(client);
         EncryptorUtils encryptorUtils = new EncryptorUtils(clusterService, client);
         FlowFrameworkIndicesHandler flowFrameworkIndicesHandler = new FlowFrameworkIndicesHandler(client, clusterService, encryptorUtils);
         WorkflowStepFactory workflowStepFactory = new WorkflowStepFactory(
-            settings,
             threadPool,
             clusterService,
             client,
             mlClient,
-            flowFrameworkIndicesHandler
+            flowFrameworkIndicesHandler,
+            flowFrameworkSettings
         );
         WorkflowProcessSorter workflowProcessSorter = new WorkflowProcessSorter(
             workflowStepFactory,
             threadPool,
             clusterService,
             client,
-            settings
+            flowFrameworkSettings
         );
 
         return List.of(workflowStepFactory, workflowProcessSorter, encryptorUtils, flowFrameworkIndicesHandler);
@@ -141,14 +141,14 @@ public class FlowFrameworkPlugin extends Plugin implements ActionPlugin {
         Supplier<DiscoveryNodes> nodesInCluster
     ) {
         return List.of(
-            new RestCreateWorkflowAction(flowFrameworkFeatureEnabledSetting, settings, clusterService),
-            new RestDeleteWorkflowAction(flowFrameworkFeatureEnabledSetting),
-            new RestProvisionWorkflowAction(flowFrameworkFeatureEnabledSetting),
-            new RestDeprovisionWorkflowAction(flowFrameworkFeatureEnabledSetting),
-            new RestSearchWorkflowAction(flowFrameworkFeatureEnabledSetting),
-            new RestGetWorkflowStateAction(flowFrameworkFeatureEnabledSetting),
-            new RestGetWorkflowAction(flowFrameworkFeatureEnabledSetting),
-            new RestSearchWorkflowStateAction(flowFrameworkFeatureEnabledSetting)
+            new RestCreateWorkflowAction(flowFrameworkSettings, settings, clusterService),
+            new RestDeleteWorkflowAction(flowFrameworkSettings),
+            new RestProvisionWorkflowAction(flowFrameworkSettings),
+            new RestDeprovisionWorkflowAction(flowFrameworkSettings),
+            new RestSearchWorkflowAction(flowFrameworkSettings),
+            new RestGetWorkflowStateAction(flowFrameworkSettings),
+            new RestGetWorkflowAction(flowFrameworkSettings),
+            new RestSearchWorkflowStateAction(flowFrameworkSettings)
         );
     }
 

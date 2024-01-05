@@ -15,6 +15,7 @@ import org.opensearch.common.settings.Settings;
 import org.opensearch.test.OpenSearchTestCase;
 
 import java.io.IOException;
+import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -22,13 +23,12 @@ import java.util.stream.Stream;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-public class FlowFrameworkFeatureEnabledSettingTests extends OpenSearchTestCase {
-
+public class FlowFrameworkSettingsTests extends OpenSearchTestCase {
     private Settings settings;
     private ClusterSettings clusterSettings;
     private ClusterService clusterService;
 
-    private FlowFrameworkFeatureEnabledSetting flowFrameworkFeatureEnabledSetting;
+    private FlowFrameworkSettings flowFrameworkSettings;
 
     @Override
     public void setUp() throws Exception {
@@ -37,12 +37,16 @@ public class FlowFrameworkFeatureEnabledSettingTests extends OpenSearchTestCase 
         settings = Settings.builder().build();
         final Set<Setting<?>> settingsSet = Stream.concat(
             ClusterSettings.BUILT_IN_CLUSTER_SETTINGS.stream(),
-            Stream.of(FlowFrameworkSettings.FLOW_FRAMEWORK_ENABLED)
+            Stream.of(
+                FlowFrameworkSettings.FLOW_FRAMEWORK_ENABLED,
+                FlowFrameworkSettings.MAX_GET_TASK_REQUEST_RETRY,
+                FlowFrameworkSettings.MAX_WORKFLOW_STEPS
+            )
         ).collect(Collectors.toSet());
         clusterSettings = new ClusterSettings(settings, settingsSet);
         clusterService = mock(ClusterService.class);
         when(clusterService.getClusterSettings()).thenReturn(clusterSettings);
-        flowFrameworkFeatureEnabledSetting = new FlowFrameworkFeatureEnabledSetting(clusterService, settings);
+        flowFrameworkSettings = new FlowFrameworkSettings(clusterService, settings);
     }
 
     @Override
@@ -51,6 +55,8 @@ public class FlowFrameworkFeatureEnabledSettingTests extends OpenSearchTestCase 
     }
 
     public void testSettings() throws IOException {
-        assertFalse(flowFrameworkFeatureEnabledSetting.isFlowFrameworkEnabled());
+        assertFalse(flowFrameworkSettings.isFlowFrameworkEnabled());
+        assertEquals(Optional.of(5), Optional.ofNullable(flowFrameworkSettings.getMaxRetry()));
+        assertEquals(Optional.of(50), Optional.ofNullable(flowFrameworkSettings.getMaxWorkflowSteps()));
     }
 }

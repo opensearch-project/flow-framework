@@ -15,10 +15,10 @@ import org.opensearch.action.admin.cluster.node.info.PluginsAndModules;
 import org.opensearch.action.admin.cluster.state.ClusterStateRequest;
 import org.opensearch.client.Client;
 import org.opensearch.cluster.service.ClusterService;
-import org.opensearch.common.settings.Settings;
 import org.opensearch.common.unit.TimeValue;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.core.rest.RestStatus;
+import org.opensearch.flowframework.common.FlowFrameworkSettings;
 import org.opensearch.flowframework.exception.FlowFrameworkException;
 import org.opensearch.flowframework.model.Workflow;
 import org.opensearch.flowframework.model.WorkflowEdge;
@@ -67,19 +67,18 @@ public class WorkflowProcessSorter {
      * @param threadPool The OpenSearch Thread pool to pass to process nodes.
      * @param clusterService The OpenSearch cluster service.
      * @param client The OpenSearch Client
-     * @param settings OpenSerch settings
+     * @param flowFrameworkSettings settings of the plugin
      */
     public WorkflowProcessSorter(
         WorkflowStepFactory workflowStepFactory,
         ThreadPool threadPool,
         ClusterService clusterService,
         Client client,
-        Settings settings
+        FlowFrameworkSettings flowFrameworkSettings
     ) {
         this.workflowStepFactory = workflowStepFactory;
         this.threadPool = threadPool;
-        this.maxWorkflowSteps = MAX_WORKFLOW_STEPS.get(settings);
-        clusterService.getClusterSettings().addSettingsUpdateConsumer(MAX_WORKFLOW_STEPS, it -> maxWorkflowSteps = it);
+        this.maxWorkflowSteps = flowFrameworkSettings.getMaxWorkflowSteps();
         this.clusterService = clusterService;
         this.client = client;
     }
