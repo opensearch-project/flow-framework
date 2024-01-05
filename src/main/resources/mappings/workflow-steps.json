@@ -123,7 +123,7 @@
             "opensearch-ml"
         ]
     },
-    "model_group": {
+    "register_model_group": {
         "inputs":[
             "name"
         ],
