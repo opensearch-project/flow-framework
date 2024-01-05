@@ -18,6 +18,7 @@ import org.opensearch.test.OpenSearchTestCase;
 
 import java.io.IOException;
 import java.time.Instant;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -72,7 +73,13 @@ public class ParseUtilsTests extends OpenSearchTestCase {
 
     public void testGetInputsFromPreviousSteps() {
         WorkflowData currentNodeInputs = new WorkflowData(
-            Map.ofEntries(Map.entry("content1", 1), Map.entry("param1", 2), Map.entry("content3", "${{step1.output1}}")),
+            Map.ofEntries(
+                Map.entry("content1", 1),
+                Map.entry("param1", 2),
+                Map.entry("content3", "${{step1.output1}}"),
+                Map.entry("nestedMap", Map.of("content4", "${{step3.output3}}")),
+                Map.entry("nestedList", List.of("${{step4.output4}}"))
+            ),
             Map.of("param1", "value1"),
             "workflowId",
             "nodeId"
@@ -86,11 +93,13 @@ public class ParseUtilsTests extends OpenSearchTestCase {
                     "step1"
                 )
             ),
-            Map.entry("step2", new WorkflowData(Map.of("output2", "step2outputvalue2"), "workflowId", "step2"))
+            Map.entry("step2", new WorkflowData(Map.of("output2", "step2outputvalue2"), "workflowId", "step2")),
+            Map.entry("step3", new WorkflowData(Map.of("output3", "step3outputvalue3"), "workflowId", "step3")),
+            Map.entry("step4", new WorkflowData(Map.of("output4", "step4outputvalue4"), "workflowId", "step4"))
         );
         Map<String, String> previousNodeInputs = Map.of("step2", "output2");
         Set<String> requiredKeys = Set.of("param1", "content1");
-        Set<String> optionalKeys = Set.of("output1", "output2", "content3", "no-output");
+        Set<String> optionalKeys = Set.of("output1", "output2", "content3", "nestedMap", "nestedList", "no-output");
 
         Map<String, Object> inputs = ParseUtils.getInputsFromPreviousSteps(
             requiredKeys,
@@ -104,7 +113,15 @@ public class ParseUtilsTests extends OpenSearchTestCase {
         assertEquals(1, inputs.get("content1"));
         assertEquals("outputvalue1", inputs.get("output1"));
         assertEquals("step2outputvalue2", inputs.get("output2"));
+
+        // Substitutions
         assertEquals("outputvalue1", inputs.get("content3"));
+        @SuppressWarnings("unchecked")
+        Map<String, Object> nestedMap = (Map<String, Object>) inputs.get("nestedMap");
+        assertEquals("step3outputvalue3", nestedMap.get("content4"));
+        @SuppressWarnings("unchecked")
+        List<String> nestedList = (List<String>) inputs.get("nestedList");
+        assertEquals(List.of("step4outputvalue4"), nestedList);
         assertNull(inputs.get("no-output"));
 
         Set<String> missingRequiredKeys = Set.of("not-here");
