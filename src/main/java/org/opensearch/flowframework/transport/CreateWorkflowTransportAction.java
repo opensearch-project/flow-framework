@@ -32,6 +32,7 @@ import org.opensearch.flowframework.workflow.ProcessNode;
 import org.opensearch.flowframework.workflow.WorkflowProcessSorter;
 import org.opensearch.index.query.QueryBuilder;
 import org.opensearch.index.query.QueryBuilders;
+import org.opensearch.plugins.PluginsService;
 import org.opensearch.search.builder.SearchSourceBuilder;
 import org.opensearch.tasks.Task;
 import org.opensearch.transport.TransportService;
@@ -55,6 +56,7 @@ public class CreateWorkflowTransportAction extends HandledTransportAction<Workfl
     private final FlowFrameworkIndicesHandler flowFrameworkIndicesHandler;
     private final Client client;
     private final Settings settings;
+    private final PluginsService pluginsService;
 
     /**
      * Intantiates a new CreateWorkflowTransportAction
@@ -64,6 +66,7 @@ public class CreateWorkflowTransportAction extends HandledTransportAction<Workfl
      * @param flowFrameworkIndicesHandler The handler for the global context index
      * @param settings Environment settings
      * @param client The client used to make the request to OS
+     * @param pluginsService The plugin service
      */
     @Inject
     public CreateWorkflowTransportAction(
@@ -72,13 +75,15 @@ public class CreateWorkflowTransportAction extends HandledTransportAction<Workfl
         WorkflowProcessSorter workflowProcessSorter,
         FlowFrameworkIndicesHandler flowFrameworkIndicesHandler,
         Settings settings,
-        Client client
+        Client client,
+        PluginsService pluginsService
     ) {
         super(CreateWorkflowAction.NAME, transportService, actionFilters, WorkflowRequest::new);
         this.workflowProcessSorter = workflowProcessSorter;
         this.flowFrameworkIndicesHandler = flowFrameworkIndicesHandler;
         this.settings = settings;
         this.client = client;
+        this.pluginsService = pluginsService;
     }
 
     @Override
@@ -263,7 +268,7 @@ public class CreateWorkflowTransportAction extends HandledTransportAction<Workfl
     private void validateWorkflows(Template template) throws Exception {
         for (Workflow workflow : template.workflows().values()) {
             List<ProcessNode> sortedNodes = workflowProcessSorter.sortProcessNodes(workflow, null);
-            workflowProcessSorter.validate(sortedNodes);
+            workflowProcessSorter.validate(sortedNodes, pluginsService);
         }
     }
 }

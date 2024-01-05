@@ -28,6 +28,7 @@ import org.opensearch.flowframework.model.Workflow;
 import org.opensearch.flowframework.model.WorkflowEdge;
 import org.opensearch.flowframework.model.WorkflowNode;
 import org.opensearch.flowframework.workflow.WorkflowProcessSorter;
+import org.opensearch.plugins.PluginsService;
 import org.opensearch.tasks.Task;
 import org.opensearch.test.OpenSearchTestCase;
 import org.opensearch.threadpool.ThreadPool;
@@ -80,6 +81,7 @@ public class CreateWorkflowTransportActionTests extends OpenSearchTestCase {
     private ClusterSettings clusterSettings;
     private ClusterService clusterService;
     private Settings settings;
+    private PluginsService pluginsService;
 
     @Override
     public void setUp() throws Exception {
@@ -102,6 +104,7 @@ public class CreateWorkflowTransportActionTests extends OpenSearchTestCase {
 
         // Validation functionality should not be invoked in these unit tests, mocking instead
         this.workflowProcessSorter = mock(WorkflowProcessSorter.class);
+        this.pluginsService = mock(PluginsService.class);
 
         // Spy this action to stub check max workflows
         this.createWorkflowTransportAction = spy(
@@ -111,7 +114,8 @@ public class CreateWorkflowTransportActionTests extends OpenSearchTestCase {
                 workflowProcessSorter,
                 flowFrameworkIndicesHandler,
                 settings,
-                client
+                client,
+                pluginsService
             )
         );
         // client = mock(Client.class);
@@ -207,7 +211,7 @@ public class CreateWorkflowTransportActionTests extends OpenSearchTestCase {
         @SuppressWarnings("unchecked")
         ActionListener<WorkflowResponse> listener = mock(ActionListener.class);
         // Stub validation failure
-        doThrow(Exception.class).when(workflowProcessSorter).validate(any());
+        doThrow(Exception.class).when(workflowProcessSorter).validate(any(), any());
         WorkflowRequest createNewWorkflow = new WorkflowRequest(null, cyclicalTemplate, new String[] { "all" }, false, null, null);
 
         createWorkflowTransportAction.doExecute(mock(Task.class), createNewWorkflow, listener);
@@ -386,7 +390,7 @@ public class CreateWorkflowTransportActionTests extends OpenSearchTestCase {
         @SuppressWarnings("unchecked")
         ActionListener<WorkflowResponse> listener = mock(ActionListener.class);
 
-        doNothing().when(workflowProcessSorter).validate(any());
+        doNothing().when(workflowProcessSorter).validate(any(), any());
         WorkflowRequest workflowRequest = new WorkflowRequest(
             null,
             validTemplate,
@@ -446,7 +450,7 @@ public class CreateWorkflowTransportActionTests extends OpenSearchTestCase {
 
         @SuppressWarnings("unchecked")
         ActionListener<WorkflowResponse> listener = mock(ActionListener.class);
-        doNothing().when(workflowProcessSorter).validate(any());
+        doNothing().when(workflowProcessSorter).validate(any(), any());
         WorkflowRequest workflowRequest = new WorkflowRequest(
             null,
             validTemplate,
