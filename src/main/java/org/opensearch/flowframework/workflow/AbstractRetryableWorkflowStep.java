@@ -24,7 +24,7 @@ import org.opensearch.threadpool.ThreadPool;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import static org.opensearch.flowframework.common.CommonValue.PROVISION_THREAD_POOL;
+import static org.opensearch.flowframework.common.CommonValue.WORKFLOW_THREAD_POOL;
 import static org.opensearch.flowframework.common.WorkflowResources.getResourceByWorkflowStep;
 
 /**
@@ -136,7 +136,7 @@ public abstract class AbstractRetryableWorkflowStep implements WorkflowStep {
                 logger.error(errorMessage);
                 mlTaskListener.onFailure(new FlowFrameworkException(errorMessage, RestStatus.REQUEST_TIMEOUT));
             }
-        }, threadPool.executor(PROVISION_THREAD_POOL));
+        }, threadPool.executor(WORKFLOW_THREAD_POOL));
     }
 
     /**

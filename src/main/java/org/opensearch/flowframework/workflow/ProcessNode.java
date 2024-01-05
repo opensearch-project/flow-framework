@@ -21,7 +21,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeoutException;
 import java.util.stream.Collectors;
 
-import static org.opensearch.flowframework.common.CommonValue.PROVISION_THREAD_POOL;
+import static org.opensearch.flowframework.common.CommonValue.WORKFLOW_THREAD_POOL;
 
 /**
  * Representation of a process node in a workflow graph.
@@ -185,7 +185,7 @@ public class ProcessNode {
             } catch (Throwable t) {
                 this.future.completeExceptionally(t.getCause() == null ? t : t.getCause());
             }
-        }, threadPool.executor(PROVISION_THREAD_POOL));
+        }, threadPool.executor(WORKFLOW_THREAD_POOL));
         return this.future;
     }
 

@@ -28,7 +28,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
 import static org.opensearch.flowframework.common.CommonValue.FLOW_FRAMEWORK_THREAD_POOL_PREFIX;
-import static org.opensearch.flowframework.common.CommonValue.PROVISION_THREAD_POOL;
+import static org.opensearch.flowframework.common.CommonValue.WORKFLOW_THREAD_POOL;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -44,10 +44,10 @@ public class ProcessNodeTests extends OpenSearchTestCase {
             ProcessNodeTests.class.getName(),
             new FixedExecutorBuilder(
                 Settings.EMPTY,
-                PROVISION_THREAD_POOL,
+                WORKFLOW_THREAD_POOL,
                 OpenSearchExecutors.allocatedProcessors(Settings.EMPTY),
                 100,
-                FLOW_FRAMEWORK_THREAD_POOL_PREFIX + PROVISION_THREAD_POOL
+                FLOW_FRAMEWORK_THREAD_POOL_PREFIX + WORKFLOW_THREAD_POOL
             )
         );
 
@@ -118,7 +118,7 @@ public class ProcessNodeTests extends OpenSearchTestCase {
                 Map<String, String> previousNodeInputs
             ) {
                 CompletableFuture<WorkflowData> future = new CompletableFuture<>();
-                testThreadPool.schedule(() -> future.complete(WorkflowData.EMPTY), TimeValue.timeValueMillis(100), PROVISION_THREAD_POOL);
+                testThreadPool.schedule(() -> future.complete(WorkflowData.EMPTY), TimeValue.timeValueMillis(100), WORKFLOW_THREAD_POOL);
                 return future;
             }
 
@@ -149,7 +149,7 @@ public class ProcessNodeTests extends OpenSearchTestCase {
                 Map<String, String> previousNodeInputs
             ) {
                 CompletableFuture<WorkflowData> future = new CompletableFuture<>();
-                testThreadPool.schedule(() -> future.complete(WorkflowData.EMPTY), TimeValue.timeValueMinutes(1), PROVISION_THREAD_POOL);
+                testThreadPool.schedule(() -> future.complete(WorkflowData.EMPTY), TimeValue.timeValueMinutes(1), WORKFLOW_THREAD_POOL);
                 return future;
             }
 
