@@ -184,7 +184,7 @@ public class RegisterLocalModelStep extends AbstractRetryableWorkflowStep {
                             // Simulate Model deployment step and update resources created
                             flowFrameworkIndicesHandler.updateResourceInStateIndex(
                                 currentNodeInputs.getWorkflowId(),
-                                currentNodeId + "-deploy",
+                                currentNodeId,
                                 DeployModelStep.NAME,
                                 id,
                                 ActionListener.wrap(deployUpdateResponse -> {
