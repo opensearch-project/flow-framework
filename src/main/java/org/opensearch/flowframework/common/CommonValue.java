@@ -71,7 +71,7 @@ public class CommonValue {
     /** Flow Framework plugin thread pool name prefix */
     public static final String FLOW_FRAMEWORK_THREAD_POOL_PREFIX = "thread_pool.flow_framework.";
     /** The provision workflow thread pool name */
-    public static final String WORKFLOW_THREAD_POOL = "opensearch_workflow_provision";
+    public static final String WORKFLOW_THREAD_POOL = "opensearch_workflow";
 
     /*
      * Field names common to multiple classes
