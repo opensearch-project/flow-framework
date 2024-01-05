@@ -123,7 +123,7 @@
             "opensearch-ml"
         ]
     },
-    "register_model_group": {
+    "model_group": {
         "inputs":[
             "name"
         ],
@@ -134,6 +134,11 @@
         "required_plugins":[
             "opensearch-ml"
         ]
+    },
+    "delete_model_group": {
+        "inputs":[],
+        "outputs":[],
+        "required_plugins":[]
     },
     "register_agent": {
         "inputs":[

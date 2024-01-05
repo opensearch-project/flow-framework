@@ -17,6 +17,7 @@ import org.opensearch.flowframework.workflow.CreateIndexStep;
 import org.opensearch.flowframework.workflow.CreateIngestPipelineStep;
 import org.opensearch.flowframework.workflow.DeleteAgentStep;
 import org.opensearch.flowframework.workflow.DeleteConnectorStep;
+import org.opensearch.flowframework.workflow.DeleteModelGroupStep;
 import org.opensearch.flowframework.workflow.DeleteModelStep;
 import org.opensearch.flowframework.workflow.DeployModelStep;
 import org.opensearch.flowframework.workflow.ModelGroupStep;
@@ -41,7 +42,7 @@ public enum WorkflowResources {
     /** Workflow steps for registering/deleting a local model and associated created resource */
     REGISTER_LOCAL_MODEL(RegisterLocalModelStep.NAME, WorkflowResources.MODEL_ID, DeleteModelStep.NAME),
     /** Workflow steps for registering a model group and associated created resource */
-    REGISTER_MODEL_GROUP(ModelGroupStep.NAME, WorkflowResources.MODEL_GROUP_ID, null), // TODO delete step
+    REGISTER_MODEL_GROUP(ModelGroupStep.NAME, WorkflowResources.MODEL_GROUP_ID, DeleteModelGroupStep.NAME),
     /** Workflow steps for deploying/undeploying a model and associated created resource */
     DEPLOY_MODEL(DeployModelStep.NAME, WorkflowResources.MODEL_ID, UndeployModelStep.NAME),
     /** Workflow steps for creating an ingest-pipeline and associated created resource */
