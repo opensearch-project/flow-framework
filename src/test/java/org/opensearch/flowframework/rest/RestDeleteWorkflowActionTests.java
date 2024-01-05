@@ -12,7 +12,7 @@ import org.opensearch.client.node.NodeClient;
 import org.opensearch.core.common.bytes.BytesArray;
 import org.opensearch.core.rest.RestStatus;
 import org.opensearch.core.xcontent.MediaTypeRegistry;
-import org.opensearch.flowframework.common.FlowFrameworkFeatureEnabledSetting;
+import org.opensearch.flowframework.common.FlowFrameworkSettings;
 import org.opensearch.rest.RestHandler;
 import org.opensearch.rest.RestRequest;
 import org.opensearch.test.OpenSearchTestCase;
@@ -29,7 +29,7 @@ import static org.mockito.Mockito.when;
 public class RestDeleteWorkflowActionTests extends OpenSearchTestCase {
     private RestDeleteWorkflowAction restDeleteWorkflowAction;
     private String getPath;
-    private FlowFrameworkFeatureEnabledSetting flowFrameworkFeatureEnabledSetting;
+    private FlowFrameworkSettings flowFrameworkFeatureEnabledSetting;
     private NodeClient nodeClient;
 
     @Override
@@ -37,7 +37,7 @@ public class RestDeleteWorkflowActionTests extends OpenSearchTestCase {
         super.setUp();
 
         this.getPath = String.format(Locale.ROOT, "%s/{%s}", WORKFLOW_URI, "workflow_id");
-        flowFrameworkFeatureEnabledSetting = mock(FlowFrameworkFeatureEnabledSetting.class);
+        flowFrameworkFeatureEnabledSetting = mock(FlowFrameworkSettings.class);
         when(flowFrameworkFeatureEnabledSetting.isFlowFrameworkEnabled()).thenReturn(true);
         this.restDeleteWorkflowAction = new RestDeleteWorkflowAction(flowFrameworkFeatureEnabledSetting);
         this.nodeClient = mock(NodeClient.class);

@@ -13,7 +13,7 @@ import org.opensearch.core.common.bytes.BytesArray;
 import org.opensearch.core.rest.RestStatus;
 import org.opensearch.core.xcontent.MediaTypeRegistry;
 import org.opensearch.core.xcontent.XContentParseException;
-import org.opensearch.flowframework.common.FlowFrameworkFeatureEnabledSetting;
+import org.opensearch.flowframework.common.FlowFrameworkSettings;
 import org.opensearch.rest.RestHandler.Route;
 import org.opensearch.rest.RestRequest;
 import org.opensearch.test.OpenSearchTestCase;
@@ -31,14 +31,14 @@ public class RestSearchWorkflowStateActionTests extends OpenSearchTestCase {
     private RestSearchWorkflowStateAction restSearchWorkflowStateAction;
     private String searchPath;
     private NodeClient nodeClient;
-    private FlowFrameworkFeatureEnabledSetting flowFrameworkFeatureEnabledSetting;
+    private FlowFrameworkSettings flowFrameworkFeatureEnabledSetting;
 
     @Override
     public void setUp() throws Exception {
         super.setUp();
 
         this.searchPath = String.format(Locale.ROOT, "%s/%s", WORKFLOW_URI, "state/_search");
-        flowFrameworkFeatureEnabledSetting = mock(FlowFrameworkFeatureEnabledSetting.class);
+        flowFrameworkFeatureEnabledSetting = mock(FlowFrameworkSettings.class);
         when(flowFrameworkFeatureEnabledSetting.isFlowFrameworkEnabled()).thenReturn(true);
         this.restSearchWorkflowStateAction = new RestSearchWorkflowStateAction(flowFrameworkFeatureEnabledSetting);
         this.nodeClient = mock(NodeClient.class);

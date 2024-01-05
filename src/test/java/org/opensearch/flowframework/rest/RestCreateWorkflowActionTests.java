@@ -18,7 +18,7 @@ import org.opensearch.core.common.bytes.BytesArray;
 import org.opensearch.core.rest.RestStatus;
 import org.opensearch.core.xcontent.MediaTypeRegistry;
 import org.opensearch.flowframework.TestHelpers;
-import org.opensearch.flowframework.common.FlowFrameworkFeatureEnabledSetting;
+import org.opensearch.flowframework.common.FlowFrameworkSettings;
 import org.opensearch.flowframework.model.Template;
 import org.opensearch.flowframework.model.Workflow;
 import org.opensearch.flowframework.model.WorkflowEdge;
@@ -48,14 +48,14 @@ public class RestCreateWorkflowActionTests extends OpenSearchTestCase {
     private String createWorkflowPath;
     private String updateWorkflowPath;
     private NodeClient nodeClient;
-    private FlowFrameworkFeatureEnabledSetting flowFrameworkFeatureEnabledSetting;
+    private FlowFrameworkSettings flowFrameworkFeatureEnabledSetting;
     private Settings settings;
     private ClusterService clusterService;
 
     @Override
     public void setUp() throws Exception {
         super.setUp();
-        flowFrameworkFeatureEnabledSetting = mock(FlowFrameworkFeatureEnabledSetting.class);
+        flowFrameworkFeatureEnabledSetting = mock(FlowFrameworkSettings.class);
         settings = Settings.builder()
             .put(WORKFLOW_REQUEST_TIMEOUT.getKey(), TimeValue.timeValueMillis(10))
             .put(MAX_WORKFLOWS.getKey(), 2)

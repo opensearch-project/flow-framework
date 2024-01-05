@@ -11,11 +11,10 @@ package org.opensearch.flowframework.workflow;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.opensearch.ExceptionsHelper;
-import org.opensearch.cluster.service.ClusterService;
-import org.opensearch.common.settings.Settings;
 import org.opensearch.common.util.concurrent.FutureUtils;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.core.rest.RestStatus;
+import org.opensearch.flowframework.common.FlowFrameworkSettings;
 import org.opensearch.flowframework.exception.FlowFrameworkException;
 import org.opensearch.flowframework.indices.FlowFrameworkIndicesHandler;
 import org.opensearch.ml.client.MachineLearningNodeClient;
@@ -26,7 +25,6 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.opensearch.flowframework.common.CommonValue.PROVISION_THREAD_POOL;
-import static org.opensearch.flowframework.common.FlowFrameworkSettings.MAX_GET_TASK_REQUEST_RETRY;
 import static org.opensearch.flowframework.common.WorkflowResources.getResourceByWorkflowStep;
 
 /**
@@ -42,22 +40,19 @@ public abstract class AbstractRetryableWorkflowStep implements WorkflowStep {
 
     /**
      * Instantiates a new Retryable workflow step
-     * @param settings Environment settings
      * @param threadPool The OpenSearch thread pool
-     * @param clusterService the cluster service
      * @param mlClient machine learning client
      * @param flowFrameworkIndicesHandler FlowFrameworkIndicesHandler class to update system indices
+     * @param flowFrameworkSettings settings of flow framework
      */
     protected AbstractRetryableWorkflowStep(
-        Settings settings,
         ThreadPool threadPool,
-        ClusterService clusterService,
         MachineLearningNodeClient mlClient,
-        FlowFrameworkIndicesHandler flowFrameworkIndicesHandler
+        FlowFrameworkIndicesHandler flowFrameworkIndicesHandler,
+        FlowFrameworkSettings flowFrameworkSettings
     ) {
         this.threadPool = threadPool;
-        this.maxRetry = MAX_GET_TASK_REQUEST_RETRY.get(settings);
-        clusterService.getClusterSettings().addSettingsUpdateConsumer(MAX_GET_TASK_REQUEST_RETRY, it -> maxRetry = it);
+        this.maxRetry = flowFrameworkSettings.getMaxRetry();
         this.mlClient = mlClient;
         this.flowFrameworkIndicesHandler = flowFrameworkIndicesHandler;
     }

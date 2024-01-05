@@ -8,7 +8,7 @@
  */
 package org.opensearch.flowframework.rest;
 
-import org.opensearch.flowframework.common.FlowFrameworkFeatureEnabledSetting;
+import org.opensearch.flowframework.common.FlowFrameworkSettings;
 import org.opensearch.flowframework.model.WorkflowState;
 import org.opensearch.flowframework.transport.SearchWorkflowStateAction;
 
@@ -30,7 +30,7 @@ public class RestSearchWorkflowStateAction extends AbstractSearchWorkflowAction<
      *
      * @param flowFrameworkFeatureEnabledSetting Whether this API is enabled
      */
-    public RestSearchWorkflowStateAction(FlowFrameworkFeatureEnabledSetting flowFrameworkFeatureEnabledSetting) {
+    public RestSearchWorkflowStateAction(FlowFrameworkSettings flowFrameworkFeatureEnabledSetting) {
         super(
             List.of(SEARCH_WORKFLOW_STATE_PATH),
             WORKFLOW_STATE_INDEX,

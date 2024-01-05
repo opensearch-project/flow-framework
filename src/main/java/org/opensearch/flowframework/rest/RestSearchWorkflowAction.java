@@ -8,7 +8,7 @@
  */
 package org.opensearch.flowframework.rest;
 
-import org.opensearch.flowframework.common.FlowFrameworkFeatureEnabledSetting;
+import org.opensearch.flowframework.common.FlowFrameworkSettings;
 import org.opensearch.flowframework.model.Template;
 import org.opensearch.flowframework.transport.SearchWorkflowAction;
 
@@ -30,7 +30,7 @@ public class RestSearchWorkflowAction extends AbstractSearchWorkflowAction<Templ
      *
      * @param flowFrameworkFeatureEnabledSetting Whether this API is enabled
      */
-    public RestSearchWorkflowAction(FlowFrameworkFeatureEnabledSetting flowFrameworkFeatureEnabledSetting) {
+    public RestSearchWorkflowAction(FlowFrameworkSettings flowFrameworkFeatureEnabledSetting) {
         super(
             List.of(SEARCH_WORKFLOW_PATH),
             GLOBAL_CONTEXT_INDEX,
