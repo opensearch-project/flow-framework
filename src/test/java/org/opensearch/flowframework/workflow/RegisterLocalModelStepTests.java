@@ -46,9 +46,9 @@ import org.mockito.MockitoAnnotations;
 
 import static org.opensearch.action.DocWriteResponse.Result.UPDATED;
 import static org.opensearch.flowframework.common.CommonValue.FLOW_FRAMEWORK_THREAD_POOL_PREFIX;
-import static org.opensearch.flowframework.common.CommonValue.PROVISION_THREAD_POOL;
 import static org.opensearch.flowframework.common.CommonValue.REGISTER_MODEL_STATUS;
 import static org.opensearch.flowframework.common.CommonValue.WORKFLOW_STATE_INDEX;
+import static org.opensearch.flowframework.common.CommonValue.WORKFLOW_THREAD_POOL;
 import static org.opensearch.flowframework.common.FlowFrameworkSettings.MAX_GET_TASK_REQUEST_RETRY;
 import static org.opensearch.flowframework.common.WorkflowResources.MODEL_GROUP_ID;
 import static org.opensearch.flowframework.common.WorkflowResources.MODEL_ID;
@@ -96,10 +96,10 @@ public class RegisterLocalModelStepTests extends OpenSearchTestCase {
             RegisterLocalModelStepTests.class.getName(),
             new FixedExecutorBuilder(
                 Settings.EMPTY,
-                PROVISION_THREAD_POOL,
+                WORKFLOW_THREAD_POOL,
                 OpenSearchExecutors.allocatedProcessors(Settings.EMPTY),
                 100,
-                FLOW_FRAMEWORK_THREAD_POOL_PREFIX + PROVISION_THREAD_POOL
+                FLOW_FRAMEWORK_THREAD_POOL_PREFIX + WORKFLOW_THREAD_POOL
             )
         );
         this.registerLocalModelStep = new RegisterLocalModelStep(

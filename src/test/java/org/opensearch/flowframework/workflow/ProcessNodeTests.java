@@ -8,8 +8,11 @@
  */
 package org.opensearch.flowframework.workflow;
 
+import org.opensearch.common.settings.Settings;
 import org.opensearch.common.unit.TimeValue;
+import org.opensearch.common.util.concurrent.OpenSearchExecutors;
 import org.opensearch.test.OpenSearchTestCase;
+import org.opensearch.threadpool.FixedExecutorBuilder;
 import org.opensearch.threadpool.TestThreadPool;
 import org.opensearch.threadpool.ThreadPool;
 import org.junit.AfterClass;
@@ -24,6 +27,8 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
+import static org.opensearch.flowframework.common.CommonValue.FLOW_FRAMEWORK_THREAD_POOL_PREFIX;
+import static org.opensearch.flowframework.common.CommonValue.WORKFLOW_THREAD_POOL;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -35,7 +40,16 @@ public class ProcessNodeTests extends OpenSearchTestCase {
 
     @BeforeClass
     public static void setup() {
-        testThreadPool = new TestThreadPool(ProcessNodeTests.class.getName());
+        testThreadPool = new TestThreadPool(
+            ProcessNodeTests.class.getName(),
+            new FixedExecutorBuilder(
+                Settings.EMPTY,
+                WORKFLOW_THREAD_POOL,
+                OpenSearchExecutors.allocatedProcessors(Settings.EMPTY),
+                100,
+                FLOW_FRAMEWORK_THREAD_POOL_PREFIX + WORKFLOW_THREAD_POOL
+            )
+        );
 
         CompletableFuture<WorkflowData> successfulFuture = new CompletableFuture<>();
         successfulFuture.complete(WorkflowData.EMPTY);
@@ -104,11 +118,7 @@ public class ProcessNodeTests extends OpenSearchTestCase {
                 Map<String, String> previousNodeInputs
             ) {
                 CompletableFuture<WorkflowData> future = new CompletableFuture<>();
-                testThreadPool.schedule(
-                    () -> future.complete(WorkflowData.EMPTY),
-                    TimeValue.timeValueMillis(100),
-                    ThreadPool.Names.GENERIC
-                );
+                testThreadPool.schedule(() -> future.complete(WorkflowData.EMPTY), TimeValue.timeValueMillis(100), WORKFLOW_THREAD_POOL);
                 return future;
             }
 
@@ -139,7 +149,7 @@ public class ProcessNodeTests extends OpenSearchTestCase {
                 Map<String, String> previousNodeInputs
             ) {
                 CompletableFuture<WorkflowData> future = new CompletableFuture<>();
-                testThreadPool.schedule(() -> future.complete(WorkflowData.EMPTY), TimeValue.timeValueMinutes(1), ThreadPool.Names.GENERIC);
+                testThreadPool.schedule(() -> future.complete(WorkflowData.EMPTY), TimeValue.timeValueMinutes(1), WORKFLOW_THREAD_POOL);
                 return future;
             }
 
