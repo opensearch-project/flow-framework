@@ -8,24 +8,14 @@
  */
 package org.opensearch.flowframework.workflow;
 
-import org.opensearch.action.admin.cluster.node.info.NodeInfo;
-import org.opensearch.action.admin.cluster.node.info.NodesInfoRequest;
-import org.opensearch.action.admin.cluster.node.info.NodesInfoResponse;
-import org.opensearch.action.admin.cluster.node.info.PluginsAndModules;
-import org.opensearch.action.admin.cluster.state.ClusterStateRequest;
-import org.opensearch.action.admin.cluster.state.ClusterStateResponse;
 import org.opensearch.client.AdminClient;
 import org.opensearch.client.Client;
-import org.opensearch.client.ClusterAdminClient;
-import org.opensearch.cluster.ClusterState;
-import org.opensearch.cluster.node.DiscoveryNodes;
 import org.opensearch.cluster.service.ClusterService;
 import org.opensearch.common.settings.ClusterSettings;
 import org.opensearch.common.settings.Setting;
 import org.opensearch.common.settings.Settings;
 import org.opensearch.common.unit.TimeValue;
 import org.opensearch.common.util.concurrent.OpenSearchExecutors;
-import org.opensearch.core.action.ActionListener;
 import org.opensearch.core.rest.RestStatus;
 import org.opensearch.flowframework.common.FlowFrameworkSettings;
 import org.opensearch.flowframework.exception.FlowFrameworkException;
@@ -36,7 +26,6 @@ import org.opensearch.flowframework.model.WorkflowEdge;
 import org.opensearch.flowframework.model.WorkflowNode;
 import org.opensearch.flowframework.model.WorkflowValidator;
 import org.opensearch.ml.client.MachineLearningNodeClient;
-import org.opensearch.plugins.PluginInfo;
 import org.opensearch.test.OpenSearchTestCase;
 import org.opensearch.threadpool.FixedExecutorBuilder;
 import org.opensearch.threadpool.TestThreadPool;
@@ -69,8 +58,6 @@ import static org.opensearch.flowframework.model.TemplateTestJsonUtil.nodeWithTy
 import static org.opensearch.flowframework.model.TemplateTestJsonUtil.nodeWithTypeAndPreviousNodes;
 import static org.opensearch.flowframework.model.TemplateTestJsonUtil.nodeWithTypeAndTimeout;
 import static org.opensearch.flowframework.model.TemplateTestJsonUtil.workflow;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -427,55 +414,6 @@ public class WorkflowProcessSorterTests extends OpenSearchTestCase {
 
     public void testSuccessfulInstalledPluginValidation() throws Exception {
 
-        // Mock and stub the cluster admin client to invoke the NodesInfoRequest
-        AdminClient adminClient = mock(AdminClient.class);
-        ClusterAdminClient clusterAdminClient = mock(ClusterAdminClient.class);
-        when(client.admin()).thenReturn(adminClient);
-        when(adminClient.cluster()).thenReturn(clusterAdminClient);
-
-        // Stub cluster state request
-        doAnswer(invocation -> {
-            ActionListener<ClusterStateResponse> listener = invocation.getArgument(1);
-
-            ClusterStateResponse response = mock(ClusterStateResponse.class);
-            ClusterState clusterState = mock(ClusterState.class);
-            DiscoveryNodes discoveryNodes = mock(DiscoveryNodes.class);
-            when(response.getState()).thenReturn(clusterState);
-            when(clusterState.nodes()).thenReturn(discoveryNodes);
-            when(discoveryNodes.getLocalNodeId()).thenReturn("123");
-            listener.onResponse(response);
-            return null;
-        }).when(clusterAdminClient).state(any(ClusterStateRequest.class), any());
-
-        // Stub cluster admin client's node info request
-        doAnswer(invocation -> {
-            ActionListener<NodesInfoResponse> listener = invocation.getArgument(1);
-
-            // Mock and stub Plugin info
-            PluginInfo mockedFlowPluginInfo = mock(PluginInfo.class);
-            PluginInfo mockedMlPluginInfo = mock(PluginInfo.class);
-            when(mockedFlowPluginInfo.getName()).thenReturn("opensearch-flow-framework");
-            when(mockedMlPluginInfo.getName()).thenReturn("opensearch-ml");
-
-            // Mock and stub PluginsAndModules
-            PluginsAndModules mockedPluginsAndModules = mock(PluginsAndModules.class);
-            when(mockedPluginsAndModules.getPluginInfos()).thenReturn(List.of(mockedFlowPluginInfo, mockedMlPluginInfo));
-
-            // Mock and stub NodesInfoResponse to NodeInfo
-            NodeInfo nodeInfo = mock(NodeInfo.class);
-            @SuppressWarnings("unchecked")
-            Map<String, NodeInfo> mockedMap = mock(Map.class);
-            NodesInfoResponse response = mock(NodesInfoResponse.class);
-            when(response.getNodesMap()).thenReturn(mockedMap);
-            when(mockedMap.get(any())).thenReturn(nodeInfo);
-            when(nodeInfo.getInfo(any())).thenReturn(mockedPluginsAndModules);
-
-            // stub on response to pass the mocked NodesInfoRepsonse
-            listener.onResponse(response);
-            return null;
-
-        }).when(clusterAdminClient).nodesInfo(any(NodesInfoRequest.class), any());
-
         WorkflowNode createConnector = new WorkflowNode(
             "workflow_step_1",
             CreateConnectorStep.NAME,
@@ -513,57 +451,14 @@ public class WorkflowProcessSorterTests extends OpenSearchTestCase {
         );
         List<ProcessNode> sortedProcessNodes = workflowProcessSorter.sortProcessNodes(workflow, "123");
 
-        workflowProcessSorter.validatePluginsInstalled(sortedProcessNodes, validator);
+        workflowProcessSorter.validatePluginsInstalled(
+            sortedProcessNodes,
+            validator,
+            List.of("opensearch-flow-framework", "opensearch-ml")
+        );
     }
 
     public void testFailedInstalledPluginValidation() throws Exception {
-
-        // Mock and stub the cluster admin client to invoke the NodesInfoRequest
-        AdminClient adminClient = mock(AdminClient.class);
-        ClusterAdminClient clusterAdminClient = mock(ClusterAdminClient.class);
-        when(client.admin()).thenReturn(adminClient);
-        when(adminClient.cluster()).thenReturn(clusterAdminClient);
-
-        // Stub cluster state request
-        doAnswer(invocation -> {
-            ActionListener<ClusterStateResponse> listener = invocation.getArgument(1);
-
-            ClusterStateResponse response = mock(ClusterStateResponse.class);
-            ClusterState clusterState = mock(ClusterState.class);
-            DiscoveryNodes discoveryNodes = mock(DiscoveryNodes.class);
-            when(response.getState()).thenReturn(clusterState);
-            when(clusterState.nodes()).thenReturn(discoveryNodes);
-            when(discoveryNodes.getLocalNodeId()).thenReturn("123");
-            listener.onResponse(response);
-            return null;
-        }).when(clusterAdminClient).state(any(ClusterStateRequest.class), any());
-
-        // Stub cluster admin client's node info request
-        doAnswer(invocation -> {
-            ActionListener<NodesInfoResponse> listener = invocation.getArgument(1);
-
-            // Mock and stub Plugin info, We ommit the opensearch-ml info here to trigger validation failure
-            PluginInfo mockedFlowPluginInfo = mock(PluginInfo.class);
-            when(mockedFlowPluginInfo.getName()).thenReturn("opensearch-flow-framework");
-
-            // Mock and stub PluginsAndModules
-            PluginsAndModules mockedPluginsAndModules = mock(PluginsAndModules.class);
-            when(mockedPluginsAndModules.getPluginInfos()).thenReturn(List.of(mockedFlowPluginInfo));
-
-            // Mock and stub NodesInfoResponse to NodeInfo
-            NodeInfo nodeInfo = mock(NodeInfo.class);
-            @SuppressWarnings("unchecked")
-            Map<String, NodeInfo> mockedMap = mock(Map.class);
-            NodesInfoResponse response = mock(NodesInfoResponse.class);
-            when(response.getNodesMap()).thenReturn(mockedMap);
-            when(mockedMap.get(any())).thenReturn(nodeInfo);
-            when(nodeInfo.getInfo(any())).thenReturn(mockedPluginsAndModules);
-
-            // stub on response to pass the mocked NodesInfoRepsonse
-            listener.onResponse(response);
-            return null;
-
-        }).when(clusterAdminClient).nodesInfo(any(NodesInfoRequest.class), any());
 
         WorkflowNode createConnector = new WorkflowNode(
             "workflow_step_1",
@@ -604,7 +499,7 @@ public class WorkflowProcessSorterTests extends OpenSearchTestCase {
 
         FlowFrameworkException exception = expectThrows(
             FlowFrameworkException.class,
-            () -> workflowProcessSorter.validatePluginsInstalled(sortedProcessNodes, validator)
+            () -> workflowProcessSorter.validatePluginsInstalled(sortedProcessNodes, validator, List.of("opensearch-flow-framework"))
         );
 
         assertEquals(
