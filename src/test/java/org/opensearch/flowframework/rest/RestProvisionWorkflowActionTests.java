@@ -12,7 +12,7 @@ import org.opensearch.client.node.NodeClient;
 import org.opensearch.core.common.bytes.BytesArray;
 import org.opensearch.core.rest.RestStatus;
 import org.opensearch.core.xcontent.MediaTypeRegistry;
-import org.opensearch.flowframework.common.FlowFrameworkFeatureEnabledSetting;
+import org.opensearch.flowframework.common.FlowFrameworkSettings;
 import org.opensearch.rest.RestHandler.Route;
 import org.opensearch.rest.RestRequest;
 import org.opensearch.test.OpenSearchTestCase;
@@ -31,12 +31,12 @@ public class RestProvisionWorkflowActionTests extends OpenSearchTestCase {
     private RestProvisionWorkflowAction provisionWorkflowRestAction;
     private String provisionWorkflowPath;
     private NodeClient nodeClient;
-    private FlowFrameworkFeatureEnabledSetting flowFrameworkFeatureEnabledSetting;
+    private FlowFrameworkSettings flowFrameworkFeatureEnabledSetting;
 
     @Override
     public void setUp() throws Exception {
         super.setUp();
-        flowFrameworkFeatureEnabledSetting = mock(FlowFrameworkFeatureEnabledSetting.class);
+        flowFrameworkFeatureEnabledSetting = mock(FlowFrameworkSettings.class);
         when(flowFrameworkFeatureEnabledSetting.isFlowFrameworkEnabled()).thenReturn(true);
 
         this.provisionWorkflowRestAction = new RestProvisionWorkflowAction(flowFrameworkFeatureEnabledSetting);
