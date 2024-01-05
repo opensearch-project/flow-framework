@@ -30,12 +30,14 @@ import java.io.IOException;
 import java.time.Instant;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Optional;
 import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 import static org.opensearch.core.xcontent.XContentParserUtils.ensureExpectedToken;
 import static org.opensearch.flowframework.common.CommonValue.PARAMETERS_FIELD;
@@ -277,15 +279,20 @@ public class ParseUtils {
                     value = matchedValue.get();
                 }
             }
-            // Check for substitution
             if (value != null) {
-                Matcher m = SUBSTITUTION_PATTERN.matcher(value.toString());
-                if (m.matches()) {
-                    WorkflowData data = outputs.get(m.group(1));
-                    if (data != null && data.getContent().containsKey(m.group(2))) {
-                        value = data.getContent().get(m.group(2));
-                    }
+                // Check for any substitution(s) in value, list, or map
+                if (value instanceof Map) {
+                    @SuppressWarnings("unchecked")
+                    Map<String, Object> valueMap = (Map<String, Object>) value;
+                    value = valueMap.entrySet()
+                        .stream()
+                        .collect(Collectors.toMap(Map.Entry::getKey, e -> conditionallySubstitute(e.getValue(), outputs)));
+                } else if (value instanceof List) {
+                    value = ((List<?>) value).stream().map(v -> conditionallySubstitute(v, outputs)).collect(Collectors.toList());
+                } else {
+                    value = conditionallySubstitute(value, outputs);
                 }
+                // Add value to inputs and mark that a required key was present
                 inputs.put(key, value);
                 requiredKeys.remove(key);
             }
@@ -305,5 +312,18 @@ public class ParseUtils {
         }
         // Finally return the map
         return inputs;
+    }
+
+    private static Object conditionallySubstitute(Object value, Map<String, WorkflowData> outputs) {
+        if (value instanceof String) {
+            Matcher m = SUBSTITUTION_PATTERN.matcher((String) value);
+            if (m.matches()) {
+                WorkflowData data = outputs.get(m.group(1));
+                if (data != null && data.getContent().containsKey(m.group(2))) {
+                    return data.getContent().get(m.group(2));
+                }
+            }
+        }
+        return value;
     }
 }
