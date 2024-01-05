@@ -10,13 +10,9 @@ package org.opensearch.flowframework.workflow;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.opensearch.action.admin.cluster.node.info.NodesInfoRequest;
-import org.opensearch.action.admin.cluster.node.info.PluginsAndModules;
-import org.opensearch.action.admin.cluster.state.ClusterStateRequest;
 import org.opensearch.client.Client;
 import org.opensearch.cluster.service.ClusterService;
 import org.opensearch.common.unit.TimeValue;
-import org.opensearch.core.action.ActionListener;
 import org.opensearch.core.rest.RestStatus;
 import org.opensearch.flowframework.common.FlowFrameworkSettings;
 import org.opensearch.flowframework.exception.FlowFrameworkException;
@@ -25,6 +21,7 @@ import org.opensearch.flowframework.model.WorkflowEdge;
 import org.opensearch.flowframework.model.WorkflowNode;
 import org.opensearch.flowframework.model.WorkflowValidator;
 import org.opensearch.plugins.PluginInfo;
+import org.opensearch.plugins.PluginsService;
 import org.opensearch.threadpool.ThreadPool;
 
 import java.util.ArrayDeque;
@@ -38,7 +35,6 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Queue;
 import java.util.Set;
-import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -137,11 +133,17 @@ public class WorkflowProcessSorter {
     /**
      * Validates inputs and ensures the required plugins are installed for each step in a topologically sorted graph
      * @param processNodes the topologically sorted list of process nodes
+     * @param pluginsService the Plugins Service to retrieve installed plugins
      * @throws Exception if validation fails
      */
-    public void validate(List<ProcessNode> processNodes) throws Exception {
+    public void validate(List<ProcessNode> processNodes, PluginsService pluginsService) throws Exception {
         WorkflowValidator validator = readWorkflowValidator();
-        validatePluginsInstalled(processNodes, validator);
+        List<String> installedPlugins = pluginsService.info()
+            .getPluginInfos()
+            .stream()
+            .map(PluginInfo::getName)
+            .collect(Collectors.toList());
+        validatePluginsInstalled(processNodes, validator, installedPlugins);
         validateGraph(processNodes, validator);
     }
 
@@ -149,49 +151,11 @@ public class WorkflowProcessSorter {
      * Validates a sorted workflow, determines if each process node's required plugins are currently installed
      * @param processNodes A list of process nodes
      * @param validator The validation definitions for the workflow steps
+     * @param installedPlugins The list of installed plugins
      * @throws Exception on validation failure
      */
-    public void validatePluginsInstalled(List<ProcessNode> processNodes, WorkflowValidator validator) throws Exception {
-        final CompletableFuture<List<String>> installedPluginsFuture = new CompletableFuture<>();
-
-        ClusterStateRequest clusterStateRequest = new ClusterStateRequest();
-        clusterStateRequest.clear().nodes(true).local(true);
-        client.admin().cluster().state(clusterStateRequest, ActionListener.wrap(stateResponse -> {
-            final String localNodeId = stateResponse.getState().nodes().getLocalNodeId();
-
-            NodesInfoRequest nodesInfoRequest = new NodesInfoRequest();
-            nodesInfoRequest.clear().addMetric(NodesInfoRequest.Metric.PLUGINS.metricName());
-            client.admin().cluster().nodesInfo(nodesInfoRequest, ActionListener.wrap(infoResponse -> {
-                // Retrieve installed plugin names from the local node
-                try {
-                    installedPluginsFuture.complete(
-                        infoResponse.getNodesMap()
-                            .get(localNodeId)
-                            .getInfo(PluginsAndModules.class)
-                            .getPluginInfos()
-                            .stream()
-                            .map(PluginInfo::getName)
-                            .collect(Collectors.toList())
-                    );
-                } catch (Exception e) {
-                    logger.error("Failed to retrieve installed plugins from local node");
-                    installedPluginsFuture.completeExceptionally(e);
-                }
-            }, infoException -> {
-                logger.error("Failed to retrieve installed plugins");
-                installedPluginsFuture.completeExceptionally(infoException);
-            }));
-        }, stateException -> {
-            logger.error("Failed to retrieve cluster state");
-            installedPluginsFuture.completeExceptionally(stateException);
-        }));
-
-        // Block execution until installed plugin list is returned
-        List<String> installedPlugins = installedPluginsFuture.orTimeout(
-            NODE_TIMEOUT_DEFAULT_VALUE.duration(),
-            NODE_TIMEOUT_DEFAULT_VALUE.timeUnit()
-        ).get();
-
+    public void validatePluginsInstalled(List<ProcessNode> processNodes, WorkflowValidator validator, List<String> installedPlugins)
+        throws Exception {
         // Iterate through process nodes in graph
         for (ProcessNode processNode : processNodes) {
 
