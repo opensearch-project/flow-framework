@@ -173,7 +173,6 @@ public class FlowFrameworkPlugin extends Plugin implements ActionPlugin {
 
     @Override
     public List<ExecutorBuilder<?>> getExecutorBuilders(Settings settings) {
-        // TODO : Determine final size/queueSize values for the provision thread pool
         return List.of(
             new FixedExecutorBuilder(
                 settings,

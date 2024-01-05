@@ -21,6 +21,8 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeoutException;
 import java.util.stream.Collectors;
 
+import static org.opensearch.flowframework.common.CommonValue.PROVISION_THREAD_POOL;
+
 /**
  * Representation of a process node in a workflow graph.
  * Tracks predecessor nodes which must be completed before it can start execution.
@@ -180,13 +182,10 @@ public class ProcessNode {
                     delayExec.cancel();
                 }
                 logger.info("Finished {}.", this.id);
-            } catch (Throwable e) {
-                // TODO: better handling of getCause
-                this.future.completeExceptionally(e);
+            } catch (Throwable t) {
+                this.future.completeExceptionally(t.getCause() == null ? t : t.getCause());
             }
-            // TODO: improve use of thread pool beyond generic
-            // https://github.com/opensearch-project/flow-framework/issues/61
-        }, threadPool.generic());
+        }, threadPool.executor(PROVISION_THREAD_POOL));
         return this.future;
     }
 

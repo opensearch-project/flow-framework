@@ -12,6 +12,7 @@ import org.opensearch.action.support.ActionFilters;
 import org.opensearch.client.Client;
 import org.opensearch.common.settings.Settings;
 import org.opensearch.common.unit.TimeValue;
+import org.opensearch.common.util.concurrent.OpenSearchExecutors;
 import org.opensearch.common.util.concurrent.ThreadContext;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.flowframework.indices.FlowFrameworkIndicesHandler;
@@ -25,6 +26,7 @@ import org.opensearch.flowframework.workflow.WorkflowStepFactory;
 import org.opensearch.ml.client.MachineLearningNodeClient;
 import org.opensearch.tasks.Task;
 import org.opensearch.test.OpenSearchTestCase;
+import org.opensearch.threadpool.FixedExecutorBuilder;
 import org.opensearch.threadpool.TestThreadPool;
 import org.opensearch.threadpool.ThreadPool;
 import org.opensearch.transport.TransportService;
@@ -38,6 +40,8 @@ import java.util.concurrent.TimeUnit;
 
 import org.mockito.ArgumentCaptor;
 
+import static org.opensearch.flowframework.common.CommonValue.FLOW_FRAMEWORK_THREAD_POOL_PREFIX;
+import static org.opensearch.flowframework.common.CommonValue.PROVISION_THREAD_POOL;
 import static org.opensearch.flowframework.common.WorkflowResources.CONNECTOR_ID;
 import static org.opensearch.flowframework.common.WorkflowResources.MODEL_ID;
 import static org.mockito.ArgumentMatchers.any;
@@ -51,7 +55,16 @@ import static org.mockito.Mockito.when;
 
 public class DeprovisionWorkflowTransportActionTests extends OpenSearchTestCase {
 
-    private static ThreadPool threadPool = new TestThreadPool(DeprovisionWorkflowTransportActionTests.class.getName());
+    private static ThreadPool threadPool = new TestThreadPool(
+        DeprovisionWorkflowTransportActionTests.class.getName(),
+        new FixedExecutorBuilder(
+            Settings.EMPTY,
+            PROVISION_THREAD_POOL,
+            OpenSearchExecutors.allocatedProcessors(Settings.EMPTY),
+            100,
+            FLOW_FRAMEWORK_THREAD_POOL_PREFIX + PROVISION_THREAD_POOL
+        )
+    );
     private Client client;
     private WorkflowStepFactory workflowStepFactory;
     private DeleteConnectorStep deleteConnectorStep;
