@@ -73,7 +73,7 @@ public class ModelGroupStepTests extends OpenSearchTestCase {
         String modelGroupId = MODEL_GROUP_ID;
         String status = MLTaskState.CREATED.name();
 
-        ModelGroupStep modelGroupStep = new ModelGroupStep(machineLearningNodeClient, flowFrameworkIndicesHandler);
+        RegisterModelGroupStep modelGroupStep = new RegisterModelGroupStep(machineLearningNodeClient, flowFrameworkIndicesHandler);
 
         @SuppressWarnings("unchecked")
         ArgumentCaptor<ActionListener<MLRegisterModelGroupResponse>> actionListenerCaptor = ArgumentCaptor.forClass(ActionListener.class);
@@ -107,7 +107,7 @@ public class ModelGroupStepTests extends OpenSearchTestCase {
     }
 
     public void testRegisterModelGroupFailure() throws IOException {
-        ModelGroupStep modelGroupStep = new ModelGroupStep(machineLearningNodeClient, flowFrameworkIndicesHandler);
+        RegisterModelGroupStep modelGroupStep = new RegisterModelGroupStep(machineLearningNodeClient, flowFrameworkIndicesHandler);
 
         @SuppressWarnings("unchecked")
         ArgumentCaptor<ActionListener<MLRegisterModelGroupResponse>> actionListenerCaptor = ArgumentCaptor.forClass(ActionListener.class);
@@ -135,7 +135,7 @@ public class ModelGroupStepTests extends OpenSearchTestCase {
     }
 
     public void testRegisterModelGroupWithNoName() throws IOException {
-        ModelGroupStep modelGroupStep = new ModelGroupStep(machineLearningNodeClient, flowFrameworkIndicesHandler);
+        RegisterModelGroupStep modelGroupStep = new RegisterModelGroupStep(machineLearningNodeClient, flowFrameworkIndicesHandler);
 
         CompletableFuture<WorkflowData> future = modelGroupStep.execute(
             inputDataWithNoName.getNodeId(),
