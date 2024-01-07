@@ -257,7 +257,7 @@ public class CreateWorkflowTransportAction extends HandledTransportAction<Workfl
      *  @param maxWorkflow max workflows
      *  @param internalListener listener for search request
      */
-    protected void checkMaxWorkflows(TimeValue requestTimeOut, Integer maxWorkflow, ActionListener<Boolean> internalListener) {
+    void checkMaxWorkflows(TimeValue requestTimeOut, Integer maxWorkflow, ActionListener<Boolean> internalListener) {
         if (!flowFrameworkIndicesHandler.doesIndexExist(CommonValue.GLOBAL_CONTEXT_INDEX)) {
             internalListener.onResponse(true);
         } else {

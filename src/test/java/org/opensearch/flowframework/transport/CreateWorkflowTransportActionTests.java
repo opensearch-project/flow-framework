@@ -8,8 +8,11 @@
  */
 package org.opensearch.flowframework.transport;
 
+import org.apache.lucene.search.TotalHits;
 import org.opensearch.Version;
 import org.opensearch.action.index.IndexResponse;
+import org.opensearch.action.search.SearchRequest;
+import org.opensearch.action.search.SearchResponse;
 import org.opensearch.action.support.ActionFilters;
 import org.opensearch.action.update.UpdateResponse;
 import org.opensearch.client.Client;
@@ -27,6 +30,8 @@ import org.opensearch.flowframework.model.WorkflowEdge;
 import org.opensearch.flowframework.model.WorkflowNode;
 import org.opensearch.flowframework.workflow.WorkflowProcessSorter;
 import org.opensearch.plugins.PluginsService;
+import org.opensearch.search.SearchHit;
+import org.opensearch.search.SearchHits;
 import org.opensearch.tasks.Task;
 import org.opensearch.test.OpenSearchTestCase;
 import org.opensearch.threadpool.ThreadPool;
@@ -199,15 +204,20 @@ public class CreateWorkflowTransportActionTests extends OpenSearchTestCase {
     }
 
     public void testMaxWorkflow() {
+        when(flowFrameworkIndicesHandler.doesIndexExist(anyString())).thenReturn(true);
+
         @SuppressWarnings("unchecked")
         ActionListener<WorkflowResponse> listener = mock(ActionListener.class);
         WorkflowRequest workflowRequest = new WorkflowRequest(null, template, new String[] { "off" }, false);
 
         doAnswer(invocation -> {
-            ActionListener<Boolean> checkMaxWorkflowListener = invocation.getArgument(2);
-            checkMaxWorkflowListener.onResponse(false);
+            ActionListener<SearchResponse> searchListener = invocation.getArgument(1);
+            SearchResponse searchResponse = mock(SearchResponse.class);
+            SearchHits searchHits = new SearchHits(new SearchHit[0], new TotalHits(3, TotalHits.Relation.EQUAL_TO), 1.0f);
+            when(searchResponse.getHits()).thenReturn(searchHits);
+            searchListener.onResponse(searchResponse);
             return null;
-        }).when(createWorkflowTransportAction).checkMaxWorkflows(any(TimeValue.class), anyInt(), any());
+        }).when(client).search(any(SearchRequest.class), any());
 
         createWorkflowTransportAction.doExecute(mock(Task.class), workflowRequest, listener);
         ArgumentCaptor<Exception> exceptionCaptor = ArgumentCaptor.forClass(Exception.class);
@@ -216,6 +226,8 @@ public class CreateWorkflowTransportActionTests extends OpenSearchTestCase {
     }
 
     public void testMaxWorkflowWithNoIndex() {
+        when(flowFrameworkIndicesHandler.doesIndexExist(anyString())).thenReturn(false);
+
         ActionListener<Boolean> listener = new ActionListener<Boolean>() {
             @Override
             public void onResponse(Boolean booleanResponse) {
@@ -223,7 +235,9 @@ public class CreateWorkflowTransportActionTests extends OpenSearchTestCase {
             }
 
             @Override
-            public void onFailure(Exception e) {}
+            public void onFailure(Exception e) {
+                fail("Should call onResponse");
+            }
         };
         createWorkflowTransportAction.checkMaxWorkflows(new TimeValue(10, TimeUnit.SECONDS), 10, listener);
     }
