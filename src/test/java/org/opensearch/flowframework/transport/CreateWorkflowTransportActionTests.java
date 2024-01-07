@@ -8,33 +8,6 @@
  */
 package org.opensearch.flowframework.transport;
 
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyInt;
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.doAnswer;
-import static org.mockito.Mockito.doNothing;
-import static org.mockito.Mockito.doThrow;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.spy;
-import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
-import static org.opensearch.action.DocWriteResponse.Result.UPDATED;
-import static org.opensearch.flowframework.common.CommonValue.GLOBAL_CONTEXT_INDEX;
-import static org.opensearch.flowframework.common.CommonValue.WORKFLOW_STATE_INDEX;
-import static org.opensearch.flowframework.common.WorkflowResources.CONNECTOR_ID;
-import static org.opensearch.flowframework.common.WorkflowResources.CREATE_CONNECTOR;
-import static org.opensearch.flowframework.common.WorkflowResources.DEPLOY_MODEL;
-import static org.opensearch.flowframework.common.WorkflowResources.MODEL_ID;
-import static org.opensearch.flowframework.common.WorkflowResources.REGISTER_REMOTE_MODEL;
-
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.TimeUnit;
-
-import org.mockito.ArgumentCaptor;
 import org.opensearch.Version;
 import org.opensearch.action.index.IndexResponse;
 import org.opensearch.action.support.ActionFilters;
@@ -58,6 +31,34 @@ import org.opensearch.tasks.Task;
 import org.opensearch.test.OpenSearchTestCase;
 import org.opensearch.threadpool.ThreadPool;
 import org.opensearch.transport.TransportService;
+
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.TimeUnit;
+
+import org.mockito.ArgumentCaptor;
+
+import static org.opensearch.action.DocWriteResponse.Result.UPDATED;
+import static org.opensearch.flowframework.common.CommonValue.GLOBAL_CONTEXT_INDEX;
+import static org.opensearch.flowframework.common.CommonValue.WORKFLOW_STATE_INDEX;
+import static org.opensearch.flowframework.common.WorkflowResources.CONNECTOR_ID;
+import static org.opensearch.flowframework.common.WorkflowResources.CREATE_CONNECTOR;
+import static org.opensearch.flowframework.common.WorkflowResources.DEPLOY_MODEL;
+import static org.opensearch.flowframework.common.WorkflowResources.MODEL_ID;
+import static org.opensearch.flowframework.common.WorkflowResources.REGISTER_REMOTE_MODEL;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 public class CreateWorkflowTransportActionTests extends OpenSearchTestCase {
 
