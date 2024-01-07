@@ -49,7 +49,7 @@ import static org.opensearch.flowframework.common.CommonValue.FLOW_FRAMEWORK_THR
 import static org.opensearch.flowframework.common.CommonValue.REGISTER_MODEL_STATUS;
 import static org.opensearch.flowframework.common.CommonValue.WORKFLOW_STATE_INDEX;
 import static org.opensearch.flowframework.common.CommonValue.WORKFLOW_THREAD_POOL;
-import static org.opensearch.flowframework.common.FlowFrameworkSettings.MAX_GET_TASK_REQUEST_RETRY;
+import static org.opensearch.flowframework.common.FlowFrameworkSettings.TASK_REQUEST_RETRY_DURATION;
 import static org.opensearch.flowframework.common.WorkflowResources.MODEL_GROUP_ID;
 import static org.opensearch.flowframework.common.WorkflowResources.MODEL_ID;
 import static org.mockito.ArgumentMatchers.any;
@@ -80,17 +80,16 @@ public class RegisterLocalCustomModelStepTests extends OpenSearchTestCase {
         ClusterService clusterService = mock(ClusterService.class);
         final Set<Setting<?>> settingsSet = Stream.concat(
             ClusterSettings.BUILT_IN_CLUSTER_SETTINGS.stream(),
-            Stream.of(MAX_GET_TASK_REQUEST_RETRY)
+            Stream.of(TASK_REQUEST_RETRY_DURATION)
         ).collect(Collectors.toSet());
 
         // Set max request retry setting to 1 to limit sleeping the thread to one retry iteration
-        Settings testMaxRetrySetting = Settings.builder().put(MAX_GET_TASK_REQUEST_RETRY.getKey(), 1).build();
+        Settings testMaxRetrySetting = Settings.builder().put(TASK_REQUEST_RETRY_DURATION.getKey(), 1).build();
         ClusterSettings clusterSettings = new ClusterSettings(testMaxRetrySetting, settingsSet);
         when(clusterService.getClusterSettings()).thenReturn(clusterSettings);
 
         flowFrameworkSettings = mock(FlowFrameworkSettings.class);
         when(flowFrameworkSettings.isFlowFrameworkEnabled()).thenReturn(true);
-        when(flowFrameworkSettings.getMaxRetry()).thenReturn(5);
 
         testThreadPool = new TestThreadPool(
             RegisterLocalCustomModelStepTests.class.getName(),

@@ -17,9 +17,9 @@ import org.opensearch.common.unit.TimeValue;
 public class FlowFrameworkSettings {
 
     private volatile Boolean isFlowFrameworkEnabled;
-    /** The maximum number of transport request retries */
-    private volatile Integer maxRetry;
-    /** Max workflow steps that can be created*/
+    /** The duration between request retries */
+    private volatile TimeValue retryDuration;
+    /** Max workflow steps that can be created */
     private volatile Integer maxWorkflowSteps;
 
     /** The upper limit of max workflows that can be created  */
@@ -27,7 +27,7 @@ public class FlowFrameworkSettings {
     /** The upper limit of max workflow steps that can be in a single workflow  */
     public static final int MAX_WORKFLOW_STEPS_LIMIT = 500;
 
-    /** This setting sets max workflows that can be created  */
+    /** This setting sets max workflows that can be created */
     public static final Setting<Integer> MAX_WORKFLOWS = Setting.intSetting(
         "plugins.flow_framework.max_workflows",
         1000,
@@ -37,7 +37,7 @@ public class FlowFrameworkSettings {
         Setting.Property.Dynamic
     );
 
-    /** This setting sets max workflows that can be created  */
+    /** This setting sets max workflows that can be created */
     public static final Setting<Integer> MAX_WORKFLOW_STEPS = Setting.intSetting(
         "plugins.flow_framework.max_workflow_steps",
         50,
@@ -47,7 +47,7 @@ public class FlowFrameworkSettings {
         Setting.Property.Dynamic
     );
 
-    /** This setting sets the timeout for the request  */
+    /** This setting sets the timeout for the request */
     public static final Setting<TimeValue> WORKFLOW_REQUEST_TIMEOUT = Setting.positiveTimeSetting(
         "plugins.flow_framework.request_timeout",
         TimeValue.timeValueSeconds(10),
@@ -63,11 +63,10 @@ public class FlowFrameworkSettings {
         Setting.Property.Dynamic
     );
 
-    /** This setting sets the maximum number of get task request retries */
-    public static final Setting<Integer> MAX_GET_TASK_REQUEST_RETRY = Setting.intSetting(
-        "plugins.flow_framework.max_get_task_request_retry",
-        5,
-        0,
+    /** This setting sets the time between task request retries */
+    public static final Setting<TimeValue> TASK_REQUEST_RETRY_DURATION = Setting.positiveTimeSetting(
+        "plugins.flow_framework.task_request_retry_duration",
+        TimeValue.timeValueSeconds(5),
         Setting.Property.NodeScope,
         Setting.Property.Dynamic
     );
@@ -82,15 +81,15 @@ public class FlowFrameworkSettings {
         // Currently this is just an on/off switch for the entire plugin's API.
         // If desired more fine-tuned feature settings can be added below.
         this.isFlowFrameworkEnabled = FLOW_FRAMEWORK_ENABLED.get(settings);
-        this.maxRetry = MAX_GET_TASK_REQUEST_RETRY.get(settings);
+        this.retryDuration = TASK_REQUEST_RETRY_DURATION.get(settings);
         this.maxWorkflowSteps = MAX_WORKFLOW_STEPS.get(settings);
         clusterService.getClusterSettings().addSettingsUpdateConsumer(FLOW_FRAMEWORK_ENABLED, it -> isFlowFrameworkEnabled = it);
-        clusterService.getClusterSettings().addSettingsUpdateConsumer(MAX_GET_TASK_REQUEST_RETRY, it -> maxRetry = it);
+        clusterService.getClusterSettings().addSettingsUpdateConsumer(TASK_REQUEST_RETRY_DURATION, it -> retryDuration = it);
         clusterService.getClusterSettings().addSettingsUpdateConsumer(MAX_WORKFLOW_STEPS, it -> maxWorkflowSteps = it);
     }
 
     /**
-     * Whether the flow framework feature is enabled. If disabled, no REST APIs will be availble.
+     * Whether the flow framework feature is enabled. If disabled, no REST APIs will be available.
      * @return whether Flow Framework is enabled.
      */
     public boolean isFlowFrameworkEnabled() {
@@ -98,11 +97,11 @@ public class FlowFrameworkSettings {
     }
 
     /**
-     * Getter for max retry count
-     * @return count of max retry
+     * Getter for retry duration
+     * @return retry duration
      */
-    public Integer getMaxRetry() {
-        return maxRetry;
+    public TimeValue getRetryDuration() {
+        return retryDuration;
     }
 
     /**
