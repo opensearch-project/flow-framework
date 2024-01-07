@@ -84,8 +84,6 @@ public class FlowFrameworkPlugin extends Plugin implements ActionPlugin {
 
     private FlowFrameworkSettings flowFrameworkSettings;
 
-    private ClusterService clusterService;
-
     /**
      * Instantiate this plugin.
      */
@@ -106,7 +104,6 @@ public class FlowFrameworkPlugin extends Plugin implements ActionPlugin {
         Supplier<RepositoriesService> repositoriesServiceSupplier
     ) {
         Settings settings = environment.settings();
-        this.clusterService = clusterService;
         flowFrameworkSettings = new FlowFrameworkSettings(clusterService, settings);
         MachineLearningNodeClient mlClient = new MachineLearningNodeClient(client);
         EncryptorUtils encryptorUtils = new EncryptorUtils(clusterService, client);
@@ -141,7 +138,7 @@ public class FlowFrameworkPlugin extends Plugin implements ActionPlugin {
         Supplier<DiscoveryNodes> nodesInCluster
     ) {
         return List.of(
-            new RestCreateWorkflowAction(flowFrameworkSettings, settings, clusterService),
+            new RestCreateWorkflowAction(flowFrameworkSettings),
             new RestDeleteWorkflowAction(flowFrameworkSettings),
             new RestProvisionWorkflowAction(flowFrameworkSettings),
             new RestDeprovisionWorkflowAction(flowFrameworkSettings),

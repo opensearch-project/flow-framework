@@ -11,8 +11,6 @@ package org.opensearch.flowframework.rest;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.opensearch.client.node.NodeClient;
-import org.opensearch.cluster.service.ClusterService;
-import org.opensearch.common.settings.Settings;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.core.rest.RestStatus;
 import org.opensearch.core.xcontent.ToXContent;
@@ -23,6 +21,7 @@ import org.opensearch.flowframework.exception.FlowFrameworkException;
 import org.opensearch.flowframework.model.Template;
 import org.opensearch.flowframework.transport.CreateWorkflowAction;
 import org.opensearch.flowframework.transport.WorkflowRequest;
+import org.opensearch.rest.BaseRestHandler;
 import org.opensearch.rest.BytesRestResponse;
 import org.opensearch.rest.RestRequest;
 
@@ -40,7 +39,7 @@ import static org.opensearch.flowframework.common.FlowFrameworkSettings.FLOW_FRA
 /**
  * Rest Action to facilitate requests to create and update a use case template
  */
-public class RestCreateWorkflowAction extends AbstractWorkflowAction {
+public class RestCreateWorkflowAction extends BaseRestHandler {
 
     private static final Logger logger = LogManager.getLogger(RestCreateWorkflowAction.class);
     private static final String CREATE_WORKFLOW_ACTION = "create_workflow_action";
@@ -50,11 +49,8 @@ public class RestCreateWorkflowAction extends AbstractWorkflowAction {
     /**
      * Instantiates a new RestCreateWorkflowAction
      * @param flowFrameworkSettings The settings for the flow framework plugin
-     * @param settings Environment settings
-     * @param clusterService clusterService
      */
-    public RestCreateWorkflowAction(FlowFrameworkSettings flowFrameworkSettings, Settings settings, ClusterService clusterService) {
-        super(settings, clusterService);
+    public RestCreateWorkflowAction(FlowFrameworkSettings flowFrameworkSettings) {
         this.flowFrameworkSettings = flowFrameworkSettings;
     }
 
@@ -92,7 +88,7 @@ public class RestCreateWorkflowAction extends AbstractWorkflowAction {
             String[] validation = request.paramAsStringArray(VALIDATION, new String[] { "all" });
             boolean provision = request.paramAsBoolean(PROVISION_WORKFLOW, false);
 
-            WorkflowRequest workflowRequest = new WorkflowRequest(workflowId, template, validation, provision, requestTimeout);
+            WorkflowRequest workflowRequest = new WorkflowRequest(workflowId, template, validation, provision);
 
             return channel -> client.execute(CreateWorkflowAction.INSTANCE, workflowRequest, ActionListener.wrap(response -> {
                 XContentBuilder builder = response.toXContent(channel.newBuilder(), ToXContent.EMPTY_PARAMS);
