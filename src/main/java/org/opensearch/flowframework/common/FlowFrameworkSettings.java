@@ -21,6 +21,8 @@ public class FlowFrameworkSettings {
     private volatile TimeValue retryDuration;
     /** Max workflow steps that can be created */
     private volatile Integer maxWorkflowSteps;
+    /** Max workflows that can be created*/
+    protected volatile Integer maxWorkflows;
 
     /** The upper limit of max workflows that can be created  */
     public static final int MAX_WORKFLOWS_LIMIT = 10000;
@@ -83,9 +85,11 @@ public class FlowFrameworkSettings {
         this.isFlowFrameworkEnabled = FLOW_FRAMEWORK_ENABLED.get(settings);
         this.retryDuration = TASK_REQUEST_RETRY_DURATION.get(settings);
         this.maxWorkflowSteps = MAX_WORKFLOW_STEPS.get(settings);
+        this.maxWorkflows = MAX_WORKFLOWS.get(settings);
         clusterService.getClusterSettings().addSettingsUpdateConsumer(FLOW_FRAMEWORK_ENABLED, it -> isFlowFrameworkEnabled = it);
         clusterService.getClusterSettings().addSettingsUpdateConsumer(TASK_REQUEST_RETRY_DURATION, it -> retryDuration = it);
         clusterService.getClusterSettings().addSettingsUpdateConsumer(MAX_WORKFLOW_STEPS, it -> maxWorkflowSteps = it);
+        clusterService.getClusterSettings().addSettingsUpdateConsumer(MAX_WORKFLOWS, it -> maxWorkflows = it);
     }
 
     /**
@@ -110,5 +114,13 @@ public class FlowFrameworkSettings {
      */
     public Integer getMaxWorkflowSteps() {
         return maxWorkflowSteps;
+    }
+
+    /**
+     * Getter for max workflows
+     * @return max workflows
+     */
+    public Integer getMaxWorkflows() {
+        return maxWorkflows;
     }
 }

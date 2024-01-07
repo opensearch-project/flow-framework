@@ -16,12 +16,12 @@ import org.opensearch.action.support.ActionFilters;
 import org.opensearch.action.support.HandledTransportAction;
 import org.opensearch.client.Client;
 import org.opensearch.common.inject.Inject;
-import org.opensearch.common.settings.Settings;
 import org.opensearch.common.unit.TimeValue;
 import org.opensearch.commons.authuser.User;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.core.rest.RestStatus;
 import org.opensearch.flowframework.common.CommonValue;
+import org.opensearch.flowframework.common.FlowFrameworkSettings;
 import org.opensearch.flowframework.exception.FlowFrameworkException;
 import org.opensearch.flowframework.indices.FlowFrameworkIndicesHandler;
 import org.opensearch.flowframework.model.ProvisioningProgress;
@@ -55,7 +55,7 @@ public class CreateWorkflowTransportAction extends HandledTransportAction<Workfl
     private final WorkflowProcessSorter workflowProcessSorter;
     private final FlowFrameworkIndicesHandler flowFrameworkIndicesHandler;
     private final Client client;
-    private final Settings settings;
+    private final FlowFrameworkSettings flowFrameworkSettings;
     private final PluginsService pluginsService;
 
     /**
@@ -64,7 +64,7 @@ public class CreateWorkflowTransportAction extends HandledTransportAction<Workfl
      * @param actionFilters action filters
      * @param workflowProcessSorter the workflow process sorter
      * @param flowFrameworkIndicesHandler The handler for the global context index
-     * @param settings Environment settings
+     * @param flowFrameworkSettings Plugin settings
      * @param client The client used to make the request to OS
      * @param pluginsService The plugin service
      */
@@ -74,14 +74,14 @@ public class CreateWorkflowTransportAction extends HandledTransportAction<Workfl
         ActionFilters actionFilters,
         WorkflowProcessSorter workflowProcessSorter,
         FlowFrameworkIndicesHandler flowFrameworkIndicesHandler,
-        Settings settings,
+        FlowFrameworkSettings flowFrameworkSettings,
         Client client,
         PluginsService pluginsService
     ) {
         super(CreateWorkflowAction.NAME, transportService, actionFilters, WorkflowRequest::new);
         this.workflowProcessSorter = workflowProcessSorter;
         this.flowFrameworkIndicesHandler = flowFrameworkIndicesHandler;
-        this.settings = settings;
+        this.flowFrameworkSettings = flowFrameworkSettings;
         this.client = client;
         this.pluginsService = pluginsService;
     }
@@ -116,9 +116,9 @@ public class CreateWorkflowTransportAction extends HandledTransportAction<Workfl
 
         if (request.getWorkflowId() == null) {
             // Throttle incoming requests
-            checkMaxWorkflows(request.getRequestTimeout(), request.getMaxWorkflows(), ActionListener.wrap(max -> {
+            checkMaxWorkflows(request.getRequestTimeout(), flowFrameworkSettings.getMaxWorkflows(), ActionListener.wrap(max -> {
                 if (!max) {
-                    String errorMessage = "Maximum workflows limit reached " + request.getMaxWorkflows();
+                    String errorMessage = "Maximum workflows limit reached " + flowFrameworkSettings.getMaxWorkflows();
                     logger.error(errorMessage);
                     FlowFrameworkException ffe = new FlowFrameworkException(errorMessage, RestStatus.BAD_REQUEST);
                     listener.onFailure(ffe);

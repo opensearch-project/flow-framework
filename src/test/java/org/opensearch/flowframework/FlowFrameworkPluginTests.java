@@ -79,7 +79,7 @@ public class FlowFrameworkPluginTests extends OpenSearchTestCase {
     public void testPlugin() throws IOException {
         try (FlowFrameworkPlugin ffp = new FlowFrameworkPlugin()) {
             assertEquals(
-                4,
+                5,
                 ffp.createComponents(client, clusterService, threadPool, null, null, null, environment, null, null, null, null).size()
             );
             assertEquals(8, ffp.getRestHandlers(settings, null, null, null, null, null, null).size());

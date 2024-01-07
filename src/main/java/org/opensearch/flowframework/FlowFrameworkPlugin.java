@@ -127,7 +127,7 @@ public class FlowFrameworkPlugin extends Plugin implements ActionPlugin {
             flowFrameworkSettings
         );
 
-        return List.of(workflowStepFactory, workflowProcessSorter, encryptorUtils, flowFrameworkIndicesHandler);
+        return List.of(workflowStepFactory, workflowProcessSorter, encryptorUtils, flowFrameworkIndicesHandler, flowFrameworkSettings);
     }
 
     @Override

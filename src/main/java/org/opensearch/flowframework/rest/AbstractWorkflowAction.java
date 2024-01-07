@@ -13,7 +13,6 @@ import org.opensearch.common.settings.Settings;
 import org.opensearch.common.unit.TimeValue;
 import org.opensearch.rest.BaseRestHandler;
 
-import static org.opensearch.flowframework.common.FlowFrameworkSettings.MAX_WORKFLOWS;
 import static org.opensearch.flowframework.common.FlowFrameworkSettings.WORKFLOW_REQUEST_TIMEOUT;
 
 /**
@@ -22,8 +21,6 @@ import static org.opensearch.flowframework.common.FlowFrameworkSettings.WORKFLOW
 public abstract class AbstractWorkflowAction extends BaseRestHandler {
     /** Timeout for the request*/
     protected volatile TimeValue requestTimeout;
-    /** Max workflows that can be created*/
-    protected volatile Integer maxWorkflows;
 
     /**
      * Instantiates a new AbstractWorkflowAction
@@ -33,10 +30,8 @@ public abstract class AbstractWorkflowAction extends BaseRestHandler {
      */
     public AbstractWorkflowAction(Settings settings, ClusterService clusterService) {
         this.requestTimeout = WORKFLOW_REQUEST_TIMEOUT.get(settings);
-        this.maxWorkflows = MAX_WORKFLOWS.get(settings);
 
         clusterService.getClusterSettings().addSettingsUpdateConsumer(WORKFLOW_REQUEST_TIMEOUT, it -> requestTimeout = it);
-        clusterService.getClusterSettings().addSettingsUpdateConsumer(MAX_WORKFLOWS, it -> maxWorkflows = it);
     }
 
 }

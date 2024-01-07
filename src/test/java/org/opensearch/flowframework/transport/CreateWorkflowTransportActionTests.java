@@ -22,6 +22,7 @@ import org.opensearch.common.util.concurrent.ThreadContext;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.core.index.shard.ShardId;
 import org.opensearch.flowframework.TestHelpers;
+import org.opensearch.flowframework.common.FlowFrameworkSettings;
 import org.opensearch.flowframework.indices.FlowFrameworkIndicesHandler;
 import org.opensearch.flowframework.model.Template;
 import org.opensearch.flowframework.model.Workflow;
@@ -81,6 +82,7 @@ public class CreateWorkflowTransportActionTests extends OpenSearchTestCase {
     private ClusterSettings clusterSettings;
     private ClusterService clusterService;
     private Settings settings;
+    private FlowFrameworkSettings flowFrameworkSettings;
     private PluginsService pluginsService;
 
     @Override
@@ -100,6 +102,8 @@ public class CreateWorkflowTransportActionTests extends OpenSearchTestCase {
         clusterSettings = new ClusterSettings(settings, settingsSet);
         clusterService = mock(ClusterService.class);
         when(clusterService.getClusterSettings()).thenReturn(clusterSettings);
+        this.flowFrameworkSettings = mock(FlowFrameworkSettings.class);
+        when(flowFrameworkSettings.getMaxWorkflows()).thenReturn(2);
         this.flowFrameworkIndicesHandler = mock(FlowFrameworkIndicesHandler.class);
 
         // Validation functionality should not be invoked in these unit tests, mocking instead
@@ -113,7 +117,7 @@ public class CreateWorkflowTransportActionTests extends OpenSearchTestCase {
                 mock(ActionFilters.class),
                 workflowProcessSorter,
                 flowFrameworkIndicesHandler,
-                settings,
+                flowFrameworkSettings,
                 client,
                 pluginsService
             )
@@ -152,7 +156,7 @@ public class CreateWorkflowTransportActionTests extends OpenSearchTestCase {
 
         @SuppressWarnings("unchecked")
         ActionListener<WorkflowResponse> listener = mock(ActionListener.class);
-        WorkflowRequest createNewWorkflow = new WorkflowRequest(null, validTemplate, new String[] { "all" }, false, null, null);
+        WorkflowRequest createNewWorkflow = new WorkflowRequest(null, validTemplate, new String[] { "all" }, false, null);
         createWorkflowTransportAction.doExecute(mock(Task.class), createNewWorkflow, listener);
     }
 
@@ -212,7 +216,7 @@ public class CreateWorkflowTransportActionTests extends OpenSearchTestCase {
         ActionListener<WorkflowResponse> listener = mock(ActionListener.class);
         // Stub validation failure
         doThrow(Exception.class).when(workflowProcessSorter).validate(any(), any());
-        WorkflowRequest createNewWorkflow = new WorkflowRequest(null, cyclicalTemplate, new String[] { "all" }, false, null, null);
+        WorkflowRequest createNewWorkflow = new WorkflowRequest(null, cyclicalTemplate, new String[] { "all" }, false, null);
 
         createWorkflowTransportAction.doExecute(mock(Task.class), createNewWorkflow, listener);
         verify(listener, times(1)).onFailure(any());
@@ -226,8 +230,7 @@ public class CreateWorkflowTransportActionTests extends OpenSearchTestCase {
             template,
             new String[] { "off" },
             false,
-            WORKFLOW_REQUEST_TIMEOUT.get(settings),
-            MAX_WORKFLOWS.get(settings)
+            WORKFLOW_REQUEST_TIMEOUT.get(settings)
         );
 
         doAnswer(invocation -> {
@@ -263,8 +266,7 @@ public class CreateWorkflowTransportActionTests extends OpenSearchTestCase {
             template,
             new String[] { "off" },
             false,
-            WORKFLOW_REQUEST_TIMEOUT.get(settings),
-            MAX_WORKFLOWS.get(settings)
+            WORKFLOW_REQUEST_TIMEOUT.get(settings)
         );
 
         // Bypass checkMaxWorkflows and force onResponse
@@ -301,8 +303,7 @@ public class CreateWorkflowTransportActionTests extends OpenSearchTestCase {
             template,
             new String[] { "off" },
             false,
-            WORKFLOW_REQUEST_TIMEOUT.get(settings),
-            MAX_WORKFLOWS.get(settings)
+            WORKFLOW_REQUEST_TIMEOUT.get(settings)
         );
 
         // Bypass checkMaxWorkflows and force onResponse
@@ -396,8 +397,7 @@ public class CreateWorkflowTransportActionTests extends OpenSearchTestCase {
             validTemplate,
             new String[] { "all" },
             true,
-            WORKFLOW_REQUEST_TIMEOUT.get(settings),
-            MAX_WORKFLOWS.get(settings)
+            WORKFLOW_REQUEST_TIMEOUT.get(settings)
         );
 
         // Bypass checkMaxWorkflows and force onResponse
@@ -456,8 +456,7 @@ public class CreateWorkflowTransportActionTests extends OpenSearchTestCase {
             validTemplate,
             new String[] { "all" },
             true,
-            WORKFLOW_REQUEST_TIMEOUT.get(settings),
-            MAX_WORKFLOWS.get(settings)
+            WORKFLOW_REQUEST_TIMEOUT.get(settings)
         );
 
         // Bypass checkMaxWorkflows and force onResponse

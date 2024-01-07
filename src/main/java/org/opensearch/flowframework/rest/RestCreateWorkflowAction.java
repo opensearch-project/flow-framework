@@ -45,21 +45,17 @@ public class RestCreateWorkflowAction extends AbstractWorkflowAction {
     private static final Logger logger = LogManager.getLogger(RestCreateWorkflowAction.class);
     private static final String CREATE_WORKFLOW_ACTION = "create_workflow_action";
 
-    private FlowFrameworkSettings flowFrameworkFeatureEnabledSetting;
+    private FlowFrameworkSettings flowFrameworkSettings;
 
     /**
      * Instantiates a new RestCreateWorkflowAction
-     * @param flowFrameworkFeatureEnabledSetting Whether this API is enabled
+     * @param flowFrameworkSettings The settings for the flow framework plugin
      * @param settings Environment settings
      * @param clusterService clusterService
      */
-    public RestCreateWorkflowAction(
-        FlowFrameworkSettings flowFrameworkFeatureEnabledSetting,
-        Settings settings,
-        ClusterService clusterService
-    ) {
+    public RestCreateWorkflowAction(FlowFrameworkSettings flowFrameworkSettings, Settings settings, ClusterService clusterService) {
         super(settings, clusterService);
-        this.flowFrameworkFeatureEnabledSetting = flowFrameworkFeatureEnabledSetting;
+        this.flowFrameworkSettings = flowFrameworkSettings;
     }
 
     @Override
@@ -80,7 +76,7 @@ public class RestCreateWorkflowAction extends AbstractWorkflowAction {
     @Override
     protected RestChannelConsumer prepareRequest(RestRequest request, NodeClient client) throws IOException {
         String workflowId = request.param(WORKFLOW_ID);
-        if (!flowFrameworkFeatureEnabledSetting.isFlowFrameworkEnabled()) {
+        if (!flowFrameworkSettings.isFlowFrameworkEnabled()) {
             FlowFrameworkException ffe = new FlowFrameworkException(
                 "This API is disabled. To enable it, set [" + FLOW_FRAMEWORK_ENABLED.getKey() + "] to true.",
                 RestStatus.FORBIDDEN
@@ -96,14 +92,7 @@ public class RestCreateWorkflowAction extends AbstractWorkflowAction {
             String[] validation = request.paramAsStringArray(VALIDATION, new String[] { "all" });
             boolean provision = request.paramAsBoolean(PROVISION_WORKFLOW, false);
 
-            WorkflowRequest workflowRequest = new WorkflowRequest(
-                workflowId,
-                template,
-                validation,
-                provision,
-                requestTimeout,
-                maxWorkflows
-            );
+            WorkflowRequest workflowRequest = new WorkflowRequest(workflowId, template, validation, provision, requestTimeout);
 
             return channel -> client.execute(CreateWorkflowAction.INSTANCE, workflowRequest, ActionListener.wrap(response -> {
                 XContentBuilder builder = response.toXContent(channel.newBuilder(), ToXContent.EMPTY_PARAMS);

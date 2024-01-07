@@ -49,17 +49,12 @@ public class WorkflowRequest extends ActionRequest {
     private TimeValue requestTimeout;
 
     /**
-     * Max workflows
-     */
-    private Integer maxWorkflows;
-
-    /**
      * Instantiates a new WorkflowRequest, set validation to false and set requestTimeout and maxWorkflows to null
      * @param workflowId the documentId of the workflow
      * @param template the use case template which describes the workflow
      */
     public WorkflowRequest(@Nullable String workflowId, @Nullable Template template) {
-        this(workflowId, template, new String[] { "all" }, false, null, null);
+        this(workflowId, template, new String[] { "all" }, false, null);
     }
 
     /**
@@ -69,13 +64,8 @@ public class WorkflowRequest extends ActionRequest {
      * @param requestTimeout timeout of the request
      * @param maxWorkflows max number of workflows
      */
-    public WorkflowRequest(
-        @Nullable String workflowId,
-        @Nullable Template template,
-        @Nullable TimeValue requestTimeout,
-        @Nullable Integer maxWorkflows
-    ) {
-        this(workflowId, template, new String[] { "all" }, false, requestTimeout, maxWorkflows);
+    public WorkflowRequest(@Nullable String workflowId, @Nullable Template template, @Nullable TimeValue requestTimeout) {
+        this(workflowId, template, new String[] { "all" }, false, requestTimeout);
     }
 
     /**
@@ -85,22 +75,19 @@ public class WorkflowRequest extends ActionRequest {
      * @param validation flag to indicate if validation is necessary
      * @param provision flag to indicate if provision is necessary
      * @param requestTimeout timeout of the request
-     * @param maxWorkflows max number of workflows
      */
     public WorkflowRequest(
         @Nullable String workflowId,
         @Nullable Template template,
         String[] validation,
         boolean provision,
-        @Nullable TimeValue requestTimeout,
-        @Nullable Integer maxWorkflows
+        @Nullable TimeValue requestTimeout
     ) {
         this.workflowId = workflowId;
         this.template = template;
         this.validation = validation;
         this.provision = provision;
         this.requestTimeout = requestTimeout;
-        this.maxWorkflows = maxWorkflows;
     }
 
     /**
@@ -116,7 +103,6 @@ public class WorkflowRequest extends ActionRequest {
         this.validation = in.readStringArray();
         this.provision = in.readBoolean();
         this.requestTimeout = in.readOptionalTimeValue();
-        this.maxWorkflows = in.readOptionalInt();
     }
 
     /**
@@ -161,14 +147,6 @@ public class WorkflowRequest extends ActionRequest {
         return requestTimeout;
     }
 
-    /**
-     * Gets the max workflows
-     * @return the maxWorkflows
-     */
-    public Integer getMaxWorkflows() {
-        return maxWorkflows;
-    }
-
     @Override
     public void writeTo(StreamOutput out) throws IOException {
         super.writeTo(out);
@@ -177,7 +155,6 @@ public class WorkflowRequest extends ActionRequest {
         out.writeStringArray(validation);
         out.writeBoolean(provision);
         out.writeOptionalTimeValue(requestTimeout);
-        out.writeOptionalInt(maxWorkflows);
     }
 
     @Override

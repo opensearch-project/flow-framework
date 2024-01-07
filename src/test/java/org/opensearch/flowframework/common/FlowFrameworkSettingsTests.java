@@ -41,7 +41,8 @@ public class FlowFrameworkSettingsTests extends OpenSearchTestCase {
             Stream.of(
                 FlowFrameworkSettings.FLOW_FRAMEWORK_ENABLED,
                 FlowFrameworkSettings.TASK_REQUEST_RETRY_DURATION,
-                FlowFrameworkSettings.MAX_WORKFLOW_STEPS
+                FlowFrameworkSettings.MAX_WORKFLOW_STEPS,
+                FlowFrameworkSettings.MAX_WORKFLOWS
             )
         ).collect(Collectors.toSet());
         clusterSettings = new ClusterSettings(settings, settingsSet);
@@ -59,5 +60,6 @@ public class FlowFrameworkSettingsTests extends OpenSearchTestCase {
         assertFalse(flowFrameworkSettings.isFlowFrameworkEnabled());
         assertEquals(Optional.of(TimeValue.timeValueSeconds(5)), Optional.ofNullable(flowFrameworkSettings.getRetryDuration()));
         assertEquals(Optional.of(50), Optional.ofNullable(flowFrameworkSettings.getMaxWorkflowSteps()));
+        assertEquals(Optional.of(1000), Optional.ofNullable(flowFrameworkSettings.getMaxWorkflows()));
     }
 }
