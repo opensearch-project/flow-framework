@@ -50,8 +50,16 @@ public class WorkflowStepFactory {
         stepMap.put(CreateIndexStep.NAME, () -> new CreateIndexStep(clusterService, client, flowFrameworkIndicesHandler));
         stepMap.put(CreateIngestPipelineStep.NAME, () -> new CreateIngestPipelineStep(client, flowFrameworkIndicesHandler));
         stepMap.put(
-            RegisterLocalModelStep.NAME,
-            () -> new RegisterLocalModelStep(threadPool, mlClient, flowFrameworkIndicesHandler, flowFrameworkSettings)
+            RegisterLocalCustomModelStep.NAME,
+            () -> new RegisterLocalCustomModelStep(threadPool, mlClient, flowFrameworkIndicesHandler, flowFrameworkSettings)
+        );
+        stepMap.put(
+            RegisterLocalSparseEncodingModelStep.NAME,
+            () -> new RegisterLocalSparseEncodingModelStep(threadPool, mlClient, flowFrameworkIndicesHandler, flowFrameworkSettings)
+        );
+        stepMap.put(
+            RegisterLocalPretrainedModelStep.NAME,
+            () -> new RegisterLocalPretrainedModelStep(threadPool, mlClient, flowFrameworkIndicesHandler, flowFrameworkSettings)
         );
         stepMap.put(RegisterRemoteModelStep.NAME, () -> new RegisterRemoteModelStep(mlClient, flowFrameworkIndicesHandler));
         stepMap.put(DeleteModelStep.NAME, () -> new DeleteModelStep(mlClient));
