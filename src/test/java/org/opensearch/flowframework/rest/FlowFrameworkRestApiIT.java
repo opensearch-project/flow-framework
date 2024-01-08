@@ -70,7 +70,7 @@ public class FlowFrameworkRestApiIT extends FlowFrameworkRestTestCase {
 
     public void testCreateAndProvisionLocalModelWorkflow() throws Exception {
         // Using a 1 step template to register a local model and deploy model
-        Template template = TestHelpers.createTemplateFromFile("register-deplylocalsparseencodingmodel.json");
+        Template template = TestHelpers.createTemplateFromFile("register-deploylocalsparseencodingmodel.json");
 
         // Remove register model input to test validation
         Workflow originalWorkflow = template.workflows().get(PROVISION_WORKFLOW);

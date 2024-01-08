@@ -35,9 +35,6 @@ import static org.opensearch.flowframework.common.WorkflowResources.MODEL_GROUP_
  */
 public class RegisterLocalCustomModelStep extends AbstractRegisterLocalModelStep {
 
-    private final MachineLearningNodeClient mlClient;
-    private final FlowFrameworkIndicesHandler flowFrameworkIndicesHandler;
-
     /** The name of this step, used as a key in the template and the {@link WorkflowStepFactory} */
     public static final String NAME = "register_local_custom_model";
 
@@ -55,8 +52,6 @@ public class RegisterLocalCustomModelStep extends AbstractRegisterLocalModelStep
         FlowFrameworkSettings flowFrameworkSettings
     ) {
         super(threadPool, mlClient, flowFrameworkIndicesHandler, flowFrameworkSettings);
-        this.mlClient = mlClient;
-        this.flowFrameworkIndicesHandler = flowFrameworkIndicesHandler;
     }
 
     @Override

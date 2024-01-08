@@ -31,9 +31,6 @@ import static org.opensearch.flowframework.common.WorkflowResources.MODEL_GROUP_
  */
 public class RegisterLocalSparseEncodingModelStep extends AbstractRegisterLocalModelStep {
 
-    private final MachineLearningNodeClient mlClient;
-    private final FlowFrameworkIndicesHandler flowFrameworkIndicesHandler;
-
     /** The name of this step, used as a key in the template and the {@link WorkflowStepFactory} */
     public static final String NAME = "register_local_sparse_encoding_model";
 
@@ -51,8 +48,6 @@ public class RegisterLocalSparseEncodingModelStep extends AbstractRegisterLocalM
         FlowFrameworkSettings flowFrameworkSettings
     ) {
         super(threadPool, mlClient, flowFrameworkIndicesHandler, flowFrameworkSettings);
-        this.mlClient = mlClient;
-        this.flowFrameworkIndicesHandler = flowFrameworkIndicesHandler;
     }
 
     @Override

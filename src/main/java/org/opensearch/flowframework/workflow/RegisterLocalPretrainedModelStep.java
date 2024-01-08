@@ -27,8 +27,6 @@ import static org.opensearch.flowframework.common.WorkflowResources.MODEL_GROUP_
  * Step to register an OpenSearch provided pretrained local model
  */
 public class RegisterLocalPretrainedModelStep extends AbstractRegisterLocalModelStep {
-    private final MachineLearningNodeClient mlClient;
-    private final FlowFrameworkIndicesHandler flowFrameworkIndicesHandler;
 
     /** The name of this step, used as a key in the template and the {@link WorkflowStepFactory} */
     public static final String NAME = "register_local_pretrained_model";
@@ -47,8 +45,6 @@ public class RegisterLocalPretrainedModelStep extends AbstractRegisterLocalModel
         FlowFrameworkSettings flowFrameworkSettings
     ) {
         super(threadPool, mlClient, flowFrameworkIndicesHandler, flowFrameworkSettings);
-        this.mlClient = mlClient;
-        this.flowFrameworkIndicesHandler = flowFrameworkIndicesHandler;
     }
 
     @Override
