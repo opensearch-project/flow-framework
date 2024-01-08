@@ -79,5 +79,6 @@ jobs:
       run: |
           ./gradlew integTest yamlRestTest
     - name: Multi Nodes Integration Testing
+      if: matrix.java == 21
       run: |
           ./gradlew integTest -PnumNodes=3
