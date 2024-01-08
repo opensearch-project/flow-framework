@@ -8,7 +8,6 @@
  */
 package org.opensearch.flowframework;
 
-import com.google.common.io.Resources;
 import org.apache.http.Header;
 import org.apache.http.HttpEntity;
 import org.apache.http.nio.entity.NStringEntity;
@@ -31,13 +30,12 @@ import org.opensearch.core.xcontent.ToXContent;
 import org.opensearch.core.xcontent.ToXContentObject;
 import org.opensearch.core.xcontent.XContentBuilder;
 import org.opensearch.flowframework.model.Template;
+import org.opensearch.flowframework.util.ParseUtils;
 
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.net.URL;
-import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
@@ -51,8 +49,7 @@ import static org.apache.http.entity.ContentType.APPLICATION_JSON;
 public class TestHelpers {
 
     public static Template createTemplateFromFile(String fileName) throws IOException {
-        URL url = TestHelpers.class.getClassLoader().getResource("template/" + fileName);
-        String json = Resources.toString(url, StandardCharsets.UTF_8);
+        String json = ParseUtils.resourceToString("/template/" + fileName);
         return Template.parse(json);
     }
 
