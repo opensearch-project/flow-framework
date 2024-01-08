@@ -290,7 +290,7 @@ public class FlowFrameworkIndicesHandler {
      * @throws IOException IOException if mapping file can't be read correctly
      */
     public static String getIndexMappings(String mapping) throws IOException {
-        return ParseUtils.resourceToString(mapping);
+        return ParseUtils.resourceToString("/" + mapping);
     }
 
     /**

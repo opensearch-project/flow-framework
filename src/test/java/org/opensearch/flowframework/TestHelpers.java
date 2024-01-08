@@ -49,7 +49,7 @@ import static org.apache.hc.core5.http.ContentType.APPLICATION_JSON;
 public class TestHelpers {
 
     public static Template createTemplateFromFile(String fileName) throws IOException {
-        String json = ParseUtils.resourceToString("template/" + fileName);
+        String json = ParseUtils.resourceToString("/template/" + fileName);
         return Template.parse(json);
     }
 

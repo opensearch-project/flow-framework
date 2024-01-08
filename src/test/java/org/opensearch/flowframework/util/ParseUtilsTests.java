@@ -25,12 +25,12 @@ import java.util.Set;
 
 public class ParseUtilsTests extends OpenSearchTestCase {
     public void testResourceToStringToJson() throws IOException {
-        String json = ParseUtils.resourceToString("template/finaltemplate.json");
+        String json = ParseUtils.resourceToString("/template/finaltemplate.json");
         assertTrue(json.startsWith("{"));
         assertTrue(json.contains("name"));
         try (XContentParser parser = ParseUtils.jsonToParser(json)) {
-            assertEquals(Token.FIELD_NAME, parser.currentToken());
-            assertEquals("name", parser.text());
+            assertEquals(Token.FIELD_NAME, parser.nextToken());
+            assertEquals("name", parser.currentName());
         }
     }
 

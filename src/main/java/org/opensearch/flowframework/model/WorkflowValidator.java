@@ -59,7 +59,7 @@ public class WorkflowValidator {
      * @throws IOException on failure to read and parse the json file
      */
     public static WorkflowValidator parse(String file) throws IOException {
-        String json = ParseUtils.resourceToString(file);
+        String json = ParseUtils.resourceToString("/" + file);
         return parse(ParseUtils.jsonToParser(json));
     }
 
