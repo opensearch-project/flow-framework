@@ -61,10 +61,10 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ThreadLeakScope(ThreadLeakScope.Scope.NONE)
-public class RegisterLocalModelStepTests extends OpenSearchTestCase {
+public class RegisterLocalCustomModelStepTests extends OpenSearchTestCase {
 
     private static TestThreadPool testThreadPool;
-    private RegisterLocalModelStep registerLocalModelStep;
+    private RegisterLocalCustomModelStep registerLocalModelStep;
     private WorkflowData workflowData;
     private FlowFrameworkIndicesHandler flowFrameworkIndicesHandler;
     private FlowFrameworkSettings flowFrameworkSettings;
@@ -93,7 +93,7 @@ public class RegisterLocalModelStepTests extends OpenSearchTestCase {
         when(flowFrameworkSettings.getMaxRetry()).thenReturn(5);
 
         testThreadPool = new TestThreadPool(
-            RegisterLocalModelStepTests.class.getName(),
+            RegisterLocalCustomModelStepTests.class.getName(),
             new FixedExecutorBuilder(
                 Settings.EMPTY,
                 WORKFLOW_THREAD_POOL,
@@ -102,7 +102,7 @@ public class RegisterLocalModelStepTests extends OpenSearchTestCase {
                 FLOW_FRAMEWORK_THREAD_POOL_PREFIX + WORKFLOW_THREAD_POOL
             )
         );
-        this.registerLocalModelStep = new RegisterLocalModelStep(
+        this.registerLocalModelStep = new RegisterLocalCustomModelStep(
             testThreadPool,
             machineLearningNodeClient,
             flowFrameworkIndicesHandler,
@@ -134,7 +134,7 @@ public class RegisterLocalModelStepTests extends OpenSearchTestCase {
         ThreadPool.terminate(testThreadPool, 500, TimeUnit.MILLISECONDS);
     }
 
-    public void testRegisterLocalModelSuccess() throws Exception {
+    public void testRegisterLocalCustomModelSuccess() throws Exception {
 
         String taskId = "abcd";
         String modelId = "model-id";
@@ -193,7 +193,7 @@ public class RegisterLocalModelStepTests extends OpenSearchTestCase {
         assertEquals(status, future.get().getContent().get(REGISTER_MODEL_STATUS));
     }
 
-    public void testRegisterLocalModelFailure() {
+    public void testRegisterLocalCustomModelFailure() {
 
         doAnswer(invocation -> {
             ActionListener<MLRegisterModelResponse> actionListener = invocation.getArgument(1);
@@ -213,7 +213,7 @@ public class RegisterLocalModelStepTests extends OpenSearchTestCase {
         assertEquals("test", ex.getCause().getMessage());
     }
 
-    public void testRegisterLocalModelTaskFailure() {
+    public void testRegisterLocalCustomModelTaskFailure() {
 
         String taskId = "abcd";
         String modelId = "model-id";
@@ -282,7 +282,8 @@ public class RegisterLocalModelStepTests extends OpenSearchTestCase {
             "framework_type",
             "version",
             "url",
-            "model_content_hash_value" }) {
+            "model_content_hash_value",
+            "function_name" }) {
             assertTrue(ex.getCause().getMessage().contains(s));
         }
         assertTrue(ex.getCause().getMessage().endsWith("] in workflow [test-id] node [test-node-id]"));

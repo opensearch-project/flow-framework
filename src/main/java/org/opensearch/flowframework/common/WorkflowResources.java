@@ -21,7 +21,9 @@ import org.opensearch.flowframework.workflow.DeleteModelGroupStep;
 import org.opensearch.flowframework.workflow.DeleteModelStep;
 import org.opensearch.flowframework.workflow.DeployModelStep;
 import org.opensearch.flowframework.workflow.RegisterAgentStep;
-import org.opensearch.flowframework.workflow.RegisterLocalModelStep;
+import org.opensearch.flowframework.workflow.RegisterLocalCustomModelStep;
+import org.opensearch.flowframework.workflow.RegisterLocalPretrainedModelStep;
+import org.opensearch.flowframework.workflow.RegisterLocalSparseEncodingModelStep;
 import org.opensearch.flowframework.workflow.RegisterModelGroupStep;
 import org.opensearch.flowframework.workflow.RegisterRemoteModelStep;
 import org.opensearch.flowframework.workflow.UndeployModelStep;
@@ -40,7 +42,11 @@ public enum WorkflowResources {
     /** Workflow steps for registering/deleting a remote model and associated created resource */
     REGISTER_REMOTE_MODEL(RegisterRemoteModelStep.NAME, WorkflowResources.MODEL_ID, DeleteModelStep.NAME),
     /** Workflow steps for registering/deleting a local model and associated created resource */
-    REGISTER_LOCAL_MODEL(RegisterLocalModelStep.NAME, WorkflowResources.MODEL_ID, DeleteModelStep.NAME),
+    REGISTER_LOCAL_MODEL(RegisterLocalCustomModelStep.NAME, WorkflowResources.MODEL_ID, DeleteModelStep.NAME),
+    /** Workflow steps for registering/deleting a local sparse encoding model and associated created resource */
+    REGISTER_LOCAL_SPARSE_ENCODING_MODEL(RegisterLocalSparseEncodingModelStep.NAME, WorkflowResources.MODEL_ID, DeleteModelStep.NAME),
+    /** Workflow steps for registering/deleting a local OpenSearch provided pretrained model and associated created resource */
+    REGISTER_LOCAL_PRETRAINED_MODEL(RegisterLocalPretrainedModelStep.NAME, WorkflowResources.MODEL_ID, DeleteModelStep.NAME),
     /** Workflow steps for registering/deleting a model group and associated created resource */
     REGISTER_MODEL_GROUP(RegisterModelGroupStep.NAME, WorkflowResources.MODEL_GROUP_ID, DeleteModelGroupStep.NAME),
     /** Workflow steps for deploying/undeploying a model and associated created resource */
