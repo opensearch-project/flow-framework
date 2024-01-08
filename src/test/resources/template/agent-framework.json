@@ -54,21 +54,16 @@
           "user_inputs": {
             "name": "flow-register-remote-test-gpt-3.5-turbo",
             "function_name": "remote",
-            "description": "test model"
-          }
-        },
-        {
-          "id": "deployed-gpt-3.5-model",
-          "type": "deploy_model",
-          "previous_node_inputs": {
-            "gpt-3.5-model": "model_id"
+            "description": "test model",
+            "deploy": true,
+            "node_timeout": "100s"
           }
         },
         {
           "id": "ml_model_tool",
           "type": "create_tool",
           "previous_node_inputs": {
-            "deployed-gpt-3.5-model": "model_id"
+            "gpt-3.5-model": "model_id"
           },
           "user_inputs": {
             "name": "MLModelTool",
@@ -138,7 +133,7 @@
           "id": "root_agent",
           "type": "register_agent",
           "previous_node_inputs": {
-            "deployed-gpt-3.5-model": "model_id",
+            "gpt-3.5-model": "model_id",
             "ml_model_tool": "tools",
             "agent_tool": "tools"
           },
@@ -169,14 +164,10 @@
         },
         {
           "source": "gpt-3.5-model",
-          "dest": "deployed-gpt-3.5-model"
-        },
-        {
-          "source": "deployed-gpt-3.5-model",
           "dest": "root_agent"
         },
         {
-          "source": "deployed-gpt-3.5-model",
+          "source": "gpt-3.5-model",
           "dest": "ml_model_tool"
         },
         {

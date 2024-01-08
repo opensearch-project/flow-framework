@@ -85,9 +85,6 @@ publishing {
     publications {
         pluginZip(MavenPublication) { publication ->
 
-            artifact sourcesJar
-            artifact javadocJar
-
             pom {
                 name = pluginName
                 description = pluginDescription
