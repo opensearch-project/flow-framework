@@ -70,7 +70,7 @@ public class FlowFrameworkRestApiIT extends FlowFrameworkRestTestCase {
 
     public void testCreateAndProvisionLocalModelWorkflow() throws Exception {
         // Using a 1 step template to register a local model and deploy model
-        Template template = TestHelpers.createTemplateFromFile("registerlocalmodel-deployflag.json");
+        Template template = TestHelpers.createTemplateFromFile("register-deplylocalsparseencodingmodel.json");
 
         // Remove register model input to test validation
         Workflow originalWorkflow = template.workflows().get(PROVISION_WORKFLOW);
@@ -78,7 +78,12 @@ public class FlowFrameworkRestApiIT extends FlowFrameworkRestTestCase {
             .stream()
             .map(
                 n -> "workflow_step_1".equals(n.id())
-                    ? new WorkflowNode("workflow_step_1", "register_local_model", Collections.emptyMap(), Collections.emptyMap())
+                    ? new WorkflowNode(
+                        "workflow_step_1",
+                        "register_local_sparse_encoding_model",
+                        Collections.emptyMap(),
+                        Collections.emptyMap()
+                    )
                     : n
             )
             .collect(Collectors.toList());
@@ -122,7 +127,7 @@ public class FlowFrameworkRestApiIT extends FlowFrameworkRestTestCase {
 
         // This template should create 2 resources, registered_model_id and deployed model_id
         assertEquals(2, resourcesCreated.size());
-        assertEquals("register_local_model", resourcesCreated.get(0).workflowStepName());
+        assertEquals("register_local_sparse_encoding_model", resourcesCreated.get(0).workflowStepName());
         assertNotNull(resourcesCreated.get(0).resourceId());
         assertEquals("deploy_model", resourcesCreated.get(1).workflowStepName());
         assertNotNull(resourcesCreated.get(1).resourceId());

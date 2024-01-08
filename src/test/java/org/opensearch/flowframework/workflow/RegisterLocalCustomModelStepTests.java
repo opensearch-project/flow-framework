@@ -61,10 +61,10 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ThreadLeakScope(ThreadLeakScope.Scope.NONE)
-public class RegisterLocalModelStepTests extends OpenSearchTestCase {
+public class RegisterLocalCustomModelStepTests extends OpenSearchTestCase {
 
     private static TestThreadPool testThreadPool;
-    private RegisterLocalModelStep registerLocalModelStep;
+    private RegisterLocalCustomModelStep registerLocalModelStep;
     private WorkflowData workflowData;
     private FlowFrameworkIndicesHandler flowFrameworkIndicesHandler;
     private FlowFrameworkSettings flowFrameworkSettings;
@@ -102,7 +102,7 @@ public class RegisterLocalModelStepTests extends OpenSearchTestCase {
                 FLOW_FRAMEWORK_THREAD_POOL_PREFIX + WORKFLOW_THREAD_POOL
             )
         );
-        this.registerLocalModelStep = new RegisterLocalModelStep(
+        this.registerLocalModelStep = new RegisterLocalCustomModelStep(
             testThreadPool,
             machineLearningNodeClient,
             flowFrameworkIndicesHandler,
