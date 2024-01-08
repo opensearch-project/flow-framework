@@ -11,6 +11,7 @@ package org.opensearch.flowframework.util;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.opensearch.client.Client;
+import org.opensearch.common.io.Streams;
 import org.opensearch.common.xcontent.LoggingDeprecationHandler;
 import org.opensearch.common.xcontent.XContentHelper;
 import org.opensearch.common.xcontent.XContentType;
@@ -26,7 +27,9 @@ import org.opensearch.flowframework.exception.FlowFrameworkException;
 import org.opensearch.flowframework.workflow.WorkflowData;
 import org.opensearch.ml.common.agent.LLMSpec;
 
+import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.InputStream;
 import java.time.Instant;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -69,6 +72,25 @@ public class ParseUtils {
         );
         ensureExpectedToken(XContentParser.Token.START_OBJECT, parser.nextToken(), parser);
         return parser;
+    }
+
+    /**
+     * Reads a file from the classpath into a String. Useful for reading JSON mapping files.
+     *
+     * @param path A string identifying the resource on the class path
+     * @return A string containing the contents of the file as UTF-8
+     * @throws IOException if file is not found or error reading
+     */
+    public static String resourceToString(String path) throws IOException {
+        try (InputStream is = ParseUtils.class.getResourceAsStream(path)) {
+            if (is == null) {
+                throw new FileNotFoundException("Resource [" + path + "] not found in classpath");
+            }
+            final StringBuilder sb = new StringBuilder();
+            // Read as UTF-8
+            Streams.readAllLines(is, sb::append);
+            return sb.toString();
+        }
     }
 
     /**

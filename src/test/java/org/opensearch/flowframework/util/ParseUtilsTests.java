@@ -12,6 +12,7 @@ import org.opensearch.common.xcontent.XContentFactory;
 import org.opensearch.core.rest.RestStatus;
 import org.opensearch.core.xcontent.XContentBuilder;
 import org.opensearch.core.xcontent.XContentParser;
+import org.opensearch.core.xcontent.XContentParser.Token;
 import org.opensearch.flowframework.exception.FlowFrameworkException;
 import org.opensearch.flowframework.workflow.WorkflowData;
 import org.opensearch.test.OpenSearchTestCase;
@@ -23,6 +24,16 @@ import java.util.Map;
 import java.util.Set;
 
 public class ParseUtilsTests extends OpenSearchTestCase {
+    public void testResourceToStringToJson() throws IOException {
+        String json = ParseUtils.resourceToString("/template/finaltemplate.json");
+        assertTrue(json.startsWith("{"));
+        assertTrue(json.contains("name"));
+        try (XContentParser parser = ParseUtils.jsonToParser(json)) {
+            assertEquals(Token.FIELD_NAME, parser.nextToken());
+            assertEquals("name", parser.currentName());
+        }
+    }
+
     public void testToInstant() throws IOException {
         long epochMilli = Instant.now().toEpochMilli();
         XContentBuilder builder = XContentFactory.jsonBuilder().value(epochMilli);
