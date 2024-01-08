@@ -56,16 +56,50 @@
             "opensearch-ml"
         ]
     },
-    "register_local_model": {
+    "register_local_custom_model": {
         "inputs":[
             "name",
             "version",
             "model_format",
+            "function_name",
             "model_content_hash_value",
+            "url",
             "model_type",
             "embedding_dimension",
-            "framework_type",
+            "framework_type"
+        ],
+        "outputs":[
+            "model_id",
+            "register_model_status"
+        ],
+        "required_plugins":[
+            "opensearch-ml"
+        ],
+        "timeout": "60s"
+    },
+    "register_local_sparse_encoding_model": {
+        "inputs":[
+            "name",
+            "version",
+            "model_format",
+            "function_name",
+            "model_content_hash_value",
             "url"
+        ],
+        "outputs":[
+            "model_id",
+            "register_model_status"
+        ],
+        "required_plugins":[
+            "opensearch-ml"
+        ],
+        "timeout": "60s"
+    },
+    "register_local_pretrained_model": {
+        "inputs":[
+            "name",
+            "version",
+            "model_format"
         ],
         "outputs":[
             "model_id",
