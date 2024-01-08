@@ -8,7 +8,6 @@
  */
 package org.opensearch.flowframework.indices;
 
-import com.google.common.io.Resources;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.opensearch.ExceptionsHelper;
@@ -39,12 +38,11 @@ import org.opensearch.flowframework.model.State;
 import org.opensearch.flowframework.model.Template;
 import org.opensearch.flowframework.model.WorkflowState;
 import org.opensearch.flowframework.util.EncryptorUtils;
+import org.opensearch.flowframework.util.ParseUtils;
 import org.opensearch.script.Script;
 import org.opensearch.script.ScriptType;
 
 import java.io.IOException;
-import java.net.URL;
-import java.nio.charset.StandardCharsets;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
@@ -292,8 +290,7 @@ public class FlowFrameworkIndicesHandler {
      * @throws IOException IOException if mapping file can't be read correctly
      */
     public static String getIndexMappings(String mapping) throws IOException {
-        URL url = FlowFrameworkIndicesHandler.class.getClassLoader().getResource(mapping);
-        return Resources.toString(url, StandardCharsets.UTF_8);
+        return ParseUtils.resourceToString(mapping);
     }
 
     /**
