@@ -61,10 +61,10 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ThreadLeakScope(ThreadLeakScope.Scope.NONE)
-public class RegisterLocalCustomModelStepTests extends OpenSearchTestCase {
+public class RegisterLocalSparseEncodingModelStepTests extends OpenSearchTestCase {
 
     private static TestThreadPool testThreadPool;
-    private RegisterLocalCustomModelStep registerLocalModelStep;
+    private RegisterLocalSparseEncodingModelStep registerLocalSparseEncodingModelStep;
     private WorkflowData workflowData;
     private FlowFrameworkIndicesHandler flowFrameworkIndicesHandler;
     private FlowFrameworkSettings flowFrameworkSettings;
@@ -102,7 +102,7 @@ public class RegisterLocalCustomModelStepTests extends OpenSearchTestCase {
                 FLOW_FRAMEWORK_THREAD_POOL_PREFIX + WORKFLOW_THREAD_POOL
             )
         );
-        this.registerLocalModelStep = new RegisterLocalCustomModelStep(
+        this.registerLocalSparseEncodingModelStep = new RegisterLocalSparseEncodingModelStep(
             testThreadPool,
             machineLearningNodeClient,
             flowFrameworkIndicesHandler,
@@ -118,9 +118,6 @@ public class RegisterLocalCustomModelStepTests extends OpenSearchTestCase {
                 Map.entry("model_format", "TORCH_SCRIPT"),
                 Map.entry(MODEL_GROUP_ID, "abcdefg"),
                 Map.entry("model_content_hash_value", "aiwoeifjoaijeofiwe"),
-                Map.entry("model_type", "bert"),
-                Map.entry("embedding_dimension", "384"),
-                Map.entry("framework_type", "sentence_transformers"),
                 Map.entry("url", "something.com")
             ),
             "test-id",
@@ -134,7 +131,7 @@ public class RegisterLocalCustomModelStepTests extends OpenSearchTestCase {
         ThreadPool.terminate(testThreadPool, 500, TimeUnit.MILLISECONDS);
     }
 
-    public void testRegisterLocalCustomModelSuccess() throws Exception {
+    public void testRegisterLocalSparseEncodingModelSuccess() throws Exception {
 
         String taskId = "abcd";
         String modelId = "model-id";
@@ -177,7 +174,7 @@ public class RegisterLocalCustomModelStepTests extends OpenSearchTestCase {
             return null;
         }).when(flowFrameworkIndicesHandler).updateResourceInStateIndex(anyString(), anyString(), anyString(), anyString(), any());
 
-        CompletableFuture<WorkflowData> future = registerLocalModelStep.execute(
+        CompletableFuture<WorkflowData> future = registerLocalSparseEncodingModelStep.execute(
             workflowData.getNodeId(),
             workflowData,
             Collections.emptyMap(),
@@ -193,7 +190,7 @@ public class RegisterLocalCustomModelStepTests extends OpenSearchTestCase {
         assertEquals(status, future.get().getContent().get(REGISTER_MODEL_STATUS));
     }
 
-    public void testRegisterLocalCustomModelFailure() {
+    public void testRegisterLocalSparseEncodingModelFailure() {
 
         doAnswer(invocation -> {
             ActionListener<MLRegisterModelResponse> actionListener = invocation.getArgument(1);
@@ -201,7 +198,7 @@ public class RegisterLocalCustomModelStepTests extends OpenSearchTestCase {
             return null;
         }).when(machineLearningNodeClient).register(any(MLRegisterModelInput.class), any());
 
-        CompletableFuture<WorkflowData> future = this.registerLocalModelStep.execute(
+        CompletableFuture<WorkflowData> future = this.registerLocalSparseEncodingModelStep.execute(
             workflowData.getNodeId(),
             workflowData,
             Collections.emptyMap(),
@@ -213,7 +210,7 @@ public class RegisterLocalCustomModelStepTests extends OpenSearchTestCase {
         assertEquals("test", ex.getCause().getMessage());
     }
 
-    public void testRegisterLocalCustomModelTaskFailure() {
+    public void testRegisterLocalSparseEncodingModelTaskFailure() {
 
         String taskId = "abcd";
         String modelId = "model-id";
@@ -250,7 +247,7 @@ public class RegisterLocalCustomModelStepTests extends OpenSearchTestCase {
             return null;
         }).when(machineLearningNodeClient).getTask(any(), any());
 
-        CompletableFuture<WorkflowData> future = this.registerLocalModelStep.execute(
+        CompletableFuture<WorkflowData> future = this.registerLocalSparseEncodingModelStep.execute(
             workflowData.getNodeId(),
             workflowData,
             Collections.emptyMap(),
@@ -263,7 +260,7 @@ public class RegisterLocalCustomModelStepTests extends OpenSearchTestCase {
     }
 
     public void testMissingInputs() {
-        CompletableFuture<WorkflowData> future = registerLocalModelStep.execute(
+        CompletableFuture<WorkflowData> future = registerLocalSparseEncodingModelStep.execute(
             "nodeId",
             new WorkflowData(Collections.emptyMap(), "test-id", "test-node-id"),
             Collections.emptyMap(),
@@ -274,16 +271,7 @@ public class RegisterLocalCustomModelStepTests extends OpenSearchTestCase {
         ExecutionException ex = assertThrows(ExecutionException.class, () -> future.get().getContent());
         assertTrue(ex.getCause() instanceof FlowFrameworkException);
         assertTrue(ex.getCause().getMessage().startsWith("Missing required inputs ["));
-        for (String s : new String[] {
-            "model_format",
-            "name",
-            "model_type",
-            "embedding_dimension",
-            "framework_type",
-            "version",
-            "url",
-            "model_content_hash_value",
-            "function_name" }) {
+        for (String s : new String[] { "model_format", "name", "function_name", "version", "url", "model_content_hash_value" }) {
             assertTrue(ex.getCause().getMessage().contains(s));
         }
         assertTrue(ex.getCause().getMessage().endsWith("] in workflow [test-id] node [test-node-id]"));
