@@ -55,7 +55,7 @@
             "name": "flow-register-remote-test-gpt-3.5-turbo",
             "function_name": "remote",
             "description": "test model",
-            "node_timeout": "60s"
+            "node_timeout": "100s"
           }
         },
         {
@@ -65,7 +65,7 @@
             "gpt-3.5-model": "model_id"
           },
           "user_inputs": {
-            "node_timeout": "60s"
+            "node_timeout": "100s"
           }
         },
         {
