@@ -93,7 +93,7 @@ public class RegisterLocalCustomModelStepTests extends OpenSearchTestCase {
         when(flowFrameworkSettings.getMaxRetry()).thenReturn(5);
 
         testThreadPool = new TestThreadPool(
-            RegisterLocalModelStepTests.class.getName(),
+            RegisterLocalCustomModelStepTests.class.getName(),
             new FixedExecutorBuilder(
                 Settings.EMPTY,
                 WORKFLOW_THREAD_POOL,
