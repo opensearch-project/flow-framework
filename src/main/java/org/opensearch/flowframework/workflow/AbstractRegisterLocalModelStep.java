@@ -18,8 +18,6 @@ import org.opensearch.flowframework.indices.FlowFrameworkIndicesHandler;
 import org.opensearch.flowframework.util.ParseUtils;
 import org.opensearch.ml.client.MachineLearningNodeClient;
 import org.opensearch.ml.common.FunctionName;
-import org.opensearch.ml.common.MLTask;
-import org.opensearch.ml.common.model.MLModelConfig;
 import org.opensearch.ml.common.model.MLModelFormat;
 import org.opensearch.ml.common.model.TextEmbeddingModelConfig;
 import org.opensearch.ml.common.model.TextEmbeddingModelConfig.FrameworkType;
@@ -31,6 +29,7 @@ import org.opensearch.threadpool.ThreadPool;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
+import java.util.stream.Stream;
 
 import static org.opensearch.flowframework.common.CommonValue.ALL_CONFIG;
 import static org.opensearch.flowframework.common.CommonValue.DEPLOY_FIELD;
@@ -49,18 +48,13 @@ import static org.opensearch.flowframework.common.WorkflowResources.MODEL_GROUP_
 import static org.opensearch.flowframework.common.WorkflowResources.getResourceByWorkflowStep;
 
 /**
- * Step to register a local model
+ * Abstract local model registration step
  */
-public class RegisterLocalModelStep extends AbstractRetryableWorkflowStep {
+public abstract class AbstractRegisterLocalModelStep extends AbstractRetryableWorkflowStep {
 
-    private static final Logger logger = LogManager.getLogger(RegisterLocalModelStep.class);
-
+    private static final Logger logger = LogManager.getLogger(AbstractRegisterLocalModelStep.class);
     private final MachineLearningNodeClient mlClient;
-
     private final FlowFrameworkIndicesHandler flowFrameworkIndicesHandler;
-
-    /** The name of this step, used as a key in the template and the {@link WorkflowStepFactory} */
-    public static final String NAME = "register_local_model";
 
     /**
      * Instantiate this class
@@ -69,7 +63,7 @@ public class RegisterLocalModelStep extends AbstractRetryableWorkflowStep {
      * @param flowFrameworkIndicesHandler FlowFrameworkIndicesHandler class to update system indices
      * @param flowFrameworkSettings settings of flow framework
      */
-    public RegisterLocalModelStep(
+    protected AbstractRegisterLocalModelStep(
         ThreadPool threadPool,
         MachineLearningNodeClient mlClient,
         FlowFrameworkIndicesHandler flowFrameworkIndicesHandler,
@@ -90,67 +84,64 @@ public class RegisterLocalModelStep extends AbstractRetryableWorkflowStep {
 
         CompletableFuture<WorkflowData> registerLocalModelFuture = new CompletableFuture<>();
 
-        Set<String> requiredKeys = Set.of(
-            NAME_FIELD,
-            VERSION_FIELD,
-            MODEL_FORMAT,
-            MODEL_TYPE,
-            EMBEDDING_DIMENSION,
-            FRAMEWORK_TYPE,
-            MODEL_CONTENT_HASH_VALUE,
-            URL
-        );
-        Set<String> optionalKeys = Set.of(DESCRIPTION_FIELD, MODEL_GROUP_ID, ALL_CONFIG, FUNCTION_NAME, DEPLOY_FIELD);
-
         try {
             Map<String, Object> inputs = ParseUtils.getInputsFromPreviousSteps(
-                requiredKeys,
-                optionalKeys,
+                getRequiredKeys(),
+                getOptionalKeys(),
                 currentNodeInputs,
                 outputs,
                 previousNodeInputs
             );
 
+            // Extract common fields of OS provided text-embedding, sparse encoding and custom models
             String modelName = (String) inputs.get(NAME_FIELD);
             String modelVersion = (String) inputs.get(VERSION_FIELD);
-            String description = (String) inputs.get(DESCRIPTION_FIELD);
-            MLModelFormat modelFormat = MLModelFormat.from((String) inputs.get(MODEL_FORMAT));
-            String modelGroupId = (String) inputs.get(MODEL_GROUP_ID);
+            String modelFormat = (String) inputs.get(MODEL_FORMAT);
+
+            // Extract non-common fields
+            String functionName = (String) inputs.get(FUNCTION_NAME);
             String modelContentHashValue = (String) inputs.get(MODEL_CONTENT_HASH_VALUE);
+            String url = (String) inputs.get(URL);
             String modelType = (String) inputs.get(MODEL_TYPE);
             String embeddingDimension = (String) inputs.get(EMBEDDING_DIMENSION);
-            FrameworkType frameworkType = FrameworkType.from((String) inputs.get(FRAMEWORK_TYPE));
+            String frameworkType = (String) inputs.get(FRAMEWORK_TYPE);
+
+            // Extract optional fields
+            String description = (String) inputs.get(DESCRIPTION_FIELD);
+            String modelGroupId = (String) inputs.get(MODEL_GROUP_ID);
             String allConfig = (String) inputs.get(ALL_CONFIG);
-            String url = (String) inputs.get(URL);
-            String functionName = (String) inputs.get(FUNCTION_NAME);
             final Boolean deploy = (Boolean) inputs.get(DEPLOY_FIELD);
 
-            // Create Model configuration
-            TextEmbeddingModelConfigBuilder modelConfigBuilder = TextEmbeddingModelConfig.builder()
-                .modelType(modelType)
-                .embeddingDimension(Integer.valueOf(embeddingDimension))
-                .frameworkType(frameworkType);
-            if (allConfig != null) {
-                modelConfigBuilder.allConfig(allConfig);
-            }
-            MLModelConfig modelConfig = modelConfigBuilder.build();
-
-            // Create register local model input
+            // Build register model input
             MLRegisterModelInputBuilder mlInputBuilder = MLRegisterModelInput.builder()
                 .modelName(modelName)
                 .version(modelVersion)
-                .modelFormat(modelFormat)
-                .hashValue(modelContentHashValue)
-                .modelConfig(modelConfig)
-                .url(url);
+                .modelFormat(MLModelFormat.from(modelFormat));
+
+            if (functionName != null) {
+                mlInputBuilder.functionName(FunctionName.from(functionName));
+            }
+            if (modelContentHashValue != null) {
+                mlInputBuilder.hashValue(modelContentHashValue);
+            }
+            if (url != null) {
+                mlInputBuilder.url(url);
+            }
+            if (Stream.of(modelType, embeddingDimension, frameworkType).allMatch(x -> x != null)) {
+                TextEmbeddingModelConfigBuilder mlConfigBuilder = TextEmbeddingModelConfig.builder()
+                    .modelType(modelType)
+                    .embeddingDimension(Integer.valueOf(embeddingDimension))
+                    .frameworkType(FrameworkType.from(frameworkType));
+                if (allConfig != null) {
+                    mlConfigBuilder.allConfig(allConfig);
+                }
+                mlInputBuilder.modelConfig(mlConfigBuilder.build());
+            }
             if (description != null) {
                 mlInputBuilder.description(description);
             }
             if (modelGroupId != null) {
                 mlInputBuilder.modelGroupId(modelGroupId);
-            }
-            if (functionName != null) {
-                mlInputBuilder.functionName(FunctionName.from(functionName));
             }
             if (deploy != null) {
                 mlInputBuilder.deployModel(deploy);
@@ -232,13 +223,16 @@ public class RegisterLocalModelStep extends AbstractRetryableWorkflowStep {
         return registerLocalModelFuture;
     }
 
-    @Override
-    protected String getResourceId(MLTask response) {
-        return response.getModelId();
-    }
+    /**
+     * Returns the required keys of the local model step
+     * @return the set of required keys
+     */
+    protected abstract Set<String> getRequiredKeys();
 
-    @Override
-    public String getName() {
-        return NAME;
-    }
+    /**
+     * Returns the optional keys of the local model step
+     * @return the set of optional keys
+     */
+    protected abstract Set<String> getOptionalKeys();
+
 }
