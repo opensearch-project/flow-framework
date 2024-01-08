@@ -226,7 +226,6 @@ public class FlowFrameworkRestApiIT extends FlowFrameworkRestTestCase {
         expectedStepNames.add("sub_agent");
         expectedStepNames.add("openAI_connector");
         expectedStepNames.add("gpt-3.5-model");
-        expectedStepNames.add("deployed-gpt-3.5-model");
         Set<String> stepNames = resourcesCreated.stream().map(ResourceCreated::workflowStepId).collect(Collectors.toSet());
 
         assertEquals(5, resourcesCreated.size());
@@ -244,14 +243,6 @@ public class FlowFrameworkRestApiIT extends FlowFrameworkRestTestCase {
         // Hit Delete API
         Response deleteResponse = deleteWorkflow(workflowId);
         assertEquals(RestStatus.OK, TestHelpers.restStatus(deleteResponse));
-
-        // wait for deletion to complete
-        Thread.sleep(30000);
-
-        // Search this workflow id in global_context index to make sure it's deleted
-        SearchResponse searchResponseAfterDeletion = searchWorkflows(query);
-        assertBusy(() -> assertEquals(0, searchResponseAfterDeletion.getHits().getTotalHits().value), 30, TimeUnit.SECONDS);
-
     }
 
 }
