@@ -11,8 +11,6 @@ package org.opensearch.flowframework.rest;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.opensearch.client.node.NodeClient;
-import org.opensearch.cluster.service.ClusterService;
-import org.opensearch.common.settings.Settings;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.core.rest.RestStatus;
 import org.opensearch.core.xcontent.ToXContent;
@@ -23,6 +21,7 @@ import org.opensearch.flowframework.exception.FlowFrameworkException;
 import org.opensearch.flowframework.model.Template;
 import org.opensearch.flowframework.transport.CreateWorkflowAction;
 import org.opensearch.flowframework.transport.WorkflowRequest;
+import org.opensearch.rest.BaseRestHandler;
 import org.opensearch.rest.BytesRestResponse;
 import org.opensearch.rest.RestRequest;
 
@@ -40,26 +39,19 @@ import static org.opensearch.flowframework.common.FlowFrameworkSettings.FLOW_FRA
 /**
  * Rest Action to facilitate requests to create and update a use case template
  */
-public class RestCreateWorkflowAction extends AbstractWorkflowAction {
+public class RestCreateWorkflowAction extends BaseRestHandler {
 
     private static final Logger logger = LogManager.getLogger(RestCreateWorkflowAction.class);
     private static final String CREATE_WORKFLOW_ACTION = "create_workflow_action";
 
-    private FlowFrameworkSettings flowFrameworkFeatureEnabledSetting;
+    private FlowFrameworkSettings flowFrameworkSettings;
 
     /**
      * Instantiates a new RestCreateWorkflowAction
-     * @param flowFrameworkFeatureEnabledSetting Whether this API is enabled
-     * @param settings Environment settings
-     * @param clusterService clusterService
+     * @param flowFrameworkSettings The settings for the flow framework plugin
      */
-    public RestCreateWorkflowAction(
-        FlowFrameworkSettings flowFrameworkFeatureEnabledSetting,
-        Settings settings,
-        ClusterService clusterService
-    ) {
-        super(settings, clusterService);
-        this.flowFrameworkFeatureEnabledSetting = flowFrameworkFeatureEnabledSetting;
+    public RestCreateWorkflowAction(FlowFrameworkSettings flowFrameworkSettings) {
+        this.flowFrameworkSettings = flowFrameworkSettings;
     }
 
     @Override
@@ -80,7 +72,7 @@ public class RestCreateWorkflowAction extends AbstractWorkflowAction {
     @Override
     protected RestChannelConsumer prepareRequest(RestRequest request, NodeClient client) throws IOException {
         String workflowId = request.param(WORKFLOW_ID);
-        if (!flowFrameworkFeatureEnabledSetting.isFlowFrameworkEnabled()) {
+        if (!flowFrameworkSettings.isFlowFrameworkEnabled()) {
             FlowFrameworkException ffe = new FlowFrameworkException(
                 "This API is disabled. To enable it, set [" + FLOW_FRAMEWORK_ENABLED.getKey() + "] to true.",
                 RestStatus.FORBIDDEN
@@ -96,14 +88,7 @@ public class RestCreateWorkflowAction extends AbstractWorkflowAction {
             String[] validation = request.paramAsStringArray(VALIDATION, new String[] { "all" });
             boolean provision = request.paramAsBoolean(PROVISION_WORKFLOW, false);
 
-            WorkflowRequest workflowRequest = new WorkflowRequest(
-                workflowId,
-                template,
-                validation,
-                provision,
-                requestTimeout,
-                maxWorkflows
-            );
+            WorkflowRequest workflowRequest = new WorkflowRequest(workflowId, template, validation, provision);
 
             return channel -> client.execute(CreateWorkflowAction.INSTANCE, workflowRequest, ActionListener.wrap(response -> {
                 XContentBuilder builder = response.toXContent(channel.newBuilder(), ToXContent.EMPTY_PARAMS);

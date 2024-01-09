@@ -12,6 +12,7 @@ import org.opensearch.cluster.service.ClusterService;
 import org.opensearch.common.settings.ClusterSettings;
 import org.opensearch.common.settings.Setting;
 import org.opensearch.common.settings.Settings;
+import org.opensearch.common.unit.TimeValue;
 import org.opensearch.test.OpenSearchTestCase;
 
 import java.io.IOException;
@@ -39,8 +40,10 @@ public class FlowFrameworkSettingsTests extends OpenSearchTestCase {
             ClusterSettings.BUILT_IN_CLUSTER_SETTINGS.stream(),
             Stream.of(
                 FlowFrameworkSettings.FLOW_FRAMEWORK_ENABLED,
-                FlowFrameworkSettings.MAX_GET_TASK_REQUEST_RETRY,
-                FlowFrameworkSettings.MAX_WORKFLOW_STEPS
+                FlowFrameworkSettings.TASK_REQUEST_RETRY_DURATION,
+                FlowFrameworkSettings.MAX_WORKFLOW_STEPS,
+                FlowFrameworkSettings.MAX_WORKFLOWS,
+                FlowFrameworkSettings.WORKFLOW_REQUEST_TIMEOUT
             )
         ).collect(Collectors.toSet());
         clusterSettings = new ClusterSettings(settings, settingsSet);
@@ -56,7 +59,9 @@ public class FlowFrameworkSettingsTests extends OpenSearchTestCase {
 
     public void testSettings() throws IOException {
         assertFalse(flowFrameworkSettings.isFlowFrameworkEnabled());
-        assertEquals(Optional.of(5), Optional.ofNullable(flowFrameworkSettings.getMaxRetry()));
+        assertEquals(Optional.of(TimeValue.timeValueSeconds(5)), Optional.ofNullable(flowFrameworkSettings.getRetryDuration()));
         assertEquals(Optional.of(50), Optional.ofNullable(flowFrameworkSettings.getMaxWorkflowSteps()));
+        assertEquals(Optional.of(1000), Optional.ofNullable(flowFrameworkSettings.getMaxWorkflows()));
+        assertEquals(Optional.of(TimeValue.timeValueSeconds(10)), Optional.ofNullable(flowFrameworkSettings.getRequestTimeout()));
     }
 }

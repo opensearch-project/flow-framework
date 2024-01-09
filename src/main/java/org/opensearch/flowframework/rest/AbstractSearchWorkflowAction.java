@@ -48,7 +48,7 @@ public abstract class AbstractSearchWorkflowAction<T extends ToXContentObject> e
     /** Search action type*/
     protected final ActionType<SearchResponse> actionType;
     /** Settings to enable FlowFramework API*/
-    protected final FlowFrameworkSettings flowFrameworkFeatureEnabledSetting;
+    protected final FlowFrameworkSettings flowFrameworkSettings;
 
     /**
      * Instantiates a new AbstractSearchWorkflowAction
@@ -56,25 +56,25 @@ public abstract class AbstractSearchWorkflowAction<T extends ToXContentObject> e
      * @param index index the search should be done on
      * @param clazz model class
      * @param actionType from which action abstract class is called
-     * @param flowFrameworkFeatureEnabledSetting Whether this API is enabled
+     * @param flowFrameworkSettings Whether this API is enabled
      */
     public AbstractSearchWorkflowAction(
         List<String> urlPaths,
         String index,
         Class<T> clazz,
         ActionType<SearchResponse> actionType,
-        FlowFrameworkSettings flowFrameworkFeatureEnabledSetting
+        FlowFrameworkSettings flowFrameworkSettings
     ) {
         this.urlPaths = urlPaths;
         this.index = index;
         this.clazz = clazz;
         this.actionType = actionType;
-        this.flowFrameworkFeatureEnabledSetting = flowFrameworkFeatureEnabledSetting;
+        this.flowFrameworkSettings = flowFrameworkSettings;
     }
 
     @Override
     protected RestChannelConsumer prepareRequest(RestRequest request, NodeClient client) throws IOException {
-        if (!flowFrameworkFeatureEnabledSetting.isFlowFrameworkEnabled()) {
+        if (!flowFrameworkSettings.isFlowFrameworkEnabled()) {
             FlowFrameworkException ffe = new FlowFrameworkException(
                 "This API is disabled. To enable it, update the setting [" + FLOW_FRAMEWORK_ENABLED.getKey() + "] to true.",
                 RestStatus.FORBIDDEN
@@ -87,6 +87,7 @@ public abstract class AbstractSearchWorkflowAction<T extends ToXContentObject> e
         searchSourceBuilder.parseXContent(request.contentOrSourceParamParser());
         searchSourceBuilder.fetchSource(getSourceContext(request, searchSourceBuilder));
         searchSourceBuilder.seqNoAndPrimaryTerm(true).version(true);
+        searchSourceBuilder.timeout(flowFrameworkSettings.getRequestTimeout());
         SearchRequest searchRequest = new SearchRequest().source(searchSourceBuilder).indices(index);
         return channel -> client.execute(actionType, searchRequest, search(channel));
     }

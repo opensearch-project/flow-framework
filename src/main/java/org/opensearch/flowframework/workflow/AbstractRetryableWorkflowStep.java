@@ -11,6 +11,7 @@ package org.opensearch.flowframework.workflow;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.opensearch.ExceptionsHelper;
+import org.opensearch.common.unit.TimeValue;
 import org.opensearch.common.util.concurrent.FutureUtils;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.core.rest.RestStatus;
@@ -22,7 +23,6 @@ import org.opensearch.ml.common.MLTask;
 import org.opensearch.threadpool.ThreadPool;
 
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.opensearch.flowframework.common.CommonValue.WORKFLOW_THREAD_POOL;
 import static org.opensearch.flowframework.common.WorkflowResources.getResourceByWorkflowStep;
@@ -32,8 +32,7 @@ import static org.opensearch.flowframework.common.WorkflowResources.getResourceB
  */
 public abstract class AbstractRetryableWorkflowStep implements WorkflowStep {
     private static final Logger logger = LogManager.getLogger(AbstractRetryableWorkflowStep.class);
-    /** The maximum number of transport request retries */
-    protected volatile Integer maxRetry;
+    private TimeValue retryDuration;
     private final MachineLearningNodeClient mlClient;
     private final FlowFrameworkIndicesHandler flowFrameworkIndicesHandler;
     private ThreadPool threadPool;
@@ -52,7 +51,7 @@ public abstract class AbstractRetryableWorkflowStep implements WorkflowStep {
         FlowFrameworkSettings flowFrameworkSettings
     ) {
         this.threadPool = threadPool;
-        this.maxRetry = flowFrameworkSettings.getMaxRetry();
+        this.retryDuration = flowFrameworkSettings.getRetryDuration();
         this.mlClient = mlClient;
         this.flowFrameworkIndicesHandler = flowFrameworkIndicesHandler;
     }
@@ -74,9 +73,8 @@ public abstract class AbstractRetryableWorkflowStep implements WorkflowStep {
         String workflowStep,
         ActionListener<MLTask> mlTaskListener
     ) {
-        AtomicInteger retries = new AtomicInteger();
         CompletableFuture.runAsync(() -> {
-            while (retries.getAndIncrement() < this.maxRetry && !future.isDone()) {
+            while (!future.isDone()) {
                 mlClient.getTask(taskId, ActionListener.wrap(response -> {
                     switch (response.getState()) {
                         case COMPLETED:
@@ -123,18 +121,12 @@ public abstract class AbstractRetryableWorkflowStep implements WorkflowStep {
                     logger.error(errorMessage);
                     mlTaskListener.onFailure(new FlowFrameworkException(errorMessage, RestStatus.BAD_REQUEST));
                 }));
-                // Wait long enough for future to possibly complete
                 try {
-                    Thread.sleep(5000);
+                    Thread.sleep(this.retryDuration.getMillis());
                 } catch (InterruptedException e) {
                     FutureUtils.cancel(future);
                     Thread.currentThread().interrupt();
                 }
-            }
-            if (!future.isDone()) {
-                String errorMessage = workflowStep + " did not complete after " + maxRetry + " retries";
-                logger.error(errorMessage);
-                mlTaskListener.onFailure(new FlowFrameworkException(errorMessage, RestStatus.REQUEST_TIMEOUT));
             }
         }, threadPool.executor(WORKFLOW_THREAD_POOL));
     }
