@@ -26,30 +26,8 @@ import org.opensearch.env.Environment;
 import org.opensearch.env.NodeEnvironment;
 import org.opensearch.flowframework.common.FlowFrameworkSettings;
 import org.opensearch.flowframework.indices.FlowFrameworkIndicesHandler;
-import org.opensearch.flowframework.rest.RestCreateWorkflowAction;
-import org.opensearch.flowframework.rest.RestDeleteWorkflowAction;
-import org.opensearch.flowframework.rest.RestDeprovisionWorkflowAction;
-import org.opensearch.flowframework.rest.RestGetWorkflowAction;
-import org.opensearch.flowframework.rest.RestGetWorkflowStateAction;
-import org.opensearch.flowframework.rest.RestProvisionWorkflowAction;
-import org.opensearch.flowframework.rest.RestSearchWorkflowAction;
-import org.opensearch.flowframework.rest.RestSearchWorkflowStateAction;
-import org.opensearch.flowframework.transport.CreateWorkflowAction;
-import org.opensearch.flowframework.transport.CreateWorkflowTransportAction;
-import org.opensearch.flowframework.transport.DeleteWorkflowAction;
-import org.opensearch.flowframework.transport.DeleteWorkflowTransportAction;
-import org.opensearch.flowframework.transport.DeprovisionWorkflowAction;
-import org.opensearch.flowframework.transport.DeprovisionWorkflowTransportAction;
-import org.opensearch.flowframework.transport.GetWorkflowAction;
-import org.opensearch.flowframework.transport.GetWorkflowStateAction;
-import org.opensearch.flowframework.transport.GetWorkflowStateTransportAction;
-import org.opensearch.flowframework.transport.GetWorkflowTransportAction;
-import org.opensearch.flowframework.transport.ProvisionWorkflowAction;
-import org.opensearch.flowframework.transport.ProvisionWorkflowTransportAction;
-import org.opensearch.flowframework.transport.SearchWorkflowAction;
-import org.opensearch.flowframework.transport.SearchWorkflowStateAction;
-import org.opensearch.flowframework.transport.SearchWorkflowStateTransportAction;
-import org.opensearch.flowframework.transport.SearchWorkflowTransportAction;
+import org.opensearch.flowframework.rest.*;
+import org.opensearch.flowframework.transport.*;
 import org.opensearch.flowframework.util.EncryptorUtils;
 import org.opensearch.flowframework.workflow.WorkflowProcessSorter;
 import org.opensearch.flowframework.workflow.WorkflowStepFactory;
@@ -145,6 +123,7 @@ public class FlowFrameworkPlugin extends Plugin implements ActionPlugin {
             new RestSearchWorkflowAction(flowFrameworkSettings),
             new RestGetWorkflowStateAction(flowFrameworkSettings),
             new RestGetWorkflowAction(flowFrameworkSettings),
+            new RestGetWorkflowStepAction(flowFrameworkSettings),
             new RestSearchWorkflowStateAction(flowFrameworkSettings)
         );
     }
@@ -159,6 +138,7 @@ public class FlowFrameworkPlugin extends Plugin implements ActionPlugin {
             new ActionHandler<>(SearchWorkflowAction.INSTANCE, SearchWorkflowTransportAction.class),
             new ActionHandler<>(GetWorkflowStateAction.INSTANCE, GetWorkflowStateTransportAction.class),
             new ActionHandler<>(GetWorkflowAction.INSTANCE, GetWorkflowTransportAction.class),
+            new ActionHandler<>(GetWorkflowStepAction.INSTANCE, GetWorkflowStepTransportAction.class),
             new ActionHandler<>(SearchWorkflowStateAction.INSTANCE, SearchWorkflowStateTransportAction.class)
         );
     }

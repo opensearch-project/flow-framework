@@ -12,6 +12,8 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.opensearch.common.unit.TimeValue;
 import org.opensearch.core.rest.RestStatus;
+import org.opensearch.core.xcontent.ToXContentObject;
+import org.opensearch.core.xcontent.XContentBuilder;
 import org.opensearch.core.xcontent.XContentParser;
 import org.opensearch.flowframework.exception.FlowFrameworkException;
 
@@ -24,7 +26,7 @@ import static org.opensearch.core.xcontent.XContentParserUtils.ensureExpectedTok
 /**
  * This represents an object of workflow steps json which maps each step to expected inputs and outputs
  */
-public class WorkflowStepValidator {
+public class WorkflowStepValidator implements ToXContentObject {
 
     private static final Logger logger = LogManager.getLogger(WorkflowStepValidator.class);
 
@@ -139,5 +141,31 @@ public class WorkflowStepValidator {
      */
     public TimeValue getTimeout() {
         return timeout;
+    }
+
+    @Override
+    public XContentBuilder toXContent(XContentBuilder builder, Params params) throws IOException {
+        XContentBuilder xContentBuilder = builder.startObject();
+        xContentBuilder.startArray(INPUTS_FIELD);
+        for (String input: this.inputs) {
+            xContentBuilder.value(input);
+        }
+        xContentBuilder.endArray();
+
+        xContentBuilder.startArray(OUTPUTS_FIELD);
+        for (String output: this.outputs) {
+            xContentBuilder.value(output);
+        }
+        xContentBuilder.endArray();
+
+        xContentBuilder.startArray(REQUIRED_PLUGINS);
+        for (String rp: this.requiredPlugins) {
+            xContentBuilder.value(rp);
+        }
+        xContentBuilder.endArray();
+
+        xContentBuilder.field(TIMEOUT, timeout);
+
+        return null;
     }
 }
