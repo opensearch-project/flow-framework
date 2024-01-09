@@ -147,24 +147,26 @@ public class WorkflowStepValidator implements ToXContentObject {
     public XContentBuilder toXContent(XContentBuilder builder, Params params) throws IOException {
         XContentBuilder xContentBuilder = builder.startObject();
         xContentBuilder.startArray(INPUTS_FIELD);
-        for (String input: this.inputs) {
+        for (String input : this.inputs) {
             xContentBuilder.value(input);
         }
         xContentBuilder.endArray();
 
         xContentBuilder.startArray(OUTPUTS_FIELD);
-        for (String output: this.outputs) {
+        for (String output : this.outputs) {
             xContentBuilder.value(output);
         }
         xContentBuilder.endArray();
 
         xContentBuilder.startArray(REQUIRED_PLUGINS);
-        for (String rp: this.requiredPlugins) {
+        for (String rp : this.requiredPlugins) {
             xContentBuilder.value(rp);
         }
         xContentBuilder.endArray();
 
-        xContentBuilder.field(TIMEOUT, timeout);
+        if (timeout != null) {
+            xContentBuilder.field(TIMEOUT, timeout);
+        }
 
         return xContentBuilder.endObject();
     }

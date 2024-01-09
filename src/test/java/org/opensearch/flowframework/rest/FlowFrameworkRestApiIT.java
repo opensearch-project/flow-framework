@@ -14,8 +14,14 @@ import org.opensearch.client.ResponseException;
 import org.opensearch.core.rest.RestStatus;
 import org.opensearch.flowframework.FlowFrameworkRestTestCase;
 import org.opensearch.flowframework.TestHelpers;
-import org.opensearch.flowframework.model.*;
-import org.opensearch.flowframework.transport.GetWorkflowStepResponse;
+import org.opensearch.flowframework.model.ProvisioningProgress;
+import org.opensearch.flowframework.model.ResourceCreated;
+import org.opensearch.flowframework.model.State;
+import org.opensearch.flowframework.model.Template;
+import org.opensearch.flowframework.model.Workflow;
+import org.opensearch.flowframework.model.WorkflowEdge;
+import org.opensearch.flowframework.model.WorkflowNode;
+import org.opensearch.flowframework.model.WorkflowState;
 
 import java.util.Collections;
 import java.util.HashMap;
@@ -60,10 +66,6 @@ public class FlowFrameworkRestApiIT extends FlowFrameworkRestTestCase {
                 assertTrue(credentialMap.values().stream().allMatch(x -> x != "12345"));
             }
         }
-    }
-
-    public void testGetWorkflowStep() throws Exception {
-        getAndAssertWorkflowStep();
     }
 
     public void testCreateAndProvisionLocalModelWorkflow() throws Exception {

@@ -438,12 +438,12 @@ public abstract class FlowFrameworkRestTestCase extends OpenSearchRestTestCase {
 
     protected Response getWorkflowStep() throws Exception {
         return TestHelpers.makeRequest(
-                client(),
-                "GET",
-                String.format("%s/%s", WORKFLOW_URI, "_step"),
-                Collections.emptyMap(),
-                "",
-                null
+            client(),
+            "GET",
+            String.format(Locale.ROOT, "%s/%s", WORKFLOW_URI, "_step"),
+            Collections.emptyMap(),
+            "",
+            null
         );
     }
 
