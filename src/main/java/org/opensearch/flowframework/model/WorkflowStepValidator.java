@@ -166,6 +166,6 @@ public class WorkflowStepValidator implements ToXContentObject {
 
         xContentBuilder.field(TIMEOUT, timeout);
 
-        return null;
+        return xContentBuilder.endObject();
     }
 }

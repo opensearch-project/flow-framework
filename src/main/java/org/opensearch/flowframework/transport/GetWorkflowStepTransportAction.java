@@ -36,7 +36,7 @@ public class GetWorkflowStepTransportAction extends HandledTransportAction<Workf
             FlowFrameworkIndicesHandler flowFrameworkIndicesHandler,
             Client client
     ) {
-        super(GetWorkflowAction.NAME, transportService, actionFilters, WorkflowRequest::new);
+        super(GetWorkflowStepAction.NAME, transportService, actionFilters, WorkflowRequest::new);
         this.flowFrameworkIndicesHandler = flowFrameworkIndicesHandler;
         this.client = client;
     }

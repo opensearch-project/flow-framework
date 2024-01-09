@@ -14,14 +14,8 @@ import org.opensearch.client.ResponseException;
 import org.opensearch.core.rest.RestStatus;
 import org.opensearch.flowframework.FlowFrameworkRestTestCase;
 import org.opensearch.flowframework.TestHelpers;
-import org.opensearch.flowframework.model.ProvisioningProgress;
-import org.opensearch.flowframework.model.ResourceCreated;
-import org.opensearch.flowframework.model.State;
-import org.opensearch.flowframework.model.Template;
-import org.opensearch.flowframework.model.Workflow;
-import org.opensearch.flowframework.model.WorkflowEdge;
-import org.opensearch.flowframework.model.WorkflowNode;
-import org.opensearch.flowframework.model.WorkflowState;
+import org.opensearch.flowframework.model.*;
+import org.opensearch.flowframework.transport.GetWorkflowStepResponse;
 
 import java.util.Collections;
 import java.util.HashMap;
@@ -68,6 +62,10 @@ public class FlowFrameworkRestApiIT extends FlowFrameworkRestTestCase {
         }
     }
 
+    public void testGetWorkflowStep() throws Exception {
+        getAndAssertWorkflowStep();
+    }
+
     public void testCreateAndProvisionLocalModelWorkflow() throws Exception {
         // Using a 1 step template to register a local model and deploy model
         Template template = TestHelpers.createTemplateFromFile("register-deploylocalsparseencodingmodel.json");
@@ -101,6 +99,8 @@ public class FlowFrameworkRestApiIT extends FlowFrameworkRestTestCase {
         // Hit Create Workflow API with invalid template
         Response response = createWorkflow(templateWithMissingInputs);
         assertEquals(RestStatus.CREATED, TestHelpers.restStatus(response));
+
+        getAndAssertWorkflowStep();
 
         // Retrieve workflow ID
         Map<String, Object> responseMap = entityAsMap(response);
