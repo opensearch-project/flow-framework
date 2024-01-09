@@ -11,7 +11,6 @@ package org.opensearch.flowframework.transport;
 import org.opensearch.action.ActionRequest;
 import org.opensearch.action.ActionRequestValidationException;
 import org.opensearch.common.Nullable;
-import org.opensearch.common.unit.TimeValue;
 import org.opensearch.core.common.io.stream.StreamInput;
 import org.opensearch.core.common.io.stream.StreamOutput;
 import org.opensearch.flowframework.model.Template;
@@ -44,38 +43,12 @@ public class WorkflowRequest extends ActionRequest {
     private boolean provision;
 
     /**
-     * Timeout for request
-     */
-    private TimeValue requestTimeout;
-
-    /**
-     * Max workflows
-     */
-    private Integer maxWorkflows;
-
-    /**
      * Instantiates a new WorkflowRequest, set validation to false and set requestTimeout and maxWorkflows to null
      * @param workflowId the documentId of the workflow
      * @param template the use case template which describes the workflow
      */
     public WorkflowRequest(@Nullable String workflowId, @Nullable Template template) {
-        this(workflowId, template, new String[] { "all" }, false, null, null);
-    }
-
-    /**
-     * Instantiates a new WorkflowRequest and set validation to false
-     * @param workflowId the documentId of the workflow
-     * @param template the use case template which describes the workflow
-     * @param requestTimeout timeout of the request
-     * @param maxWorkflows max number of workflows
-     */
-    public WorkflowRequest(
-        @Nullable String workflowId,
-        @Nullable Template template,
-        @Nullable TimeValue requestTimeout,
-        @Nullable Integer maxWorkflows
-    ) {
-        this(workflowId, template, new String[] { "all" }, false, requestTimeout, maxWorkflows);
+        this(workflowId, template, new String[] { "all" }, false);
     }
 
     /**
@@ -84,23 +57,12 @@ public class WorkflowRequest extends ActionRequest {
      * @param template the use case template which describes the workflow
      * @param validation flag to indicate if validation is necessary
      * @param provision flag to indicate if provision is necessary
-     * @param requestTimeout timeout of the request
-     * @param maxWorkflows max number of workflows
      */
-    public WorkflowRequest(
-        @Nullable String workflowId,
-        @Nullable Template template,
-        String[] validation,
-        boolean provision,
-        @Nullable TimeValue requestTimeout,
-        @Nullable Integer maxWorkflows
-    ) {
+    public WorkflowRequest(@Nullable String workflowId, @Nullable Template template, String[] validation, boolean provision) {
         this.workflowId = workflowId;
         this.template = template;
         this.validation = validation;
         this.provision = provision;
-        this.requestTimeout = requestTimeout;
-        this.maxWorkflows = maxWorkflows;
     }
 
     /**
@@ -115,8 +77,6 @@ public class WorkflowRequest extends ActionRequest {
         this.template = templateJson == null ? null : Template.parse(templateJson);
         this.validation = in.readStringArray();
         this.provision = in.readBoolean();
-        this.requestTimeout = in.readOptionalTimeValue();
-        this.maxWorkflows = in.readOptionalInt();
     }
 
     /**
@@ -153,22 +113,6 @@ public class WorkflowRequest extends ActionRequest {
         return this.provision;
     }
 
-    /**
-     * Gets the timeout of the request
-     * @return the requestTimeout
-     */
-    public TimeValue getRequestTimeout() {
-        return requestTimeout;
-    }
-
-    /**
-     * Gets the max workflows
-     * @return the maxWorkflows
-     */
-    public Integer getMaxWorkflows() {
-        return maxWorkflows;
-    }
-
     @Override
     public void writeTo(StreamOutput out) throws IOException {
         super.writeTo(out);
@@ -176,13 +120,10 @@ public class WorkflowRequest extends ActionRequest {
         out.writeOptionalString(template == null ? null : template.toJson());
         out.writeStringArray(validation);
         out.writeBoolean(provision);
-        out.writeOptionalTimeValue(requestTimeout);
-        out.writeOptionalInt(maxWorkflows);
     }
 
     @Override
     public ActionRequestValidationException validate() {
         return null;
     }
-
 }

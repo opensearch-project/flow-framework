@@ -16,12 +16,12 @@ import org.opensearch.action.support.ActionFilters;
 import org.opensearch.action.support.HandledTransportAction;
 import org.opensearch.client.Client;
 import org.opensearch.common.inject.Inject;
-import org.opensearch.common.settings.Settings;
 import org.opensearch.common.unit.TimeValue;
 import org.opensearch.commons.authuser.User;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.core.rest.RestStatus;
 import org.opensearch.flowframework.common.CommonValue;
+import org.opensearch.flowframework.common.FlowFrameworkSettings;
 import org.opensearch.flowframework.exception.FlowFrameworkException;
 import org.opensearch.flowframework.indices.FlowFrameworkIndicesHandler;
 import org.opensearch.flowframework.model.ProvisioningProgress;
@@ -55,7 +55,7 @@ public class CreateWorkflowTransportAction extends HandledTransportAction<Workfl
     private final WorkflowProcessSorter workflowProcessSorter;
     private final FlowFrameworkIndicesHandler flowFrameworkIndicesHandler;
     private final Client client;
-    private final Settings settings;
+    private final FlowFrameworkSettings flowFrameworkSettings;
     private final PluginsService pluginsService;
 
     /**
@@ -64,7 +64,7 @@ public class CreateWorkflowTransportAction extends HandledTransportAction<Workfl
      * @param actionFilters action filters
      * @param workflowProcessSorter the workflow process sorter
      * @param flowFrameworkIndicesHandler The handler for the global context index
-     * @param settings Environment settings
+     * @param flowFrameworkSettings Plugin settings
      * @param client The client used to make the request to OS
      * @param pluginsService The plugin service
      */
@@ -74,14 +74,14 @@ public class CreateWorkflowTransportAction extends HandledTransportAction<Workfl
         ActionFilters actionFilters,
         WorkflowProcessSorter workflowProcessSorter,
         FlowFrameworkIndicesHandler flowFrameworkIndicesHandler,
-        Settings settings,
+        FlowFrameworkSettings flowFrameworkSettings,
         Client client,
         PluginsService pluginsService
     ) {
         super(CreateWorkflowAction.NAME, transportService, actionFilters, WorkflowRequest::new);
         this.workflowProcessSorter = workflowProcessSorter;
         this.flowFrameworkIndicesHandler = flowFrameworkIndicesHandler;
-        this.settings = settings;
+        this.flowFrameworkSettings = flowFrameworkSettings;
         this.client = client;
         this.pluginsService = pluginsService;
     }
@@ -116,94 +116,104 @@ public class CreateWorkflowTransportAction extends HandledTransportAction<Workfl
 
         if (request.getWorkflowId() == null) {
             // Throttle incoming requests
-            checkMaxWorkflows(request.getRequestTimeout(), request.getMaxWorkflows(), ActionListener.wrap(max -> {
-                if (!max) {
-                    String errorMessage = "Maximum workflows limit reached " + request.getMaxWorkflows();
-                    logger.error(errorMessage);
-                    FlowFrameworkException ffe = new FlowFrameworkException(errorMessage, RestStatus.BAD_REQUEST);
-                    listener.onFailure(ffe);
-                    return;
-                } else {
-                    // Initialize config index and create new global context and state index entries
-                    flowFrameworkIndicesHandler.initializeConfigIndex(ActionListener.wrap(isInitialized -> {
-                        if (!isInitialized) {
-                            listener.onFailure(
-                                new FlowFrameworkException("Failed to initalize config index", RestStatus.INTERNAL_SERVER_ERROR)
-                            );
-                        } else {
-                            // Create new global context and state index entries
-                            flowFrameworkIndicesHandler.putTemplateToGlobalContext(
-                                templateWithUser,
-                                ActionListener.wrap(globalContextResponse -> {
-                                    flowFrameworkIndicesHandler.putInitialStateToWorkflowState(
-                                        globalContextResponse.getId(),
-                                        user,
-                                        ActionListener.wrap(stateResponse -> {
-                                            logger.info("create state workflow doc");
-                                            if (request.isProvision()) {
-                                                logger.info("provision parameter");
-                                                WorkflowRequest workflowRequest = new WorkflowRequest(globalContextResponse.getId(), null);
-                                                client.execute(
-                                                    ProvisionWorkflowAction.INSTANCE,
-                                                    workflowRequest,
-                                                    ActionListener.wrap(provisionResponse -> {
-                                                        listener.onResponse(new WorkflowResponse(provisionResponse.getWorkflowId()));
-                                                    }, exception -> {
-                                                        if (exception instanceof FlowFrameworkException) {
-                                                            listener.onFailure(exception);
-                                                        } else {
-                                                            listener.onFailure(
-                                                                new FlowFrameworkException(exception.getMessage(), RestStatus.BAD_REQUEST)
-                                                            );
-                                                        }
-                                                        logger.error("Failed to send back provision workflow exception", exception);
-                                                    })
-                                                );
-                                            } else {
-                                                listener.onResponse(new WorkflowResponse(globalContextResponse.getId()));
-                                            }
-                                        }, exception -> {
-                                            logger.error("Failed to save workflow state : {}", exception.getMessage());
-                                            if (exception instanceof FlowFrameworkException) {
-                                                listener.onFailure(exception);
-                                            } else {
-                                                listener.onFailure(
-                                                    new FlowFrameworkException(exception.getMessage(), RestStatus.BAD_REQUEST)
-                                                );
-                                            }
-                                        })
-                                    );
-                                }, exception -> {
-                                    logger.error("Failed to save use case template : {}", exception.getMessage());
-                                    if (exception instanceof FlowFrameworkException) {
-                                        listener.onFailure(exception);
-                                    } else {
-                                        listener.onFailure(
-                                            new FlowFrameworkException(exception.getMessage(), ExceptionsHelper.status(exception))
+            checkMaxWorkflows(
+                flowFrameworkSettings.getRequestTimeout(),
+                flowFrameworkSettings.getMaxWorkflows(),
+                ActionListener.wrap(max -> {
+                    if (!max) {
+                        String errorMessage = "Maximum workflows limit reached " + flowFrameworkSettings.getMaxWorkflows();
+                        logger.error(errorMessage);
+                        FlowFrameworkException ffe = new FlowFrameworkException(errorMessage, RestStatus.BAD_REQUEST);
+                        listener.onFailure(ffe);
+                        return;
+                    } else {
+                        // Initialize config index and create new global context and state index entries
+                        flowFrameworkIndicesHandler.initializeConfigIndex(ActionListener.wrap(isInitialized -> {
+                            if (!isInitialized) {
+                                listener.onFailure(
+                                    new FlowFrameworkException("Failed to initalize config index", RestStatus.INTERNAL_SERVER_ERROR)
+                                );
+                            } else {
+                                // Create new global context and state index entries
+                                flowFrameworkIndicesHandler.putTemplateToGlobalContext(
+                                    templateWithUser,
+                                    ActionListener.wrap(globalContextResponse -> {
+                                        flowFrameworkIndicesHandler.putInitialStateToWorkflowState(
+                                            globalContextResponse.getId(),
+                                            user,
+                                            ActionListener.wrap(stateResponse -> {
+                                                logger.info("create state workflow doc");
+                                                if (request.isProvision()) {
+                                                    logger.info("provision parameter");
+                                                    WorkflowRequest workflowRequest = new WorkflowRequest(
+                                                        globalContextResponse.getId(),
+                                                        null
+                                                    );
+                                                    client.execute(
+                                                        ProvisionWorkflowAction.INSTANCE,
+                                                        workflowRequest,
+                                                        ActionListener.wrap(provisionResponse -> {
+                                                            listener.onResponse(new WorkflowResponse(provisionResponse.getWorkflowId()));
+                                                        }, exception -> {
+                                                            if (exception instanceof FlowFrameworkException) {
+                                                                listener.onFailure(exception);
+                                                            } else {
+                                                                listener.onFailure(
+                                                                    new FlowFrameworkException(
+                                                                        exception.getMessage(),
+                                                                        RestStatus.BAD_REQUEST
+                                                                    )
+                                                                );
+                                                            }
+                                                            logger.error("Failed to send back provision workflow exception", exception);
+                                                        })
+                                                    );
+                                                } else {
+                                                    listener.onResponse(new WorkflowResponse(globalContextResponse.getId()));
+                                                }
+                                            }, exception -> {
+                                                logger.error("Failed to save workflow state : {}", exception.getMessage());
+                                                if (exception instanceof FlowFrameworkException) {
+                                                    listener.onFailure(exception);
+                                                } else {
+                                                    listener.onFailure(
+                                                        new FlowFrameworkException(exception.getMessage(), RestStatus.BAD_REQUEST)
+                                                    );
+                                                }
+                                            })
                                         );
-                                    }
+                                    }, exception -> {
+                                        logger.error("Failed to save use case template : {}", exception.getMessage());
+                                        if (exception instanceof FlowFrameworkException) {
+                                            listener.onFailure(exception);
+                                        } else {
+                                            listener.onFailure(
+                                                new FlowFrameworkException(exception.getMessage(), ExceptionsHelper.status(exception))
+                                            );
+                                        }
 
-                                })
-                            );
-                        }
-                    }, exception -> {
-                        logger.error("Failed to initialize config index : {}", exception.getMessage());
-                        if (exception instanceof FlowFrameworkException) {
-                            listener.onFailure(exception);
-                        } else {
-                            listener.onFailure(new FlowFrameworkException(exception.getMessage(), ExceptionsHelper.status(exception)));
-                        }
+                                    })
+                                );
+                            }
+                        }, exception -> {
+                            logger.error("Failed to initialize config index : {}", exception.getMessage());
+                            if (exception instanceof FlowFrameworkException) {
+                                listener.onFailure(exception);
+                            } else {
+                                listener.onFailure(new FlowFrameworkException(exception.getMessage(), ExceptionsHelper.status(exception)));
+                            }
 
-                    }));
-                }
-            }, e -> {
-                logger.error("Failed to updated use case template {} : {}", request.getWorkflowId(), e.getMessage());
-                if (e instanceof FlowFrameworkException) {
-                    listener.onFailure(e);
-                } else {
-                    listener.onFailure(new FlowFrameworkException(e.getMessage(), ExceptionsHelper.status(e)));
-                }
-            }));
+                        }));
+                    }
+                }, e -> {
+                    logger.error("Failed to updated use case template {} : {}", request.getWorkflowId(), e.getMessage());
+                    if (e instanceof FlowFrameworkException) {
+                        listener.onFailure(e);
+                    } else {
+                        listener.onFailure(new FlowFrameworkException(e.getMessage(), ExceptionsHelper.status(e)));
+                    }
+                })
+            );
         } else {
             // Update existing entry, full document replacement
             flowFrameworkIndicesHandler.updateTemplateInGlobalContext(
@@ -247,7 +257,7 @@ public class CreateWorkflowTransportAction extends HandledTransportAction<Workfl
      *  @param maxWorkflow max workflows
      *  @param internalListener listener for search request
      */
-    protected void checkMaxWorkflows(TimeValue requestTimeOut, Integer maxWorkflow, ActionListener<Boolean> internalListener) {
+    void checkMaxWorkflows(TimeValue requestTimeOut, Integer maxWorkflow, ActionListener<Boolean> internalListener) {
         if (!flowFrameworkIndicesHandler.doesIndexExist(CommonValue.GLOBAL_CONTEXT_INDEX)) {
             internalListener.onResponse(true);
         } else {
