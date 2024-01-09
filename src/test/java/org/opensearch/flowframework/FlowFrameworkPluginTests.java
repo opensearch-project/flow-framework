@@ -27,9 +27,9 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import static org.opensearch.flowframework.common.FlowFrameworkSettings.FLOW_FRAMEWORK_ENABLED;
-import static org.opensearch.flowframework.common.FlowFrameworkSettings.MAX_GET_TASK_REQUEST_RETRY;
 import static org.opensearch.flowframework.common.FlowFrameworkSettings.MAX_WORKFLOWS;
 import static org.opensearch.flowframework.common.FlowFrameworkSettings.MAX_WORKFLOW_STEPS;
+import static org.opensearch.flowframework.common.FlowFrameworkSettings.TASK_REQUEST_RETRY_DURATION;
 import static org.opensearch.flowframework.common.FlowFrameworkSettings.WORKFLOW_REQUEST_TIMEOUT;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -63,7 +63,7 @@ public class FlowFrameworkPluginTests extends OpenSearchTestCase {
 
         final Set<Setting<?>> settingsSet = Stream.concat(
             ClusterSettings.BUILT_IN_CLUSTER_SETTINGS.stream(),
-            Stream.of(FLOW_FRAMEWORK_ENABLED, MAX_WORKFLOWS, MAX_WORKFLOW_STEPS, WORKFLOW_REQUEST_TIMEOUT, MAX_GET_TASK_REQUEST_RETRY)
+            Stream.of(FLOW_FRAMEWORK_ENABLED, MAX_WORKFLOWS, MAX_WORKFLOW_STEPS, WORKFLOW_REQUEST_TIMEOUT, TASK_REQUEST_RETRY_DURATION)
         ).collect(Collectors.toSet());
         clusterSettings = new ClusterSettings(settings, settingsSet);
         clusterService = mock(ClusterService.class);
@@ -79,7 +79,7 @@ public class FlowFrameworkPluginTests extends OpenSearchTestCase {
     public void testPlugin() throws IOException {
         try (FlowFrameworkPlugin ffp = new FlowFrameworkPlugin()) {
             assertEquals(
-                4,
+                5,
                 ffp.createComponents(client, clusterService, threadPool, null, null, null, environment, null, null, null, null).size()
             );
             assertEquals(8, ffp.getRestHandlers(settings, null, null, null, null, null, null).size());

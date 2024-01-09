@@ -46,9 +46,9 @@ import java.util.stream.Stream;
 import static org.opensearch.flowframework.common.CommonValue.FLOW_FRAMEWORK_THREAD_POOL_PREFIX;
 import static org.opensearch.flowframework.common.CommonValue.WORKFLOW_THREAD_POOL;
 import static org.opensearch.flowframework.common.FlowFrameworkSettings.FLOW_FRAMEWORK_ENABLED;
-import static org.opensearch.flowframework.common.FlowFrameworkSettings.MAX_GET_TASK_REQUEST_RETRY;
 import static org.opensearch.flowframework.common.FlowFrameworkSettings.MAX_WORKFLOWS;
 import static org.opensearch.flowframework.common.FlowFrameworkSettings.MAX_WORKFLOW_STEPS;
+import static org.opensearch.flowframework.common.FlowFrameworkSettings.TASK_REQUEST_RETRY_DURATION;
 import static org.opensearch.flowframework.common.FlowFrameworkSettings.WORKFLOW_REQUEST_TIMEOUT;
 import static org.opensearch.flowframework.common.WorkflowResources.CONNECTOR_ID;
 import static org.opensearch.flowframework.common.WorkflowResources.MODEL_ID;
@@ -98,7 +98,7 @@ public class WorkflowProcessSorterTests extends OpenSearchTestCase {
         Settings settings = Settings.builder().put("plugins.flow_framework.max_workflow_steps", 5).build();
         final Set<Setting<?>> settingsSet = Stream.concat(
             ClusterSettings.BUILT_IN_CLUSTER_SETTINGS.stream(),
-            Stream.of(FLOW_FRAMEWORK_ENABLED, MAX_WORKFLOWS, MAX_WORKFLOW_STEPS, WORKFLOW_REQUEST_TIMEOUT, MAX_GET_TASK_REQUEST_RETRY)
+            Stream.of(FLOW_FRAMEWORK_ENABLED, MAX_WORKFLOWS, MAX_WORKFLOW_STEPS, WORKFLOW_REQUEST_TIMEOUT, TASK_REQUEST_RETRY_DURATION)
         ).collect(Collectors.toSet());
         ClusterSettings clusterSettings = new ClusterSettings(settings, settingsSet);
         when(clusterService.getClusterSettings()).thenReturn(clusterSettings);
