@@ -72,9 +72,9 @@ import java.util.function.Supplier;
 import static org.opensearch.flowframework.common.CommonValue.FLOW_FRAMEWORK_THREAD_POOL_PREFIX;
 import static org.opensearch.flowframework.common.CommonValue.WORKFLOW_THREAD_POOL;
 import static org.opensearch.flowframework.common.FlowFrameworkSettings.FLOW_FRAMEWORK_ENABLED;
-import static org.opensearch.flowframework.common.FlowFrameworkSettings.MAX_GET_TASK_REQUEST_RETRY;
 import static org.opensearch.flowframework.common.FlowFrameworkSettings.MAX_WORKFLOWS;
 import static org.opensearch.flowframework.common.FlowFrameworkSettings.MAX_WORKFLOW_STEPS;
+import static org.opensearch.flowframework.common.FlowFrameworkSettings.TASK_REQUEST_RETRY_DURATION;
 import static org.opensearch.flowframework.common.FlowFrameworkSettings.WORKFLOW_REQUEST_TIMEOUT;
 
 /**
@@ -83,8 +83,6 @@ import static org.opensearch.flowframework.common.FlowFrameworkSettings.WORKFLOW
 public class FlowFrameworkPlugin extends Plugin implements ActionPlugin {
 
     private FlowFrameworkSettings flowFrameworkSettings;
-
-    private ClusterService clusterService;
 
     /**
      * Instantiate this plugin.
@@ -106,7 +104,6 @@ public class FlowFrameworkPlugin extends Plugin implements ActionPlugin {
         Supplier<RepositoriesService> repositoriesServiceSupplier
     ) {
         Settings settings = environment.settings();
-        this.clusterService = clusterService;
         flowFrameworkSettings = new FlowFrameworkSettings(clusterService, settings);
         MachineLearningNodeClient mlClient = new MachineLearningNodeClient(client);
         EncryptorUtils encryptorUtils = new EncryptorUtils(clusterService, client);
@@ -127,7 +124,7 @@ public class FlowFrameworkPlugin extends Plugin implements ActionPlugin {
             flowFrameworkSettings
         );
 
-        return List.of(workflowStepFactory, workflowProcessSorter, encryptorUtils, flowFrameworkIndicesHandler);
+        return List.of(workflowStepFactory, workflowProcessSorter, encryptorUtils, flowFrameworkIndicesHandler, flowFrameworkSettings);
     }
 
     @Override
@@ -141,7 +138,7 @@ public class FlowFrameworkPlugin extends Plugin implements ActionPlugin {
         Supplier<DiscoveryNodes> nodesInCluster
     ) {
         return List.of(
-            new RestCreateWorkflowAction(flowFrameworkSettings, settings, clusterService),
+            new RestCreateWorkflowAction(flowFrameworkSettings),
             new RestDeleteWorkflowAction(flowFrameworkSettings),
             new RestProvisionWorkflowAction(flowFrameworkSettings),
             new RestDeprovisionWorkflowAction(flowFrameworkSettings),
@@ -168,7 +165,7 @@ public class FlowFrameworkPlugin extends Plugin implements ActionPlugin {
 
     @Override
     public List<Setting<?>> getSettings() {
-        return List.of(FLOW_FRAMEWORK_ENABLED, MAX_WORKFLOWS, MAX_WORKFLOW_STEPS, WORKFLOW_REQUEST_TIMEOUT, MAX_GET_TASK_REQUEST_RETRY);
+        return List.of(FLOW_FRAMEWORK_ENABLED, MAX_WORKFLOWS, MAX_WORKFLOW_STEPS, WORKFLOW_REQUEST_TIMEOUT, TASK_REQUEST_RETRY_DURATION);
     }
 
     @Override
