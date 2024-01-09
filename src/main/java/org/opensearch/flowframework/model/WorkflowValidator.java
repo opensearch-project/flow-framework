@@ -8,13 +8,10 @@
  */
 package org.opensearch.flowframework.model;
 
-import com.google.common.io.Resources;
 import org.opensearch.core.xcontent.XContentParser;
 import org.opensearch.flowframework.util.ParseUtils;
 
 import java.io.IOException;
-import java.net.URL;
-import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -62,8 +59,7 @@ public class WorkflowValidator {
      * @throws IOException on failure to read and parse the json file
      */
     public static WorkflowValidator parse(String file) throws IOException {
-        URL url = WorkflowValidator.class.getClassLoader().getResource(file);
-        String json = Resources.toString(url, StandardCharsets.UTF_8);
+        String json = ParseUtils.resourceToString("/" + file);
         return parse(ParseUtils.jsonToParser(json));
     }
 
