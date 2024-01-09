@@ -13,8 +13,6 @@ import org.opensearch.common.xcontent.LoggingDeprecationHandler;
 import org.opensearch.common.xcontent.json.JsonXContent;
 import org.opensearch.common.xcontent.yaml.YamlXContent;
 import org.opensearch.commons.authuser.User;
-import org.opensearch.core.common.io.stream.StreamOutput;
-import org.opensearch.core.common.io.stream.Writeable;
 import org.opensearch.core.xcontent.NamedXContentRegistry;
 import org.opensearch.core.xcontent.ToXContentObject;
 import org.opensearch.core.xcontent.XContentBuilder;
@@ -37,7 +35,7 @@ import static org.opensearch.flowframework.common.CommonValue.VERSION_FIELD;
 /**
  * The Template is the central data structure which configures workflows. This object is used to parse JSON communicated via REST API.
  */
-public class Template implements ToXContentObject, Writeable {
+public class Template implements ToXContentObject {
 
     /** The template field name for template workflows */
     public static final String WORKFLOWS_FIELD = "workflows";
@@ -245,23 +243,6 @@ public class Template implements ToXContentObject, Writeable {
         }
 
         return xContentBuilder.endObject();
-    }
-
-    // TODO: fix writeable when implementing get workflow API
-    @Override
-    public void writeTo(StreamOutput output) throws IOException {
-        output.writeString(name);
-        output.writeOptionalString(description);
-        output.writeString(useCase);
-        output.writeVersion(templateVersion);
-        // output.writeList((List<? extends Writeable>) compatibilityVersion);
-        output.writeMapWithConsistentOrder(workflows);
-        if (user != null) {
-            output.writeBoolean(true); // user exists
-            user.writeTo(output);
-        } else {
-            output.writeBoolean(false); // user does not exist
-        }
     }
 
     /**
