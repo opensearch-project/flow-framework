@@ -11,6 +11,7 @@ package org.opensearch.flowframework.transport;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.opensearch.ExceptionsHelper;
+import org.opensearch.action.ActionRequest;
 import org.opensearch.action.support.ActionFilters;
 import org.opensearch.action.support.HandledTransportAction;
 import org.opensearch.common.inject.Inject;
@@ -21,9 +22,9 @@ import org.opensearch.tasks.Task;
 import org.opensearch.transport.TransportService;
 
 /**
- * Transport action to retrieve a the workflow step json
+ * Transport action to retrieve a workflow step json
  */
-public class GetWorkflowStepTransportAction extends HandledTransportAction<WorkflowRequest, GetWorkflowStepResponse> {
+public class GetWorkflowStepTransportAction extends HandledTransportAction<ActionRequest, GetWorkflowStepResponse> {
 
     private final Logger logger = LogManager.getLogger(GetWorkflowStepTransportAction.class);
 
@@ -38,7 +39,7 @@ public class GetWorkflowStepTransportAction extends HandledTransportAction<Workf
     }
 
     @Override
-    protected void doExecute(Task task, WorkflowRequest request, ActionListener<GetWorkflowStepResponse> listener) {
+    protected void doExecute(Task task, ActionRequest request, ActionListener<GetWorkflowStepResponse> listener) {
         try {
             listener.onResponse(new GetWorkflowStepResponse(WorkflowValidator.parse("mappings/workflow-steps.json")));
         } catch (Exception e) {

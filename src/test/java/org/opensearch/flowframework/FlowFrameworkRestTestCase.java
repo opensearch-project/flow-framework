@@ -440,7 +440,7 @@ public abstract class FlowFrameworkRestTestCase extends OpenSearchRestTestCase {
         return TestHelpers.makeRequest(
             client(),
             "GET",
-            String.format(Locale.ROOT, "%s/%s", WORKFLOW_URI, "_step"),
+            String.format(Locale.ROOT, "%s/%s", WORKFLOW_URI, "_steps"),
             Collections.emptyMap(),
             "",
             null

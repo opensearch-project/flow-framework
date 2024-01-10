@@ -36,7 +36,7 @@ public class RestGetWorkflowStepActionTests extends OpenSearchTestCase {
     public void setUp() throws Exception {
         super.setUp();
 
-        this.getPath = String.format(Locale.ROOT, "%s/%s", WORKFLOW_URI, "_step");
+        this.getPath = String.format(Locale.ROOT, "%s/%s", WORKFLOW_URI, "_steps");
         flowFrameworkFeatureEnabledSetting = mock(FlowFrameworkSettings.class);
         when(flowFrameworkFeatureEnabledSetting.isFlowFrameworkEnabled()).thenReturn(true);
         this.restGetWorkflowStepAction = new RestGetWorkflowStepAction(flowFrameworkFeatureEnabledSetting);
@@ -65,7 +65,7 @@ public class RestGetWorkflowStepActionTests extends OpenSearchTestCase {
         IllegalArgumentException ex = expectThrows(IllegalArgumentException.class, () -> {
             restGetWorkflowStepAction.handleRequest(request, channel, nodeClient);
         });
-        assertEquals("request [GET /_plugins/_flow_framework/workflow/_step] does not support having a body", ex.getMessage());
+        assertEquals("request [GET /_plugins/_flow_framework/workflow/_steps] does not support having a body", ex.getMessage());
     }
 
     public void testFeatureFlagNotEnabled() throws Exception {

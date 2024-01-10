@@ -11,6 +11,8 @@ package org.opensearch.flowframework.rest;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.opensearch.ExceptionsHelper;
+import org.opensearch.action.ActionRequest;
+import org.opensearch.action.ActionRequestValidationException;
 import org.opensearch.client.node.NodeClient;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.core.rest.RestStatus;
@@ -19,7 +21,6 @@ import org.opensearch.core.xcontent.XContentBuilder;
 import org.opensearch.flowframework.common.FlowFrameworkSettings;
 import org.opensearch.flowframework.exception.FlowFrameworkException;
 import org.opensearch.flowframework.transport.GetWorkflowStepAction;
-import org.opensearch.flowframework.transport.WorkflowRequest;
 import org.opensearch.rest.BaseRestHandler;
 import org.opensearch.rest.BytesRestResponse;
 import org.opensearch.rest.RestRequest;
@@ -38,14 +39,14 @@ public class RestGetWorkflowStepAction extends BaseRestHandler {
 
     private static final String GET_WORKFLOW_STEP_ACTION = "get_workflow_step";
     private static final Logger logger = LogManager.getLogger(RestGetWorkflowStepAction.class);
-    private FlowFrameworkSettings flowFrameworkFeatureEnabledSetting;
+    private FlowFrameworkSettings flowFrameworkSettings;
 
     /**
      * Instantiates a new RestGetWorkflowStepAction
-     * @param flowFrameworkFeatureEnabledSetting Whether this API is enabled
+     * @param flowFrameworkSettings Whether this API is enabled
      */
-    public RestGetWorkflowStepAction(FlowFrameworkSettings flowFrameworkFeatureEnabledSetting) {
-        this.flowFrameworkFeatureEnabledSetting = flowFrameworkFeatureEnabledSetting;
+    public RestGetWorkflowStepAction(FlowFrameworkSettings flowFrameworkSettings) {
+        this.flowFrameworkSettings = flowFrameworkSettings;
     }
 
     @Override
@@ -55,21 +56,26 @@ public class RestGetWorkflowStepAction extends BaseRestHandler {
 
     @Override
     public List<Route> routes() {
-        return List.of(new Route(RestRequest.Method.GET, String.format(Locale.ROOT, "%s/%s", WORKFLOW_URI, "_step")));
+        return List.of(new Route(RestRequest.Method.GET, String.format(Locale.ROOT, "%s/%s", WORKFLOW_URI, "_steps")));
     }
 
     @Override
     protected RestChannelConsumer prepareRequest(RestRequest restRequest, NodeClient client) throws IOException {
         try {
-            if (!flowFrameworkFeatureEnabledSetting.isFlowFrameworkEnabled()) {
+            if (!flowFrameworkSettings.isFlowFrameworkEnabled()) {
                 throw new FlowFrameworkException(
                     "This API is disabled. To enable it, update the setting [" + FLOW_FRAMEWORK_ENABLED.getKey() + "] to true.",
                     RestStatus.FORBIDDEN
                 );
             }
 
-            WorkflowRequest workflowRequest = new WorkflowRequest(null, null);
-            return channel -> client.execute(GetWorkflowStepAction.INSTANCE, workflowRequest, ActionListener.wrap(response -> {
+            ActionRequest request = new ActionRequest() {
+                @Override
+                public ActionRequestValidationException validate() {
+                    return null;
+                }
+            };
+            return channel -> client.execute(GetWorkflowStepAction.INSTANCE, request, ActionListener.wrap(response -> {
                 XContentBuilder builder = response.toXContent(channel.newBuilder(), ToXContent.EMPTY_PARAMS);
                 channel.sendResponse(new BytesRestResponse(RestStatus.OK, builder));
             }, exception -> {
