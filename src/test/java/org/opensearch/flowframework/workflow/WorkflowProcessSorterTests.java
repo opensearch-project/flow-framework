@@ -141,19 +141,19 @@ public class WorkflowProcessSorterTests extends OpenSearchTestCase {
         workflow = parseToNodes(
             workflow(
                 List.of(
-                    nodeWithType("default_timeout", "create_ingest_pipeline"),
-                    nodeWithTypeAndTimeout("custom_timeout", "create_index", "100ms")
+                    nodeWithType("default_timeout", "create_connector"),
+                    nodeWithTypeAndTimeout("custom_timeout", "register_local_custom_model", "100ms")
                 ),
                 Collections.emptyList()
             )
         );
         ProcessNode node = workflow.get(0);
         assertEquals("default_timeout", node.id());
-        assertEquals(CreateIngestPipelineStep.class, node.workflowStep().getClass());
+        assertEquals(CreateConnectorStep.class, node.workflowStep().getClass());
         assertEquals(10, node.nodeTimeout().seconds());
         node = workflow.get(1);
         assertEquals("custom_timeout", node.id());
-        assertEquals(CreateIndexStep.class, node.workflowStep().getClass());
+        assertEquals(RegisterLocalCustomModelStep.class, node.workflowStep().getClass());
         assertEquals(100, node.nodeTimeout().millis());
     }
 
