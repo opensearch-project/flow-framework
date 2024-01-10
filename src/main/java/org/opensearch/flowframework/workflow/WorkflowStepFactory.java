@@ -47,8 +47,6 @@ public class WorkflowStepFactory {
         FlowFrameworkSettings flowFrameworkSettings
     ) {
         stepMap.put(NoOpStep.NAME, NoOpStep::new);
-        stepMap.put(CreateIndexStep.NAME, () -> new CreateIndexStep(clusterService, client, flowFrameworkIndicesHandler));
-        stepMap.put(CreateIngestPipelineStep.NAME, () -> new CreateIngestPipelineStep(client, flowFrameworkIndicesHandler));
         stepMap.put(
             RegisterLocalCustomModelStep.NAME,
             () -> new RegisterLocalCustomModelStep(threadPool, mlClient, flowFrameworkIndicesHandler, flowFrameworkSettings)
