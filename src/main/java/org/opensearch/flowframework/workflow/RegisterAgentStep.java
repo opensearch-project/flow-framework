@@ -13,7 +13,6 @@ import org.apache.logging.log4j.Logger;
 import org.opensearch.ExceptionsHelper;
 import org.opensearch.common.Nullable;
 import org.opensearch.core.action.ActionListener;
-import org.opensearch.core.rest.RestStatus;
 import org.opensearch.flowframework.exception.FlowFrameworkException;
 import org.opensearch.flowframework.indices.FlowFrameworkIndicesHandler;
 import org.opensearch.flowframework.util.ParseUtils;
@@ -174,17 +173,6 @@ public class RegisterAgentStep implements WorkflowStep {
             // Case when modelId is present in previous node inputs
             if (llmModelId == null) {
                 llmModelId = getLlmModelId(previousNodeInputs, outputs);
-            }
-
-            // Case when modelId is not present at all
-            if (llmModelId == null) {
-                registerAgentModelFuture.completeExceptionally(
-                    new FlowFrameworkException(
-                        "llm model id is not provided for workflow: " + workflowId + " on node: " + currentNodeId,
-                        RestStatus.BAD_REQUEST
-                    )
-                );
-                return registerAgentModelFuture;
             }
 
             LLMSpec llmSpec = getLLMSpec(llmModelId, llmParameters, workflowId, currentNodeId);
