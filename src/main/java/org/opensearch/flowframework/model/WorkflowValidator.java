@@ -8,6 +8,9 @@
  */
 package org.opensearch.flowframework.model;
 
+import org.opensearch.common.xcontent.json.JsonXContent;
+import org.opensearch.core.xcontent.ToXContentObject;
+import org.opensearch.core.xcontent.XContentBuilder;
 import org.opensearch.core.xcontent.XContentParser;
 import org.opensearch.flowframework.util.ParseUtils;
 
@@ -20,7 +23,7 @@ import static org.opensearch.core.xcontent.XContentParserUtils.ensureExpectedTok
 /**
  * This represents the workflow steps json which maps each step to expected inputs and outputs
  */
-public class WorkflowValidator {
+public class WorkflowValidator implements ToXContentObject {
 
     private Map<String, WorkflowStepValidator> workflowStepValidators;
 
@@ -64,6 +67,20 @@ public class WorkflowValidator {
     }
 
     /**
+     * Output this object in a compact JSON string.
+     *
+     * @return a JSON representation of the template.
+     */
+    public String toJson() {
+        try {
+            XContentBuilder builder = JsonXContent.contentBuilder();
+            return this.toXContent(builder, EMPTY_PARAMS).toString();
+        } catch (IOException e) {
+            return "{\"error\": \"couldn't create JSON: " + e.getMessage() + "\"}";
+        }
+    }
+
+    /**
      * Get the map of WorkflowStepValidators
      * @return the map of WorkflowStepValidators
      */
@@ -71,4 +88,8 @@ public class WorkflowValidator {
         return Map.copyOf(this.workflowStepValidators);
     }
 
+    @Override
+    public XContentBuilder toXContent(XContentBuilder xContentBuilder, Params params) throws IOException {
+        return xContentBuilder.map(workflowStepValidators);
+    }
 }
