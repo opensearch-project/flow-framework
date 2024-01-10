@@ -177,12 +177,20 @@ public class FlowFrameworkRestApiIT extends FlowFrameworkRestTestCase {
 
         Map<String, Object> responseMap = entityAsMap(response);
         String workflowId = (String) responseMap.get(WORKFLOW_ID);
-        assertBusy(() -> { getAndAssertWorkflowStatus(workflowId, State.NOT_STARTED, ProvisioningProgress.NOT_STARTED); }, 30, TimeUnit.SECONDS);
+        assertBusy(
+            () -> { getAndAssertWorkflowStatus(workflowId, State.NOT_STARTED, ProvisioningProgress.NOT_STARTED); },
+            30,
+            TimeUnit.SECONDS
+        );
 
         // Hit Provision API and assert status
         response = provisionWorkflow(workflowId);
         assertEquals(RestStatus.OK, TestHelpers.restStatus(response));
-        assertBusy(() -> { getAndAssertWorkflowStatus(workflowId, State.PROVISIONING, ProvisioningProgress.IN_PROGRESS); }, 30, TimeUnit.SECONDS);
+        assertBusy(
+            () -> { getAndAssertWorkflowStatus(workflowId, State.PROVISIONING, ProvisioningProgress.IN_PROGRESS); },
+            30,
+            TimeUnit.SECONDS
+        );
 
         // Wait until provisioning has completed successfully before attempting to retrieve created resources
         List<ResourceCreated> resourcesCreated = getResourcesCreated(workflowId, 90);
