@@ -4,30 +4,6 @@
         "outputs":[],
         "required_plugins":[]
     },
-    "create_index": {
-        "inputs":[
-            "index_name",
-            "default_mapping_option"
-        ],
-        "outputs":[
-            "index_name"
-        ],
-        "required_plugins":[]
-    },
-    "create_ingest_pipeline": {
-        "inputs":[
-            "id",
-            "description",
-            "type",
-            "model_id",
-            "input_field_name",
-            "output_field_name"
-        ],
-        "outputs":[
-            "pipeline_id"
-        ],
-        "required_plugins":[]
-    },
     "create_connector": {
         "inputs":[
             "name",

@@ -415,6 +415,17 @@ public abstract class FlowFrameworkRestTestCase extends OpenSearchRestTestCase {
 
     }
 
+    protected Response getWorkflowStep() throws Exception {
+        return TestHelpers.makeRequest(
+            client(),
+            "GET",
+            String.format(Locale.ROOT, "%s/%s", WORKFLOW_URI, "_steps"),
+            Collections.emptyMap(),
+            "",
+            null
+        );
+    }
+
     /**
      * Helper method to invoke the Search Workflow Rest Action with the given query
      * @param query the search query
@@ -489,6 +500,11 @@ public abstract class FlowFrameworkRestTestCase extends OpenSearchRestTestCase {
         assertEquals(stateStatus.name(), responseMap.get(CommonValue.STATE_FIELD));
         assertEquals(provisioningStatus.name(), responseMap.get(CommonValue.PROVISIONING_PROGRESS_FIELD));
 
+    }
+
+    protected void getAndAssertWorkflowStep() throws Exception {
+        Response response = getWorkflowStep();
+        assertEquals(RestStatus.OK, TestHelpers.restStatus(response));
     }
 
     /**

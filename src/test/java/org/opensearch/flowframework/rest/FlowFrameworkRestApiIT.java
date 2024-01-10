@@ -102,6 +102,8 @@ public class FlowFrameworkRestApiIT extends FlowFrameworkRestTestCase {
         Response response = createWorkflow(templateWithMissingInputs);
         assertEquals(RestStatus.CREATED, TestHelpers.restStatus(response));
 
+        getAndAssertWorkflowStep();
+
         // Retrieve workflow ID
         Map<String, Object> responseMap = entityAsMap(response);
         String workflowId = (String) responseMap.get(WORKFLOW_ID);
