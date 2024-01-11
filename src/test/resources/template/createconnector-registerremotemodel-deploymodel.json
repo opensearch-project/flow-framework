@@ -16,6 +16,7 @@
             "id": "workflow_step_1",
             "type": "create_connector",
             "user_inputs": {
+              "node_timeout": "75s",
               "name": "OpenAI Chat Connector",
               "description": "The connector to public OpenAI model service for GPT 3.5",
               "version": "1",
@@ -43,6 +44,7 @@
               "workflow_step_1": "connector_id"
             },
             "user_inputs": {
+              "node_timeout": "75s",
               "name": "openAI-gpt-3.5-turbo",
               "function_name": "remote",
               "description": "test model"
@@ -53,6 +55,9 @@
             "type": "deploy_model",
             "previous_node_inputs": {
               "workflow_step_2": "model_id"
+            },
+            "user_inputs": {
+              "node_timeout": "100s"
             }
           }
         ],
