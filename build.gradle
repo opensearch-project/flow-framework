@@ -209,6 +209,20 @@ integTest {
         }
     }
 
+    // Exclude integration tests that require security plugin
+    if (System.getProperty("https") == null || System.getProperty("https") == "false") {
+        filter {
+            excludeTestsMatching "org.opensearch.flowframework.rest.FlowFrameworkSecureRestApiIT"
+        }
+    }
+
+    // Include only secure integration tests in security enabled clusters
+    if (System.getProperty("https") != null && System.getProperty("https") == "true") {
+        filter {
+            includeTestsMatching "org.opensearch.flowframework.rest.FlowFrameworkSecureRestApiIT"
+            excludeTestsMatching "org.opensearch.flowframework.rest.FlowFrameworkRestApiIT"
+        }
+    }
 
     // doFirst delays this block until execution time
     doFirst {
@@ -283,6 +297,21 @@ task integTestRemote(type: RestIntegTestTask) {
     if (System.getProperty("tests.rest.cluster") != null) {
         filter {
             includeTestsMatching "org.opensearch.flowframework.rest.*IT"
+        }
+    }
+
+    // Exclude integration tests that require security plugin
+    if (System.getProperty("https") == null || System.getProperty("https") == "false") {
+        filter {
+            excludeTestsMatching "org.opensearch.flowframework.rest.FlowFrameworkSecureRestApiIT"
+        }
+    }
+
+    // Include only secure integration tests in security enabled clusters
+    if (System.getProperty("https") != null && System.getProperty("https") == "true") {
+        filter {
+            includeTestsMatching "org.opensearch.flowframework.rest.FlowFrameworkSecureRestApiIT"
+            excludeTestsMatching "org.opensearch.flowframework.rest.FlowFrameworkRestApiIT"
         }
     }
 }

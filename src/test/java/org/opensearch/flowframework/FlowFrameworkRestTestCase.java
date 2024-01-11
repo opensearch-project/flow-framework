@@ -8,6 +8,7 @@
  */
 package org.opensearch.flowframework;
 
+import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.hc.client5.http.auth.AuthScope;
 import org.apache.hc.client5.http.auth.UsernamePasswordCredentials;
 import org.apache.hc.client5.http.impl.auth.BasicCredentialsProvider;
@@ -46,7 +47,6 @@ import org.opensearch.flowframework.model.State;
 import org.opensearch.flowframework.model.Template;
 import org.opensearch.flowframework.model.WorkflowState;
 import org.opensearch.test.rest.OpenSearchRestTestCase;
-import org.junit.AfterClass;
 import org.junit.Before;
 
 import javax.net.ssl.SSLEngine;
@@ -62,7 +62,6 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
-import java.util.stream.Collectors;
 
 import static org.opensearch.client.RestClientBuilder.DEFAULT_MAX_CONN_PER_ROUTE;
 import static org.opensearch.client.RestClientBuilder.DEFAULT_MAX_CONN_TOTAL;
@@ -79,11 +78,17 @@ import static org.opensearch.flowframework.common.CommonValue.WORKFLOW_URI;
  */
 public abstract class FlowFrameworkRestTestCase extends OpenSearchRestTestCase {
 
+    private static String FULL_ACCESS_ROLE = "flow_framework_full_access";
+    private static String READ_ACCESS_ROLE = "flow_framework_read_access";
+    public static String FULL_ACCESS_USER = "fullAccessUser";
+    public static String READ_ACCESS_USER = "readAccessUser";
+    private static RestClient readAccessClient;
+    private static RestClient fullAccessClient;
+
     @Before
-    public void setUpSettings() throws Exception {
+    protected void setUpSettings() throws Exception {
 
         if (!indexExistsWithAdminClient(".plugins-ml-config")) {
-
             // Initial cluster set up
 
             // Enable Flow Framework Plugin Rest APIs
@@ -134,6 +139,38 @@ public abstract class FlowFrameworkRestTestCase extends OpenSearchRestTestCase {
             assertBusy(() -> { assertTrue(indexExistsWithAdminClient(".plugins-ml-config")); }, 60, TimeUnit.SECONDS);
         }
 
+        // Set up clients if running in security enabled cluster
+        if (isHttps()) {
+            String fullAccessUserPassword = generatePassword(FULL_ACCESS_USER);
+            String readAccessUserPassword = generatePassword(READ_ACCESS_USER);
+
+            // Configure full access user and client
+            Response response = createUser(FULL_ACCESS_USER, fullAccessUserPassword, FULL_ACCESS_ROLE);
+            fullAccessClient = new SecureRestClientBuilder(
+                getClusterHosts().toArray(new HttpHost[0]),
+                isHttps(),
+                FULL_ACCESS_USER,
+                fullAccessUserPassword
+            ).setSocketTimeout(60000).build();
+
+            // Configure read access user and client
+            response = createUser(READ_ACCESS_USER, readAccessUserPassword, READ_ACCESS_ROLE);
+            readAccessClient = new SecureRestClientBuilder(
+                getClusterHosts().toArray(new HttpHost[0]),
+                isHttps(),
+                READ_ACCESS_USER,
+                readAccessUserPassword
+            ).setSocketTimeout(60000).build();
+        }
+
+    }
+
+    protected static RestClient fullAccessClient() {
+        return fullAccessClient;
+    }
+
+    protected static RestClient readAccessClient() {
+        return readAccessClient;
     }
 
     protected boolean isHttps() {
@@ -216,37 +253,6 @@ public abstract class FlowFrameworkRestTestCase extends OpenSearchRestTestCase {
 
     }
 
-    // Cleans up resources after all test execution has been completed
-    @SuppressWarnings("unchecked")
-    @AfterClass
-    protected static void wipeAllSystemIndices() throws IOException {
-        Response response = adminClient().performRequest(new Request("GET", "/_cat/indices?format=json&expand_wildcards=all"));
-        MediaType xContentType = MediaType.fromMediaType(response.getEntity().getContentType());
-        try (
-            XContentParser parser = xContentType.xContent()
-                .createParser(
-                    NamedXContentRegistry.EMPTY,
-                    DeprecationHandler.THROW_UNSUPPORTED_OPERATION,
-                    response.getEntity().getContent()
-                )
-        ) {
-            XContentParser.Token token = parser.nextToken();
-            List<Map<String, Object>> parserList = null;
-            if (token == XContentParser.Token.START_ARRAY) {
-                parserList = parser.listOrderedMap().stream().map(obj -> (Map<String, Object>) obj).collect(Collectors.toList());
-            } else {
-                parserList = Collections.singletonList(parser.mapOrdered());
-            }
-
-            for (Map<String, Object> index : parserList) {
-                String indexName = (String) index.get("index");
-                if (indexName != null && !".opendistro_security".equals(indexName)) {
-                    adminClient().performRequest(new Request("DELETE", "/" + indexName));
-                }
-            }
-        }
-    }
-
     protected static void configureHttpsClient(RestClientBuilder builder, Settings settings) throws IOException {
         Map<String, String> headers = ThreadContext.buildDefaultHeaders(settings);
         Header[] defaultHeaders = new Header[headers.size()];
@@ -319,13 +325,22 @@ public abstract class FlowFrameworkRestTestCase extends OpenSearchRestTestCase {
     }
 
     /**
+     * Create an unguessable password. Simple password are weak due to https://tinyurl.com/383em9zk
+     * @return a random password.
+     */
+    public static String generatePassword(String username) {
+        return RandomStringUtils.random(15, true, true);
+    }
+
+    /**
      * Helper method to invoke the Create Workflow Rest Action without validation
+     * @param client the rest client
      * @param template the template to create
      * @throws Exception if the request fails
      * @return a rest response
      */
-    protected Response createWorkflow(Template template) throws Exception {
-        return TestHelpers.makeRequest(client(), "POST", WORKFLOW_URI + "?validation=off", Collections.emptyMap(), template.toJson(), null);
+    protected Response createWorkflow(RestClient client, Template template) throws Exception {
+        return TestHelpers.makeRequest(client, "POST", WORKFLOW_URI + "?validation=off", Collections.emptyMap(), template.toJson(), null);
     }
 
     /**
@@ -340,24 +355,26 @@ public abstract class FlowFrameworkRestTestCase extends OpenSearchRestTestCase {
 
     /**
      * Helper method to invoke the Create Workflow Rest Action with validation
+     * @param client the rest client
      * @param template the template to create
      * @throws Exception if the request fails
      * @return a rest response
      */
-    protected Response createWorkflowValidation(Template template) throws Exception {
-        return TestHelpers.makeRequest(client(), "POST", WORKFLOW_URI, Collections.emptyMap(), template.toJson(), null);
+    protected Response createWorkflowValidation(RestClient client, Template template) throws Exception {
+        return TestHelpers.makeRequest(client, "POST", WORKFLOW_URI, Collections.emptyMap(), template.toJson(), null);
     }
 
     /**
      * Helper method to invoke the Update Workflow API
+     * @param client the rest client
      * @param workflowId the document id
      * @param template the template used to update
      * @throws Exception if the request fails
      * @return a rest response
      */
-    protected Response updateWorkflow(String workflowId, Template template) throws Exception {
+    protected Response updateWorkflow(RestClient client, String workflowId, Template template) throws Exception {
         return TestHelpers.makeRequest(
-            client(),
+            client,
             "PUT",
             String.format(Locale.ROOT, "%s/%s", WORKFLOW_URI, workflowId),
             Collections.emptyMap(),
@@ -368,13 +385,14 @@ public abstract class FlowFrameworkRestTestCase extends OpenSearchRestTestCase {
 
     /**
      * Helper method to invoke the Provision Workflow Rest Action
+     * @param client the rest client
      * @param workflowId the workflow ID to provision
      * @throws Exception if the request fails
      * @return a rest response
      */
-    protected Response provisionWorkflow(String workflowId) throws Exception {
+    protected Response provisionWorkflow(RestClient client, String workflowId) throws Exception {
         return TestHelpers.makeRequest(
-            client(),
+            client,
             "POST",
             String.format(Locale.ROOT, "%s/%s/%s", WORKFLOW_URI, workflowId, "_provision"),
             Collections.emptyMap(),
@@ -385,13 +403,14 @@ public abstract class FlowFrameworkRestTestCase extends OpenSearchRestTestCase {
 
     /**
      * Helper method to invoke the Deprovision Workflow Rest Action
+     * @param client the rest client
      * @param workflowId the workflow ID to deprovision
      * @return a rest response
      * @throws Exception if the request fails
      */
-    protected Response deprovisionWorkflow(String workflowId) throws Exception {
+    protected Response deprovisionWorkflow(RestClient client, String workflowId) throws Exception {
         return TestHelpers.makeRequest(
-            client(),
+            client,
             "POST",
             String.format(Locale.ROOT, "%s/%s/%s", WORKFLOW_URI, workflowId, "_deprovision"),
             Collections.emptyMap(),
@@ -402,13 +421,14 @@ public abstract class FlowFrameworkRestTestCase extends OpenSearchRestTestCase {
 
     /**
      * Helper method to invoke the Delete Workflow Rest Action
+     * @param client the rest client
      * @param workflowId the workflow ID to delete
      * @return a rest response
      * @throws Exception if the request fails
      */
-    protected Response deleteWorkflow(String workflowId) throws Exception {
+    protected Response deleteWorkflow(RestClient client, String workflowId) throws Exception {
         return TestHelpers.makeRequest(
-            client(),
+            client,
             "DELETE",
             String.format(Locale.ROOT, "%s/%s", WORKFLOW_URI, workflowId),
             Collections.emptyMap(),
@@ -419,14 +439,15 @@ public abstract class FlowFrameworkRestTestCase extends OpenSearchRestTestCase {
 
     /**
      * Helper method to invoke the Get Workflow Rest Action
+     * @param client the rest client
      * @param workflowId the workflow ID to get the status
      * @param all verbose status flag
      * @throws Exception if the request fails
      * @return rest response
      */
-    protected Response getWorkflowStatus(String workflowId, boolean all) throws Exception {
+    protected Response getWorkflowStatus(RestClient client, String workflowId, boolean all) throws Exception {
         return TestHelpers.makeRequest(
-            client(),
+            client,
             "GET",
             String.format(Locale.ROOT, "%s/%s/%s?all=%s", WORKFLOW_URI, workflowId, "_status", all),
             Collections.emptyMap(),
@@ -436,9 +457,15 @@ public abstract class FlowFrameworkRestTestCase extends OpenSearchRestTestCase {
 
     }
 
-    protected Response getWorkflowStep() throws Exception {
+    /**
+     * Helper method to invoke the Get Workflow Steps Rest Action
+     * @param client the rest client
+     * @return rest response
+     * @throws Exception
+     */
+    protected Response getWorkflowStep(RestClient client) throws Exception {
         return TestHelpers.makeRequest(
-            client(),
+            client,
             "GET",
             String.format(Locale.ROOT, "%s/%s", WORKFLOW_URI, "_steps"),
             Collections.emptyMap(),
@@ -449,15 +476,16 @@ public abstract class FlowFrameworkRestTestCase extends OpenSearchRestTestCase {
 
     /**
      * Helper method to invoke the Search Workflow Rest Action with the given query
+     * @param client the rest client
      * @param query the search query
      * @return rest response
      * @throws Exception if the request fails
      */
-    protected SearchResponse searchWorkflows(String query) throws Exception {
+    protected SearchResponse searchWorkflows(RestClient client, String query) throws Exception {
 
         // Execute search
         Response restSearchResponse = TestHelpers.makeRequest(
-            client(),
+            client,
             "GET",
             String.format(Locale.ROOT, "%s/_search", WORKFLOW_URI),
             Collections.emptyMap(),
@@ -480,9 +508,16 @@ public abstract class FlowFrameworkRestTestCase extends OpenSearchRestTestCase {
         }
     }
 
-    protected SearchResponse searchWorkflowState(String query) throws Exception {
+    /**
+     * Helper method to invoke the Search Workflow State Rest Action
+     * @param client the rest client
+     * @param query the search query
+     * @return
+     * @throws Exception
+     */
+    protected SearchResponse searchWorkflowState(RestClient client, String query) throws Exception {
         Response restSearchResponse = TestHelpers.makeRequest(
-            client(),
+            client,
             "GET",
             String.format(Locale.ROOT, "%s/state/_search", WORKFLOW_URI),
             Collections.emptyMap(),
@@ -507,14 +542,19 @@ public abstract class FlowFrameworkRestTestCase extends OpenSearchRestTestCase {
 
     /**
      * Helper method to invoke the Get Workflow Rest Action and assert the provisioning and state status
+     * @param client the rest client
      * @param workflowId the workflow ID to get the status
      * @param stateStatus the state status name
      * @param provisioningStatus the provisioning status name
      * @throws Exception if the request fails
      */
-    protected void getAndAssertWorkflowStatus(String workflowId, State stateStatus, ProvisioningProgress provisioningStatus)
-        throws Exception {
-        Response response = getWorkflowStatus(workflowId, true);
+    protected void getAndAssertWorkflowStatus(
+        RestClient client,
+        String workflowId,
+        State stateStatus,
+        ProvisioningProgress provisioningStatus
+    ) throws Exception {
+        Response response = getWorkflowStatus(client, workflowId, true);
         assertEquals(RestStatus.OK, TestHelpers.restStatus(response));
 
         Map<String, Object> responseMap = entityAsMap(response);
@@ -523,28 +563,34 @@ public abstract class FlowFrameworkRestTestCase extends OpenSearchRestTestCase {
 
     }
 
-    protected void getAndAssertWorkflowStep() throws Exception {
-        Response response = getWorkflowStep();
+    /**
+     * Helper method to get and assert a workflow step
+     * @param client the rest client
+     * @throws Exception
+     */
+    protected void getAndAssertWorkflowStep(RestClient client) throws Exception {
+        Response response = getWorkflowStep(client);
         assertEquals(RestStatus.OK, TestHelpers.restStatus(response));
     }
 
     /**
      * Helper method to wait until a workflow provisioning has completed and retrieve any resources created
+     * @param client the rest client
      * @param workflowId the workflow id to retrieve resources from
      * @param timeout the max wait time in seconds
      * @return a list of created resources
      * @throws Exception if the request fails
      */
-    protected List<ResourceCreated> getResourcesCreated(String workflowId, int timeout) throws Exception {
+    protected List<ResourceCreated> getResourcesCreated(RestClient client, String workflowId, int timeout) throws Exception {
 
         // wait and ensure state is completed/done
         assertBusy(
-            () -> { getAndAssertWorkflowStatus(workflowId, State.COMPLETED, ProvisioningProgress.DONE); },
+            () -> { getAndAssertWorkflowStatus(client, workflowId, State.COMPLETED, ProvisioningProgress.DONE); },
             timeout,
             TimeUnit.SECONDS
         );
 
-        Response response = getWorkflowStatus(workflowId, true);
+        Response response = getWorkflowStatus(client, workflowId, true);
 
         // Parse workflow state from response and retreieve resources created
         MediaType mediaType = MediaType.fromMediaType(response.getEntity().getContentType());
@@ -560,5 +606,32 @@ public abstract class FlowFrameworkRestTestCase extends OpenSearchRestTestCase {
             WorkflowState workflowState = WorkflowState.parse(parser);
             return workflowState.resourcesCreated();
         }
+    }
+
+    protected Response createUser(String name, String password, String backendRole) throws IOException {
+        String json = "{\"password\": \""
+            + password
+            + "\",\"opendistro_security_roles\": [\""
+            + backendRole
+            + "\"],\"backend_roles\": [],\"attributes\": {}}";
+        return TestHelpers.makeRequest(
+            client(),
+            "PUT",
+            "/_opendistro/_security/api/internalusers/" + name,
+            null,
+            TestHelpers.toHttpEntity(json),
+            List.of(new BasicHeader(HttpHeaders.USER_AGENT, "Kibana"))
+        );
+    }
+
+    protected Response deleteUser(String user) throws IOException {
+        return TestHelpers.makeRequest(
+            client(),
+            "DELETE",
+            "/_opendistro/_security/api/internalusers/" + user,
+            null,
+            "",
+            List.of(new BasicHeader(HttpHeaders.USER_AGENT, "Kibana"))
+        );
     }
 }
