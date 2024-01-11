@@ -61,13 +61,17 @@ jobs:
           else
             echo "imagePresent=false" >> $GITHUB_ENV
           fi
-      - name: Run Flow Framework Test
+      - name: Run Docker Image
         if: env.imagePresent == 'true'
         run: |
           cd ..
           docker run -p 9200:9200 -d -p 9600:9600 -e "discovery.type=single-node" opensearch-flow-framework:test
           sleep 90
+          docker ps
 
+      - name: Run Flow Framework Test
+        if: env.imagePresent == 'true'
+        run: |
           security=`curl -XGET https://localhost:9200/_cat/plugins?v -u admin:admin --insecure |grep opensearch-security|wc -l`
           if [ $security -gt 0 ]
           then
