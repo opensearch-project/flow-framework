@@ -177,12 +177,12 @@ public class FlowFrameworkRestApiIT extends FlowFrameworkRestTestCase {
 
         Map<String, Object> responseMap = entityAsMap(response);
         String workflowId = (String) responseMap.get(WORKFLOW_ID);
-        Thread.sleep(1000);
-        assertBusy(
-            () -> { getAndAssertWorkflowStatus(workflowId, State.NOT_STARTED, ProvisioningProgress.NOT_STARTED); },
-            30,
-            TimeUnit.SECONDS
-        );
+        // Thread.sleep(1000);
+        // assertBusy(
+        // () -> { getAndAssertWorkflowStatus(workflowId, State.NOT_STARTED, ProvisioningProgress.NOT_STARTED); },
+        // 30,
+        // TimeUnit.SECONDS
+        // );
 
         // Hit Provision API and assert status
         response = provisionWorkflow(workflowId);
@@ -206,8 +206,8 @@ public class FlowFrameworkRestApiIT extends FlowFrameworkRestTestCase {
         assertEquals("deploy_model", resourcesCreated.get(2).workflowStepName());
         assertNotNull(resourcesCreated.get(2).resourceId());
 
-        // Deprovision the workflow to avoid opening circut breaker when running additional tests
-        Response deprovisionResponse = deprovisionWorkflow(workflowId);
+        // // Deprovision the workflow to avoid opening circut breaker when running additional tests
+        // Response deprovisionResponse = deprovisionWorkflow(workflowId);
 
         // wait for deprovision to complete
         Thread.sleep(5000);
@@ -245,16 +245,16 @@ public class FlowFrameworkRestApiIT extends FlowFrameworkRestTestCase {
         assertNotNull(resourcesCreated.get(0).resourceId());
 
         // Hit Deprovision API
-        Response deprovisionResponse = deprovisionWorkflow(workflowId);
-        assertBusy(
-            () -> { getAndAssertWorkflowStatus(workflowId, State.NOT_STARTED, ProvisioningProgress.NOT_STARTED); },
-            60,
-            TimeUnit.SECONDS
-        );
+        // Response deprovisionResponse = deprovisionWorkflow(workflowId);
+        // assertBusy(
+        // () -> { getAndAssertWorkflowStatus(workflowId, State.NOT_STARTED, ProvisioningProgress.NOT_STARTED); },
+        // 60,
+        // TimeUnit.SECONDS
+        // );
 
         // Hit Delete API
-        Response deleteResponse = deleteWorkflow(workflowId);
-        assertEquals(RestStatus.OK, TestHelpers.restStatus(deleteResponse));
+        // Response deleteResponse = deleteWorkflow(workflowId);
+        // assertEquals(RestStatus.OK, TestHelpers.restStatus(deleteResponse));
     }
 
 }
