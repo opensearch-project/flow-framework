@@ -31,7 +31,7 @@ jobs:
         run: |
           ./gradlew assemble
       # example of variables:
-      # plugin = opensearch-time-series-analytics-2.10.0.0-SNAPSHOT.zip
+      # plugin = opensearch-flow-framework-2.10.0.0-SNAPSHOT.zip
       # version = 2.10.0, plugin_version = 2.10.0.0, qualifier = SNAPSHOT
       - name: Pull and Run Docker
         run: |
@@ -76,5 +76,6 @@ jobs:
             echo "Security plugin is available"
             ./gradlew integTest -Dtests.rest.cluster=localhost:9200 -Dtests.cluster=localhost:9200 -Dtests.clustername="docker-cluster" -Dhttps=true -Duser=admin -Dpassword=admin
           else
-            echo "Security plugin is NOT available, skipping integration tests"
+            echo "Security plugin is NOT available"
+            ./gradlew integTest -Dtests.rest.cluster=localhost:9200 -Dtests.cluster=localhost:9200 -Dtests.clustername="docker-cluster"
           fi
