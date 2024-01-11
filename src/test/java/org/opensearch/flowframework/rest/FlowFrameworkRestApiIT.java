@@ -177,7 +177,7 @@ public class FlowFrameworkRestApiIT extends FlowFrameworkRestTestCase {
 
         Map<String, Object> responseMap = entityAsMap(response);
         String workflowId = (String) responseMap.get(WORKFLOW_ID);
-        Thread.sleep(500);
+        Thread.sleep(1000);
         assertBusy(
             () -> { getAndAssertWorkflowStatus(workflowId, State.NOT_STARTED, ProvisioningProgress.NOT_STARTED); },
             30,
@@ -187,7 +187,7 @@ public class FlowFrameworkRestApiIT extends FlowFrameworkRestTestCase {
         // Hit Provision API and assert status
         response = provisionWorkflow(workflowId);
         assertEquals(RestStatus.OK, TestHelpers.restStatus(response));
-        Thread.sleep(500);
+        Thread.sleep(1000);
         assertBusy(
             () -> { getAndAssertWorkflowStatus(workflowId, State.PROVISIONING, ProvisioningProgress.IN_PROGRESS); },
             30,
