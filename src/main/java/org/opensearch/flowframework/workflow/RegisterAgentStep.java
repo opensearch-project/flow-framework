@@ -13,7 +13,6 @@ import org.apache.logging.log4j.Logger;
 import org.opensearch.ExceptionsHelper;
 import org.opensearch.common.Nullable;
 import org.opensearch.core.action.ActionListener;
-import org.opensearch.core.rest.RestStatus;
 import org.opensearch.flowframework.exception.FlowFrameworkException;
 import org.opensearch.flowframework.indices.FlowFrameworkIndicesHandler;
 import org.opensearch.flowframework.util.ParseUtils;
@@ -176,17 +175,6 @@ public class RegisterAgentStep implements WorkflowStep {
                 llmModelId = getLlmModelId(previousNodeInputs, outputs);
             }
 
-            // Case when modelId is not present at all
-            if (llmModelId == null) {
-                registerAgentModelFuture.completeExceptionally(
-                    new FlowFrameworkException(
-                        "llm model id is not provided for workflow: " + workflowId + " on node: " + currentNodeId,
-                        RestStatus.BAD_REQUEST
-                    )
-                );
-                return registerAgentModelFuture;
-            }
-
             LLMSpec llmSpec = getLLMSpec(llmModelId, llmParameters, workflowId, currentNodeId);
 
             MLAgentBuilder builder = MLAgent.builder().name(name);
@@ -194,12 +182,16 @@ public class RegisterAgentStep implements WorkflowStep {
             if (description != null) {
                 builder.description(description);
             }
+            if (memory != null) {
+                builder.memory(memory);
+            }
+            if (llmSpec != null) {
+                builder.llm(llmSpec);
+            }
 
             builder.type(type)
-                .llm(llmSpec)
                 .tools(toolsList)
                 .parameters(parameters)
-                .memory(memory)
                 .createdTime(createdTime)
                 .lastUpdateTime(lastUpdateTime)
                 .appType(appType);
@@ -264,10 +256,7 @@ public class RegisterAgentStep implements WorkflowStep {
 
     private LLMSpec getLLMSpec(String llmModelId, Map<String, String> llmParameters, String workflowId, String currentNodeId) {
         if (llmModelId == null) {
-            throw new FlowFrameworkException(
-                "model id for llm is null for workflow: " + workflowId + " on node: " + currentNodeId,
-                RestStatus.BAD_REQUEST
-            );
+            return null;
         }
         LLMSpec.LLMSpecBuilder builder = LLMSpec.builder();
         builder.modelId(llmModelId);
@@ -279,6 +268,9 @@ public class RegisterAgentStep implements WorkflowStep {
     }
 
     private MLMemorySpec getMLMemorySpec(Object mlMemory) {
+        if (mlMemory == null) {
+            return null;
+        }
 
         Map<?, ?> map = (Map<?, ?>) mlMemory;
         String type = null;
