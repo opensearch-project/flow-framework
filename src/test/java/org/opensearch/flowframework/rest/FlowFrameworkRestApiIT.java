@@ -245,16 +245,16 @@ public class FlowFrameworkRestApiIT extends FlowFrameworkRestTestCase {
         assertNotNull(resourcesCreated.get(0).resourceId());
 
         // Hit Deprovision API
-        // Response deprovisionResponse = deprovisionWorkflow(workflowId);
-        // assertBusy(
-        // () -> { getAndAssertWorkflowStatus(workflowId, State.NOT_STARTED, ProvisioningProgress.NOT_STARTED); },
-        // 60,
-        // TimeUnit.SECONDS
-        // );
+        Response deprovisionResponse = deprovisionWorkflow(workflowId);
+        assertBusy(
+            () -> { getAndAssertWorkflowStatus(workflowId, State.NOT_STARTED, ProvisioningProgress.NOT_STARTED); },
+            60,
+            TimeUnit.SECONDS
+        );
 
         // Hit Delete API
-        // Response deleteResponse = deleteWorkflow(workflowId);
-        // assertEquals(RestStatus.OK, TestHelpers.restStatus(deleteResponse));
+        Response deleteResponse = deleteWorkflow(workflowId);
+        assertEquals(RestStatus.OK, TestHelpers.restStatus(deleteResponse));
     }
 
 }
