@@ -37,8 +37,13 @@ This package uses the [Gradle](https://docs.gradle.org/current/userguide/usergui
 
 1. `./gradlew check` builds and tests.
 2. `./gradlew :run` installs and runs ML-Commons and Flow Framework Plugins into a local cluster
-3. `./gradlew spotlessApply` formats code. And/or import formatting rules in [formatterConfig.xml](formatter/formatterConfig.xml) with IDE.
-4. `./gradlew test` to run the complete test suite.
+3. `./gradlew run -Dsecurity.enabled=true` installs, configures and runs ML-Commons, Flow Framework and Security Plugins into a local cluster
+4. `./gradlew spotlessApply` formats code. And/or import formatting rules in [formatterConfig.xml](formatter/formatterConfig.xml) with IDE.
+5. `./gradlew test` to run the complete test suite.
+6. `./gradlew integTest` to run only the non-security enabled integration tests
+7. `./gradlew integTest -Dsecurity.enabled=true` to run only the security enabled integration tests
+6. `./gradlew integTestRemote -Dtests.rest.cluster=localhost:9200 -Dtests.cluster=localhost:9200 -Dtests.clustername=docker-cluster` to run only the non-security enabled integration tests on a remote cluster
+7. `./gradlew integTestRemote -Dtests.rest.cluster=localhost:9200 -Dtests.cluster=localhost:9200 -Dtests.clustername=docker-cluster -Dsecurity.enabled=true` to run only the security enabled integration tests on a remote cluster
 
 #### Building from the IDE
 

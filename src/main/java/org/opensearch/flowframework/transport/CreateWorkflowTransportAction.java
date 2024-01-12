@@ -17,6 +17,7 @@ import org.opensearch.action.support.HandledTransportAction;
 import org.opensearch.client.Client;
 import org.opensearch.common.inject.Inject;
 import org.opensearch.common.unit.TimeValue;
+import org.opensearch.common.util.concurrent.ThreadContext;
 import org.opensearch.commons.authuser.User;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.core.rest.RestStatus;
@@ -265,13 +266,17 @@ public class CreateWorkflowTransportAction extends HandledTransportAction<Workfl
             SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder().query(query).size(0).timeout(requestTimeOut);
 
             SearchRequest searchRequest = new SearchRequest(CommonValue.GLOBAL_CONTEXT_INDEX).source(searchSourceBuilder);
-
-            client.search(searchRequest, ActionListener.wrap(searchResponse -> {
-                internalListener.onResponse(searchResponse.getHits().getTotalHits().value < maxWorkflow);
-            }, exception -> {
-                logger.error("Unable to fetch the workflows", exception);
-                internalListener.onFailure(new FlowFrameworkException("Unable to fetch the workflows", RestStatus.BAD_REQUEST));
-            }));
+            try (ThreadContext.StoredContext context = client.threadPool().getThreadContext().stashContext()) {
+                client.search(searchRequest, ActionListener.wrap(searchResponse -> {
+                    internalListener.onResponse(searchResponse.getHits().getTotalHits().value < maxWorkflow);
+                }, exception -> {
+                    logger.error("Unable to fetch the workflows", exception);
+                    internalListener.onFailure(new FlowFrameworkException("Unable to fetch the workflows", RestStatus.BAD_REQUEST));
+                }));
+            } catch (Exception e) {
+                logger.error("Unable to fetch the workflows", e);
+                internalListener.onFailure(new FlowFrameworkException(e.getMessage(), ExceptionsHelper.status(e)));
+            }
         }
     }
 

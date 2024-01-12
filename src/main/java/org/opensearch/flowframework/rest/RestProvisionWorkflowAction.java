@@ -10,6 +10,7 @@ package org.opensearch.flowframework.rest;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.opensearch.ExceptionsHelper;
 import org.opensearch.client.node.NodeClient;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.core.rest.RestStatus;
@@ -90,11 +91,14 @@ public class RestProvisionWorkflowAction extends BaseRestHandler {
                 channel.sendResponse(new BytesRestResponse(RestStatus.OK, builder));
             }, exception -> {
                 try {
-                    FlowFrameworkException ex = (FlowFrameworkException) exception;
+                    FlowFrameworkException ex = exception instanceof FlowFrameworkException
+                        ? (FlowFrameworkException) exception
+                        : new FlowFrameworkException(exception.getMessage(), ExceptionsHelper.status(exception));
                     XContentBuilder exceptionBuilder = ex.toXContent(channel.newErrorBuilder(), ToXContent.EMPTY_PARAMS);
                     channel.sendResponse(new BytesRestResponse(ex.getRestStatus(), exceptionBuilder));
                 } catch (IOException e) {
                     logger.error("Failed to send back provision workflow exception", e);
+                    channel.sendResponse(new BytesRestResponse(ExceptionsHelper.status(e), e.getMessage()));
                 }
             }));
         } catch (FlowFrameworkException ex) {
