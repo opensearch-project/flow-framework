@@ -238,27 +238,6 @@ ext{
         cluster.setting('plugins.security.restapi.roles_enabled', '["all_access", "security_rest_api_access"]')
         cluster.setting('plugins.security.system_indices.enabled', "true")
         cluster.setting('plugins.security.system_indices.indices', '[' +
-                '".plugins-ml-config", ' +
-                '".plugins-ml-connector", ' +
-                '".plugins-ml-model-group", ' +
-                '".plugins-ml-model", ".plugins-ml-task", ' +
-                '".plugins-ml-conversation-meta", ' +
-                '".plugins-ml-conversation-interactions", ' +
-                '".opendistro-alerting-config", ' +
-                '".opendistro-alerting-alert*", ' +
-                '".opendistro-anomaly-results*", ' +
-                '".opendistro-anomaly-detector*", ' +
-                '".opendistro-anomaly-checkpoints", ' +
-                '".opendistro-anomaly-detection-state", ' +
-                '".opendistro-reports-*", ' +
-                '".opensearch-notifications-*", ' +
-                '".opensearch-notebooks", ' +
-                '".opensearch-observability", ' +
-                '".ql-datasources", ' +
-                '".opendistro-asynchronous-search-response*", ' +
-                '".replication-metadata-store", ' +
-                '".opensearch-knn-models", ' +
-                '".geospatial-ip2geo-data*", ' +
                 '".plugins-flow-framework-config", ' +
                 '".plugins-flow-framework-templates", ' +
                 '".plugins-flow-framework-state"' +
@@ -295,9 +274,18 @@ integTest {
     systemProperty 'tests.security.manager', 'false'
     systemProperty 'java.io.tmpdir', opensearch_tmp_dir.absolutePath
     systemProperty('project.root', project.rootDir.absolutePath)
-    systemProperty "https", System.getProperty("https")
-    systemProperty "user", System.getProperty("user")
-    systemProperty "password", System.getProperty("password")
+    systemProperty 'security.enabled', System.getProperty('security.enabled')
+    var is_https = System.getProperty('https')
+    var user = System.getProperty('user')
+    var password = System.getProperty('password')
+    if (System.getProperty('security.enabled') != null) {
+        is_https = is_https == null ? 'true' : is_https
+        user = user == null ? 'admin' : user
+        password = password == null ? 'admin' : password
+    }
+    systemProperty('https', is_https)
+    systemProperty('user', user)
+    systemProperty('password', password)
 
     // Only rest case can run with remote cluster
     if (System.getProperty("tests.rest.cluster") != null) {
@@ -307,14 +295,14 @@ integTest {
     }
 
     // Exclude integration tests that require security plugin
-    if (System.getProperty("https") == null || System.getProperty("https") == "false") {
+    if (System.getProperty("security.enabled") == null || System.getProperty("security.enabled") == "false") {
         filter {
             excludeTestsMatching "org.opensearch.flowframework.rest.FlowFrameworkSecureRestApiIT"
         }
     }
 
     // Include only secure integration tests in security enabled clusters
-    if (System.getProperty("https") != null && System.getProperty("https") == "true") {
+    if (System.getProperty("security.enabled") != null && System.getProperty("security.enabled") == "true") {
         filter {
             includeTestsMatching "org.opensearch.flowframework.rest.FlowFrameworkSecureRestApiIT"
             excludeTestsMatching "org.opensearch.flowframework.rest.FlowFrameworkRestApiIT"
@@ -347,7 +335,7 @@ testClusters.integTest {
     testDistribution = "ARCHIVE"
 
     // Optionally install security
-    if (System.getProperty("https") != null && System.getProperty("https") == "true") {
+    if (System.getProperty("security.enabled") != null && System.getProperty("security.enabled") == "true") {
         configureSecurityPlugin(testClusters.integTest)
     }
 
