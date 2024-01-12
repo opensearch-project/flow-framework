@@ -67,7 +67,6 @@ jobs:
           cd ..
           docker run -p 9200:9200 -d -p 9600:9600 -e "discovery.type=single-node" opensearch-flow-framework:test
           sleep 90
-          docker ps
 
       - name: Run Flow Framework Test
         if: env.imagePresent == 'true'
