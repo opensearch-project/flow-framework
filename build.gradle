@@ -1,6 +1,48 @@
 import java.nio.file.Files
+import org.opensearch.gradle.testclusters.OpenSearchCluster
 import org.opensearch.gradle.test.RestIntegTestTask
 import java.util.concurrent.Callable
+import java.nio.file.Paths
+
+buildscript {
+    ext {
+        opensearch_version = System.getProperty("opensearch.version", "2.12.0-SNAPSHOT")
+        buildVersionQualifier = System.getProperty("build.version_qualifier", "")
+        isSnapshot = "true" == System.getProperty("build.snapshot", "true")
+        version_tokens = opensearch_version.tokenize('-')
+        opensearch_build = version_tokens[0] + '.0'
+        plugin_no_snapshot = opensearch_build
+        if (buildVersionQualifier) {
+            opensearch_build += "-${buildVersionQualifier}"
+            plugin_no_snapshot += "-${buildVersionQualifier}"
+        }
+        if (isSnapshot) {
+            opensearch_build += "-SNAPSHOT"
+        }
+        opensearch_group = "org.opensearch"
+        opensearch_no_snapshot = opensearch_build.replace("-SNAPSHOT","")
+        System.setProperty('tests.security.manager', 'false')
+        common_utils_version = System.getProperty("common_utils.version", opensearch_build)
+    }
+
+    repositories {
+        mavenLocal()
+        maven { url "https://aws.oss.sonatype.org/content/repositories/snapshots" }
+        mavenCentral()
+        maven { url "https://plugins.gradle.org/m2/" }
+        maven { url 'https://jitpack.io' }
+    }
+
+    dependencies {
+        classpath "org.opensearch.gradle:build-tools:${opensearch_version}"
+        classpath "com.diffplug.spotless:spotless-plugin-gradle:6.23.3"
+        classpath "com.github.form-com.diff-coverage-gradle:diff-coverage:0.9.5"
+    }
+}
+
+plugins {
+    id "de.undercouch.download" version "5.3.0"
+}
 
 apply plugin: 'java'
 apply plugin: 'idea'
@@ -38,42 +80,6 @@ thirdPartyAudit.enabled = false
 
 // No need to validate pom, as we do not upload to maven/sonatype
 validateNebulaPom.enabled = false
-
-buildscript {
-    ext {
-        opensearch_version = System.getProperty("opensearch.version", "2.12.0-SNAPSHOT")
-        buildVersionQualifier = System.getProperty("build.version_qualifier", "")
-        isSnapshot = "true" == System.getProperty("build.snapshot", "true")
-        version_tokens = opensearch_version.tokenize('-')
-        opensearch_build = version_tokens[0] + '.0'
-        plugin_no_snapshot = opensearch_build
-        if (buildVersionQualifier) {
-            opensearch_build += "-${buildVersionQualifier}"
-            plugin_no_snapshot += "-${buildVersionQualifier}"
-        }
-        if (isSnapshot) {
-            opensearch_build += "-SNAPSHOT"
-        }
-        opensearch_group = "org.opensearch"
-        opensearch_no_snapshot = opensearch_build.replace("-SNAPSHOT","")
-        System.setProperty('tests.security.manager', 'false')
-        common_utils_version = System.getProperty("common_utils.version", opensearch_build)
-    }
-
-    repositories {
-        mavenLocal()
-        maven { url "https://aws.oss.sonatype.org/content/repositories/snapshots" }
-        mavenCentral()
-        maven { url "https://plugins.gradle.org/m2/" }
-        maven { url 'https://jitpack.io' }
-    }
-
-    dependencies {
-        classpath "org.opensearch.gradle:build-tools:${opensearch_version}"
-        classpath "com.diffplug.spotless:spotless-plugin-gradle:6.23.3"
-        classpath "com.github.form-com.diff-coverage-gradle:diff-coverage:0.9.5"
-    }
-}
 
 allprojects {
     // Default to the apache license
@@ -155,6 +161,7 @@ dependencies {
 
     // ZipArchive dependencies used for integration tests
     zipArchive group: 'org.opensearch.plugin', name:'opensearch-ml-plugin', version: "${opensearch_build}"
+    zipArchive group: 'org.opensearch.plugin', name:'opensearch-security', version: "${opensearch_build}"
 
     configurations.all {
         resolutionStrategy {
@@ -169,6 +176,81 @@ dependencies {
 def opensearch_tmp_dir = rootProject.file('build/private/opensearch_tmp').absoluteFile
 opensearch_tmp_dir.mkdirs()
 def _numNodes = findProperty('numNodes') as Integer ?: 1
+
+ext{
+
+    configureSecurityPlugin = { OpenSearchCluster cluster ->
+
+        // Retrieve Security Plugin Zip from zipArchive
+        configurations.zipArchive.asFileTree.each {
+            if(it.name.contains("opensearch-security")) {
+                cluster.plugin(provider(new Callable<RegularFile>(){
+                        @Override
+                        RegularFile call() throws Exception {
+                            return new RegularFile() {
+                                @Override
+                                File getAsFile() {
+                                    return it
+                                }
+                            }
+                        }
+                    })
+                )
+            }
+        }
+
+        cluster.getNodes().forEach { node ->
+            var creds = node.getCredentials()
+            if (creds.isEmpty()) {
+                creds.add(Map.of('username', 'admin', 'password', 'admin'))
+            } else {
+                creds.get(0).putAll(Map.of('username', 'admin', 'password', 'admin'))
+            }
+        }
+
+        // Config below including files are copied from security demo configuration
+        ['esnode.pem', 'esnode-key.pem', 'root-ca.pem'].forEach { file ->
+            File local = Paths.get(opensearch_tmp_dir.absolutePath, file).toFile()
+            download.run {
+                src "https://raw.githubusercontent.com/opensearch-project/security/main/bwc-test/src/test/resources/security/" + file
+                dest local
+                overwrite false
+            }
+            cluster.extraConfigFile(file, local)
+        }
+
+        // This configuration is copied from the security plugins demo install:
+        // https://github.com/opensearch-project/security/blob/2.11.1.0/tools/install_demo_configuration.sh#L365-L388
+        cluster.setting("plugins.security.ssl.transport.pemcert_filepath", "esnode.pem")
+        cluster.setting("plugins.security.ssl.transport.pemkey_filepath", "esnode-key.pem")
+        cluster.setting("plugins.security.ssl.transport.pemtrustedcas_filepath", "root-ca.pem")
+        cluster.setting("plugins.security.ssl.transport.enforce_hostname_verification", "false")
+        cluster.setting("plugins.security.ssl.http.enabled", "true")
+        cluster.setting("plugins.security.ssl.http.pemcert_filepath", "esnode.pem")
+        cluster.setting("plugins.security.ssl.http.pemkey_filepath", "esnode-key.pem")
+        cluster.setting("plugins.security.ssl.http.pemtrustedcas_filepath", "root-ca.pem")
+        cluster.setting("plugins.security.allow_unsafe_democertificates", "true")
+        cluster.setting("plugins.security.allow_default_init_securityindex", "true")
+        cluster.setting("plugins.security.unsupported.inject_user.enabled", "true")
+
+        cluster.setting("plugins.security.authcz.admin_dn", "\n- CN=kirk,OU=client,O=client,L=test, C=de")
+        cluster.setting('plugins.security.restapi.roles_enabled', '["all_access", "security_rest_api_access"]')
+        cluster.setting('plugins.security.system_indices.enabled', "true")
+        cluster.setting('plugins.security.system_indices.indices', '[' +
+                '".plugins-ml-config", ' +
+                '".plugins-ml-connector", ' +
+                '".plugins-ml-model-group", ' +
+                '".plugins-ml-model", ".plugins-ml-task", ' +
+                '".plugins-ml-conversation-meta", ' +
+                '".plugins-ml-conversation-interactions", ' +
+                '".plugins-flow-framework-config", ' +
+                '".plugins-flow-framework-templates", ' +
+                '".plugins-flow-framework-state"' +
+                ']'
+        )
+        cluster.setSecure(true)
+    }
+}
 
 test {
     include '**/*Tests.class'
@@ -197,9 +279,18 @@ integTest {
     systemProperty 'tests.security.manager', 'false'
     systemProperty 'java.io.tmpdir', opensearch_tmp_dir.absolutePath
     systemProperty('project.root', project.rootDir.absolutePath)
-    systemProperty "https", System.getProperty("https")
-    systemProperty "user", System.getProperty("user")
-    systemProperty "password", System.getProperty("password")
+    systemProperty 'security.enabled', System.getProperty('security.enabled')
+    var is_https = System.getProperty('https')
+    var user = System.getProperty('user')
+    var password = System.getProperty('password')
+    if (System.getProperty('security.enabled') != null) {
+        is_https = is_https == null ? 'true' : is_https
+        user = user == null ? 'admin' : user
+        password = password == null ? 'admin' : password
+    }
+    systemProperty('https', is_https)
+    systemProperty('user', user)
+    systemProperty('password', password)
 
     // Only rest case can run with remote cluster
     if (System.getProperty("tests.rest.cluster") != null) {
@@ -208,6 +299,20 @@ integTest {
         }
     }
 
+    // Exclude integration tests that require security plugin
+    if (System.getProperty("security.enabled") == null || System.getProperty("security.enabled") == "false") {
+        filter {
+            excludeTestsMatching "org.opensearch.flowframework.rest.FlowFrameworkSecureRestApiIT"
+        }
+    }
+
+    // Include only secure integration tests in security enabled clusters
+    if (System.getProperty("security.enabled") != null && System.getProperty("security.enabled") == "true") {
+        filter {
+            includeTestsMatching "org.opensearch.flowframework.rest.FlowFrameworkSecureRestApiIT"
+            excludeTestsMatching "org.opensearch.flowframework.rest.FlowFrameworkRestApiIT"
+        }
+    }
 
     // doFirst delays this block until execution time
     doFirst {
@@ -234,19 +339,27 @@ integTest {
 testClusters.integTest {
     testDistribution = "ARCHIVE"
 
-    // Installs all registered zipArchive dependencies on integTest cluster nodes
+    // Optionally install security
+    if (System.getProperty("security.enabled") != null && System.getProperty("security.enabled") == "true") {
+        configureSecurityPlugin(testClusters.integTest)
+    }
+
+    // Installs all registered zipArchive dependencies on integTest cluster nodes except security
     configurations.zipArchive.asFileTree.each {
-        plugin(provider(new Callable<RegularFile>(){
-            @Override
-            RegularFile call() throws Exception {
-                return new RegularFile() {
+        if(!it.name.contains("opensearch-security")) {
+            plugin(provider(new Callable<RegularFile>(){
                     @Override
-                    File getAsFile() {
-                        return it
+                    RegularFile call() throws Exception {
+                        return new RegularFile() {
+                            @Override
+                            File getAsFile() {
+                                return it
+                            }
+                        }
                     }
-                }
-            }
-        }))
+                })
+            )
+        }
     }
 
     // Install Flow Framwork Plugin on integTest cluster nodes
@@ -271,10 +384,17 @@ testClusters.integTest {
 task integTestRemote(type: RestIntegTestTask) {
     testClassesDirs = sourceSets.test.output.classesDirs
     classpath = sourceSets.test.runtimeClasspath
-
-    systemProperty "https", System.getProperty("https")
-    systemProperty "user", System.getProperty("user")
-    systemProperty "password", System.getProperty("password")
+    var is_https = System.getProperty('https')
+    var user = System.getProperty('user')
+    var password = System.getProperty('password')
+    if (System.getProperty('security.enabled') != null) {
+        is_https = is_https == null ? 'true' : is_https
+        user = user == null ? 'admin' : user
+        password = password == null ? 'admin' : password
+    }
+    systemProperty('https', is_https)
+    systemProperty('user', user)
+    systemProperty('password', password)
     systemProperty 'cluster.number_of_nodes', "${_numNodes}"
     systemProperty 'tests.security.manager', 'false'
 
@@ -282,6 +402,21 @@ task integTestRemote(type: RestIntegTestTask) {
     if (System.getProperty("tests.rest.cluster") != null) {
         filter {
             includeTestsMatching "org.opensearch.flowframework.rest.*IT"
+        }
+    }
+
+    // Exclude integration tests that require security plugin
+    if (System.getProperty("https") == null || System.getProperty("https") == "false") {
+        filter {
+            excludeTestsMatching "org.opensearch.flowframework.rest.FlowFrameworkSecureRestApiIT"
+        }
+    }
+
+    // Include only secure integration tests in security enabled clusters
+    if (System.getProperty("https") != null && System.getProperty("https") == "true") {
+        filter {
+            includeTestsMatching "org.opensearch.flowframework.rest.FlowFrameworkSecureRestApiIT"
+            excludeTestsMatching "org.opensearch.flowframework.rest.FlowFrameworkRestApiIT"
         }
     }
 }
