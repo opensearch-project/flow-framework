@@ -31,14 +31,11 @@ jobs:
     steps:
       - name: Checkout Flow Framework
         uses: actions/checkout@v4
-        with:
-          submodules: true
-
       - name: Setup Java ${{ matrix.java }}
         uses: actions/setup-java@v4
         with:
+          distribution: 'temurin'
           java-version: ${{ matrix.java }}
-
       - name: Run build
         # switching the user, as OpenSearch cluster can only be started as root/Administrator on linux-deb/linux-rpm/windows-zip.
         run: |
