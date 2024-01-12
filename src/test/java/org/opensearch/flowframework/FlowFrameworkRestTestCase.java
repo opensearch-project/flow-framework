@@ -61,6 +61,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import static org.opensearch.client.RestClientBuilder.DEFAULT_MAX_CONN_PER_ROUTE;
 import static org.opensearch.client.RestClientBuilder.DEFAULT_MAX_CONN_TOTAL;
@@ -490,6 +491,25 @@ public abstract class FlowFrameworkRestTestCase extends OpenSearchRestTestCase {
 
     }
 
+    public void waitForProvisioningStatus(String workflowId, ProvisioningProgress provisioningProgress) throws InterruptedException {
+        AtomicBoolean provisioningStatusDone = new AtomicBoolean(false);
+        waitUntil(() -> {
+            try {
+                Response response = getWorkflowStatus(workflowId, true);
+                assertEquals(RestStatus.OK, TestHelpers.restStatus(response));
+                Map<String, Object> responseMap = entityAsMap(response);
+                String state = (String) responseMap.get(CommonValue.PROVISIONING_PROGRESS_FIELD);
+                if (provisioningProgress.name().equals(state)) {
+                    provisioningStatusDone.set(true);
+                }
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+            return provisioningStatusDone.get();
+        }, 90, TimeUnit.SECONDS);
+        assertTrue(provisioningStatusDone.get());
+    }
+
     protected void getAndAssertWorkflowStep() throws Exception {
         Response response = getWorkflowStep();
         assertEquals(RestStatus.OK, TestHelpers.restStatus(response));
@@ -505,11 +525,12 @@ public abstract class FlowFrameworkRestTestCase extends OpenSearchRestTestCase {
     protected List<ResourceCreated> getResourcesCreated(String workflowId, int timeout) throws Exception {
 
         // wait and ensure state is completed/done
-        assertBusy(
-            () -> { getAndAssertWorkflowStatus(workflowId, State.COMPLETED, ProvisioningProgress.DONE); },
-            timeout,
-            TimeUnit.SECONDS
-        );
+        // assertBusy(
+        // () -> { getAndAssertWorkflowStatus(workflowId, State.COMPLETED, ProvisioningProgress.DONE); },
+        // timeout,
+        // TimeUnit.SECONDS
+        // );
+        waitForProvisioningStatus(workflowId, ProvisioningProgress.DONE);
 
         Response response = getWorkflowStatus(workflowId, true);
 

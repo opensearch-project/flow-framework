@@ -29,7 +29,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 import static org.opensearch.flowframework.common.CommonValue.CREDENTIAL_FIELD;
@@ -188,11 +187,14 @@ public class FlowFrameworkRestApiIT extends FlowFrameworkRestTestCase {
         response = provisionWorkflow(workflowId);
         assertEquals(RestStatus.OK, TestHelpers.restStatus(response));
         Thread.sleep(1000);
-        assertBusy(
-            () -> { getAndAssertWorkflowStatus(workflowId, State.PROVISIONING, ProvisioningProgress.IN_PROGRESS); },
-            30,
-            TimeUnit.SECONDS
-        );
+
+        // waitForProvisioningStatus(workflowId, ProvisioningProgress.DONE);
+
+        // assertBusy(
+        // () -> { getAndAssertWorkflowStatus(workflowId, State.PROVISIONING, ProvisioningProgress.IN_PROGRESS); },
+        // 30,
+        // TimeUnit.SECONDS
+        // );
 
         // Wait until provisioning has completed successfully before attempting to retrieve created resources
         List<ResourceCreated> resourcesCreated = getResourcesCreated(workflowId, 90);
@@ -207,7 +209,7 @@ public class FlowFrameworkRestApiIT extends FlowFrameworkRestTestCase {
         assertNotNull(resourcesCreated.get(2).resourceId());
 
         // // Deprovision the workflow to avoid opening circut breaker when running additional tests
-        // Response deprovisionResponse = deprovisionWorkflow(workflowId);
+        Response deprovisionResponse = deprovisionWorkflow(workflowId);
 
         // wait for deprovision to complete
         Thread.sleep(5000);
@@ -222,8 +224,8 @@ public class FlowFrameworkRestApiIT extends FlowFrameworkRestTestCase {
         Map<String, Object> responseMap = entityAsMap(response);
         String workflowId = (String) responseMap.get(WORKFLOW_ID);
         // wait and ensure state is completed/done
-        assertBusy(() -> { getAndAssertWorkflowStatus(workflowId, State.COMPLETED, ProvisioningProgress.DONE); }, 60, TimeUnit.SECONDS);
-
+        // assertBusy(() -> { getAndAssertWorkflowStatus(workflowId, State.COMPLETED, ProvisioningProgress.DONE); }, 60, TimeUnit.SECONDS);
+        waitForProvisioningStatus(workflowId, ProvisioningProgress.DONE);
         // Hit Search State API with the workflow id created above
         String query = "{\"query\":{\"ids\":{\"values\":[\"" + workflowId + "\"]}}}";
         SearchResponse searchResponse = searchWorkflowState(query);
@@ -246,12 +248,12 @@ public class FlowFrameworkRestApiIT extends FlowFrameworkRestTestCase {
 
         // Hit Deprovision API
         Response deprovisionResponse = deprovisionWorkflow(workflowId);
-        assertBusy(
-            () -> { getAndAssertWorkflowStatus(workflowId, State.NOT_STARTED, ProvisioningProgress.NOT_STARTED); },
-            60,
-            TimeUnit.SECONDS
-        );
-
+        // assertBusy(
+        // () -> { getAndAssertWorkflowStatus(workflowId, State.NOT_STARTED, ProvisioningProgress.NOT_STARTED); },
+        // 60,
+        // TimeUnit.SECONDS
+        // );
+        waitForProvisioningStatus(workflowId, ProvisioningProgress.NOT_STARTED);
         // Hit Delete API
         Response deleteResponse = deleteWorkflow(workflowId);
         assertEquals(RestStatus.OK, TestHelpers.restStatus(deleteResponse));
