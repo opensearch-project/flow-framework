@@ -54,6 +54,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 import static org.opensearch.core.xcontent.XContentParserUtils.ensureExpectedToken;
 import static org.opensearch.flowframework.common.CommonValue.WORKFLOW_URI;
@@ -63,7 +64,8 @@ import static org.opensearch.flowframework.common.CommonValue.WORKFLOW_URI;
  */
 public abstract class FlowFrameworkRestTestCase extends OpenSearchRestTestCase {
 
-    private static String FULL_ACCESS_ROLE = "flow_framework_full_access";
+    private static String FLOW_FRAMEWORK_FULL_ACCESS_ROLE = "flow_framework_full_access";
+    private static String ML_COMMONS_FULL_ACCESS_ROLE = "ml_full_access";
     private static String READ_ACCESS_ROLE = "flow_framework_read_access";
     public static String FULL_ACCESS_USER = "fullAccessUser";
     public static String READ_ACCESS_USER = "readAccessUser";
@@ -129,8 +131,12 @@ public abstract class FlowFrameworkRestTestCase extends OpenSearchRestTestCase {
             String fullAccessUserPassword = generatePassword(FULL_ACCESS_USER);
             String readAccessUserPassword = generatePassword(READ_ACCESS_USER);
 
-            // Configure full access user and client
-            Response response = createUser(FULL_ACCESS_USER, fullAccessUserPassword, FULL_ACCESS_ROLE);
+            // Configure full access user and client, needs ML Full Access role as well
+            Response response = createUser(
+                FULL_ACCESS_USER,
+                fullAccessUserPassword,
+                List.of(FLOW_FRAMEWORK_FULL_ACCESS_ROLE, ML_COMMONS_FULL_ACCESS_ROLE)
+            );
             fullAccessClient = new SecureRestClientBuilder(
                 getClusterHosts().toArray(new HttpHost[0]),
                 isHttps(),
@@ -139,7 +145,7 @@ public abstract class FlowFrameworkRestTestCase extends OpenSearchRestTestCase {
             ).setSocketTimeout(60000).build();
 
             // Configure read access user and client
-            response = createUser(READ_ACCESS_USER, readAccessUserPassword, READ_ACCESS_ROLE);
+            response = createUser(READ_ACCESS_USER, readAccessUserPassword, List.of(READ_ACCESS_ROLE));
             readAccessClient = new SecureRestClientBuilder(
                 getClusterHosts().toArray(new HttpHost[0]),
                 isHttps(),
@@ -264,7 +270,7 @@ public abstract class FlowFrameworkRestTestCase extends OpenSearchRestTestCase {
     }
 
     /**
-     * Create an unguessable password. Simple password are weak due to https://tinyurl.com/383em9zk
+     * Create an unique password. Simple password are weak due to https://tinyurl.com/383em9zk
      * @return a random password.
      */
     public static String generatePassword(String username) {
@@ -565,12 +571,13 @@ public abstract class FlowFrameworkRestTestCase extends OpenSearchRestTestCase {
         }
     }
 
-    protected Response createUser(String name, String password, String backendRole) throws IOException {
+    protected Response createUser(String name, String password, List<String> backendRoles) throws IOException {
+        String backendRolesString = backendRoles.stream().map(item -> "\"" + item + "\"").collect(Collectors.joining(","));
         String json = "{\"password\": \""
             + password
-            + "\",\"opendistro_security_roles\": [\""
-            + backendRole
-            + "\"],\"backend_roles\": [],\"attributes\": {}}";
+            + "\",\"opendistro_security_roles\": ["
+            + backendRolesString
+            + "],\"backend_roles\": [],\"attributes\": {}}";
         return TestHelpers.makeRequest(
             client(),
             "PUT",

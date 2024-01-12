@@ -8,6 +8,7 @@
  */
 package org.opensearch.flowframework.rest;
 
+import org.opensearch.action.search.SearchResponse;
 import org.opensearch.client.Response;
 import org.opensearch.client.ResponseException;
 import org.opensearch.common.util.io.IOUtils;
@@ -18,6 +19,9 @@ import org.opensearch.flowframework.model.Template;
 import org.junit.After;
 
 import java.io.IOException;
+import java.util.Map;
+
+import static org.opensearch.flowframework.common.CommonValue.WORKFLOW_ID;
 
 public class FlowFrameworkSecureRestApiIT extends FlowFrameworkRestTestCase {
 
@@ -57,19 +61,27 @@ public class FlowFrameworkSecureRestApiIT extends FlowFrameworkRestTestCase {
     public void testGetWorkflowWithReadAccess() throws Exception {
         // No permissions to create, so we assert only that the response status isnt forbidden
         ResponseException exception = expectThrows(ResponseException.class, () -> getWorkflow(readAccessClient(), "test"));
-        assertTrue(exception.getMessage().contains("There are no templates in the global_context"));
         assertEquals(RestStatus.NOT_FOUND, TestHelpers.restStatus(exception.getResponse()));
     }
 
     public void testSearchWorkflowWithReadAccess() throws Exception {
+        // Use full access client to invoke create workflow to ensure the template/state indices are created
+        Template template = TestHelpers.createTemplateFromFile("createconnector-registerremotemodel-deploymodel.json");
+        Response response = createWorkflow(fullAccessClient(), template);
+        assertEquals(RestStatus.CREATED, TestHelpers.restStatus(response));
+
         // No permissions to create, so we assert only that the response status isnt forbidden
         String termIdQuery = "{\"query\":{\"ids\":{\"values\":[\"test\"]}}}";
-        ResponseException exception = expectThrows(ResponseException.class, () -> searchWorkflows(readAccessClient(), termIdQuery));
-        assertTrue(exception.getMessage().contains("no such index [.plugins-flow-framework-templates]"));
-        assertEquals(RestStatus.NOT_FOUND, TestHelpers.restStatus(exception.getResponse()));
+        SearchResponse seachResponse = searchWorkflows(readAccessClient(), termIdQuery);
+        assertEquals(RestStatus.OK, seachResponse.status());
     }
 
     public void testGetWorkflowStateWithReadAccess() throws Exception {
+        // Use the full access client to invoke create workflow to ensure the template/state indices are created
+        Template template = TestHelpers.createTemplateFromFile("createconnector-registerremotemodel-deploymodel.json");
+        Response response = createWorkflow(fullAccessClient(), template);
+        assertEquals(RestStatus.CREATED, TestHelpers.restStatus(response));
+
         // No permissions to create or provision, so we assert only that the response status isnt forbidden
         ResponseException exception = expectThrows(ResponseException.class, () -> getWorkflowStatus(readAccessClient(), "test", false));
         assertTrue(exception.getMessage().contains("Fail to find workflow"));
@@ -77,11 +89,43 @@ public class FlowFrameworkSecureRestApiIT extends FlowFrameworkRestTestCase {
     }
 
     public void testSearchWorkflowStateWithReadAccess() throws Exception {
+        // Use the full access client to invoke create workflow to ensure the template/state indices are created
+        Template template = TestHelpers.createTemplateFromFile("createconnector-registerremotemodel-deploymodel.json");
+        Response response = createWorkflow(fullAccessClient(), template);
+        assertEquals(RestStatus.CREATED, TestHelpers.restStatus(response));
+
         // No permissions to create, so we assert only that the response status isnt forbidden
         String termIdQuery = "{\"query\":{\"ids\":{\"values\":[\"test\"]}}}";
-        ResponseException exception = expectThrows(ResponseException.class, () -> searchWorkflowState(readAccessClient(), termIdQuery));
-        assertTrue(exception.getMessage().contains("no such index [.plugins-flow-framework-state]"));
-        assertEquals(RestStatus.NOT_FOUND, TestHelpers.restStatus(exception.getResponse()));
+        SearchResponse searchResponse = searchWorkflowState(readAccessClient(), termIdQuery);
+        assertEquals(RestStatus.OK, searchResponse.status());
+    }
+
+    public void testCreateProvisionDeprovisionWorkflowWithFullAccess() throws Exception {
+        // Invoke create workflow API
+        Template template = TestHelpers.createTemplateFromFile("createconnector-registerremotemodel-deploymodel.json");
+        Response response = createWorkflow(fullAccessClient(), template);
+        assertEquals(RestStatus.CREATED, TestHelpers.restStatus(response));
+
+        // Retrieve workflow ID
+        Map<String, Object> responseMap = entityAsMap(response);
+        String workflowId = (String) responseMap.get(WORKFLOW_ID);
+
+        // Invoke provision API
+        response = provisionWorkflow(fullAccessClient(), workflowId);
+        assertEquals(RestStatus.OK, TestHelpers.restStatus(response));
+
+        // Invoke status API
+        response = getWorkflowStatus(fullAccessClient(), workflowId, false);
+        assertEquals(RestStatus.OK, TestHelpers.restStatus(response));
+
+        // Invoke deprovision API
+        response = deprovisionWorkflow(fullAccessClient(), workflowId);
+        assertEquals(RestStatus.OK, TestHelpers.restStatus(response));
+    }
+
+    public void testGetWorkflowStepWithFullAccess() throws Exception {
+        Response response = getWorkflowStep(fullAccessClient());
+        assertEquals(RestStatus.OK, TestHelpers.restStatus(response));
     }
 
 }
