@@ -238,6 +238,12 @@ ext{
         cluster.setting('plugins.security.restapi.roles_enabled', '["all_access", "security_rest_api_access"]')
         cluster.setting('plugins.security.system_indices.enabled', "true")
         cluster.setting('plugins.security.system_indices.indices', '[' +
+                '".plugins-ml-config", ' +
+                '".plugins-ml-connector", ' +
+                '".plugins-ml-model-group", ' +
+                '".plugins-ml-model", ".plugins-ml-task", ' +
+                '".plugins-ml-conversation-meta", ' +
+                '".plugins-ml-conversation-interactions", ' +
                 '".plugins-flow-framework-config", ' +
                 '".plugins-flow-framework-templates", ' +
                 '".plugins-flow-framework-state"' +
@@ -379,10 +385,17 @@ testClusters.integTest {
 task integTestRemote(type: RestIntegTestTask) {
     testClassesDirs = sourceSets.test.output.classesDirs
     classpath = sourceSets.test.runtimeClasspath
-
-    systemProperty "https", System.getProperty("https")
-    systemProperty "user", System.getProperty("user")
-    systemProperty "password", System.getProperty("password")
+    var is_https = System.getProperty('https')
+    var user = System.getProperty('user')
+    var password = System.getProperty('password')
+    if (System.getProperty('security.enabled') != null) {
+        is_https = is_https == null ? 'true' : is_https
+        user = user == null ? 'admin' : user
+        password = password == null ? 'admin' : password
+    }
+    systemProperty('https', is_https)
+    systemProperty('user', user)
+    systemProperty('password', password)
     systemProperty 'cluster.number_of_nodes', "${_numNodes}"
     systemProperty 'tests.security.manager', 'false'
 

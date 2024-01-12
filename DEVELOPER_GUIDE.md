@@ -42,6 +42,8 @@ This package uses the [Gradle](https://docs.gradle.org/current/userguide/usergui
 5. `./gradlew test` to run the complete test suite.
 6. `./gradlew integTest` to run only the non-security enabled integration tests
 7. `./gradlew integTest -Dsecurity.enabled=true` to run only the security enabled integration tests
+6. `./gradlew integTestRemote -Dtests.rest.cluster=localhost:9200 -Dtests.cluster=localhost:9200 -Dtests.clustername=docker-cluster` to run only the non-security enabled integration tests on a remote cluster
+7. `./gradlew integTestRemote -Dtests.rest.cluster=localhost:9200 -Dtests.cluster=localhost:9200 -Dtests.clustername=docker-cluster -Dsecurity.enabled=true` to run only the security enabled integration tests on a remote cluster
 
 #### Building from the IDE
 
