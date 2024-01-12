@@ -110,6 +110,11 @@ public class FlowFrameworkSecureRestApiIT extends FlowFrameworkRestTestCase {
         Map<String, Object> responseMap = entityAsMap(response);
         String workflowId = (String) responseMap.get(WORKFLOW_ID);
 
+        // Invoke search workflows API
+        String termIdQuery = "{\"query\":{\"ids\":{\"values\":[\"" + workflowId + "\"]}}}";
+        SearchResponse searchResponse = searchWorkflows(fullAccessClient(), termIdQuery);
+        assertEquals(RestStatus.OK, searchResponse.status());
+
         // Invoke provision API
         response = provisionWorkflow(fullAccessClient(), workflowId);
         assertEquals(RestStatus.OK, TestHelpers.restStatus(response));
@@ -120,6 +125,10 @@ public class FlowFrameworkSecureRestApiIT extends FlowFrameworkRestTestCase {
 
         // Invoke deprovision API
         response = deprovisionWorkflow(fullAccessClient(), workflowId);
+        assertEquals(RestStatus.OK, TestHelpers.restStatus(response));
+
+        // Invoke delete API
+        response = deleteWorkflow(fullAccessClient(), workflowId);
         assertEquals(RestStatus.OK, TestHelpers.restStatus(response));
     }
 
