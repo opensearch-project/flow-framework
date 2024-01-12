@@ -56,6 +56,7 @@ import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 
 import static org.opensearch.core.xcontent.XContentParserUtils.ensureExpectedToken;
+import static org.opensearch.flowframework.common.CommonValue.WORKFLOW_ID;
 import static org.opensearch.flowframework.common.CommonValue.WORKFLOW_URI;
 
 /**
@@ -394,6 +395,24 @@ public abstract class FlowFrameworkRestTestCase extends OpenSearchRestTestCase {
             null
         );
 
+    }
+
+    /**
+     * Helper method to invoke the Get Workflow Rest Action
+     * @param client the rest client
+     * @param workflowId the workflow ID
+     * @return rest response
+     * @throws Exception
+     */
+    protected Response getWorkflow(RestClient client, String workflowId) throws Exception {
+        return TestHelpers.makeRequest(
+            client,
+            "GET",
+            String.format(Locale.ROOT, "%s/%s", WORKFLOW_URI, workflowId),
+            Collections.emptyMap(),
+            "",
+            null
+        );
     }
 
     /**
