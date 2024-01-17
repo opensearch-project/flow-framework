@@ -180,6 +180,7 @@ def _numNodes = findProperty('numNodes') as Integer ?: 1
 
 ext{
 
+    System.setProperty("OPENSEARCH_INITIAL_ADMIN_PASSWORD", "myStrongPassword123!")
     configureSecurityPlugin = { OpenSearchCluster cluster ->
 
         // Retrieve Security Plugin Zip from zipArchive
@@ -200,12 +201,14 @@ ext{
             }
         }
 
+        var adminPassword = System.getProperty("OPENSEARCH_INITIAL_ADMIN_PASSWORD")
+
         cluster.getNodes().forEach { node ->
             var creds = node.getCredentials()
             if (creds.isEmpty()) {
-                creds.add(Map.of('username', 'admin', 'password', 'admin'))
+                creds.add(Map.of('username', 'admin', 'password', adminPassword))
             } else {
-                creds.get(0).putAll(Map.of('username', 'admin', 'password', 'admin'))
+                creds.get(0).putAll(Map.of('username', 'admin', 'password', adminPassword))
             }
         }
 
@@ -287,7 +290,7 @@ integTest {
     if (System.getProperty('security.enabled') != null) {
         is_https = is_https == null ? 'true' : is_https
         user = user == null ? 'admin' : user
-        password = password == null ? 'admin' : password
+        password = password == null ? System.getProperty("OPENSEARCH_INITIAL_ADMIN_PASSWORD") : password
     }
     systemProperty('https', is_https)
     systemProperty('user', user)
@@ -391,7 +394,7 @@ task integTestRemote(type: RestIntegTestTask) {
     if (System.getProperty('security.enabled') != null) {
         is_https = is_https == null ? 'true' : is_https
         user = user == null ? 'admin' : user
-        password = password == null ? 'admin' : password
+        password = password == null ? System.getProperty("OPENSEARCH_INITIAL_ADMIN_PASSWORD") : password
     }
     systemProperty('https', is_https)
     systemProperty('user', user)
