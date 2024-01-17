@@ -15,6 +15,7 @@ import org.opensearch.common.unit.TimeValue;
 import org.opensearch.common.util.concurrent.OpenSearchExecutors;
 import org.opensearch.common.util.concurrent.ThreadContext;
 import org.opensearch.core.action.ActionListener;
+import org.opensearch.flowframework.common.FlowFrameworkSettings;
 import org.opensearch.flowframework.indices.FlowFrameworkIndicesHandler;
 import org.opensearch.flowframework.model.ResourceCreated;
 import org.opensearch.flowframework.model.WorkflowState;
@@ -70,6 +71,7 @@ public class DeprovisionWorkflowTransportActionTests extends OpenSearchTestCase 
     private DeleteConnectorStep deleteConnectorStep;
     private DeprovisionWorkflowTransportAction deprovisionWorkflowTransportAction;
     private FlowFrameworkIndicesHandler flowFrameworkIndicesHandler;
+    private FlowFrameworkSettings flowFrameworkSettings;
 
     @Override
     public void setUp() throws Exception {
@@ -77,6 +79,8 @@ public class DeprovisionWorkflowTransportActionTests extends OpenSearchTestCase 
         this.client = mock(Client.class);
         this.workflowStepFactory = mock(WorkflowStepFactory.class);
         this.flowFrameworkIndicesHandler = mock(FlowFrameworkIndicesHandler.class);
+        flowFrameworkSettings = mock(FlowFrameworkSettings.class);
+        when(flowFrameworkSettings.getRequestTimeout()).thenReturn(TimeValue.timeValueSeconds(10));
 
         this.deprovisionWorkflowTransportAction = new DeprovisionWorkflowTransportAction(
             mock(TransportService.class),
@@ -84,7 +88,8 @@ public class DeprovisionWorkflowTransportActionTests extends OpenSearchTestCase 
             threadPool,
             client,
             workflowStepFactory,
-            flowFrameworkIndicesHandler
+            flowFrameworkIndicesHandler,
+            flowFrameworkSettings
         );
 
         MachineLearningNodeClient mlClient = new MachineLearningNodeClient(client);
