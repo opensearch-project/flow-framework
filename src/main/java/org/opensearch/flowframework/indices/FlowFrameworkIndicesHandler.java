@@ -15,6 +15,7 @@ import org.opensearch.action.admin.indices.create.CreateIndexRequest;
 import org.opensearch.action.admin.indices.create.CreateIndexResponse;
 import org.opensearch.action.admin.indices.mapping.put.PutMappingRequest;
 import org.opensearch.action.admin.indices.settings.put.UpdateSettingsRequest;
+import org.opensearch.action.get.GetRequest;
 import org.opensearch.action.index.IndexRequest;
 import org.opensearch.action.index.IndexResponse;
 import org.opensearch.action.support.WriteRequest;
@@ -29,8 +30,10 @@ import org.opensearch.common.xcontent.XContentType;
 import org.opensearch.commons.authuser.User;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.core.rest.RestStatus;
+import org.opensearch.core.xcontent.NamedXContentRegistry;
 import org.opensearch.core.xcontent.ToXContent;
 import org.opensearch.core.xcontent.XContentBuilder;
+import org.opensearch.core.xcontent.XContentParser;
 import org.opensearch.flowframework.exception.FlowFrameworkException;
 import org.opensearch.flowframework.model.ProvisioningProgress;
 import org.opensearch.flowframework.model.ResourceCreated;
@@ -47,8 +50,10 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.Consumer;
 
 import static org.opensearch.core.rest.RestStatus.INTERNAL_SERVER_ERROR;
+import static org.opensearch.core.xcontent.XContentParserUtils.ensureExpectedToken;
 import static org.opensearch.flowframework.common.CommonValue.CONFIG_INDEX_MAPPING;
 import static org.opensearch.flowframework.common.CommonValue.GLOBAL_CONTEXT_INDEX;
 import static org.opensearch.flowframework.common.CommonValue.GLOBAL_CONTEXT_INDEX_MAPPING;
@@ -70,20 +75,28 @@ public class FlowFrameworkIndicesHandler {
     private final EncryptorUtils encryptorUtils;
     private static final Map<String, AtomicBoolean> indexMappingUpdated = new HashMap<>();
     private static final Map<String, Object> indexSettings = Map.of("index.auto_expand_replicas", "0-1");
+    private final NamedXContentRegistry xContentRegistry;
 
     /**
      * constructor
      * @param client the open search client
      * @param clusterService ClusterService
      * @param encryptorUtils encryption utility
+     * @param xContentRegistry contentRegister to parse any response
      */
-    public FlowFrameworkIndicesHandler(Client client, ClusterService clusterService, EncryptorUtils encryptorUtils) {
+    public FlowFrameworkIndicesHandler(
+        Client client,
+        ClusterService clusterService,
+        EncryptorUtils encryptorUtils,
+        NamedXContentRegistry xContentRegistry
+    ) {
         this.client = client;
         this.clusterService = clusterService;
         this.encryptorUtils = encryptorUtils;
         for (FlowFrameworkIndex mlIndex : FlowFrameworkIndex.values()) {
             indexMappingUpdated.put(mlIndex.getIndexName(), new AtomicBoolean(false));
         }
+        this.xContentRegistry = xContentRegistry;
     }
 
     static {
@@ -395,22 +408,89 @@ public class FlowFrameworkIndicesHandler {
                 + ", global_context index does not exist.";
             logger.error(exceptionMessage);
             listener.onFailure(new FlowFrameworkException(exceptionMessage, RestStatus.BAD_REQUEST));
-        } else {
-            IndexRequest request = new IndexRequest(GLOBAL_CONTEXT_INDEX).id(documentId);
-            try (
-                XContentBuilder builder = XContentFactory.jsonBuilder();
-                ThreadContext.StoredContext context = client.threadPool().getThreadContext().stashContext()
-            ) {
-                Template encryptedTemplate = encryptorUtils.encryptTemplateCredentials(template);
-                request.source(encryptedTemplate.toXContent(builder, ToXContent.EMPTY_PARAMS))
-                    .setRefreshPolicy(WriteRequest.RefreshPolicy.IMMEDIATE);
-                client.index(request, ActionListener.runBefore(listener, context::restore));
-            } catch (Exception e) {
-                String errorMessage = "Failed to update global_context entry : " + documentId;
-                logger.error(errorMessage, e);
-                listener.onFailure(new FlowFrameworkException(errorMessage + " : " + e.getMessage(), ExceptionsHelper.status(e)));
-            }
+            return;
         }
+        doesTemplateExists(documentId, templateExists -> {
+            if (templateExists) {
+                isWorkflowProvisioned(documentId, workflowIsProvisioned -> {
+                    if (workflowIsProvisioned) {
+                        IndexRequest request = new IndexRequest(GLOBAL_CONTEXT_INDEX).id(documentId);
+                        try (
+                            XContentBuilder builder = XContentFactory.jsonBuilder();
+                            ThreadContext.StoredContext context = client.threadPool().getThreadContext().stashContext()
+                        ) {
+                            Template encryptedTemplate = encryptorUtils.encryptTemplateCredentials(template);
+                            request.source(encryptedTemplate.toXContent(builder, ToXContent.EMPTY_PARAMS))
+                                .setRefreshPolicy(WriteRequest.RefreshPolicy.IMMEDIATE);
+                            client.index(request, ActionListener.runBefore(listener, context::restore));
+                        } catch (Exception e) {
+                            String errorMessage = "Failed to update global_context entry : " + documentId;
+                            logger.error(errorMessage, e);
+                            listener.onFailure(
+                                new FlowFrameworkException(errorMessage + " : " + e.getMessage(), ExceptionsHelper.status(e))
+                            );
+                        }
+                    } else {
+                        String errorMessage = "The template has already been provisioned so it can't be updated: " + documentId;
+                        logger.error(errorMessage);
+                        listener.onFailure(new FlowFrameworkException(errorMessage, RestStatus.BAD_REQUEST));
+                    }
+                }, listener);
+
+            } else {
+                String errorMessage = "Failed to get template: " + documentId;
+                logger.error(errorMessage);
+                listener.onFailure(new FlowFrameworkException(errorMessage, RestStatus.BAD_REQUEST));
+            }
+        });
+    }
+
+    /**
+     * Check if the given template exists in the template index
+     *
+     * @param documentId document id
+     * @param booleanResultConsumer boolean consumer function
+     */
+    public void doesTemplateExists(String documentId, Consumer<Boolean> booleanResultConsumer) {
+        GetRequest getRequest = new GetRequest(GLOBAL_CONTEXT_INDEX, documentId);
+        client.get(getRequest, ActionListener.wrap(response -> { booleanResultConsumer.accept(response.isExists()); }, exception -> {
+            logger.error("Failed to get template " + documentId, exception);
+            booleanResultConsumer.accept(false);
+        }));
+    }
+
+    /**
+     * Check if the workflow has been provisioned and executes the consumer by passing a boolean
+     *
+     * @param documentId document id
+     * @param booleanResultConsumer boolean consumer function
+     * @param listener action listener
+     * @param <T> action listener response type
+     */
+    public <T> void isWorkflowProvisioned(String documentId, Consumer<Boolean> booleanResultConsumer, ActionListener<T> listener) {
+        GetRequest getRequest = new GetRequest(WORKFLOW_STATE_INDEX, documentId);
+        client.get(getRequest, ActionListener.wrap(response -> {
+            if (!response.isExists()) {
+                booleanResultConsumer.accept(false);
+                return;
+            }
+            try (XContentParser parser = ParseUtils.createXContentParserFromRegistry(xContentRegistry, response.getSourceAsBytesRef())) {
+                ensureExpectedToken(XContentParser.Token.START_OBJECT, parser.nextToken(), parser);
+                WorkflowState workflowState = WorkflowState.parse(parser);
+                if (workflowState.getProvisioningProgress().equals(ProvisioningProgress.NOT_STARTED.name())) {
+                    booleanResultConsumer.accept(true);
+                } else {
+                    booleanResultConsumer.accept(false);
+                }
+            } catch (Exception e) {
+                String message = "Failed to parse workflow state" + documentId;
+                logger.error(message, e);
+                listener.onFailure(new FlowFrameworkException(message, RestStatus.INTERNAL_SERVER_ERROR));
+            }
+        }, exception -> {
+            logger.error("Failed to get workflow state " + documentId, exception);
+            booleanResultConsumer.accept(false);
+        }));
     }
 
     /**

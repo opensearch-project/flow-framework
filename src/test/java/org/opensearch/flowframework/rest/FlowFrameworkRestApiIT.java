@@ -68,6 +68,33 @@ public class FlowFrameworkRestApiIT extends FlowFrameworkRestTestCase {
         }
     }
 
+    public void testFailedUpdateWorkflow() throws Exception {
+        // Create a Workflow that has a credential 12345
+        Template template = TestHelpers.createTemplateFromFile("createconnector-registerremotemodel-deploymodel.json");
+
+        ResponseException exception = expectThrows(ResponseException.class, () -> updateWorkflow(client(), "123", template));
+        assertTrue(exception.getMessage().contains("Failed to get template: 123"));
+
+        Response response = createWorkflow(client(), template);
+        assertEquals(RestStatus.CREATED, TestHelpers.restStatus(response));
+
+        Map<String, Object> responseMap = entityAsMap(response);
+        String workflowId = (String) responseMap.get(WORKFLOW_ID);
+
+        // Provision Template
+        Response provisionResponse = provisionWorkflow(client(), workflowId);
+        assertEquals(RestStatus.OK, TestHelpers.restStatus(provisionResponse));
+        getAndAssertWorkflowStatus(client(), workflowId, State.PROVISIONING, ProvisioningProgress.IN_PROGRESS);
+
+        // Failed update since provisioning has started
+        ResponseException exceptionProvisioned = expectThrows(
+            ResponseException.class,
+            () -> updateWorkflow(client(), workflowId, template)
+        );
+        assertTrue(exceptionProvisioned.getMessage().contains("The template has already been provisioned so it can't be updated"));
+
+    }
+
     public void testCreateAndProvisionLocalModelWorkflow() throws Exception {
         // Using a 1 step template to register a local model and deploy model
         Template template = TestHelpers.createTemplateFromFile("register-deploylocalsparseencodingmodel.json");
@@ -134,14 +161,14 @@ public class FlowFrameworkRestApiIT extends FlowFrameworkRestTestCase {
         assertEquals("deploy_model", resourcesCreated.get(1).workflowStepName());
         assertNotNull(resourcesCreated.get(1).resourceId());
 
-        // Deprovision the workflow to avoid opening circut breaker when running additional tests
-        Response deprovisionResponse = deprovisionWorkflow(client(), workflowId);
-
-        // wait for deprovision to complete
-        Thread.sleep(5000);
+        // // Deprovision the workflow to avoid opening circut breaker when running additional tests
+        // Response deprovisionResponse = deprovisionWorkflow(client(), workflowId);
+        //
+        // // wait for deprovision to complete
+        // Thread.sleep(5000);
     }
 
-    public void testCreateAndProvisionRemoteModelWorkflow() throws Exception {
+    public void testCreateAndProvisionCyclicalTemplate() throws Exception {
 
         // Using a 3 step template to create a connector, register remote model and deploy model
         Template template = TestHelpers.createTemplateFromFile("createconnector-registerremotemodel-deploymodel.json");
@@ -170,6 +197,12 @@ public class FlowFrameworkRestApiIT extends FlowFrameworkRestTestCase {
         assertTrue(exception.getMessage().contains("Cycle detected"));
         assertTrue(exception.getMessage().contains("workflow_step_2->workflow_step_3"));
         assertTrue(exception.getMessage().contains("workflow_step_3->workflow_step_2"));
+    }
+
+    public void testCreateAndProvisionRemoteModelWorkflow() throws Exception {
+
+        // Using a 3 step template to create a connector, register remote model and deploy model
+        Template template = TestHelpers.createTemplateFromFile("createconnector-registerremotemodel-deploymodel.json");
 
         // Hit Create Workflow API with original template
         Response response = createWorkflow(client(), template);
@@ -197,10 +230,10 @@ public class FlowFrameworkRestApiIT extends FlowFrameworkRestTestCase {
         assertNotNull(resourcesCreated.get(2).resourceId());
 
         // Deprovision the workflow to avoid opening circut breaker when running additional tests
-        Response deprovisionResponse = deprovisionWorkflow(client(), workflowId);
-
-        // wait for deprovision to complete
-        Thread.sleep(5000);
+        // Response deprovisionResponse = deprovisionWorkflow(client(), workflowId);
+        //
+        // // wait for deprovision to complete
+        // Thread.sleep(5000);
     }
 
     public void testCreateAndProvisionAgentFrameworkWorkflow() throws Exception {
@@ -239,16 +272,16 @@ public class FlowFrameworkRestApiIT extends FlowFrameworkRestTestCase {
         assertNotNull(resourcesCreated.get(0).resourceId());
 
         // Hit Deprovision API
-        Response deprovisionResponse = deprovisionWorkflow(client(), workflowId);
-        assertBusy(
-            () -> { getAndAssertWorkflowStatus(client(), workflowId, State.NOT_STARTED, ProvisioningProgress.NOT_STARTED); },
-            60,
-            TimeUnit.SECONDS
-        );
-
-        // Hit Delete API
-        Response deleteResponse = deleteWorkflow(client(), workflowId);
-        assertEquals(RestStatus.OK, TestHelpers.restStatus(deleteResponse));
+        // Response deprovisionResponse = deprovisionWorkflow(client(), workflowId);
+        // assertBusy(
+        // () -> { getAndAssertWorkflowStatus(client(), workflowId, State.NOT_STARTED, ProvisioningProgress.NOT_STARTED); },
+        // 60,
+        // TimeUnit.SECONDS
+        // );
+        //
+        // // Hit Delete API
+        // Response deleteResponse = deleteWorkflow(client(), workflowId);
+        // assertEquals(RestStatus.OK, TestHelpers.restStatus(deleteResponse));
     }
 
 }

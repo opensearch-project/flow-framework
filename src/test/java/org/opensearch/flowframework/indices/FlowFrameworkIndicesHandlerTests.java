@@ -80,7 +80,7 @@ public class FlowFrameworkIndicesHandlerTests extends OpenSearchTestCase {
         threadContext = new ThreadContext(settings);
         when(client.threadPool()).thenReturn(threadPool);
         when(threadPool.getThreadContext()).thenReturn(threadContext);
-        flowFrameworkIndicesHandler = new FlowFrameworkIndicesHandler(client, clusterService, encryptorUtils);
+        flowFrameworkIndicesHandler = new FlowFrameworkIndicesHandler(client, clusterService, encryptorUtils, xContentRegistry());
         adminClient = mock(AdminClient.class);
         indicesAdminClient = mock(IndicesAdminClient.class);
         metadata = mock(Metadata.class);
