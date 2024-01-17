@@ -102,7 +102,8 @@ public class DeprovisionWorkflowTransportAction extends HandledTransportAction<W
                 context.restore();
 
                 // Retrieve resources from workflow state and deprovision
-                threadPool.executor(WORKFLOW_THREAD_POOL).execute(() -> executeDeprovisionSequence(workflowId, response.getWorkflowState().resourcesCreated(), listener));
+                threadPool.executor(WORKFLOW_THREAD_POOL)
+                    .execute(() -> executeDeprovisionSequence(workflowId, response.getWorkflowState().resourcesCreated(), listener));
             }, exception -> {
                 String message = "Failed to get workflow state for workflow " + workflowId;
                 logger.error(message, exception);
