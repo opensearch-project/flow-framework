@@ -68,7 +68,7 @@ public abstract class AbstractRetryableWorkflowStep implements WorkflowStep {
     protected void retryableGetMlTask(
         String workflowId,
         String nodeId,
-        CompletableFuture<WorkflowData> future,
+        PlainActionFuture<WorkflowData> future,
         String taskId,
         String workflowStep,
         ActionListener<MLTask> mlTaskListener

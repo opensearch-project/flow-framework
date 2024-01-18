@@ -16,6 +16,7 @@ import org.opensearch.core.action.ActionListener;
 import org.opensearch.flowframework.exception.FlowFrameworkException;
 import org.opensearch.flowframework.util.ParseUtils;
 import org.opensearch.ml.client.MachineLearningNodeClient;
+import org.opensearch.action.support.PlainActionFuture;
 
 import java.util.Collections;
 import java.util.Map;
@@ -45,19 +46,19 @@ public class DeleteModelStep implements WorkflowStep {
     }
 
     @Override
-    public CompletableFuture<WorkflowData> execute(
+    public PlainActionFuture<WorkflowData> execute(
         String currentNodeId,
         WorkflowData currentNodeInputs,
         Map<String, WorkflowData> outputs,
         Map<String, String> previousNodeInputs
     ) {
-        CompletableFuture<WorkflowData> deleteModelFuture = new CompletableFuture<>();
+        PlainActionFuture<WorkflowData> deleteModelFuture = PlainActionFuture.newFuture();
 
         ActionListener<DeleteResponse> actionListener = new ActionListener<>() {
 
             @Override
             public void onResponse(DeleteResponse deleteResponse) {
-                deleteModelFuture.complete(
+                deleteModelFuture.onResponse(
                     new WorkflowData(
                         Map.ofEntries(Map.entry(MODEL_ID, deleteResponse.getId())),
                         currentNodeInputs.getWorkflowId(),
@@ -69,7 +70,7 @@ public class DeleteModelStep implements WorkflowStep {
             @Override
             public void onFailure(Exception e) {
                 logger.error("Failed to delete model");
-                deleteModelFuture.completeExceptionally(new FlowFrameworkException(e.getMessage(), ExceptionsHelper.status(e)));
+                deleteModelFuture.onFailure(new FlowFrameworkException(e.getMessage(), ExceptionsHelper.status(e)));
             }
         };
 
@@ -89,7 +90,7 @@ public class DeleteModelStep implements WorkflowStep {
 
             mlClient.deleteModel(modelId, actionListener);
         } catch (FlowFrameworkException e) {
-            deleteModelFuture.completeExceptionally(e);
+            deleteModelFuture.onFailure(e);
         }
         return deleteModelFuture;
     }

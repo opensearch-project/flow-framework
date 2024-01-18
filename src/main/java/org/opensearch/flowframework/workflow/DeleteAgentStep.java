@@ -16,6 +16,7 @@ import org.opensearch.core.action.ActionListener;
 import org.opensearch.flowframework.exception.FlowFrameworkException;
 import org.opensearch.flowframework.util.ParseUtils;
 import org.opensearch.ml.client.MachineLearningNodeClient;
+import org.opensearch.action.support.PlainActionFuture;
 
 import java.util.Collections;
 import java.util.Map;
@@ -45,19 +46,19 @@ public class DeleteAgentStep implements WorkflowStep {
     }
 
     @Override
-    public CompletableFuture<WorkflowData> execute(
+    public PlainActionFuture<WorkflowData> execute(
         String currentNodeId,
         WorkflowData currentNodeInputs,
         Map<String, WorkflowData> outputs,
         Map<String, String> previousNodeInputs
     ) {
-        CompletableFuture<WorkflowData> deleteAgentFuture = new CompletableFuture<>();
+        PlainActionFuture<WorkflowData> deleteAgentFuture = PlainActionFuture.newFuture();
 
         ActionListener<DeleteResponse> actionListener = new ActionListener<>() {
 
             @Override
             public void onResponse(DeleteResponse deleteResponse) {
-                deleteAgentFuture.complete(
+                deleteAgentFuture.onResponse(
                     new WorkflowData(
                         Map.ofEntries(Map.entry(AGENT_ID, deleteResponse.getId())),
                         currentNodeInputs.getWorkflowId(),
@@ -69,7 +70,7 @@ public class DeleteAgentStep implements WorkflowStep {
             @Override
             public void onFailure(Exception e) {
                 logger.error("Failed to delete agent");
-                deleteAgentFuture.completeExceptionally(new FlowFrameworkException(e.getMessage(), ExceptionsHelper.status(e)));
+                deleteAgentFuture.onFailure(new FlowFrameworkException(e.getMessage(), ExceptionsHelper.status(e)));
             }
         };
 
@@ -88,7 +89,7 @@ public class DeleteAgentStep implements WorkflowStep {
 
             mlClient.deleteAgent(agentId, actionListener);
         } catch (FlowFrameworkException e) {
-            deleteAgentFuture.completeExceptionally(e);
+            deleteAgentFuture.onFailure(e);
         }
         return deleteAgentFuture;
     }

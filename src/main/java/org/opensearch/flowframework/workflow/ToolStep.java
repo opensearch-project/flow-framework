@@ -10,6 +10,7 @@ package org.opensearch.flowframework.workflow;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.opensearch.action.support.PlainActionFuture;
 import org.opensearch.flowframework.exception.FlowFrameworkException;
 import org.opensearch.flowframework.util.ParseUtils;
 import org.opensearch.ml.common.agent.MLToolSpec;
@@ -34,11 +35,11 @@ import static org.opensearch.flowframework.common.WorkflowResources.MODEL_ID;
 public class ToolStep implements WorkflowStep {
 
     private static final Logger logger = LogManager.getLogger(ToolStep.class);
-    CompletableFuture<WorkflowData> toolFuture = new CompletableFuture<>();
+    PlainActionFuture<WorkflowData> toolFuture = PlainActionFuture.newFuture();
     static final String NAME = "create_tool";
 
     @Override
-    public CompletableFuture<WorkflowData> execute(
+    public PlainActionFuture<WorkflowData> execute(
         String currentNodeId,
         WorkflowData currentNodeInputs,
         Map<String, WorkflowData> outputs,
@@ -80,7 +81,7 @@ public class ToolStep implements WorkflowStep {
 
             MLToolSpec mlToolSpec = builder.build();
 
-            toolFuture.complete(
+            toolFuture.onResponse(
                 new WorkflowData(
                     Map.ofEntries(Map.entry(TOOLS_FIELD, mlToolSpec)),
                     currentNodeInputs.getWorkflowId(),
@@ -91,7 +92,7 @@ public class ToolStep implements WorkflowStep {
             logger.info("Tool registered successfully {}", type);
 
         } catch (FlowFrameworkException e) {
-            toolFuture.completeExceptionally(e);
+            toolFuture.onFailure(e);
         }
         return toolFuture;
     }

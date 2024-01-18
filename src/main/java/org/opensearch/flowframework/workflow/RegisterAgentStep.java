@@ -23,6 +23,7 @@ import org.opensearch.ml.common.agent.MLAgent.MLAgentBuilder;
 import org.opensearch.ml.common.agent.MLMemorySpec;
 import org.opensearch.ml.common.agent.MLToolSpec;
 import org.opensearch.ml.common.transport.agent.MLRegisterAgentResponse;
+import org.opensearch.action.support.PlainActionFuture;
 
 import java.time.Instant;
 import java.util.ArrayList;
@@ -78,7 +79,7 @@ public class RegisterAgentStep implements WorkflowStep {
     }
 
     @Override
-    public CompletableFuture<WorkflowData> execute(
+    public PlainActionFuture<WorkflowData> execute(
         String currentNodeId,
         WorkflowData currentNodeInputs,
         Map<String, WorkflowData> outputs,
@@ -87,7 +88,7 @@ public class RegisterAgentStep implements WorkflowStep {
 
         String workflowId = currentNodeInputs.getWorkflowId();
 
-        CompletableFuture<WorkflowData> registerAgentModelFuture = new CompletableFuture<>();
+        PlainActionFuture<WorkflowData> registerAgentModelFuture = PlainActionFuture.newFuture();
 
         ActionListener<MLRegisterAgentResponse> actionListener = new ActionListener<>() {
             @Override
@@ -102,7 +103,7 @@ public class RegisterAgentStep implements WorkflowStep {
                         mlRegisterAgentResponse.getAgentId(),
                         ActionListener.wrap(response -> {
                             logger.info("successfully updated resources created in state index: {}", response.getIndex());
-                            registerAgentModelFuture.complete(
+                            registerAgentModelFuture.onResponse(
                                 new WorkflowData(
                                     Map.ofEntries(Map.entry(resourceName, mlRegisterAgentResponse.getAgentId())),
                                     workflowId,
@@ -111,7 +112,7 @@ public class RegisterAgentStep implements WorkflowStep {
                             );
                         }, exception -> {
                             logger.error("Failed to update new created resource", exception);
-                            registerAgentModelFuture.completeExceptionally(
+                            registerAgentModelFuture.onFailure(
                                 new FlowFrameworkException(exception.getMessage(), ExceptionsHelper.status(exception))
                             );
                         })
@@ -119,14 +120,14 @@ public class RegisterAgentStep implements WorkflowStep {
 
                 } catch (Exception e) {
                     logger.error("Failed to parse and update new created resource", e);
-                    registerAgentModelFuture.completeExceptionally(new FlowFrameworkException(e.getMessage(), ExceptionsHelper.status(e)));
+                    registerAgentModelFuture.onFailure(new FlowFrameworkException(e.getMessage(), ExceptionsHelper.status(e)));
                 }
             }
 
             @Override
             public void onFailure(Exception e) {
                 logger.error("Failed to register the agent");
-                registerAgentModelFuture.completeExceptionally(new FlowFrameworkException(e.getMessage(), ExceptionsHelper.status(e)));
+                registerAgentModelFuture.onFailure(new FlowFrameworkException(e.getMessage(), ExceptionsHelper.status(e)));
             }
         };
 
@@ -201,7 +202,7 @@ public class RegisterAgentStep implements WorkflowStep {
             mlClient.registerAgent(mlAgent, actionListener);
 
         } catch (FlowFrameworkException e) {
-            registerAgentModelFuture.completeExceptionally(e);
+            registerAgentModelFuture.onFailure(e);
         }
         return registerAgentModelFuture;
     }

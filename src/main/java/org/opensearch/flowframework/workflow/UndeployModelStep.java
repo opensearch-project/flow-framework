@@ -13,6 +13,7 @@ import org.apache.logging.log4j.Logger;
 import org.opensearch.ExceptionsHelper;
 import org.opensearch.OpenSearchException;
 import org.opensearch.action.FailedNodeException;
+import org.opensearch.action.support.PlainActionFuture;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.flowframework.exception.FlowFrameworkException;
 import org.opensearch.flowframework.util.ParseUtils;
@@ -50,13 +51,13 @@ public class UndeployModelStep implements WorkflowStep {
     }
 
     @Override
-    public CompletableFuture<WorkflowData> execute(
+    public PlainActionFuture<WorkflowData> execute(
         String currentNodeId,
         WorkflowData currentNodeInputs,
         Map<String, WorkflowData> outputs,
         Map<String, String> previousNodeInputs
     ) {
-        CompletableFuture<WorkflowData> undeployModelFuture = new CompletableFuture<>();
+        PlainActionFuture<WorkflowData> undeployModelFuture = PlainActionFuture.newFuture();
 
         ActionListener<MLUndeployModelsResponse> actionListener = new ActionListener<>() {
 
@@ -64,7 +65,7 @@ public class UndeployModelStep implements WorkflowStep {
             public void onResponse(MLUndeployModelsResponse mlUndeployModelsResponse) {
                 List<FailedNodeException> failures = mlUndeployModelsResponse.getResponse().failures();
                 if (failures.isEmpty()) {
-                    undeployModelFuture.complete(
+                    undeployModelFuture.onResponse(
                         new WorkflowData(
                             Map.ofEntries(Map.entry(SUCCESS, !mlUndeployModelsResponse.getResponse().hasFailures())),
                             currentNodeInputs.getWorkflowId(),
@@ -75,14 +76,14 @@ public class UndeployModelStep implements WorkflowStep {
                     List<String> failedNodes = failures.stream().map(FailedNodeException::nodeId).collect(Collectors.toList());
                     String message = "Failed to undeploy model on nodes " + failedNodes;
                     logger.error(message);
-                    undeployModelFuture.completeExceptionally(new OpenSearchException(message));
+                    undeployModelFuture.onFailure(new OpenSearchException(message));
                 }
             }
 
             @Override
             public void onFailure(Exception e) {
                 logger.error("Failed to unldeploy model");
-                undeployModelFuture.completeExceptionally(new FlowFrameworkException(e.getMessage(), ExceptionsHelper.status(e)));
+                undeployModelFuture.onFailure(new FlowFrameworkException(e.getMessage(), ExceptionsHelper.status(e)));
             }
         };
 
@@ -102,7 +103,7 @@ public class UndeployModelStep implements WorkflowStep {
 
             mlClient.undeploy(new String[] { modelId }, null, actionListener);
         } catch (FlowFrameworkException e) {
-            undeployModelFuture.completeExceptionally(e);
+            undeployModelFuture.onFailure(e);
         }
         return undeployModelFuture;
     }
