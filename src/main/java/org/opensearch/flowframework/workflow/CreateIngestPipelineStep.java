@@ -12,6 +12,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.opensearch.ExceptionsHelper;
 import org.opensearch.action.ingest.PutPipelineRequest;
+import org.opensearch.action.support.PlainActionFuture;
 import org.opensearch.client.Client;
 import org.opensearch.client.ClusterAdminClient;
 import org.opensearch.common.xcontent.XContentFactory;
@@ -27,7 +28,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.concurrent.CompletableFuture;
 import java.util.stream.Stream;
 
 import static org.opensearch.flowframework.common.CommonValue.DESCRIPTION_FIELD;
@@ -66,14 +66,14 @@ public class CreateIngestPipelineStep implements WorkflowStep {
     }
 
     @Override
-    public CompletableFuture<WorkflowData> execute(
+    public PlainActionFuture<WorkflowData> execute(
         String currentNodeId,
         WorkflowData currentNodeInputs,
         Map<String, WorkflowData> outputs,
         Map<String, String> previousNodeInputs
     ) {
 
-        CompletableFuture<WorkflowData> createIngestPipelineFuture = new CompletableFuture<>();
+        PlainActionFuture<WorkflowData> createIngestPipelineFuture = PlainActionFuture.newFuture();
 
         String pipelineId = null;
         String description = null;
@@ -127,7 +127,7 @@ public class CreateIngestPipelineStep implements WorkflowStep {
                     );
                 } catch (IOException e) {
                     logger.error("Failed to create ingest pipeline configuration: " + e.getMessage());
-                    createIngestPipelineFuture.completeExceptionally(e);
+                    createIngestPipelineFuture.onFailure(e);
                 }
                 break;
             }
@@ -135,7 +135,7 @@ public class CreateIngestPipelineStep implements WorkflowStep {
 
         if (configuration == null) {
             // Required workflow data not found
-            createIngestPipelineFuture.completeExceptionally(new Exception("Failed to create ingest pipeline, required inputs not found"));
+            createIngestPipelineFuture.onFailure(new Exception("Failed to create ingest pipeline, required inputs not found"));
         } else {
             // Create PutPipelineRequest and execute
             PutPipelineRequest putPipelineRequest = new PutPipelineRequest(pipelineId, configuration, XContentType.JSON);
@@ -153,7 +153,7 @@ public class CreateIngestPipelineStep implements WorkflowStep {
                             logger.info("successfully updated resources created in state index: {}", updateResponse.getIndex());
                             // PutPipelineRequest returns only an AcknowledgeResponse, returning pipelineId instead
                             // TODO: revisit this concept of pipeline_id to be consistent with what makes most sense to end user here
-                            createIngestPipelineFuture.complete(
+                            createIngestPipelineFuture.onResponse(
                                 new WorkflowData(
                                     Map.of(resourceName, putPipelineRequest.getId()),
                                     currentNodeInputs.getWorkflowId(),
@@ -162,7 +162,7 @@ public class CreateIngestPipelineStep implements WorkflowStep {
                             );
                         }, exception -> {
                             logger.error("Failed to update new created resource", exception);
-                            createIngestPipelineFuture.completeExceptionally(
+                            createIngestPipelineFuture.onFailure(
                                 new FlowFrameworkException(exception.getMessage(), ExceptionsHelper.status(exception))
                             );
                         })
@@ -170,14 +170,12 @@ public class CreateIngestPipelineStep implements WorkflowStep {
 
                 } catch (Exception e) {
                     logger.error("Failed to parse and update new created resource", e);
-                    createIngestPipelineFuture.completeExceptionally(
-                        new FlowFrameworkException(e.getMessage(), ExceptionsHelper.status(e))
-                    );
+                    createIngestPipelineFuture.onFailure(new FlowFrameworkException(e.getMessage(), ExceptionsHelper.status(e)));
                 }
 
             }, exception -> {
                 logger.error("Failed to create ingest pipeline : " + exception.getMessage());
-                createIngestPipelineFuture.completeExceptionally(exception);
+                createIngestPipelineFuture.onFailure(exception);
             }));
         }
 
