@@ -10,10 +10,12 @@ package org.opensearch.flowframework.workflow;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.opensearch.action.support.PlainActionFuture;
 import org.opensearch.common.unit.TimeValue;
 import org.opensearch.threadpool.Scheduler.ScheduledCancellable;
 import org.opensearch.threadpool.ThreadPool;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -39,7 +41,7 @@ public class ProcessNode {
     private final ThreadPool threadPool;
     private final TimeValue nodeTimeout;
 
-    private final CompletableFuture<WorkflowData> future = new CompletableFuture<>();
+    private final PlainActionFuture<WorkflowData> future = PlainActionFuture.newFuture();
 
     /**
      * Create this node linked to its executing process, including input data and any predecessor nodes.
@@ -109,7 +111,7 @@ public class ProcessNode {
      * @return A future indicating the processing state of this node.
      * Returns {@code null} if it has not begun executing, should not happen if a workflow is sorted and executed topologically.
      */
-    public CompletableFuture<WorkflowData> future() {
+    public PlainActionFuture<WorkflowData> future() {
         return future;
     }
 
@@ -139,24 +141,26 @@ public class ProcessNode {
      * @return this node's future.
      * This is returned immediately, while process execution continues asynchronously.
      */
-    public CompletableFuture<WorkflowData> execute() {
+    public PlainActionFuture<WorkflowData> execute() {
         if (this.future.isDone()) {
             throw new IllegalStateException("Process Node [" + this.id + "] already executed.");
         }
 
         CompletableFuture.runAsync(() -> {
-            List<CompletableFuture<WorkflowData>> predFutures = predecessors.stream().map(p -> p.future()).collect(Collectors.toList());
+            List<PlainActionFuture<WorkflowData>> predFutures = predecessors.stream().map(p -> p.future()).collect(Collectors.toList());
+            List<WorkflowData> waitForPredecessors = new ArrayList<>(predFutures.size());
             try {
                 if (!predecessors.isEmpty()) {
-                    CompletableFuture<Void> waitForPredecessors = CompletableFuture.allOf(predFutures.toArray(new CompletableFuture<?>[0]));
-                    waitForPredecessors.join();
-                }
+                    for (PlainActionFuture<WorkflowData> future : predFutures) {
+                        waitForPredecessors.add(future.get());
+                    }
 
+                }
                 logger.info("Starting {}.", this.id);
                 // get the input data from predecessor(s)
                 Map<String, WorkflowData> inputMap = new HashMap<>();
-                for (CompletableFuture<WorkflowData> cf : predFutures) {
-                    WorkflowData wd = cf.get();
+                for (PlainActionFuture<WorkflowData> cf : predFutures) {
+                    WorkflowData wd = cf.actionGet();
                     inputMap.put(wd.getNodeId(), wd);
                 }
 
@@ -164,26 +168,26 @@ public class ProcessNode {
                 if (this.nodeTimeout.compareTo(TimeValue.ZERO) > 0) {
                     delayExec = threadPool.schedule(() -> {
                         if (!future.isDone()) {
-                            future.completeExceptionally(new TimeoutException("Execute timed out for " + this.id));
+                            future.onFailure(new TimeoutException("Execute timed out for " + this.id));
                         }
                     }, this.nodeTimeout, ThreadPool.Names.SAME);
                 }
                 // record start time for this step.
-                CompletableFuture<WorkflowData> stepFuture = this.workflowStep.execute(
+                PlainActionFuture<WorkflowData> stepFuture = this.workflowStep.execute(
                     this.id,
                     this.input,
                     inputMap,
                     this.previousNodeInputs
                 );
                 // If completed exceptionally, this is a no-op
-                future.complete(stepFuture.get());
+                future.onResponse(stepFuture.get());
                 // record end time passing workflow steps
                 if (delayExec != null) {
                     delayExec.cancel();
                 }
                 logger.info("Finished {}.", this.id);
-            } catch (Throwable t) {
-                this.future.completeExceptionally(t.getCause() == null ? t : t.getCause());
+            } catch (Exception e) {
+                this.future.onFailure(e);
             }
         }, threadPool.executor(WORKFLOW_THREAD_POOL));
         return this.future;

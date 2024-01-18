@@ -41,7 +41,6 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.CancellationException;
-import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 
 import static org.opensearch.flowframework.common.CommonValue.ERROR_FIELD;

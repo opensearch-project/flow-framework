@@ -11,6 +11,7 @@ package org.opensearch.flowframework.workflow;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.opensearch.ExceptionsHelper;
+import org.opensearch.action.support.PlainActionFuture;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.flowframework.common.FlowFrameworkSettings;
 import org.opensearch.flowframework.exception.FlowFrameworkException;
@@ -20,12 +21,10 @@ import org.opensearch.ml.client.MachineLearningNodeClient;
 import org.opensearch.ml.common.MLTask;
 import org.opensearch.ml.common.transport.deploy.MLDeployModelResponse;
 import org.opensearch.threadpool.ThreadPool;
-import org.opensearch.action.support.PlainActionFuture;
 
 import java.util.Collections;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.CompletableFuture;
 
 import static org.opensearch.flowframework.common.CommonValue.REGISTER_MODEL_STATUS;
 import static org.opensearch.flowframework.common.WorkflowResources.MODEL_ID;
@@ -95,11 +94,7 @@ public class DeployModelStep extends AbstractRetryableWorkflowStep {
                                 currentNodeId
                             )
                         );
-                    },
-                        e -> {
-                            deployModelFuture.onFailure(new FlowFrameworkException(e.getMessage(), ExceptionsHelper.status(e)));
-                        }
-                    )
+                    }, e -> { deployModelFuture.onFailure(new FlowFrameworkException(e.getMessage(), ExceptionsHelper.status(e))); })
                 );
             }
 

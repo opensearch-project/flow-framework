@@ -11,6 +11,7 @@ package org.opensearch.flowframework.workflow;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.opensearch.ExceptionsHelper;
+import org.opensearch.action.support.PlainActionFuture;
 import org.opensearch.common.Nullable;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.flowframework.exception.FlowFrameworkException;
@@ -23,7 +24,6 @@ import org.opensearch.ml.common.agent.MLAgent.MLAgentBuilder;
 import org.opensearch.ml.common.agent.MLMemorySpec;
 import org.opensearch.ml.common.agent.MLToolSpec;
 import org.opensearch.ml.common.transport.agent.MLRegisterAgentResponse;
-import org.opensearch.action.support.PlainActionFuture;
 
 import java.time.Instant;
 import java.util.ArrayList;
@@ -33,7 +33,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
-import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 
 import static org.opensearch.flowframework.common.CommonValue.APP_TYPE_FIELD;

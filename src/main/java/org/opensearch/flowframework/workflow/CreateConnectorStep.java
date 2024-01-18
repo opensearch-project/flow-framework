@@ -11,6 +11,7 @@ package org.opensearch.flowframework.workflow;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.opensearch.ExceptionsHelper;
+import org.opensearch.action.support.PlainActionFuture;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.core.rest.RestStatus;
 import org.opensearch.flowframework.exception.FlowFrameworkException;
@@ -21,7 +22,6 @@ import org.opensearch.ml.common.connector.ConnectorAction;
 import org.opensearch.ml.common.connector.ConnectorAction.ActionType;
 import org.opensearch.ml.common.transport.connector.MLCreateConnectorInput;
 import org.opensearch.ml.common.transport.connector.MLCreateConnectorResponse;
-import org.opensearch.action.support.PlainActionFuture;
 
 import java.security.AccessController;
 import java.security.PrivilegedActionException;
@@ -34,7 +34,6 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
-import java.util.concurrent.CompletableFuture;
 
 import static org.opensearch.flowframework.common.CommonValue.ACTIONS_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.CREDENTIAL_FIELD;

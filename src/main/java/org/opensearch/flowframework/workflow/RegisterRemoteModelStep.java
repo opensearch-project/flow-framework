@@ -25,7 +25,6 @@ import org.opensearch.ml.common.transport.register.MLRegisterModelResponse;
 
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.CompletableFuture;
 
 import static org.opensearch.flowframework.common.CommonValue.DEPLOY_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.DESCRIPTION_FIELD;
@@ -148,9 +147,7 @@ public class RegisterRemoteModelStep implements WorkflowStep {
 
                     } catch (Exception e) {
                         logger.error("Failed to parse and update new created resource", e);
-                        registerRemoteModelFuture.onFailure(
-                            new FlowFrameworkException(e.getMessage(), ExceptionsHelper.status(e))
-                        );
+                        registerRemoteModelFuture.onFailure(new FlowFrameworkException(e.getMessage(), ExceptionsHelper.status(e)));
                     }
                 }
 

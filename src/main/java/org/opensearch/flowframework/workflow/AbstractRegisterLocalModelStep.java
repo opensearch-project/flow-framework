@@ -29,7 +29,6 @@ import org.opensearch.threadpool.ThreadPool;
 
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.CompletableFuture;
 import java.util.stream.Stream;
 
 import static org.opensearch.flowframework.common.CommonValue.ALL_CONFIG;
@@ -214,9 +213,7 @@ public abstract class AbstractRegisterLocalModelStep extends AbstractRetryableWo
                 );
             }, exception -> {
                 logger.error("Failed to register local model");
-                registerLocalModelFuture.onFailure(
-                    new FlowFrameworkException(exception.getMessage(), ExceptionsHelper.status(exception))
-                );
+                registerLocalModelFuture.onFailure(new FlowFrameworkException(exception.getMessage(), ExceptionsHelper.status(exception)));
             }));
         } catch (FlowFrameworkException e) {
             registerLocalModelFuture.onFailure(e);

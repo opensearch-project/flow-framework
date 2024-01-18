@@ -27,7 +27,6 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.CompletableFuture;
 
 import static org.opensearch.flowframework.common.CommonValue.ADD_ALL_BACKEND_ROLES;
 import static org.opensearch.flowframework.common.CommonValue.BACKEND_ROLES_FIELD;
