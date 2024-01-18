@@ -436,13 +436,12 @@ public class FlowFrameworkIndicesHandler {
                         listener.onFailure(new FlowFrameworkException(errorMessage, RestStatus.BAD_REQUEST));
                     }
                 }, listener);
-
             } else {
                 String errorMessage = "Failed to get template: " + documentId;
                 logger.error(errorMessage);
                 listener.onFailure(new FlowFrameworkException(errorMessage, RestStatus.BAD_REQUEST));
             }
-        });
+        }, listener);
     }
 
     /**
@@ -450,13 +449,23 @@ public class FlowFrameworkIndicesHandler {
      *
      * @param documentId document id
      * @param booleanResultConsumer boolean consumer function
+     * @param listener action listener
+     * @param <T> action listener response type
      */
-    public void doesTemplateExists(String documentId, Consumer<Boolean> booleanResultConsumer) {
+    public <T> void doesTemplateExists(String documentId, Consumer<Boolean> booleanResultConsumer, ActionListener<T> listener) {
         GetRequest getRequest = new GetRequest(GLOBAL_CONTEXT_INDEX, documentId);
-        client.get(getRequest, ActionListener.wrap(response -> { booleanResultConsumer.accept(response.isExists()); }, exception -> {
-            logger.error("Failed to get template " + documentId, exception);
+        try (ThreadContext.StoredContext context = client.threadPool().getThreadContext().stashContext()) {
+            client.get(getRequest, ActionListener.wrap(response -> { booleanResultConsumer.accept(response.isExists()); }, exception -> {
+                context.restore();
+                logger.error("Failed to get template " + documentId, exception);
+                booleanResultConsumer.accept(false);
+                listener.onFailure(new FlowFrameworkException(exception.getMessage(), ExceptionsHelper.status(exception)));
+            }));
+        } catch (Exception e) {
+            logger.error("Failed to retrieve template from global context.", e);
             booleanResultConsumer.accept(false);
-        }));
+            listener.onFailure(new FlowFrameworkException(e.getMessage(), ExceptionsHelper.status(e)));
+        }
     }
 
     /**
@@ -469,28 +478,36 @@ public class FlowFrameworkIndicesHandler {
      */
     public <T> void isWorkflowProvisioned(String documentId, Consumer<Boolean> booleanResultConsumer, ActionListener<T> listener) {
         GetRequest getRequest = new GetRequest(WORKFLOW_STATE_INDEX, documentId);
-        client.get(getRequest, ActionListener.wrap(response -> {
-            if (!response.isExists()) {
-                booleanResultConsumer.accept(false);
-                return;
-            }
-            try (XContentParser parser = ParseUtils.createXContentParserFromRegistry(xContentRegistry, response.getSourceAsBytesRef())) {
-                ensureExpectedToken(XContentParser.Token.START_OBJECT, parser.nextToken(), parser);
-                WorkflowState workflowState = WorkflowState.parse(parser);
-                if (workflowState.getProvisioningProgress().equals(ProvisioningProgress.NOT_STARTED.name())) {
-                    booleanResultConsumer.accept(true);
-                } else {
+        try (ThreadContext.StoredContext context = client.threadPool().getThreadContext().stashContext()) {
+            client.get(getRequest, ActionListener.wrap(response -> {
+                context.restore();
+                if (!response.isExists()) {
                     booleanResultConsumer.accept(false);
+                    return;
                 }
-            } catch (Exception e) {
-                String message = "Failed to parse workflow state" + documentId;
-                logger.error(message, e);
-                listener.onFailure(new FlowFrameworkException(message, RestStatus.INTERNAL_SERVER_ERROR));
-            }
-        }, exception -> {
-            logger.error("Failed to get workflow state " + documentId, exception);
-            booleanResultConsumer.accept(false);
-        }));
+                try (
+                    XContentParser parser = ParseUtils.createXContentParserFromRegistry(xContentRegistry, response.getSourceAsBytesRef())
+                ) {
+                    ensureExpectedToken(XContentParser.Token.START_OBJECT, parser.nextToken(), parser);
+                    WorkflowState workflowState = WorkflowState.parse(parser);
+                    if (workflowState.getProvisioningProgress().equals(ProvisioningProgress.NOT_STARTED.name())) {
+                        booleanResultConsumer.accept(true);
+                    } else {
+                        booleanResultConsumer.accept(false);
+                    }
+                } catch (Exception e) {
+                    String message = "Failed to parse workflow state" + documentId;
+                    logger.error(message, e);
+                    listener.onFailure(new FlowFrameworkException(message, RestStatus.INTERNAL_SERVER_ERROR));
+                }
+            }, exception -> {
+                logger.error("Failed to get workflow state " + documentId, exception);
+                booleanResultConsumer.accept(false);
+            }));
+        } catch (Exception e) {
+            logger.error("Failed to retrieve workflow state to check provisioning status", e);
+            listener.onFailure(new FlowFrameworkException(e.getMessage(), ExceptionsHelper.status(e)));
+        }
     }
 
     /**

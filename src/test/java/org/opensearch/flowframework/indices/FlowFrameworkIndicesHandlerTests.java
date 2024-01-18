@@ -8,8 +8,11 @@
  */
 package org.opensearch.flowframework.indices;
 
+import org.opensearch.Version;
 import org.opensearch.action.admin.indices.create.CreateIndexRequest;
 import org.opensearch.action.admin.indices.mapping.put.PutMappingRequest;
+import org.opensearch.action.get.GetRequest;
+import org.opensearch.action.get.GetResponse;
 import org.opensearch.action.index.IndexResponse;
 import org.opensearch.action.support.master.AcknowledgedResponse;
 import org.opensearch.client.AdminClient;
@@ -23,25 +26,38 @@ import org.opensearch.cluster.metadata.Metadata;
 import org.opensearch.cluster.service.ClusterService;
 import org.opensearch.common.settings.Settings;
 import org.opensearch.common.util.concurrent.ThreadContext;
+import org.opensearch.common.xcontent.XContentFactory;
 import org.opensearch.core.action.ActionListener;
+import org.opensearch.core.common.bytes.BytesReference;
+import org.opensearch.core.xcontent.XContentBuilder;
+import org.opensearch.flowframework.TestHelpers;
 import org.opensearch.flowframework.model.Template;
+import org.opensearch.flowframework.model.Workflow;
+import org.opensearch.flowframework.model.WorkflowState;
 import org.opensearch.flowframework.util.EncryptorUtils;
 import org.opensearch.flowframework.workflow.CreateIndexStep;
+import org.opensearch.index.get.GetResult;
 import org.opensearch.test.OpenSearchTestCase;
 import org.opensearch.threadpool.ThreadPool;
 
 import java.io.IOException;
+import java.time.Instant;
+import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.Consumer;
 
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
 import static org.opensearch.flowframework.common.CommonValue.GLOBAL_CONTEXT_INDEX;
+import static org.opensearch.flowframework.common.CommonValue.WORKFLOW_STATE_INDEX;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -70,6 +86,7 @@ public class FlowFrameworkIndicesHandlerTests extends OpenSearchTestCase {
     private Map<String, AtomicBoolean> indexMappingUpdated = new HashMap<>();
     @Mock
     IndexMetadata indexMetadata;
+    private Template template;
 
     @Override
     public void setUp() throws Exception {
@@ -91,6 +108,20 @@ public class FlowFrameworkIndicesHandlerTests extends OpenSearchTestCase {
         when(adminClient.indices()).thenReturn(indicesAdminClient);
         when(clusterService.state()).thenReturn(ClusterState.builder(new ClusterName("test cluster")).build());
         when(metadata.indices()).thenReturn(Map.of(GLOBAL_CONTEXT_INDEX, indexMetadata));
+
+        Workflow workflow = TestHelpers.createSampleWorkflow();
+        Version templateVersion = Version.fromString("1.0.0");
+        List<Version> compatibilityVersions = List.of(Version.fromString("2.0.0"), Version.fromString("3.0.0"));
+        this.template = new Template(
+            "test",
+            "description",
+            "use case",
+            templateVersion,
+            compatibilityVersions,
+            Map.of("workflow", workflow),
+            Collections.emptyMap(),
+            TestHelpers.randomUser()
+        );
     }
 
     public void testDoesIndexExist() {
@@ -191,5 +222,55 @@ public class FlowFrameworkIndicesHandlerTests extends OpenSearchTestCase {
         flowFrameworkIndicesHandler.initFlowFrameworkIndexIfAbsent(FlowFrameworkIndex.GLOBAL_CONTEXT, listener);
 
         verify(indicesAdminClient, times(1)).create(any(CreateIndexRequest.class), any());
+    }
+
+    public void testIsWorkflowProvisionedFailedParsing() {
+        String documentId = randomAlphaOfLength(5);
+        Consumer<Boolean> function = mock(Consumer.class);
+        ActionListener<GetResponse> listener = mock(ActionListener.class);
+        WorkflowState workFlowState = new WorkflowState(
+            documentId,
+            "test",
+            "PROVISIONING",
+            "IN_PROGRESS",
+            Instant.now(),
+            Instant.now(),
+            TestHelpers.randomUser(),
+            Collections.emptyMap(),
+            Collections.emptyList()
+        );
+        doAnswer(invocation -> {
+            ActionListener<GetResponse> responseListener = invocation.getArgument(1);
+
+            XContentBuilder builder = XContentFactory.jsonBuilder();
+            // workFlowState.toXContent(builder, null);
+            this.template.toXContent(builder, null);
+            BytesReference workflowBytesRef = BytesReference.bytes(builder);
+            GetResult getResult = new GetResult(WORKFLOW_STATE_INDEX, documentId, 1, 1, 1, true, workflowBytesRef, null, null);
+            responseListener.onResponse(new GetResponse(getResult));
+            return null;
+        }).when(client).get(any(GetRequest.class), any());
+        flowFrameworkIndicesHandler.isWorkflowProvisioned(documentId, function, listener);
+        ArgumentCaptor<Exception> exceptionCaptor = ArgumentCaptor.forClass(Exception.class);
+        verify(listener, times(1)).onFailure(exceptionCaptor.capture());
+        assertTrue(exceptionCaptor.getValue().getMessage().contains("Failed to parse workflow state"));
+    }
+
+    public void testDoesTemplateExist() {
+        String documentId = randomAlphaOfLength(5);
+        Consumer<Boolean> function = mock(Consumer.class);
+        ActionListener<GetResponse> listener = mock(ActionListener.class);
+        doAnswer(invocation -> {
+            ActionListener<GetResponse> responseListener = invocation.getArgument(1);
+
+            XContentBuilder builder = XContentFactory.jsonBuilder();
+            this.template.toXContent(builder, null);
+            BytesReference templateBytesRef = BytesReference.bytes(builder);
+            GetResult getResult = new GetResult(GLOBAL_CONTEXT_INDEX, documentId, 1, 1, 1, true, templateBytesRef, null, null);
+            responseListener.onResponse(new GetResponse(getResult));
+            return null;
+        }).when(client).get(any(GetRequest.class), any());
+        flowFrameworkIndicesHandler.doesTemplateExists(documentId, function, listener);
+        verify(function).accept(true);
     }
 }

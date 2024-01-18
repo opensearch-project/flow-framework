@@ -162,10 +162,10 @@ public class FlowFrameworkRestApiIT extends FlowFrameworkRestTestCase {
         assertNotNull(resourcesCreated.get(1).resourceId());
 
         // // Deprovision the workflow to avoid opening circut breaker when running additional tests
-        // Response deprovisionResponse = deprovisionWorkflow(client(), workflowId);
-        //
-        // // wait for deprovision to complete
-        // Thread.sleep(5000);
+        Response deprovisionResponse = deprovisionWorkflow(client(), workflowId);
+
+        // wait for deprovision to complete
+        Thread.sleep(5000);
     }
 
     public void testCreateAndProvisionCyclicalTemplate() throws Exception {
@@ -230,10 +230,10 @@ public class FlowFrameworkRestApiIT extends FlowFrameworkRestTestCase {
         assertNotNull(resourcesCreated.get(2).resourceId());
 
         // Deprovision the workflow to avoid opening circut breaker when running additional tests
-        // Response deprovisionResponse = deprovisionWorkflow(client(), workflowId);
-        //
-        // // wait for deprovision to complete
-        // Thread.sleep(5000);
+        Response deprovisionResponse = deprovisionWorkflow(client(), workflowId);
+
+        // wait for deprovision to complete
+        Thread.sleep(5000);
     }
 
     public void testCreateAndProvisionAgentFrameworkWorkflow() throws Exception {
@@ -272,16 +272,16 @@ public class FlowFrameworkRestApiIT extends FlowFrameworkRestTestCase {
         assertNotNull(resourcesCreated.get(0).resourceId());
 
         // Hit Deprovision API
-        // Response deprovisionResponse = deprovisionWorkflow(client(), workflowId);
-        // assertBusy(
-        // () -> { getAndAssertWorkflowStatus(client(), workflowId, State.NOT_STARTED, ProvisioningProgress.NOT_STARTED); },
-        // 60,
-        // TimeUnit.SECONDS
-        // );
+        Response deprovisionResponse = deprovisionWorkflow(client(), workflowId);
+        assertBusy(
+            () -> { getAndAssertWorkflowStatus(client(), workflowId, State.NOT_STARTED, ProvisioningProgress.NOT_STARTED); },
+            60,
+            TimeUnit.SECONDS
+        );
         //
         // // Hit Delete API
-        // Response deleteResponse = deleteWorkflow(client(), workflowId);
-        // assertEquals(RestStatus.OK, TestHelpers.restStatus(deleteResponse));
+        Response deleteResponse = deleteWorkflow(client(), workflowId);
+        assertEquals(RestStatus.OK, TestHelpers.restStatus(deleteResponse));
     }
 
 }

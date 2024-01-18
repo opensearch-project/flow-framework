@@ -113,12 +113,7 @@ public class CreateWorkflowTransportActionTests extends OpenSearchTestCase {
 
         Version templateVersion = Version.fromString("1.0.0");
         List<Version> compatibilityVersions = List.of(Version.fromString("2.0.0"), Version.fromString("3.0.0"));
-        WorkflowNode nodeA = new WorkflowNode("A", "a-type", Collections.emptyMap(), Map.of("foo", "bar"));
-        WorkflowNode nodeB = new WorkflowNode("B", "b-type", Collections.emptyMap(), Map.of("baz", "qux"));
-        WorkflowEdge edgeAB = new WorkflowEdge("A", "B");
-        List<WorkflowNode> nodes = List.of(nodeA, nodeB);
-        List<WorkflowEdge> edges = List.of(edgeAB);
-        Workflow workflow = new Workflow(Map.of("key", "value"), nodes, edges);
+        Workflow workflow = TestHelpers.createSampleWorkflow();
 
         this.template = new Template(
             "test",
