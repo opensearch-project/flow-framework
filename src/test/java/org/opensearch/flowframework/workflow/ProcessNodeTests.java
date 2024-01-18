@@ -12,6 +12,7 @@ import org.opensearch.action.support.PlainActionFuture;
 import org.opensearch.common.settings.Settings;
 import org.opensearch.common.unit.TimeValue;
 import org.opensearch.common.util.concurrent.OpenSearchExecutors;
+import org.opensearch.common.util.concurrent.UncategorizedExecutionException;
 import org.opensearch.test.OpenSearchTestCase;
 import org.opensearch.threadpool.ScalingExecutorBuilder;
 import org.opensearch.threadpool.TestThreadPool;
@@ -22,10 +23,8 @@ import org.junit.BeforeClass;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.CompletionException;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
 
 import static org.opensearch.flowframework.common.CommonValue.FLOW_FRAMEWORK_THREAD_POOL_PREFIX;
 import static org.opensearch.flowframework.common.CommonValue.WORKFLOW_THREAD_POOL;
@@ -165,9 +164,9 @@ public class ProcessNodeTests extends OpenSearchTestCase {
         assertEquals("Zzz", nodeZ.toString());
 
         PlainActionFuture<WorkflowData> f = nodeZ.execute();
-        CompletionException exception = assertThrows(CompletionException.class, () -> f.actionGet());
-        assertFalse(f.isDone());
-        assertEquals(TimeoutException.class, exception.getCause().getClass());
+        UncategorizedExecutionException exception = assertThrows(UncategorizedExecutionException.class, () -> f.actionGet());
+        assertTrue(f.isDone());
+        assertEquals(ExecutionException.class, exception.getCause().getClass());
     }
 
     public void testExceptions() {
@@ -197,9 +196,12 @@ public class ProcessNodeTests extends OpenSearchTestCase {
         assertEquals("E", nodeE.toString());
 
         PlainActionFuture<WorkflowData> f = nodeE.execute();
-        CompletionException exception = assertThrows(CompletionException.class, () -> f.actionGet());
-        assertFalse(f.isDone());
-        assertEquals("Test exception", exception.getCause().getMessage());
+        UncategorizedExecutionException exception = assertThrows(UncategorizedExecutionException.class, () -> f.actionGet());
+        assertTrue(f.isDone());
+        assertEquals(
+            "java.util.concurrent.ExecutionException: java.lang.RuntimeException: Test exception",
+            exception.getCause().getMessage()
+        );
 
         // Tests where we already called execute
         assertThrows(IllegalStateException.class, () -> nodeE.execute());

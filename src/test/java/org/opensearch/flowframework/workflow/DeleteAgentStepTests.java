@@ -82,7 +82,7 @@ public class DeleteAgentStepTests extends OpenSearchTestCase {
             Collections.emptyMap()
         );
 
-        assertFalse(future.isDone());
+        assertTrue(future.isDone());
         ExecutionException ex = assertThrows(ExecutionException.class, () -> future.get().getContent());
         assertTrue(ex.getCause() instanceof FlowFrameworkException);
         assertEquals("Missing required inputs [agent_id] in workflow [test-id] node [test-node-id]", ex.getCause().getMessage());
@@ -106,7 +106,7 @@ public class DeleteAgentStepTests extends OpenSearchTestCase {
 
         verify(machineLearningNodeClient).deleteAgent(any(String.class), any());
 
-        assertFalse(future.isDone());
+        assertTrue(future.isDone());
         ExecutionException ex = assertThrows(ExecutionException.class, () -> future.get().getContent());
         assertTrue(ex.getCause() instanceof FlowFrameworkException);
         assertEquals("Failed to delete agent", ex.getCause().getMessage());

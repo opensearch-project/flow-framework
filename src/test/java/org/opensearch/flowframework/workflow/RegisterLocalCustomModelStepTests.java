@@ -254,7 +254,6 @@ public class RegisterLocalCustomModelStepTests extends OpenSearchTestCase {
             Collections.emptyMap()
         );
         assertTrue(future.isDone());
-        assertFalse(future.isDone());
         ExecutionException ex = assertThrows(ExecutionException.class, () -> future.get().getContent());
         assertTrue(ex.getCause() instanceof FlowFrameworkException);
         assertTrue(ex.getCause().getMessage().startsWith("Missing required inputs ["));

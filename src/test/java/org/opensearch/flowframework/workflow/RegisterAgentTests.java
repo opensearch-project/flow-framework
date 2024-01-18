@@ -146,7 +146,7 @@ public class RegisterAgentTests extends OpenSearchTestCase {
 
         verify(machineLearningNodeClient).registerAgent(any(MLAgent.class), actionListenerCaptor.capture());
 
-        assertFalse(future.isDone());
+        assertTrue(future.isDone());
         ExecutionException ex = assertThrows(ExecutionException.class, () -> future.get().getContent());
         assertTrue(ex.getCause() instanceof FlowFrameworkException);
         assertEquals("Failed to register the agent", ex.getCause().getMessage());

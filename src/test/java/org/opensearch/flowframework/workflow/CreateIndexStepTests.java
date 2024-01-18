@@ -140,7 +140,7 @@ public class CreateIndexStepTests extends OpenSearchTestCase {
 
         actionListenerCaptor.getValue().onFailure(new Exception("Failed to create an index"));
 
-        assertFalse(future.isDone());
+        assertTrue(future.isDone());
         ExecutionException ex = assertThrows(ExecutionException.class, () -> future.get().getContent());
         assertTrue(ex.getCause() instanceof Exception);
         assertEquals("Failed to create an index", ex.getCause().getMessage());

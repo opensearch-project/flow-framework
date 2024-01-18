@@ -127,7 +127,7 @@ public class ModelGroupStepTests extends OpenSearchTestCase {
 
         verify(machineLearningNodeClient).registerModelGroup(any(MLRegisterModelGroupInput.class), actionListenerCaptor.capture());
 
-        assertFalse(future.isDone());
+        assertTrue(future.isDone());
         ExecutionException ex = assertThrows(ExecutionException.class, () -> future.get().getContent());
         assertTrue(ex.getCause() instanceof FlowFrameworkException);
         assertEquals("Failed to register model group", ex.getCause().getMessage());
@@ -144,7 +144,7 @@ public class ModelGroupStepTests extends OpenSearchTestCase {
             Collections.emptyMap()
         );
 
-        assertFalse(future.isDone());
+        assertTrue(future.isDone());
         ExecutionException ex = assertThrows(ExecutionException.class, () -> future.get().getContent());
         assertTrue(ex.getCause() instanceof FlowFrameworkException);
         assertEquals("Missing required inputs [name] in workflow [test-id] node [test-node-id]", ex.getCause().getMessage());

@@ -90,7 +90,7 @@ public class UndeployModelStepTests extends OpenSearchTestCase {
             Collections.emptyMap()
         );
 
-        assertFalse(future.isDone());
+        assertTrue(future.isDone());
         ExecutionException ex = assertThrows(ExecutionException.class, () -> future.get().getContent());
         assertTrue(ex.getCause() instanceof FlowFrameworkException);
         assertEquals("Missing required inputs [model_id] in workflow [test-id] node [test-node-id]", ex.getCause().getMessage());
@@ -123,7 +123,7 @@ public class UndeployModelStepTests extends OpenSearchTestCase {
 
         verify(machineLearningNodeClient).undeploy(any(String[].class), any(), any());
 
-        assertFalse(future.isDone());
+        assertTrue(future.isDone());
         ExecutionException ex = assertThrows(ExecutionException.class, () -> future.get().getContent());
         assertTrue(ex.getCause() instanceof OpenSearchException);
         assertEquals("Failed to undeploy model on nodes [failed-node]", ex.getCause().getMessage());

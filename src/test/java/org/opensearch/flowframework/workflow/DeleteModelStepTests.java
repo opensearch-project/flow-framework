@@ -82,7 +82,7 @@ public class DeleteModelStepTests extends OpenSearchTestCase {
             Collections.emptyMap()
         );
 
-        assertFalse(future.isDone());
+        assertTrue(future.isDone());
         ExecutionException ex = assertThrows(ExecutionException.class, () -> future.get().getContent());
         assertTrue(ex.getCause() instanceof FlowFrameworkException);
         assertEquals("Missing required inputs [model_id] in workflow [test-id] node [test-node-id]", ex.getCause().getMessage());
@@ -106,7 +106,7 @@ public class DeleteModelStepTests extends OpenSearchTestCase {
 
         verify(machineLearningNodeClient).deleteModel(any(String.class), any());
 
-        assertFalse(future.isDone());
+        assertTrue(future.isDone());
         ExecutionException ex = assertThrows(ExecutionException.class, () -> future.get().getContent());
         assertTrue(ex.getCause() instanceof FlowFrameworkException);
         assertEquals("Failed to delete model", ex.getCause().getMessage());

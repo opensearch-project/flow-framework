@@ -130,7 +130,7 @@ public class CreateConnectorStepTests extends OpenSearchTestCase {
 
         verify(machineLearningNodeClient).createConnector(any(MLCreateConnectorInput.class), any());
 
-        assertFalse(future.isDone());
+        assertTrue(future.isDone());
         ExecutionException ex = assertThrows(ExecutionException.class, () -> future.get().getContent());
         assertTrue(ex.getCause() instanceof FlowFrameworkException);
         assertEquals("Failed to create connector", ex.getCause().getMessage());
