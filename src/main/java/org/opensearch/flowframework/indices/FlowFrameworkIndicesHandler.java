@@ -410,7 +410,7 @@ public class FlowFrameworkIndicesHandler {
             listener.onFailure(new FlowFrameworkException(exceptionMessage, RestStatus.BAD_REQUEST));
             return;
         }
-        doesTemplateExists(documentId, templateExists -> {
+        doesTemplateExist(documentId, templateExists -> {
             if (templateExists) {
                 isWorkflowProvisioned(documentId, workflowIsProvisioned -> {
                     if (workflowIsProvisioned) {
@@ -448,22 +448,20 @@ public class FlowFrameworkIndicesHandler {
      * Check if the given template exists in the template index
      *
      * @param documentId document id
-     * @param booleanResultConsumer boolean consumer function
+     * @param booleanResultConsumer a consumer based on whether the template exist
      * @param listener action listener
      * @param <T> action listener response type
      */
-    public <T> void doesTemplateExists(String documentId, Consumer<Boolean> booleanResultConsumer, ActionListener<T> listener) {
+    public <T> void doesTemplateExist(String documentId, Consumer<Boolean> booleanResultConsumer, ActionListener<T> listener) {
         GetRequest getRequest = new GetRequest(GLOBAL_CONTEXT_INDEX, documentId);
         try (ThreadContext.StoredContext context = client.threadPool().getThreadContext().stashContext()) {
             client.get(getRequest, ActionListener.wrap(response -> { booleanResultConsumer.accept(response.isExists()); }, exception -> {
                 context.restore();
                 logger.error("Failed to get template " + documentId, exception);
-                booleanResultConsumer.accept(false);
                 listener.onFailure(new FlowFrameworkException(exception.getMessage(), ExceptionsHelper.status(exception)));
             }));
         } catch (Exception e) {
             logger.error("Failed to retrieve template from global context.", e);
-            booleanResultConsumer.accept(false);
             listener.onFailure(new FlowFrameworkException(e.getMessage(), ExceptionsHelper.status(e)));
         }
     }
@@ -472,7 +470,7 @@ public class FlowFrameworkIndicesHandler {
      * Check if the workflow has been provisioned and executes the consumer by passing a boolean
      *
      * @param documentId document id
-     * @param booleanResultConsumer boolean consumer function
+     * @param booleanResultConsumer boolean consumer function based on if workflow is provisioned or not
      * @param listener action listener
      * @param <T> action listener response type
      */
@@ -490,13 +488,9 @@ public class FlowFrameworkIndicesHandler {
                 ) {
                     ensureExpectedToken(XContentParser.Token.START_OBJECT, parser.nextToken(), parser);
                     WorkflowState workflowState = WorkflowState.parse(parser);
-                    if (workflowState.getProvisioningProgress().equals(ProvisioningProgress.NOT_STARTED.name())) {
-                        booleanResultConsumer.accept(true);
-                    } else {
-                        booleanResultConsumer.accept(false);
-                    }
+                    booleanResultConsumer.accept(workflowState.getProvisioningProgress().equals(ProvisioningProgress.NOT_STARTED.name()));
                 } catch (Exception e) {
-                    String message = "Failed to parse workflow state" + documentId;
+                    String message = "Failed to parse workflow state " + documentId;
                     logger.error(message, e);
                     listener.onFailure(new FlowFrameworkException(message, RestStatus.INTERNAL_SERVER_ERROR));
                 }

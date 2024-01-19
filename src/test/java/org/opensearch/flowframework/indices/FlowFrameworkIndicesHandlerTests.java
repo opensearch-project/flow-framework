@@ -155,6 +155,30 @@ public class FlowFrameworkIndicesHandlerTests extends OpenSearchTestCase {
         );
     }
 
+    public void testFailedUpdateTemplateInGlobalContextNotExisting() throws IOException {
+        Template template = mock(Template.class);
+        @SuppressWarnings("unchecked")
+        ActionListener<IndexResponse> listener = mock(ActionListener.class);
+        FlowFrameworkIndex index = FlowFrameworkIndex.GLOBAL_CONTEXT;
+        ClusterState mockClusterState = mock(ClusterState.class);
+        Metadata mockMetadata = mock(Metadata.class);
+        when(clusterService.state()).thenReturn(mockClusterState);
+        when(mockClusterState.metadata()).thenReturn(mockMetadata);
+        when(mockMetadata.hasIndex(index.getIndexName())).thenReturn(true);
+        when(flowFrameworkIndicesHandler.doesIndexExist(GLOBAL_CONTEXT_INDEX)).thenReturn(true);
+        doAnswer(invocation -> {
+            ActionListener<GetResponse> responseListener = invocation.getArgument(1);
+            responseListener.onFailure(new Exception("Failed to get template"));
+            return null;
+        }).when(client).get(any(GetRequest.class), any());
+
+        flowFrameworkIndicesHandler.updateTemplateInGlobalContext("1", template, listener);
+
+        ArgumentCaptor<Exception> exceptionCaptor = ArgumentCaptor.forClass(Exception.class);
+        verify(listener, times(1)).onFailure(exceptionCaptor.capture());
+        assertTrue(exceptionCaptor.getValue().getMessage().contains("Failed to get template"));
+    }
+
     public void testInitIndexIfAbsent_IndexExist() {
         FlowFrameworkIndex index = FlowFrameworkIndex.GLOBAL_CONTEXT;
         indexMappingUpdated.put(index.getIndexName(), new AtomicBoolean(false));
@@ -270,7 +294,7 @@ public class FlowFrameworkIndicesHandlerTests extends OpenSearchTestCase {
             responseListener.onResponse(new GetResponse(getResult));
             return null;
         }).when(client).get(any(GetRequest.class), any());
-        flowFrameworkIndicesHandler.doesTemplateExists(documentId, function, listener);
+        flowFrameworkIndicesHandler.doesTemplateExist(documentId, function, listener);
         verify(function).accept(true);
     }
 }

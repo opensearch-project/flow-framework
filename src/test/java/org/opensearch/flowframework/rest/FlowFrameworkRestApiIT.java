@@ -69,9 +69,12 @@ public class FlowFrameworkRestApiIT extends FlowFrameworkRestTestCase {
     }
 
     public void testFailedUpdateWorkflow() throws Exception {
-        // Create a Workflow that has a credential 12345
-        Template template = TestHelpers.createTemplateFromFile("createconnector-registerremotemodel-deploymodel.json");
+        Template templateCreation = TestHelpers.createTemplateFromFile("createconnector-registerremotemodel-deploymodel.json");
+        Response responseCreate = createWorkflow(client(), templateCreation);
+        assertEquals(RestStatus.CREATED, TestHelpers.restStatus(responseCreate));
 
+        Template template = TestHelpers.createTemplateFromFile("createconnector-registerremotemodel-deploymodel.json");
+        Thread.sleep(1000);
         ResponseException exception = expectThrows(ResponseException.class, () -> updateWorkflow(client(), "123", template));
         assertTrue(exception.getMessage().contains("Failed to get template: 123"));
 
@@ -161,7 +164,7 @@ public class FlowFrameworkRestApiIT extends FlowFrameworkRestTestCase {
         assertEquals("deploy_model", resourcesCreated.get(1).workflowStepName());
         assertNotNull(resourcesCreated.get(1).resourceId());
 
-        // // Deprovision the workflow to avoid opening circut breaker when running additional tests
+        // Deprovision the workflow to avoid opening circut breaker when running additional tests
         Response deprovisionResponse = deprovisionWorkflow(client(), workflowId);
 
         // wait for deprovision to complete
@@ -229,7 +232,7 @@ public class FlowFrameworkRestApiIT extends FlowFrameworkRestTestCase {
         assertEquals("deploy_model", resourcesCreated.get(2).workflowStepName());
         assertNotNull(resourcesCreated.get(2).resourceId());
 
-        // Deprovision the workflow to avoid opening circut breaker when running additional tests
+        // Deprovision the workflow to avoid opening circuit breaker when running additional tests
         Response deprovisionResponse = deprovisionWorkflow(client(), workflowId);
 
         // wait for deprovision to complete
@@ -278,8 +281,7 @@ public class FlowFrameworkRestApiIT extends FlowFrameworkRestTestCase {
             60,
             TimeUnit.SECONDS
         );
-        //
-        // // Hit Delete API
+        // Hit Delete API
         Response deleteResponse = deleteWorkflow(client(), workflowId);
         assertEquals(RestStatus.OK, TestHelpers.restStatus(deleteResponse));
     }
