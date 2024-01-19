@@ -26,7 +26,7 @@ import org.opensearch.ml.common.MLTaskState;
 import org.opensearch.ml.common.MLTaskType;
 import org.opensearch.ml.common.transport.deploy.MLDeployModelResponse;
 import org.opensearch.test.OpenSearchTestCase;
-import org.opensearch.threadpool.FixedExecutorBuilder;
+import org.opensearch.threadpool.ScalingExecutorBuilder;
 import org.opensearch.threadpool.TestThreadPool;
 import org.opensearch.threadpool.ThreadPool;
 import org.junit.AfterClass;
@@ -82,11 +82,11 @@ public class DeployModelStepTests extends OpenSearchTestCase {
 
         testThreadPool = new TestThreadPool(
             DeployModelStepTests.class.getName(),
-            new FixedExecutorBuilder(
-                Settings.EMPTY,
+            new ScalingExecutorBuilder(
                 WORKFLOW_THREAD_POOL,
+                1,
                 OpenSearchExecutors.allocatedProcessors(Settings.EMPTY),
-                100,
+                TimeValue.timeValueMinutes(5),
                 FLOW_FRAMEWORK_THREAD_POOL_PREFIX + WORKFLOW_THREAD_POOL
             )
         );
