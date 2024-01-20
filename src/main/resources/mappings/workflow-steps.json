@@ -145,11 +145,6 @@
             "opensearch-ml"
         ]
     },
-    "delete_model_group": {
-        "inputs":[],
-        "outputs":[],
-        "required_plugins":[]
-    },
     "register_agent": {
         "inputs":[
             "name",
