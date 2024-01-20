@@ -68,6 +68,36 @@ public class FlowFrameworkRestApiIT extends FlowFrameworkRestTestCase {
         }
     }
 
+    public void testFailedUpdateWorkflow() throws Exception {
+        Template templateCreation = TestHelpers.createTemplateFromFile("createconnector-registerremotemodel-deploymodel.json");
+        Response responseCreate = createWorkflow(client(), templateCreation);
+        assertEquals(RestStatus.CREATED, TestHelpers.restStatus(responseCreate));
+
+        Template template = TestHelpers.createTemplateFromFile("createconnector-registerremotemodel-deploymodel.json");
+        Thread.sleep(1000);
+        ResponseException exception = expectThrows(ResponseException.class, () -> updateWorkflow(client(), "123", template));
+        assertTrue(exception.getMessage().contains("Failed to get template: 123"));
+
+        Response response = createWorkflow(client(), template);
+        assertEquals(RestStatus.CREATED, TestHelpers.restStatus(response));
+
+        Map<String, Object> responseMap = entityAsMap(response);
+        String workflowId = (String) responseMap.get(WORKFLOW_ID);
+
+        // Provision Template
+        Response provisionResponse = provisionWorkflow(client(), workflowId);
+        assertEquals(RestStatus.OK, TestHelpers.restStatus(provisionResponse));
+        getAndAssertWorkflowStatus(client(), workflowId, State.PROVISIONING, ProvisioningProgress.IN_PROGRESS);
+
+        // Failed update since provisioning has started
+        ResponseException exceptionProvisioned = expectThrows(
+            ResponseException.class,
+            () -> updateWorkflow(client(), workflowId, template)
+        );
+        assertTrue(exceptionProvisioned.getMessage().contains("The template has already been provisioned so it can't be updated"));
+
+    }
+
     public void testCreateAndProvisionLocalModelWorkflow() throws Exception {
         // Using a 1 step template to register a local model and deploy model
         Template template = TestHelpers.createTemplateFromFile("register-deploylocalsparseencodingmodel.json");
@@ -141,7 +171,7 @@ public class FlowFrameworkRestApiIT extends FlowFrameworkRestTestCase {
         Thread.sleep(5000);
     }
 
-    public void testCreateAndProvisionRemoteModelWorkflow() throws Exception {
+    public void testCreateAndProvisionCyclicalTemplate() throws Exception {
 
         // Using a 3 step template to create a connector, register remote model and deploy model
         Template template = TestHelpers.createTemplateFromFile("createconnector-registerremotemodel-deploymodel.json");
@@ -170,6 +200,12 @@ public class FlowFrameworkRestApiIT extends FlowFrameworkRestTestCase {
         assertTrue(exception.getMessage().contains("Cycle detected"));
         assertTrue(exception.getMessage().contains("workflow_step_2->workflow_step_3"));
         assertTrue(exception.getMessage().contains("workflow_step_3->workflow_step_2"));
+    }
+
+    public void testCreateAndProvisionRemoteModelWorkflow() throws Exception {
+
+        // Using a 3 step template to create a connector, register remote model and deploy model
+        Template template = TestHelpers.createTemplateFromFile("createconnector-registerremotemodel-deploymodel.json");
 
         // Hit Create Workflow API with original template
         Response response = createWorkflow(client(), template);
@@ -196,7 +232,7 @@ public class FlowFrameworkRestApiIT extends FlowFrameworkRestTestCase {
         assertEquals("deploy_model", resourcesCreated.get(2).workflowStepName());
         assertNotNull(resourcesCreated.get(2).resourceId());
 
-        // Deprovision the workflow to avoid opening circut breaker when running additional tests
+        // Deprovision the workflow to avoid opening circuit breaker when running additional tests
         Response deprovisionResponse = deprovisionWorkflow(client(), workflowId);
 
         // wait for deprovision to complete
@@ -245,7 +281,6 @@ public class FlowFrameworkRestApiIT extends FlowFrameworkRestTestCase {
             60,
             TimeUnit.SECONDS
         );
-
         // Hit Delete API
         Response deleteResponse = deleteWorkflow(client(), workflowId);
         assertEquals(RestStatus.OK, TestHelpers.restStatus(deleteResponse));

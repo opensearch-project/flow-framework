@@ -231,7 +231,7 @@ public class CreateWorkflowTransportAction extends HandledTransportAction<Workfl
                             logger.info("updated workflow {} state to {}", request.getWorkflowId(), State.NOT_STARTED.name());
                             listener.onResponse(new WorkflowResponse(request.getWorkflowId()));
                         }, exception -> {
-                            logger.error("Failed to update workflow state : {}", exception.getMessage());
+                            logger.error("Failed to update workflow in template index: ", exception);
                             if (exception instanceof FlowFrameworkException) {
                                 listener.onFailure(exception);
                             } else {
