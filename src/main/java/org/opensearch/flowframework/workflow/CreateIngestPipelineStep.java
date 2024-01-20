@@ -135,7 +135,9 @@ public class CreateIngestPipelineStep implements WorkflowStep {
 
         if (configuration == null) {
             // Required workflow data not found
-            createIngestPipelineFuture.onFailure(new Exception("Failed to create ingest pipeline, required inputs not found"));
+            createIngestPipelineFuture.onFailure(
+                new IllegalArgumentException("Failed to create ingest pipeline, required inputs not found")
+            );
         } else {
             // Create PutPipelineRequest and execute
             PutPipelineRequest putPipelineRequest = new PutPipelineRequest(pipelineId, configuration, XContentType.JSON);

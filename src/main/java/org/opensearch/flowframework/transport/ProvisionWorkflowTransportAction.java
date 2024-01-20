@@ -202,7 +202,7 @@ public class ProvisionWorkflowTransportAction extends HandledTransportAction<Wor
                 workflowFutureList.add(processNode.execute());
             }
 
-            // Attempt to join each workflow step future, may throw a CompletionException if any step completes exceptionally
+            // Attempt to join each workflow step future, may throw a ExecutionException if any step completes exceptionally
             workflowFutureList.forEach(PlainActionFuture::actionGet);
 
             logger.info("Provisioning completed successfully for workflow {}", workflowId);

@@ -162,7 +162,7 @@ public class DeprovisionWorkflowTransportAction extends HandledTransportAction<W
                 String resourceNameAndId = getResourceNameAndId(resource);
                 PlainActionFuture<WorkflowData> deprovisionFuture = deprovisionNode.execute();
                 try {
-                    deprovisionFuture.actionGet();
+                    deprovisionFuture.get();
                     logger.info("Successful {} for {}", deprovisionNode.id(), resourceNameAndId);
                     // Remove from list so we don't try again
                     iter.remove();

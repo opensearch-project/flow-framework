@@ -196,13 +196,8 @@ public class ProcessNodeTests extends OpenSearchTestCase {
         assertEquals("E", nodeE.toString());
 
         PlainActionFuture<WorkflowData> f = nodeE.execute();
-        UncategorizedExecutionException exception = assertThrows(UncategorizedExecutionException.class, () -> f.actionGet());
+        RuntimeException exception = assertThrows(RuntimeException.class, () -> f.actionGet());
         assertTrue(f.isDone());
-        assertEquals(
-            "java.util.concurrent.ExecutionException: java.lang.RuntimeException: Test exception",
-            exception.getCause().getMessage()
-        );
-
         // Tests where we already called execute
         assertThrows(IllegalStateException.class, () -> nodeE.execute());
     }

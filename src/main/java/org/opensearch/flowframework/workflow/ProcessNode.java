@@ -15,13 +15,11 @@ import org.opensearch.common.unit.TimeValue;
 import org.opensearch.threadpool.Scheduler.ScheduledCancellable;
 import org.opensearch.threadpool.ThreadPool;
 
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeoutException;
-import java.util.stream.Collectors;
 
 import static org.opensearch.flowframework.common.CommonValue.WORKFLOW_THREAD_POOL;
 
@@ -147,20 +145,12 @@ public class ProcessNode {
         }
 
         CompletableFuture.runAsync(() -> {
-            List<PlainActionFuture<WorkflowData>> predFutures = predecessors.stream().map(p -> p.future()).collect(Collectors.toList());
-            List<WorkflowData> waitForPredecessors = new ArrayList<>(predFutures.size());
             try {
-                if (!predecessors.isEmpty()) {
-                    for (PlainActionFuture<WorkflowData> future : predFutures) {
-                        waitForPredecessors.add(future.get());
-                    }
-
-                }
                 logger.info("Starting {}.", this.id);
                 // get the input data from predecessor(s)
                 Map<String, WorkflowData> inputMap = new HashMap<>();
-                for (PlainActionFuture<WorkflowData> cf : predFutures) {
-                    WorkflowData wd = cf.actionGet();
+                for (ProcessNode node : predecessors) {
+                    WorkflowData wd = node.future().actionGet();
                     inputMap.put(wd.getNodeId(), wd);
                 }
 
