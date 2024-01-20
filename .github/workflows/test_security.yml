@@ -1,11 +1,11 @@
 name: Security test workflow for Flow Framework
 on:
   push:
-    branches:
-      - "*"
+    branches-ignore:
+      - 'whitesource-remediate/**'
+      - 'backport/**'
   pull_request:
-    branches:
-      - "*"
+    types: [opened, synchronize, reopened]
 
 jobs:
   Get-CI-Image-Tag:
@@ -30,9 +30,9 @@ jobs:
 
     steps:
       - name: Checkout Flow Framework
-        uses: actions/checkout@v1
+        uses: actions/checkout@v3
       - name: Setup Java ${{ matrix.java }}
-        uses: actions/setup-java@v1
+        uses: actions/setup-java@v3
         with:
           distribution: 'temurin'
           java-version: ${{ matrix.java }}

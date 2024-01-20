@@ -12,7 +12,7 @@ import org.opensearch.common.settings.Settings;
 import org.opensearch.common.unit.TimeValue;
 import org.opensearch.common.util.concurrent.OpenSearchExecutors;
 import org.opensearch.test.OpenSearchTestCase;
-import org.opensearch.threadpool.FixedExecutorBuilder;
+import org.opensearch.threadpool.ScalingExecutorBuilder;
 import org.opensearch.threadpool.TestThreadPool;
 import org.opensearch.threadpool.ThreadPool;
 import org.junit.AfterClass;
@@ -42,11 +42,11 @@ public class ProcessNodeTests extends OpenSearchTestCase {
     public static void setup() {
         testThreadPool = new TestThreadPool(
             ProcessNodeTests.class.getName(),
-            new FixedExecutorBuilder(
-                Settings.EMPTY,
+            new ScalingExecutorBuilder(
                 WORKFLOW_THREAD_POOL,
+                1,
                 OpenSearchExecutors.allocatedProcessors(Settings.EMPTY),
-                100,
+                TimeValue.timeValueMinutes(5),
                 FLOW_FRAMEWORK_THREAD_POOL_PREFIX + WORKFLOW_THREAD_POOL
             )
         );

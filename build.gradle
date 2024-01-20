@@ -348,7 +348,6 @@ testClusters.integTest {
 
     // Installs all registered zipArchive dependencies on integTest cluster nodes except security
     configurations.zipArchive.asFileTree.each {
-        if(!it.name.contains("opensearch-security")) {
             plugin(provider(new Callable<RegularFile>(){
                     @Override
                     RegularFile call() throws Exception {
@@ -361,7 +360,7 @@ testClusters.integTest {
                     }
                 })
             )
-        }
+
     }
 
     // Install Flow Framwork Plugin on integTest cluster nodes

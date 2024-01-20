@@ -8,6 +8,7 @@
  */
 package org.opensearch.flowframework.transport;
 
+import org.opensearch.action.LatchedActionListener;
 import org.opensearch.action.support.ActionFilters;
 import org.opensearch.client.Client;
 import org.opensearch.common.settings.Settings;
@@ -19,24 +20,20 @@ import org.opensearch.flowframework.common.FlowFrameworkSettings;
 import org.opensearch.flowframework.indices.FlowFrameworkIndicesHandler;
 import org.opensearch.flowframework.model.ResourceCreated;
 import org.opensearch.flowframework.model.WorkflowState;
-import org.opensearch.flowframework.workflow.CreateConnectorStep;
 import org.opensearch.flowframework.workflow.DeleteConnectorStep;
-import org.opensearch.flowframework.workflow.ProcessNode;
 import org.opensearch.flowframework.workflow.WorkflowData;
 import org.opensearch.flowframework.workflow.WorkflowStepFactory;
-import org.opensearch.ml.client.MachineLearningNodeClient;
 import org.opensearch.tasks.Task;
 import org.opensearch.test.OpenSearchTestCase;
-import org.opensearch.threadpool.FixedExecutorBuilder;
+import org.opensearch.threadpool.ScalingExecutorBuilder;
 import org.opensearch.threadpool.TestThreadPool;
 import org.opensearch.threadpool.ThreadPool;
 import org.opensearch.transport.TransportService;
 import org.junit.AfterClass;
 
-import java.io.IOException;
-import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
 import org.mockito.ArgumentCaptor;
@@ -50,6 +47,7 @@ import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -58,11 +56,11 @@ public class DeprovisionWorkflowTransportActionTests extends OpenSearchTestCase 
 
     private static ThreadPool threadPool = new TestThreadPool(
         DeprovisionWorkflowTransportActionTests.class.getName(),
-        new FixedExecutorBuilder(
-            Settings.EMPTY,
+        new ScalingExecutorBuilder(
             WORKFLOW_THREAD_POOL,
+            1,
             OpenSearchExecutors.allocatedProcessors(Settings.EMPTY),
-            100,
+            TimeValue.timeValueMinutes(5),
             FLOW_FRAMEWORK_THREAD_POOL_PREFIX + WORKFLOW_THREAD_POOL
         )
     );
@@ -77,7 +75,15 @@ public class DeprovisionWorkflowTransportActionTests extends OpenSearchTestCase 
     public void setUp() throws Exception {
         super.setUp();
         this.client = mock(Client.class);
+        ThreadPool clientThreadPool = spy(threadPool);
+        when(client.threadPool()).thenReturn(clientThreadPool);
+        ThreadContext threadContext = new ThreadContext(Settings.EMPTY);
+        when(clientThreadPool.getThreadContext()).thenReturn(threadContext);
+
         this.workflowStepFactory = mock(WorkflowStepFactory.class);
+        this.deleteConnectorStep = mock(DeleteConnectorStep.class);
+        when(this.workflowStepFactory.createStep("delete_connector")).thenReturn(deleteConnectorStep);
+
         this.flowFrameworkIndicesHandler = mock(FlowFrameworkIndicesHandler.class);
         flowFrameworkSettings = mock(FlowFrameworkSettings.class);
         when(flowFrameworkSettings.getRequestTimeout()).thenReturn(TimeValue.timeValueSeconds(10));
@@ -85,28 +91,12 @@ public class DeprovisionWorkflowTransportActionTests extends OpenSearchTestCase 
         this.deprovisionWorkflowTransportAction = new DeprovisionWorkflowTransportAction(
             mock(TransportService.class),
             mock(ActionFilters.class),
-            threadPool,
+            clientThreadPool,
             client,
             workflowStepFactory,
             flowFrameworkIndicesHandler,
             flowFrameworkSettings
         );
-
-        MachineLearningNodeClient mlClient = new MachineLearningNodeClient(client);
-        ProcessNode processNode = mock(ProcessNode.class);
-        when(processNode.id()).thenReturn("step_1");
-        when(processNode.workflowStep()).thenReturn(new CreateConnectorStep(mlClient, flowFrameworkIndicesHandler));
-        when(processNode.previousNodeInputs()).thenReturn(Collections.emptyMap());
-        when(processNode.input()).thenReturn(WorkflowData.EMPTY);
-        when(processNode.nodeTimeout()).thenReturn(TimeValue.timeValueSeconds(5));
-        this.deleteConnectorStep = mock(DeleteConnectorStep.class);
-        when(this.workflowStepFactory.createStep("delete_connector")).thenReturn(deleteConnectorStep);
-
-        ThreadPool clientThreadPool = mock(ThreadPool.class);
-        ThreadContext threadContext = new ThreadContext(Settings.EMPTY);
-
-        when(client.threadPool()).thenReturn(clientThreadPool);
-        when(clientThreadPool.getThreadContext()).thenReturn(threadContext);
     }
 
     @AfterClass
@@ -114,10 +104,12 @@ public class DeprovisionWorkflowTransportActionTests extends OpenSearchTestCase 
         ThreadPool.terminate(threadPool, 500, TimeUnit.MILLISECONDS);
     }
 
-    public void testDeprovisionWorkflow() throws IOException {
+    public void testDeprovisionWorkflow() throws Exception {
         String workflowId = "1";
+
+        CountDownLatch latch = new CountDownLatch(1);
         @SuppressWarnings("unchecked")
-        ActionListener<WorkflowResponse> listener = mock(ActionListener.class);
+        ActionListener<WorkflowResponse> listener = spy(new LatchedActionListener<WorkflowResponse>(mock(ActionListener.class), latch));
         WorkflowRequest workflowRequest = new WorkflowRequest(workflowId, null);
 
         doAnswer(invocation -> {
@@ -137,14 +129,17 @@ public class DeprovisionWorkflowTransportActionTests extends OpenSearchTestCase 
         deprovisionWorkflowTransportAction.doExecute(mock(Task.class), workflowRequest, listener);
         ArgumentCaptor<WorkflowResponse> responseCaptor = ArgumentCaptor.forClass(WorkflowResponse.class);
 
+        latch.await(5, TimeUnit.SECONDS);
         verify(listener, times(1)).onResponse(responseCaptor.capture());
         assertEquals(workflowId, responseCaptor.getValue().getWorkflowId());
     }
 
-    public void testFailToDeprovision() throws IOException {
+    public void testFailToDeprovision() throws Exception {
         String workflowId = "1";
+
+        CountDownLatch latch = new CountDownLatch(1);
         @SuppressWarnings("unchecked")
-        ActionListener<WorkflowResponse> listener = mock(ActionListener.class);
+        ActionListener<WorkflowResponse> listener = spy(new LatchedActionListener<WorkflowResponse>(mock(ActionListener.class), latch));
         WorkflowRequest workflowRequest = new WorkflowRequest(workflowId, null);
 
         doAnswer(invocation -> {
@@ -164,6 +159,7 @@ public class DeprovisionWorkflowTransportActionTests extends OpenSearchTestCase 
         deprovisionWorkflowTransportAction.doExecute(mock(Task.class), workflowRequest, listener);
         ArgumentCaptor<Exception> exceptionCaptor = ArgumentCaptor.forClass(Exception.class);
 
+        latch.await(5, TimeUnit.SECONDS);
         verify(listener, times(1)).onFailure(exceptionCaptor.capture());
         assertEquals("Failed to deprovision some resources: [model_id modelId].", exceptionCaptor.getValue().getMessage());
     }
