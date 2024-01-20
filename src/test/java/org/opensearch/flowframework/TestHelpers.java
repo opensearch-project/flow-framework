@@ -30,6 +30,9 @@ import org.opensearch.core.xcontent.ToXContent;
 import org.opensearch.core.xcontent.ToXContentObject;
 import org.opensearch.core.xcontent.XContentBuilder;
 import org.opensearch.flowframework.model.Template;
+import org.opensearch.flowframework.model.Workflow;
+import org.opensearch.flowframework.model.WorkflowEdge;
+import org.opensearch.flowframework.model.WorkflowNode;
 import org.opensearch.flowframework.util.ParseUtils;
 
 import java.io.BufferedReader;
@@ -37,6 +40,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -153,4 +157,15 @@ public class TestHelpers {
     public static Map<String, Object> XContentBuilderToMap(XContentBuilder builder) {
         return XContentHelper.convertToMap(BytesReference.bytes(builder), false, builder.contentType()).v2();
     }
+
+    public static Workflow createSampleWorkflow() {
+        WorkflowNode nodeA = new WorkflowNode("A", "a-type", Collections.emptyMap(), Map.of("foo", "bar"));
+        WorkflowNode nodeB = new WorkflowNode("B", "b-type", Collections.emptyMap(), Map.of("baz", "qux"));
+        WorkflowEdge edgeAB = new WorkflowEdge("A", "B");
+        List<WorkflowNode> nodes = List.of(nodeA, nodeB);
+        List<WorkflowEdge> edges = List.of(edgeAB);
+        Workflow workflow = new Workflow(Map.of("key", "value"), nodes, edges);
+        return workflow;
+    }
+
 }
