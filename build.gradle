@@ -162,7 +162,11 @@ dependencies {
 
     // ZipArchive dependencies used for integration tests
     zipArchive group: 'org.opensearch.plugin', name:'opensearch-ml-plugin', version: "${opensearch_build}"
-    zipArchive group: 'org.opensearch.plugin', name:'opensearch-security', version: "${opensearch_build}"
+
+    // Only pull security plugin dependency if security is enabled
+    if(System.getProperty('security.enabled') == 'true'){
+        zipArchive group: 'org.opensearch.plugin', name:'opensearch-security', version: "${opensearch_build}"
+    }
 
     configurations.all {
         resolutionStrategy {
