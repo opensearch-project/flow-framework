@@ -16,7 +16,8 @@ jobs:
   integ-test-with-security-linux:
     strategy:
       matrix:
-        java: [11, 17, 21]
+      # Don't use 21.0.2 https://github.com/opensearch-project/flow-framework/issues/426
+        java: [11, 17, 21.0.1]
 
     name: Run Security Integration Tests on Linux
     runs-on: ubuntu-latest
