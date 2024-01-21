@@ -273,6 +273,7 @@ public abstract class FlowFrameworkRestTestCase extends OpenSearchRestTestCase {
                 // Do not reset ML/Flow Framework encryption index as this is needed to encrypt connector credentials
                 if (indexName != null
                     && !".opendistro_security".equals(indexName)
+                    && !".plugins-ml-model-group".equals(indexName)
                     && !".plugins-ml-config".equals(indexName)
                     && !".plugins-flow-framework-config".equals(indexName)) {
                     adminClient().performRequest(new Request("DELETE", "/" + indexName));
