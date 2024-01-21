@@ -84,8 +84,14 @@ public class FlowFrameworkRestApiIT extends FlowFrameworkRestTestCase {
         Map<String, Object> responseMap = entityAsMap(response);
         String workflowId = (String) responseMap.get(WORKFLOW_ID);
 
-        // Provision Template
-        Response provisionResponse = provisionWorkflow(client(), workflowId);
+        // Ensure Ml config index is initialized as creating a connector requires this, then hit Provision API and assert status
+        Response provisionResponse;
+        if (!indexExistsWithAdminClient(".plugins-ml-config")) {
+            assertBusy(() -> assertTrue(indexExistsWithAdminClient(".plugins-ml-config")), 40, TimeUnit.SECONDS);
+            provisionResponse = provisionWorkflow(client(), workflowId);
+        } else {
+            provisionResponse = provisionWorkflow(client(), workflowId);
+        }
         assertEquals(RestStatus.OK, TestHelpers.restStatus(provisionResponse));
         getAndAssertWorkflowStatus(client(), workflowId, State.PROVISIONING, ProvisioningProgress.IN_PROGRESS);
 
