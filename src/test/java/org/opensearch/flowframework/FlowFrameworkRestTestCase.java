@@ -276,7 +276,7 @@ public abstract class FlowFrameworkRestTestCase extends OpenSearchRestTestCase {
                     && !".plugins-ml-model-group".equals(indexName)
                     && !".plugins-ml-config".equals(indexName)
                     && !".plugins-flow-framework-config".equals(indexName)) {
-                    adminClient().performRequest(new Request("DELETE", "/" + indexName));
+                    client().performRequest(new Request("DELETE", "/" + indexName));
                 }
             }
         }
