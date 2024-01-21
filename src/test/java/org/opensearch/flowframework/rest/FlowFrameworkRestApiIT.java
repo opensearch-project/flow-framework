@@ -74,7 +74,7 @@ public class FlowFrameworkRestApiIT extends FlowFrameworkRestTestCase {
         assertEquals(RestStatus.CREATED, TestHelpers.restStatus(responseCreate));
 
         Template template = TestHelpers.createTemplateFromFile("createconnector-registerremotemodel-deploymodel.json");
-        Thread.sleep(1000);
+
         ResponseException exception = expectThrows(ResponseException.class, () -> updateWorkflow(client(), "123", template));
         assertTrue(exception.getMessage().contains("Failed to get template: 123"));
 
@@ -215,8 +215,14 @@ public class FlowFrameworkRestApiIT extends FlowFrameworkRestTestCase {
         String workflowId = (String) responseMap.get(WORKFLOW_ID);
         getAndAssertWorkflowStatus(client(), workflowId, State.NOT_STARTED, ProvisioningProgress.NOT_STARTED);
 
-        // Hit Provision API and assert status
-        response = provisionWorkflow(client(), workflowId);
+        // Ensure Ml config index is initialized as creating a connector requires this, then hit Provision API and assert status
+        if(!indexExistsWithAdminClient(".plugins-ml-config")) {
+            assertBusy(() -> assertTrue(indexExistsWithAdminClient(".plugins-ml-config")), 25, TimeUnit.SECONDS);
+            response = provisionWorkflow(client(), workflowId);
+        } else {
+            response = provisionWorkflow(client(), workflowId);
+        }
+        
         assertEquals(RestStatus.OK, TestHelpers.restStatus(response));
         getAndAssertWorkflowStatus(client(), workflowId, State.PROVISIONING, ProvisioningProgress.IN_PROGRESS);
 
@@ -243,7 +249,13 @@ public class FlowFrameworkRestApiIT extends FlowFrameworkRestTestCase {
         Template template = TestHelpers.createTemplateFromFile("agent-framework.json");
 
         // Hit Create Workflow API to create agent-framework template, with template validation check and provision parameter
-        Response response = createWorkflowWithProvision(template);
+        Response response;
+        if(!indexExistsWithAdminClient(".plugins-ml-config")) {
+            assertBusy(() -> assertTrue(indexExistsWithAdminClient(".plugins-ml-config")), 25, TimeUnit.SECONDS);
+            response = createWorkflowWithProvision(client(), template);
+        } else {
+            response = createWorkflowWithProvision(client(), template);
+        }
         assertEquals(RestStatus.CREATED, TestHelpers.restStatus(response));
         Map<String, Object> responseMap = entityAsMap(response);
         String workflowId = (String) responseMap.get(WORKFLOW_ID);
