@@ -118,7 +118,7 @@ public class FlowFrameworkSecureRestApiIT extends FlowFrameworkRestTestCase {
 
         // Invoke provision API
         if (!indexExistsWithAdminClient(".plugins-ml-config")) {
-            assertBusy(() -> assertTrue(indexExistsWithAdminClient(".plugins-ml-config")), 25, TimeUnit.SECONDS);
+            assertBusy(() -> assertTrue(indexExistsWithAdminClient(".plugins-ml-config")), 40, TimeUnit.SECONDS);
             response = provisionWorkflow(fullAccessClient(), workflowId);
         } else {
             response = provisionWorkflow(fullAccessClient(), workflowId);

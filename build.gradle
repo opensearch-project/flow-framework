@@ -424,6 +424,14 @@ task integTestRemote(type: RestIntegTestTask) {
 
 // Automatically sets up the integration test cluster locally
 run {
+    doFirst {
+        // There seems to be an issue when running multi node run or integ tasks with unicast_hosts
+        // not being written, the waitForAllConditions ensures it's written
+        getClusters().forEach { cluster ->
+            cluster.waitForAllConditions()
+        }
+    }
+
     useCluster testClusters.integTest
 }
 
