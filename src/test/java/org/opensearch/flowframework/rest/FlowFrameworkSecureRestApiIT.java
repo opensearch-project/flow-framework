@@ -117,7 +117,7 @@ public class FlowFrameworkSecureRestApiIT extends FlowFrameworkRestTestCase {
         assertEquals(RestStatus.OK, searchResponse.status());
 
         // Invoke provision API
-        if(!indexExistsWithAdminClient(".plugins-ml-config")) {
+        if (!indexExistsWithAdminClient(".plugins-ml-config")) {
             assertBusy(() -> assertTrue(indexExistsWithAdminClient(".plugins-ml-config")), 25, TimeUnit.SECONDS);
             response = provisionWorkflow(fullAccessClient(), workflowId);
         } else {

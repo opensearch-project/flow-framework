@@ -216,13 +216,13 @@ public class FlowFrameworkRestApiIT extends FlowFrameworkRestTestCase {
         getAndAssertWorkflowStatus(client(), workflowId, State.NOT_STARTED, ProvisioningProgress.NOT_STARTED);
 
         // Ensure Ml config index is initialized as creating a connector requires this, then hit Provision API and assert status
-        if(!indexExistsWithAdminClient(".plugins-ml-config")) {
+        if (!indexExistsWithAdminClient(".plugins-ml-config")) {
             assertBusy(() -> assertTrue(indexExistsWithAdminClient(".plugins-ml-config")), 25, TimeUnit.SECONDS);
             response = provisionWorkflow(client(), workflowId);
         } else {
             response = provisionWorkflow(client(), workflowId);
         }
-        
+
         assertEquals(RestStatus.OK, TestHelpers.restStatus(response));
         getAndAssertWorkflowStatus(client(), workflowId, State.PROVISIONING, ProvisioningProgress.IN_PROGRESS);
 
@@ -250,7 +250,7 @@ public class FlowFrameworkRestApiIT extends FlowFrameworkRestTestCase {
 
         // Hit Create Workflow API to create agent-framework template, with template validation check and provision parameter
         Response response;
-        if(!indexExistsWithAdminClient(".plugins-ml-config")) {
+        if (!indexExistsWithAdminClient(".plugins-ml-config")) {
             assertBusy(() -> assertTrue(indexExistsWithAdminClient(".plugins-ml-config")), 25, TimeUnit.SECONDS);
             response = createWorkflowWithProvision(client(), template);
         } else {
