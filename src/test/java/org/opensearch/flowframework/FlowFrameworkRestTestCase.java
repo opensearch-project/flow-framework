@@ -120,6 +120,28 @@ public abstract class FlowFrameworkRestTestCase extends OpenSearchRestTestCase {
         );
         assertEquals(200, response.getStatusLine().getStatusCode());
 
+        // Set ML auto redeploy to false
+        response = TestHelpers.makeRequest(
+            client(),
+            "PUT",
+            "_cluster/settings",
+            null,
+            "{\"persistent\":{\"plugins.ml_commons.model_auto_redeploy.enable\":false}}",
+            List.of(new BasicHeader(HttpHeaders.USER_AGENT, ""))
+        );
+        assertEquals(200, response.getStatusLine().getStatusCode());
+
+        // Set ML auto redeploy retries to 0
+        response = TestHelpers.makeRequest(
+            client(),
+            "PUT",
+            "_cluster/settings",
+            null,
+            "{\"persistent\":{\"plugins.ml_commons.model_auto_redeploy.lifetime_retry_times\":0}}",
+            List.of(new BasicHeader(HttpHeaders.USER_AGENT, ""))
+        );
+        assertEquals(200, response.getStatusLine().getStatusCode());
+
         // Set up clients if running in security enabled cluster
         if (isHttps()) {
             String fullAccessUserPassword = generatePassword(FULL_ACCESS_USER);
