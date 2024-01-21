@@ -146,13 +146,13 @@ public class ProcessNode {
 
         CompletableFuture.runAsync(() -> {
             try {
-                logger.info("Starting {}.", this.id);
                 // get the input data from predecessor(s)
                 Map<String, WorkflowData> inputMap = new HashMap<>();
                 for (ProcessNode node : predecessors) {
                     WorkflowData wd = node.future().actionGet();
                     inputMap.put(wd.getNodeId(), wd);
                 }
+                logger.info("Starting {}.", this.id);
 
                 ScheduledCancellable delayExec = null;
                 if (this.nodeTimeout.compareTo(TimeValue.ZERO) > 0) {
