@@ -45,6 +45,7 @@ import org.opensearch.flowframework.model.State;
 import org.opensearch.flowframework.model.Template;
 import org.opensearch.flowframework.model.WorkflowState;
 import org.opensearch.test.rest.OpenSearchRestTestCase;
+import org.junit.After;
 import org.junit.Before;
 
 import java.io.IOException;
@@ -75,56 +76,71 @@ public abstract class FlowFrameworkRestTestCase extends OpenSearchRestTestCase {
     @Before
     protected void setUpSettings() throws Exception {
 
-        if (!indexExistsWithAdminClient(".plugins-ml-config")) {
-            // Initial cluster set up
+        // Enable Flow Framework Plugin Rest APIs
+        Response response = TestHelpers.makeRequest(
+            client(),
+            "PUT",
+            "_cluster/settings",
+            null,
+            "{\"transient\":{\"plugins.flow_framework.enabled\":true}}",
+            List.of(new BasicHeader(HttpHeaders.USER_AGENT, ""))
+        );
+        assertEquals(200, response.getStatusLine().getStatusCode());
 
-            // Enable Flow Framework Plugin Rest APIs
-            Response response = TestHelpers.makeRequest(
-                client(),
-                "PUT",
-                "_cluster/settings",
-                null,
-                "{\"transient\":{\"plugins.flow_framework.enabled\":true}}",
-                List.of(new BasicHeader(HttpHeaders.USER_AGENT, ""))
-            );
-            assertEquals(200, response.getStatusLine().getStatusCode());
+        // Enable ML Commons to run on non-ml nodes
+        response = TestHelpers.makeRequest(
+            client(),
+            "PUT",
+            "_cluster/settings",
+            null,
+            "{\"persistent\":{\"plugins.ml_commons.only_run_on_ml_node\":false}}",
+            List.of(new BasicHeader(HttpHeaders.USER_AGENT, ""))
+        );
+        assertEquals(200, response.getStatusLine().getStatusCode());
 
-            // Enable ML Commons to run on non-ml nodes
-            response = TestHelpers.makeRequest(
-                client(),
-                "PUT",
-                "_cluster/settings",
-                null,
-                "{\"persistent\":{\"plugins.ml_commons.only_run_on_ml_node\":false}}",
-                List.of(new BasicHeader(HttpHeaders.USER_AGENT, ""))
-            );
-            assertEquals(200, response.getStatusLine().getStatusCode());
+        // Enable local model registration via URL
+        response = TestHelpers.makeRequest(
+            client(),
+            "PUT",
+            "_cluster/settings",
+            null,
+            "{\"persistent\":{\"plugins.ml_commons.allow_registering_model_via_url\":true}}",
+            List.of(new BasicHeader(HttpHeaders.USER_AGENT, ""))
+        );
+        assertEquals(200, response.getStatusLine().getStatusCode());
 
-            // Enable local model registration via URL
-            response = TestHelpers.makeRequest(
-                client(),
-                "PUT",
-                "_cluster/settings",
-                null,
-                "{\"persistent\":{\"plugins.ml_commons.allow_registering_model_via_url\":true}}",
-                List.of(new BasicHeader(HttpHeaders.USER_AGENT, ""))
-            );
-            assertEquals(200, response.getStatusLine().getStatusCode());
+        // Set ML jvm heap memory threshold to 100 to avoid opening the circuit breaker during tests
+        response = TestHelpers.makeRequest(
+            client(),
+            "PUT",
+            "_cluster/settings",
+            null,
+            "{\"persistent\":{\"plugins.ml_commons.jvm_heap_memory_threshold\":100}}",
+            List.of(new BasicHeader(HttpHeaders.USER_AGENT, ""))
+        );
+        assertEquals(200, response.getStatusLine().getStatusCode());
 
-            // Set ML jvm heap memory threshold to 100 to avoid opening the circuit breaker during tests
-            response = TestHelpers.makeRequest(
-                client(),
-                "PUT",
-                "_cluster/settings",
-                null,
-                "{\"persistent\":{\"plugins.ml_commons.jvm_heap_memory_threshold\":100}}",
-                List.of(new BasicHeader(HttpHeaders.USER_AGENT, ""))
-            );
-            assertEquals(200, response.getStatusLine().getStatusCode());
+        // Set ML auto redeploy to false
+        response = TestHelpers.makeRequest(
+            client(),
+            "PUT",
+            "_cluster/settings",
+            null,
+            "{\"persistent\":{\"plugins.ml_commons.model_auto_redeploy.enable\":false}}",
+            List.of(new BasicHeader(HttpHeaders.USER_AGENT, ""))
+        );
+        assertEquals(200, response.getStatusLine().getStatusCode());
 
-            // Ensure .plugins-ml-config is created before proceeding with integration tests
-            assertBusy(() -> { assertTrue(indexExistsWithAdminClient(".plugins-ml-config")); }, 60, TimeUnit.SECONDS);
-        }
+        // Set ML auto redeploy retries to 0
+        response = TestHelpers.makeRequest(
+            client(),
+            "PUT",
+            "_cluster/settings",
+            null,
+            "{\"persistent\":{\"plugins.ml_commons.model_auto_redeploy.lifetime_retry_times\":0}}",
+            List.of(new BasicHeader(HttpHeaders.USER_AGENT, ""))
+        );
+        assertEquals(200, response.getStatusLine().getStatusCode());
 
         // Set up clients if running in security enabled cluster
         if (isHttps()) {
@@ -132,7 +148,7 @@ public abstract class FlowFrameworkRestTestCase extends OpenSearchRestTestCase {
             String readAccessUserPassword = generatePassword(READ_ACCESS_USER);
 
             // Configure full access user and client, needs ML Full Access role as well
-            Response response = createUser(
+            response = createUser(
                 FULL_ACCESS_USER,
                 fullAccessUserPassword,
                 List.of(FLOW_FRAMEWORK_FULL_ACCESS_ROLE, ML_COMMONS_FULL_ACCESS_ROLE)
@@ -187,7 +203,7 @@ public abstract class FlowFrameworkRestTestCase extends OpenSearchRestTestCase {
 
     // Utility fn for checking if an index exists. Should only be used when not allowed in a regular context
     // (e.g., checking existence of system indices)
-    protected static boolean indexExistsWithAdminClient(String indexName) throws IOException {
+    public static boolean indexExistsWithAdminClient(String indexName) throws IOException {
         Request request = new Request("HEAD", "/" + indexName);
         Response response = adminClient().performRequest(request);
         return RestStatus.OK.getStatus() == response.getStatusLine().getStatusCode();
@@ -253,6 +269,40 @@ public abstract class FlowFrameworkRestTestCase extends OpenSearchRestTestCase {
         }
     }
 
+    @SuppressWarnings("unchecked")
+    @After
+    protected void wipeAllODFEIndices() throws IOException {
+        Response response = adminClient().performRequest(new Request("GET", "/_cat/indices?format=json&expand_wildcards=all"));
+        MediaType xContentType = MediaType.fromMediaType(response.getEntity().getContentType());
+        try (
+            XContentParser parser = xContentType.xContent()
+                .createParser(
+                    NamedXContentRegistry.EMPTY,
+                    DeprecationHandler.THROW_UNSUPPORTED_OPERATION,
+                    response.getEntity().getContent()
+                )
+        ) {
+            XContentParser.Token token = parser.nextToken();
+            List<Map<String, Object>> parserList = null;
+            if (token == XContentParser.Token.START_ARRAY) {
+                parserList = parser.listOrderedMap().stream().map(obj -> (Map<String, Object>) obj).collect(Collectors.toList());
+            } else {
+                parserList = Collections.singletonList(parser.mapOrdered());
+            }
+
+            for (Map<String, Object> index : parserList) {
+                String indexName = (String) index.get("index");
+                // Do not reset ML/Flow Framework encryption index as this is needed to encrypt connector credentials
+                if (indexName != null
+                    && !".opendistro_security".equals(indexName)
+                    && !".plugins-ml-config".equals(indexName)
+                    && !".plugins-flow-framework-config".equals(indexName)) {
+                    adminClient().performRequest(new Request("DELETE", "/" + indexName));
+                }
+            }
+        }
+    }
+
     /**
      * wipeAllIndices won't work since it cannot delete security index. Use wipeAllSystemIndices instead.
      */
@@ -290,12 +340,13 @@ public abstract class FlowFrameworkRestTestCase extends OpenSearchRestTestCase {
 
     /**
      * Helper method to invoke the Create Workflow Rest Action with provision
+     * @param client the rest client
      * @param template the template to create
      * @throws Exception if the request fails
      * @return a rest response
      */
-    protected Response createWorkflowWithProvision(Template template) throws Exception {
-        return TestHelpers.makeRequest(client(), "POST", WORKFLOW_URI + "?provision=true", Collections.emptyMap(), template.toJson(), null);
+    protected Response createWorkflowWithProvision(RestClient client, Template template) throws Exception {
+        return TestHelpers.makeRequest(client, "POST", WORKFLOW_URI + "?provision=true", Collections.emptyMap(), template.toJson(), null);
     }
 
     /**

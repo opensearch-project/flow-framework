@@ -238,18 +238,6 @@ ext{
         cluster.setting("plugins.security.authcz.admin_dn", "\n- CN=kirk,OU=client,O=client,L=test, C=de")
         cluster.setting('plugins.security.restapi.roles_enabled', '["all_access", "security_rest_api_access"]')
         cluster.setting('plugins.security.system_indices.enabled', "true")
-        cluster.setting('plugins.security.system_indices.indices', '[' +
-                '".plugins-ml-config", ' +
-                '".plugins-ml-connector", ' +
-                '".plugins-ml-model-group", ' +
-                '".plugins-ml-model", ".plugins-ml-task", ' +
-                '".plugins-ml-conversation-meta", ' +
-                '".plugins-ml-conversation-interactions", ' +
-                '".plugins-flow-framework-config", ' +
-                '".plugins-flow-framework-templates", ' +
-                '".plugins-flow-framework-state"' +
-                ']'
-        )
         cluster.setSecure(true)
     }
 }
@@ -424,6 +412,14 @@ task integTestRemote(type: RestIntegTestTask) {
 
 // Automatically sets up the integration test cluster locally
 run {
+    doFirst {
+        // There seems to be an issue when running multi node run or integ tasks with unicast_hosts
+        // not being written, the waitForAllConditions ensures it's written
+        getClusters().forEach { cluster ->
+            cluster.waitForAllConditions()
+        }
+    }
+
     useCluster testClusters.integTest
 }
 
