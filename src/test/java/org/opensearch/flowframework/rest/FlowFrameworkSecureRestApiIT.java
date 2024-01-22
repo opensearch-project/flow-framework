@@ -20,6 +20,7 @@ import org.junit.After;
 
 import java.io.IOException;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 
 import static org.opensearch.flowframework.common.CommonValue.WORKFLOW_ID;
 
@@ -116,7 +117,12 @@ public class FlowFrameworkSecureRestApiIT extends FlowFrameworkRestTestCase {
         assertEquals(RestStatus.OK, searchResponse.status());
 
         // Invoke provision API
-        response = provisionWorkflow(fullAccessClient(), workflowId);
+        if (!indexExistsWithAdminClient(".plugins-ml-config")) {
+            assertBusy(() -> assertTrue(indexExistsWithAdminClient(".plugins-ml-config")), 40, TimeUnit.SECONDS);
+            response = provisionWorkflow(fullAccessClient(), workflowId);
+        } else {
+            response = provisionWorkflow(fullAccessClient(), workflowId);
+        }
         assertEquals(RestStatus.OK, TestHelpers.restStatus(response));
 
         // Invoke status API

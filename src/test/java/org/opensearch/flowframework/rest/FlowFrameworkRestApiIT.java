@@ -74,7 +74,7 @@ public class FlowFrameworkRestApiIT extends FlowFrameworkRestTestCase {
         assertEquals(RestStatus.CREATED, TestHelpers.restStatus(responseCreate));
 
         Template template = TestHelpers.createTemplateFromFile("createconnector-registerremotemodel-deploymodel.json");
-        Thread.sleep(1000);
+
         ResponseException exception = expectThrows(ResponseException.class, () -> updateWorkflow(client(), "123", template));
         assertTrue(exception.getMessage().contains("Failed to get template: 123"));
 
@@ -84,8 +84,14 @@ public class FlowFrameworkRestApiIT extends FlowFrameworkRestTestCase {
         Map<String, Object> responseMap = entityAsMap(response);
         String workflowId = (String) responseMap.get(WORKFLOW_ID);
 
-        // Provision Template
-        Response provisionResponse = provisionWorkflow(client(), workflowId);
+        // Ensure Ml config index is initialized as creating a connector requires this, then hit Provision API and assert status
+        Response provisionResponse;
+        if (!indexExistsWithAdminClient(".plugins-ml-config")) {
+            assertBusy(() -> assertTrue(indexExistsWithAdminClient(".plugins-ml-config")), 40, TimeUnit.SECONDS);
+            provisionResponse = provisionWorkflow(client(), workflowId);
+        } else {
+            provisionResponse = provisionWorkflow(client(), workflowId);
+        }
         assertEquals(RestStatus.OK, TestHelpers.restStatus(provisionResponse));
         getAndAssertWorkflowStatus(client(), workflowId, State.PROVISIONING, ProvisioningProgress.IN_PROGRESS);
 
@@ -163,12 +169,6 @@ public class FlowFrameworkRestApiIT extends FlowFrameworkRestTestCase {
         assertNotNull(resourcesCreated.get(0).resourceId());
         assertEquals("deploy_model", resourcesCreated.get(1).workflowStepName());
         assertNotNull(resourcesCreated.get(1).resourceId());
-
-        // Deprovision the workflow to avoid opening circut breaker when running additional tests
-        Response deprovisionResponse = deprovisionWorkflow(client(), workflowId);
-
-        // wait for deprovision to complete
-        Thread.sleep(5000);
     }
 
     public void testCreateAndProvisionCyclicalTemplate() throws Exception {
@@ -215,8 +215,14 @@ public class FlowFrameworkRestApiIT extends FlowFrameworkRestTestCase {
         String workflowId = (String) responseMap.get(WORKFLOW_ID);
         getAndAssertWorkflowStatus(client(), workflowId, State.NOT_STARTED, ProvisioningProgress.NOT_STARTED);
 
-        // Hit Provision API and assert status
-        response = provisionWorkflow(client(), workflowId);
+        // Ensure Ml config index is initialized as creating a connector requires this, then hit Provision API and assert status
+        if (!indexExistsWithAdminClient(".plugins-ml-config")) {
+            assertBusy(() -> assertTrue(indexExistsWithAdminClient(".plugins-ml-config")), 40, TimeUnit.SECONDS);
+            response = provisionWorkflow(client(), workflowId);
+        } else {
+            response = provisionWorkflow(client(), workflowId);
+        }
+
         assertEquals(RestStatus.OK, TestHelpers.restStatus(response));
         getAndAssertWorkflowStatus(client(), workflowId, State.PROVISIONING, ProvisioningProgress.IN_PROGRESS);
 
@@ -231,19 +237,19 @@ public class FlowFrameworkRestApiIT extends FlowFrameworkRestTestCase {
         assertNotNull(resourcesCreated.get(1).resourceId());
         assertEquals("deploy_model", resourcesCreated.get(2).workflowStepName());
         assertNotNull(resourcesCreated.get(2).resourceId());
-
-        // Deprovision the workflow to avoid opening circuit breaker when running additional tests
-        Response deprovisionResponse = deprovisionWorkflow(client(), workflowId);
-
-        // wait for deprovision to complete
-        Thread.sleep(5000);
     }
 
     public void testCreateAndProvisionAgentFrameworkWorkflow() throws Exception {
         Template template = TestHelpers.createTemplateFromFile("agent-framework.json");
 
         // Hit Create Workflow API to create agent-framework template, with template validation check and provision parameter
-        Response response = createWorkflowWithProvision(template);
+        Response response;
+        if (!indexExistsWithAdminClient(".plugins-ml-config")) {
+            assertBusy(() -> assertTrue(indexExistsWithAdminClient(".plugins-ml-config")), 40, TimeUnit.SECONDS);
+            response = createWorkflowWithProvision(client(), template);
+        } else {
+            response = createWorkflowWithProvision(client(), template);
+        }
         assertEquals(RestStatus.CREATED, TestHelpers.restStatus(response));
         Map<String, Object> responseMap = entityAsMap(response);
         String workflowId = (String) responseMap.get(WORKFLOW_ID);
