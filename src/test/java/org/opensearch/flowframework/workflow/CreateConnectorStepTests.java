@@ -8,6 +8,7 @@
  */
 package org.opensearch.flowframework.workflow;
 
+import org.opensearch.action.support.PlainActionFuture;
 import org.opensearch.action.update.UpdateResponse;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.core.index.shard.ShardId;
@@ -24,7 +25,6 @@ import org.opensearch.test.OpenSearchTestCase;
 import java.io.IOException;
 import java.util.Collections;
 import java.util.Map;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 
 import org.mockito.Mock;
@@ -99,7 +99,7 @@ public class CreateConnectorStepTests extends OpenSearchTestCase {
             return null;
         }).when(flowFrameworkIndicesHandler).updateResourceInStateIndex(anyString(), anyString(), anyString(), anyString(), any());
 
-        CompletableFuture<WorkflowData> future = createConnectorStep.execute(
+        PlainActionFuture<WorkflowData> future = createConnectorStep.execute(
             inputData.getNodeId(),
             inputData,
             Collections.emptyMap(),
@@ -121,7 +121,7 @@ public class CreateConnectorStepTests extends OpenSearchTestCase {
             return null;
         }).when(machineLearningNodeClient).createConnector(any(MLCreateConnectorInput.class), any());
 
-        CompletableFuture<WorkflowData> future = createConnectorStep.execute(
+        PlainActionFuture<WorkflowData> future = createConnectorStep.execute(
             inputData.getNodeId(),
             inputData,
             Collections.emptyMap(),
@@ -130,7 +130,7 @@ public class CreateConnectorStepTests extends OpenSearchTestCase {
 
         verify(machineLearningNodeClient).createConnector(any(MLCreateConnectorInput.class), any());
 
-        assertTrue(future.isCompletedExceptionally());
+        assertTrue(future.isDone());
         ExecutionException ex = assertThrows(ExecutionException.class, () -> future.get().getContent());
         assertTrue(ex.getCause() instanceof FlowFrameworkException);
         assertEquals("Failed to create connector", ex.getCause().getMessage());

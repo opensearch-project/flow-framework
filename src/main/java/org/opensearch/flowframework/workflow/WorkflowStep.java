@@ -8,8 +8,9 @@
  */
 package org.opensearch.flowframework.workflow;
 
+import org.opensearch.action.support.PlainActionFuture;
+
 import java.util.Map;
-import java.util.concurrent.CompletableFuture;
 
 /**
  * Interface for the workflow setup of different building blocks.
@@ -24,7 +25,7 @@ public interface WorkflowStep {
      * @param previousNodeInputs Input params for this node that come from previous steps
      * @return A CompletableFuture of the building block. This block should return immediately, but not be completed until the step executes, containing either the step's output data or {@link WorkflowData#EMPTY} which may be passed to follow-on steps.
      */
-    CompletableFuture<WorkflowData> execute(
+    PlainActionFuture<WorkflowData> execute(
         String currentNodeId,
         WorkflowData currentNodeInputs,
         Map<String, WorkflowData> outputs,

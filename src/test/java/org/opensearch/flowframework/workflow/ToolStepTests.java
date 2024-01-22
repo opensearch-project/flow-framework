@@ -8,13 +8,13 @@
  */
 package org.opensearch.flowframework.workflow;
 
+import org.opensearch.action.support.PlainActionFuture;
 import org.opensearch.ml.common.agent.MLToolSpec;
 import org.opensearch.test.OpenSearchTestCase;
 
 import java.io.IOException;
 import java.util.Collections;
 import java.util.Map;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 
 public class ToolStepTests extends OpenSearchTestCase {
@@ -40,7 +40,7 @@ public class ToolStepTests extends OpenSearchTestCase {
     public void testTool() throws IOException, ExecutionException, InterruptedException {
         ToolStep toolStep = new ToolStep();
 
-        CompletableFuture<WorkflowData> future = toolStep.execute(
+        PlainActionFuture<WorkflowData> future = toolStep.execute(
             inputData.getNodeId(),
             inputData,
             Collections.emptyMap(),

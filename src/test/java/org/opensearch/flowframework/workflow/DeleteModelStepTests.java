@@ -9,6 +9,7 @@
 package org.opensearch.flowframework.workflow;
 
 import org.opensearch.action.delete.DeleteResponse;
+import org.opensearch.action.support.PlainActionFuture;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.core.index.Index;
 import org.opensearch.core.index.shard.ShardId;
@@ -20,7 +21,6 @@ import org.opensearch.test.OpenSearchTestCase;
 import java.io.IOException;
 import java.util.Collections;
 import java.util.Map;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 
 import org.mockito.Mock;
@@ -60,7 +60,7 @@ public class DeleteModelStepTests extends OpenSearchTestCase {
             return null;
         }).when(machineLearningNodeClient).deleteModel(any(String.class), any());
 
-        CompletableFuture<WorkflowData> future = deleteModelStep.execute(
+        PlainActionFuture<WorkflowData> future = deleteModelStep.execute(
             inputData.getNodeId(),
             inputData,
             Map.of("step_1", new WorkflowData(Map.of(MODEL_ID, modelId), "workflowId", "nodeId")),
@@ -75,14 +75,14 @@ public class DeleteModelStepTests extends OpenSearchTestCase {
     public void testNoModelIdInOutput() throws IOException {
         DeleteModelStep deleteModelStep = new DeleteModelStep(machineLearningNodeClient);
 
-        CompletableFuture<WorkflowData> future = deleteModelStep.execute(
+        PlainActionFuture<WorkflowData> future = deleteModelStep.execute(
             inputData.getNodeId(),
             inputData,
             Collections.emptyMap(),
             Collections.emptyMap()
         );
 
-        assertTrue(future.isCompletedExceptionally());
+        assertTrue(future.isDone());
         ExecutionException ex = assertThrows(ExecutionException.class, () -> future.get().getContent());
         assertTrue(ex.getCause() instanceof FlowFrameworkException);
         assertEquals("Missing required inputs [model_id] in workflow [test-id] node [test-node-id]", ex.getCause().getMessage());
@@ -97,7 +97,7 @@ public class DeleteModelStepTests extends OpenSearchTestCase {
             return null;
         }).when(machineLearningNodeClient).deleteModel(any(String.class), any());
 
-        CompletableFuture<WorkflowData> future = deleteModelStep.execute(
+        PlainActionFuture<WorkflowData> future = deleteModelStep.execute(
             inputData.getNodeId(),
             inputData,
             Map.of("step_1", new WorkflowData(Map.of(MODEL_ID, "test"), "workflowId", "nodeId")),
@@ -106,7 +106,7 @@ public class DeleteModelStepTests extends OpenSearchTestCase {
 
         verify(machineLearningNodeClient).deleteModel(any(String.class), any());
 
-        assertTrue(future.isCompletedExceptionally());
+        assertTrue(future.isDone());
         ExecutionException ex = assertThrows(ExecutionException.class, () -> future.get().getContent());
         assertTrue(ex.getCause() instanceof FlowFrameworkException);
         assertEquals("Failed to delete model", ex.getCause().getMessage());
