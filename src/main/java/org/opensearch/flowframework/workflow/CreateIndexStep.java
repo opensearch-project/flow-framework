@@ -13,6 +13,7 @@ import org.apache.logging.log4j.Logger;
 import org.opensearch.ExceptionsHelper;
 import org.opensearch.action.admin.indices.create.CreateIndexRequest;
 import org.opensearch.action.admin.indices.create.CreateIndexResponse;
+import org.opensearch.action.support.PlainActionFuture;
 import org.opensearch.client.Client;
 import org.opensearch.cluster.service.ClusterService;
 import org.opensearch.common.settings.Settings;
@@ -25,7 +26,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import static org.opensearch.flowframework.common.CommonValue.DEFAULT_MAPPING_OPTION;
@@ -59,13 +59,13 @@ public class CreateIndexStep implements WorkflowStep {
     }
 
     @Override
-    public CompletableFuture<WorkflowData> execute(
+    public PlainActionFuture<WorkflowData> execute(
         String currentNodeId,
         WorkflowData currentNodeInputs,
         Map<String, WorkflowData> outputs,
         Map<String, String> previousNodeInputs
     ) {
-        CompletableFuture<WorkflowData> createIndexFuture = new CompletableFuture<>();
+        PlainActionFuture<WorkflowData> createIndexFuture = PlainActionFuture.newFuture();
         ActionListener<CreateIndexResponse> actionListener = new ActionListener<>() {
 
             @Override
@@ -80,7 +80,7 @@ public class CreateIndexStep implements WorkflowStep {
                         createIndexResponse.index(),
                         ActionListener.wrap(response -> {
                             logger.info("successfully updated resource created in state index: {}", response.getIndex());
-                            createIndexFuture.complete(
+                            createIndexFuture.onResponse(
                                 new WorkflowData(
                                     Map.of(resourceName, createIndexResponse.index()),
                                     currentNodeInputs.getWorkflowId(),
@@ -89,21 +89,21 @@ public class CreateIndexStep implements WorkflowStep {
                             );
                         }, exception -> {
                             logger.error("Failed to update new created resource", exception);
-                            createIndexFuture.completeExceptionally(
+                            createIndexFuture.onFailure(
                                 new FlowFrameworkException(exception.getMessage(), ExceptionsHelper.status(exception))
                             );
                         })
                     );
                 } catch (Exception e) {
                     logger.error("Failed to parse and update new created resource", e);
-                    createIndexFuture.completeExceptionally(new FlowFrameworkException(e.getMessage(), ExceptionsHelper.status(e)));
+                    createIndexFuture.onFailure(new FlowFrameworkException(e.getMessage(), ExceptionsHelper.status(e)));
                 }
             }
 
             @Override
             public void onFailure(Exception e) {
                 logger.error("Failed to create an index", e);
-                createIndexFuture.completeExceptionally(e);
+                createIndexFuture.onFailure(e);
             }
         };
 
@@ -128,7 +128,7 @@ public class CreateIndexStep implements WorkflowStep {
             }
         } catch (Exception e) {
             logger.error("Failed to find the correct resource for the workflow step", e);
-            createIndexFuture.completeExceptionally(new FlowFrameworkException(e.getMessage(), ExceptionsHelper.status(e)));
+            createIndexFuture.onFailure(new FlowFrameworkException(e.getMessage(), ExceptionsHelper.status(e)));
         }
 
         // TODO:

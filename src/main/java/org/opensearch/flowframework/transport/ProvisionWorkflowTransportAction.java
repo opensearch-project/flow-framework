@@ -14,6 +14,7 @@ import org.opensearch.ExceptionsHelper;
 import org.opensearch.action.get.GetRequest;
 import org.opensearch.action.support.ActionFilters;
 import org.opensearch.action.support.HandledTransportAction;
+import org.opensearch.action.support.PlainActionFuture;
 import org.opensearch.client.Client;
 import org.opensearch.common.inject.Inject;
 import org.opensearch.common.util.concurrent.ThreadContext;
@@ -40,7 +41,6 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.CancellationException;
-import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 
 import static org.opensearch.flowframework.common.CommonValue.ERROR_FIELD;
@@ -183,7 +183,7 @@ public class ProvisionWorkflowTransportAction extends HandledTransportAction<Wor
     private void executeWorkflow(List<ProcessNode> workflowSequence, String workflowId) {
         try {
 
-            List<CompletableFuture<?>> workflowFutureList = new ArrayList<>();
+            List<PlainActionFuture<?>> workflowFutureList = new ArrayList<>();
             for (ProcessNode processNode : workflowSequence) {
                 List<ProcessNode> predecessors = processNode.predecessors();
 
@@ -202,8 +202,8 @@ public class ProvisionWorkflowTransportAction extends HandledTransportAction<Wor
                 workflowFutureList.add(processNode.execute());
             }
 
-            // Attempt to join each workflow step future, may throw a CompletionException if any step completes exceptionally
-            workflowFutureList.forEach(CompletableFuture::join);
+            // Attempt to join each workflow step future, may throw a ExecutionException if any step completes exceptionally
+            workflowFutureList.forEach(PlainActionFuture::actionGet);
 
             logger.info("Provisioning completed successfully for workflow {}", workflowId);
             flowFrameworkIndicesHandler.updateFlowFrameworkSystemIndexDoc(

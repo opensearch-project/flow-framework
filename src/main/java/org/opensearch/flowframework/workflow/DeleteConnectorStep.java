@@ -12,6 +12,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.opensearch.ExceptionsHelper;
 import org.opensearch.action.delete.DeleteResponse;
+import org.opensearch.action.support.PlainActionFuture;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.flowframework.exception.FlowFrameworkException;
 import org.opensearch.flowframework.util.ParseUtils;
@@ -20,7 +21,6 @@ import org.opensearch.ml.client.MachineLearningNodeClient;
 import java.util.Collections;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.CompletableFuture;
 
 import static org.opensearch.flowframework.common.WorkflowResources.CONNECTOR_ID;
 
@@ -45,19 +45,19 @@ public class DeleteConnectorStep implements WorkflowStep {
     }
 
     @Override
-    public CompletableFuture<WorkflowData> execute(
+    public PlainActionFuture<WorkflowData> execute(
         String currentNodeId,
         WorkflowData currentNodeInputs,
         Map<String, WorkflowData> outputs,
         Map<String, String> previousNodeInputs
     ) {
-        CompletableFuture<WorkflowData> deleteConnectorFuture = new CompletableFuture<>();
+        PlainActionFuture<WorkflowData> deleteConnectorFuture = PlainActionFuture.newFuture();
 
         ActionListener<DeleteResponse> actionListener = new ActionListener<>() {
 
             @Override
             public void onResponse(DeleteResponse deleteResponse) {
-                deleteConnectorFuture.complete(
+                deleteConnectorFuture.onResponse(
                     new WorkflowData(
                         Map.ofEntries(Map.entry(CONNECTOR_ID, deleteResponse.getId())),
                         currentNodeInputs.getWorkflowId(),
@@ -69,7 +69,7 @@ public class DeleteConnectorStep implements WorkflowStep {
             @Override
             public void onFailure(Exception e) {
                 logger.error("Failed to delete connector");
-                deleteConnectorFuture.completeExceptionally(new FlowFrameworkException(e.getMessage(), ExceptionsHelper.status(e)));
+                deleteConnectorFuture.onFailure(new FlowFrameworkException(e.getMessage(), ExceptionsHelper.status(e)));
             }
         };
 
@@ -88,7 +88,7 @@ public class DeleteConnectorStep implements WorkflowStep {
 
             mlClient.deleteConnector(connectorId, actionListener);
         } catch (FlowFrameworkException e) {
-            deleteConnectorFuture.completeExceptionally(e);
+            deleteConnectorFuture.onFailure(e);
         }
         return deleteConnectorFuture;
     }

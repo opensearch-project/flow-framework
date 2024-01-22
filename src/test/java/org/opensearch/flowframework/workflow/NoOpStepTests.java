@@ -8,24 +8,23 @@
  */
 package org.opensearch.flowframework.workflow;
 
+import org.opensearch.action.support.PlainActionFuture;
 import org.opensearch.test.OpenSearchTestCase;
 
 import java.io.IOException;
 import java.util.Collections;
-import java.util.concurrent.CompletableFuture;
 
 public class NoOpStepTests extends OpenSearchTestCase {
 
     public void testNoOpStep() throws IOException {
         NoOpStep noopStep = new NoOpStep();
         assertEquals(NoOpStep.NAME, noopStep.getName());
-        CompletableFuture<WorkflowData> future = noopStep.execute(
+        PlainActionFuture<WorkflowData> future = noopStep.execute(
             "nodeId",
             WorkflowData.EMPTY,
             Collections.emptyMap(),
             Collections.emptyMap()
         );
         assertTrue(future.isDone());
-        assertFalse(future.isCompletedExceptionally());
     }
 }

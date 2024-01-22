@@ -14,6 +14,7 @@ import org.opensearch.ExceptionsHelper;
 import org.opensearch.OpenSearchStatusException;
 import org.opensearch.action.support.ActionFilters;
 import org.opensearch.action.support.HandledTransportAction;
+import org.opensearch.action.support.PlainActionFuture;
 import org.opensearch.client.Client;
 import org.opensearch.common.inject.Inject;
 import org.opensearch.common.util.concurrent.ThreadContext;
@@ -39,7 +40,6 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 
 import static org.opensearch.flowframework.common.CommonValue.PROVISIONING_PROGRESS_FIELD;
@@ -160,9 +160,9 @@ public class DeprovisionWorkflowTransportAction extends HandledTransportAction<W
                 ProcessNode deprovisionNode = iter.next();
                 ResourceCreated resource = getResourceFromDeprovisionNode(deprovisionNode, resourcesCreated);
                 String resourceNameAndId = getResourceNameAndId(resource);
-                CompletableFuture<WorkflowData> deprovisionFuture = deprovisionNode.execute();
+                PlainActionFuture<WorkflowData> deprovisionFuture = deprovisionNode.execute();
                 try {
-                    deprovisionFuture.join();
+                    deprovisionFuture.get();
                     logger.info("Successful {} for {}", deprovisionNode.id(), resourceNameAndId);
                     // Remove from list so we don't try again
                     iter.remove();

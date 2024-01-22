@@ -11,6 +11,7 @@ package org.opensearch.flowframework.workflow;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.opensearch.ExceptionsHelper;
+import org.opensearch.action.support.PlainActionFuture;
 import org.opensearch.common.unit.TimeValue;
 import org.opensearch.common.util.concurrent.FutureUtils;
 import org.opensearch.core.action.ActionListener;
@@ -68,7 +69,7 @@ public abstract class AbstractRetryableWorkflowStep implements WorkflowStep {
     protected void retryableGetMlTask(
         String workflowId,
         String nodeId,
-        CompletableFuture<WorkflowData> future,
+        PlainActionFuture<WorkflowData> future,
         String taskId,
         String workflowStep,
         ActionListener<MLTask> mlTaskListener

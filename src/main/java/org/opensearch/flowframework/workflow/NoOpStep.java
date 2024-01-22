@@ -8,8 +8,9 @@
  */
 package org.opensearch.flowframework.workflow;
 
+import org.opensearch.action.support.PlainActionFuture;
+
 import java.util.Map;
-import java.util.concurrent.CompletableFuture;
 
 /**
  * A workflow step that does nothing. May be used for synchronizing other actions.
@@ -23,13 +24,15 @@ public class NoOpStep implements WorkflowStep {
     public static final String NAME = "noop";
 
     @Override
-    public CompletableFuture<WorkflowData> execute(
+    public PlainActionFuture<WorkflowData> execute(
         String currentNodeId,
         WorkflowData currentNodeInputs,
         Map<String, WorkflowData> outputs,
         Map<String, String> previousNodeInputs
     ) {
-        return CompletableFuture.completedFuture(WorkflowData.EMPTY);
+        PlainActionFuture<WorkflowData> future = PlainActionFuture.newFuture();
+        future.onResponse(WorkflowData.EMPTY);
+        return future;
     }
 
     @Override

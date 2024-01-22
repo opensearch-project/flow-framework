@@ -11,6 +11,7 @@ package org.opensearch.flowframework.workflow;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.opensearch.ExceptionsHelper;
+import org.opensearch.action.support.PlainActionFuture;
 import org.opensearch.common.Nullable;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.flowframework.exception.FlowFrameworkException;
@@ -32,7 +33,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
-import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 
 import static org.opensearch.flowframework.common.CommonValue.APP_TYPE_FIELD;
@@ -78,7 +78,7 @@ public class RegisterAgentStep implements WorkflowStep {
     }
 
     @Override
-    public CompletableFuture<WorkflowData> execute(
+    public PlainActionFuture<WorkflowData> execute(
         String currentNodeId,
         WorkflowData currentNodeInputs,
         Map<String, WorkflowData> outputs,
@@ -87,7 +87,7 @@ public class RegisterAgentStep implements WorkflowStep {
 
         String workflowId = currentNodeInputs.getWorkflowId();
 
-        CompletableFuture<WorkflowData> registerAgentModelFuture = new CompletableFuture<>();
+        PlainActionFuture<WorkflowData> registerAgentModelFuture = PlainActionFuture.newFuture();
 
         ActionListener<MLRegisterAgentResponse> actionListener = new ActionListener<>() {
             @Override
@@ -102,7 +102,7 @@ public class RegisterAgentStep implements WorkflowStep {
                         mlRegisterAgentResponse.getAgentId(),
                         ActionListener.wrap(response -> {
                             logger.info("successfully updated resources created in state index: {}", response.getIndex());
-                            registerAgentModelFuture.complete(
+                            registerAgentModelFuture.onResponse(
                                 new WorkflowData(
                                     Map.ofEntries(Map.entry(resourceName, mlRegisterAgentResponse.getAgentId())),
                                     workflowId,
@@ -111,7 +111,7 @@ public class RegisterAgentStep implements WorkflowStep {
                             );
                         }, exception -> {
                             logger.error("Failed to update new created resource", exception);
-                            registerAgentModelFuture.completeExceptionally(
+                            registerAgentModelFuture.onFailure(
                                 new FlowFrameworkException(exception.getMessage(), ExceptionsHelper.status(exception))
                             );
                         })
@@ -119,14 +119,14 @@ public class RegisterAgentStep implements WorkflowStep {
 
                 } catch (Exception e) {
                     logger.error("Failed to parse and update new created resource", e);
-                    registerAgentModelFuture.completeExceptionally(new FlowFrameworkException(e.getMessage(), ExceptionsHelper.status(e)));
+                    registerAgentModelFuture.onFailure(new FlowFrameworkException(e.getMessage(), ExceptionsHelper.status(e)));
                 }
             }
 
             @Override
             public void onFailure(Exception e) {
                 logger.error("Failed to register the agent");
-                registerAgentModelFuture.completeExceptionally(new FlowFrameworkException(e.getMessage(), ExceptionsHelper.status(e)));
+                registerAgentModelFuture.onFailure(new FlowFrameworkException(e.getMessage(), ExceptionsHelper.status(e)));
             }
         };
 
@@ -201,7 +201,7 @@ public class RegisterAgentStep implements WorkflowStep {
             mlClient.registerAgent(mlAgent, actionListener);
 
         } catch (FlowFrameworkException e) {
-            registerAgentModelFuture.completeExceptionally(e);
+            registerAgentModelFuture.onFailure(e);
         }
         return registerAgentModelFuture;
     }
