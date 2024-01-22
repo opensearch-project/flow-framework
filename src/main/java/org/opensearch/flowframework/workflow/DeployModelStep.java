@@ -11,6 +11,7 @@ package org.opensearch.flowframework.workflow;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.opensearch.ExceptionsHelper;
+import org.opensearch.action.support.PlainActionFuture;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.flowframework.common.FlowFrameworkSettings;
 import org.opensearch.flowframework.exception.FlowFrameworkException;
@@ -24,7 +25,6 @@ import org.opensearch.threadpool.ThreadPool;
 import java.util.Collections;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.CompletableFuture;
 
 import static org.opensearch.flowframework.common.CommonValue.REGISTER_MODEL_STATUS;
 import static org.opensearch.flowframework.common.WorkflowResources.MODEL_ID;
@@ -61,14 +61,14 @@ public class DeployModelStep extends AbstractRetryableWorkflowStep {
     }
 
     @Override
-    public CompletableFuture<WorkflowData> execute(
+    public PlainActionFuture<WorkflowData> execute(
         String currentNodeId,
         WorkflowData currentNodeInputs,
         Map<String, WorkflowData> outputs,
         Map<String, String> previousNodeInputs
     ) {
 
-        CompletableFuture<WorkflowData> deployModelFuture = new CompletableFuture<>();
+        PlainActionFuture<WorkflowData> deployModelFuture = PlainActionFuture.newFuture();
 
         ActionListener<MLDeployModelResponse> actionListener = new ActionListener<>() {
             @Override
@@ -87,25 +87,21 @@ public class DeployModelStep extends AbstractRetryableWorkflowStep {
                         // Deployed Model Resource has been updated
                         String resourceName = getResourceByWorkflowStep(getName());
                         String id = getResourceId(mlTask);
-                        deployModelFuture.complete(
+                        deployModelFuture.onResponse(
                             new WorkflowData(
                                 Map.ofEntries(Map.entry(resourceName, id), Map.entry(REGISTER_MODEL_STATUS, mlTask.getState().name())),
                                 currentNodeInputs.getWorkflowId(),
                                 currentNodeId
                             )
                         );
-                    },
-                        e -> {
-                            deployModelFuture.completeExceptionally(new FlowFrameworkException(e.getMessage(), ExceptionsHelper.status(e)));
-                        }
-                    )
+                    }, e -> { deployModelFuture.onFailure(new FlowFrameworkException(e.getMessage(), ExceptionsHelper.status(e))); })
                 );
             }
 
             @Override
             public void onFailure(Exception e) {
                 logger.error("Failed to deploy model");
-                deployModelFuture.completeExceptionally(new FlowFrameworkException(e.getMessage(), ExceptionsHelper.status(e)));
+                deployModelFuture.onFailure(new FlowFrameworkException(e.getMessage(), ExceptionsHelper.status(e)));
             }
         };
 
@@ -125,7 +121,7 @@ public class DeployModelStep extends AbstractRetryableWorkflowStep {
 
             mlClient.deploy(modelId, actionListener);
         } catch (FlowFrameworkException e) {
-            deployModelFuture.completeExceptionally(e);
+            deployModelFuture.onFailure(e);
         }
         return deployModelFuture;
     }

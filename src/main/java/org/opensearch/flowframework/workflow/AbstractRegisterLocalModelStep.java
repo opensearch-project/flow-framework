@@ -11,6 +11,7 @@ package org.opensearch.flowframework.workflow;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.opensearch.ExceptionsHelper;
+import org.opensearch.action.support.PlainActionFuture;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.flowframework.common.FlowFrameworkSettings;
 import org.opensearch.flowframework.exception.FlowFrameworkException;
@@ -28,7 +29,6 @@ import org.opensearch.threadpool.ThreadPool;
 
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.CompletableFuture;
 import java.util.stream.Stream;
 
 import static org.opensearch.flowframework.common.CommonValue.ALL_CONFIG;
@@ -75,14 +75,14 @@ public abstract class AbstractRegisterLocalModelStep extends AbstractRetryableWo
     }
 
     @Override
-    public CompletableFuture<WorkflowData> execute(
+    public PlainActionFuture<WorkflowData> execute(
         String currentNodeId,
         WorkflowData currentNodeInputs,
         Map<String, WorkflowData> outputs,
         Map<String, String> previousNodeInputs
     ) {
 
-        CompletableFuture<WorkflowData> registerLocalModelFuture = new CompletableFuture<>();
+        PlainActionFuture<WorkflowData> registerLocalModelFuture = PlainActionFuture.newFuture();
 
         try {
             Map<String, Object> inputs = ParseUtils.getInputsFromPreviousSteps(
@@ -180,7 +180,7 @@ public abstract class AbstractRegisterLocalModelStep extends AbstractRetryableWo
                                         "successfully updated resources created in state index: {}",
                                         deployUpdateResponse.getIndex()
                                     );
-                                    registerLocalModelFuture.complete(
+                                    registerLocalModelFuture.onResponse(
                                         new WorkflowData(
                                             Map.ofEntries(
                                                 Map.entry(resourceName, id),
@@ -192,7 +192,7 @@ public abstract class AbstractRegisterLocalModelStep extends AbstractRetryableWo
                                     );
                                 }, deployUpdateException -> {
                                     logger.error("Failed to update simulated deploy step resource", deployUpdateException);
-                                    registerLocalModelFuture.completeExceptionally(
+                                    registerLocalModelFuture.onFailure(
                                         new FlowFrameworkException(
                                             deployUpdateException.getMessage(),
                                             ExceptionsHelper.status(deployUpdateException)
@@ -201,7 +201,7 @@ public abstract class AbstractRegisterLocalModelStep extends AbstractRetryableWo
                                 })
                             );
                         } else {
-                            registerLocalModelFuture.complete(
+                            registerLocalModelFuture.onResponse(
                                 new WorkflowData(
                                     Map.ofEntries(Map.entry(resourceName, id), Map.entry(REGISTER_MODEL_STATUS, mlTask.getState().name())),
                                     currentNodeInputs.getWorkflowId(),
@@ -209,16 +209,14 @@ public abstract class AbstractRegisterLocalModelStep extends AbstractRetryableWo
                                 )
                             );
                         }
-                    }, exception -> { registerLocalModelFuture.completeExceptionally(exception); })
+                    }, exception -> { registerLocalModelFuture.onFailure(exception); })
                 );
             }, exception -> {
                 logger.error("Failed to register local model");
-                registerLocalModelFuture.completeExceptionally(
-                    new FlowFrameworkException(exception.getMessage(), ExceptionsHelper.status(exception))
-                );
+                registerLocalModelFuture.onFailure(new FlowFrameworkException(exception.getMessage(), ExceptionsHelper.status(exception)));
             }));
         } catch (FlowFrameworkException e) {
-            registerLocalModelFuture.completeExceptionally(e);
+            registerLocalModelFuture.onFailure(e);
         }
         return registerLocalModelFuture;
     }

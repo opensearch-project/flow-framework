@@ -61,6 +61,7 @@ jobs:
   integTest:
     needs: [spotless, javadoc]
     strategy:
+      fail-fast: false
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
         # Don't use 21.0.2 https://github.com/opensearch-project/flow-framework/issues/426

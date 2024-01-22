@@ -8,9 +8,11 @@
  */
 package org.opensearch.flowframework.workflow;
 
+import org.opensearch.action.support.PlainActionFuture;
 import org.opensearch.common.settings.Settings;
 import org.opensearch.common.unit.TimeValue;
 import org.opensearch.common.util.concurrent.OpenSearchExecutors;
+import org.opensearch.common.util.concurrent.UncategorizedExecutionException;
 import org.opensearch.test.OpenSearchTestCase;
 import org.opensearch.threadpool.ScalingExecutorBuilder;
 import org.opensearch.threadpool.TestThreadPool;
@@ -21,11 +23,8 @@ import org.junit.BeforeClass;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CompletionException;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
 
 import static org.opensearch.flowframework.common.CommonValue.FLOW_FRAMEWORK_THREAD_POOL_PREFIX;
 import static org.opensearch.flowframework.common.CommonValue.WORKFLOW_THREAD_POOL;
@@ -51,10 +50,10 @@ public class ProcessNodeTests extends OpenSearchTestCase {
             )
         );
 
-        CompletableFuture<WorkflowData> successfulFuture = new CompletableFuture<>();
-        successfulFuture.complete(WorkflowData.EMPTY);
-        CompletableFuture<WorkflowData> failedFuture = new CompletableFuture<>();
-        failedFuture.completeExceptionally(new RuntimeException("Test exception"));
+        PlainActionFuture<WorkflowData> successfulFuture = PlainActionFuture.newFuture();
+        successfulFuture.onResponse(WorkflowData.EMPTY);
+        PlainActionFuture<WorkflowData> failedFuture = PlainActionFuture.newFuture();
+        failedFuture.onFailure(new RuntimeException("Test exception"));
         successfulNode = mock(ProcessNode.class);
         when(successfulNode.future()).thenReturn(successfulFuture);
         failedNode = mock(ProcessNode.class);
@@ -70,14 +69,14 @@ public class ProcessNodeTests extends OpenSearchTestCase {
         // Tests where execute nas no timeout
         ProcessNode nodeA = new ProcessNode("A", new WorkflowStep() {
             @Override
-            public CompletableFuture<WorkflowData> execute(
+            public PlainActionFuture<WorkflowData> execute(
                 String currentNodeId,
                 WorkflowData currentNodeInputs,
                 Map<String, WorkflowData> outputs,
                 Map<String, String> previousNodeInputs
             ) {
-                CompletableFuture<WorkflowData> f = new CompletableFuture<>();
-                f.complete(new WorkflowData(Map.of("test", "output"), "test-id", "test-node-id"));
+                PlainActionFuture<WorkflowData> f = PlainActionFuture.newFuture();
+                f.onResponse(new WorkflowData(Map.of("test", "output"), "test-id", "test-node-id"));
                 return f;
             }
 
@@ -102,7 +101,7 @@ public class ProcessNodeTests extends OpenSearchTestCase {
         assertEquals(50, nodeA.nodeTimeout().millis());
         assertEquals("A", nodeA.toString());
 
-        CompletableFuture<WorkflowData> f = nodeA.execute();
+        PlainActionFuture<WorkflowData> f = nodeA.execute();
         assertEquals(f, nodeA.future());
         assertEquals("output", f.get().getContent().get("test"));
     }
@@ -111,14 +110,14 @@ public class ProcessNodeTests extends OpenSearchTestCase {
         // Tests where execute finishes before timeout
         ProcessNode nodeB = new ProcessNode("B", new WorkflowStep() {
             @Override
-            public CompletableFuture<WorkflowData> execute(
+            public PlainActionFuture<WorkflowData> execute(
                 String currentNodeId,
                 WorkflowData currentNodeInputs,
                 Map<String, WorkflowData> outputs,
                 Map<String, String> previousNodeInputs
             ) {
-                CompletableFuture<WorkflowData> future = new CompletableFuture<>();
-                testThreadPool.schedule(() -> future.complete(WorkflowData.EMPTY), TimeValue.timeValueMillis(100), WORKFLOW_THREAD_POOL);
+                PlainActionFuture<WorkflowData> future = PlainActionFuture.newFuture();
+                testThreadPool.schedule(() -> future.onResponse(WorkflowData.EMPTY), TimeValue.timeValueMillis(100), WORKFLOW_THREAD_POOL);
                 return future;
             }
 
@@ -133,7 +132,7 @@ public class ProcessNodeTests extends OpenSearchTestCase {
         assertEquals(Collections.emptyList(), nodeB.predecessors());
         assertEquals("B", nodeB.toString());
 
-        CompletableFuture<WorkflowData> f = nodeB.execute();
+        PlainActionFuture<WorkflowData> f = nodeB.execute();
         assertEquals(f, nodeB.future());
         assertEquals(WorkflowData.EMPTY, f.get());
     }
@@ -142,14 +141,14 @@ public class ProcessNodeTests extends OpenSearchTestCase {
         // Tests where execute finishes after timeout
         ProcessNode nodeZ = new ProcessNode("Zzz", new WorkflowStep() {
             @Override
-            public CompletableFuture<WorkflowData> execute(
+            public PlainActionFuture<WorkflowData> execute(
                 String currentNodeId,
                 WorkflowData currentNodeInputs,
                 Map<String, WorkflowData> outputs,
                 Map<String, String> previousNodeInputs
             ) {
-                CompletableFuture<WorkflowData> future = new CompletableFuture<>();
-                testThreadPool.schedule(() -> future.complete(WorkflowData.EMPTY), TimeValue.timeValueMinutes(1), WORKFLOW_THREAD_POOL);
+                PlainActionFuture<WorkflowData> future = PlainActionFuture.newFuture();
+                testThreadPool.schedule(() -> future.onResponse(WorkflowData.EMPTY), TimeValue.timeValueMinutes(1), WORKFLOW_THREAD_POOL);
                 return future;
             }
 
@@ -164,24 +163,24 @@ public class ProcessNodeTests extends OpenSearchTestCase {
         assertEquals(Collections.emptyList(), nodeZ.predecessors());
         assertEquals("Zzz", nodeZ.toString());
 
-        CompletableFuture<WorkflowData> f = nodeZ.execute();
-        CompletionException exception = assertThrows(CompletionException.class, () -> f.join());
-        assertTrue(f.isCompletedExceptionally());
-        assertEquals(TimeoutException.class, exception.getCause().getClass());
+        PlainActionFuture<WorkflowData> f = nodeZ.execute();
+        UncategorizedExecutionException exception = assertThrows(UncategorizedExecutionException.class, () -> f.actionGet());
+        assertTrue(f.isDone());
+        assertEquals(ExecutionException.class, exception.getCause().getClass());
     }
 
     public void testExceptions() {
         // Tests where a predecessor future completed exceptionally
         ProcessNode nodeE = new ProcessNode("E", new WorkflowStep() {
             @Override
-            public CompletableFuture<WorkflowData> execute(
+            public PlainActionFuture<WorkflowData> execute(
                 String currentNodeId,
                 WorkflowData currentNodeInputs,
                 Map<String, WorkflowData> outputs,
                 Map<String, String> previousNodeInputs
             ) {
-                CompletableFuture<WorkflowData> f = new CompletableFuture<>();
-                f.complete(WorkflowData.EMPTY);
+                PlainActionFuture<WorkflowData> f = PlainActionFuture.newFuture();
+                f.onResponse(WorkflowData.EMPTY);
                 return f;
             }
 
@@ -196,11 +195,9 @@ public class ProcessNodeTests extends OpenSearchTestCase {
         assertEquals(2, nodeE.predecessors().size());
         assertEquals("E", nodeE.toString());
 
-        CompletableFuture<WorkflowData> f = nodeE.execute();
-        CompletionException exception = assertThrows(CompletionException.class, () -> f.join());
-        assertTrue(f.isCompletedExceptionally());
-        assertEquals("Test exception", exception.getCause().getMessage());
-
+        PlainActionFuture<WorkflowData> f = nodeE.execute();
+        RuntimeException exception = assertThrows(RuntimeException.class, () -> f.actionGet());
+        assertTrue(f.isDone());
         // Tests where we already called execute
         assertThrows(IllegalStateException.class, () -> nodeE.execute());
     }

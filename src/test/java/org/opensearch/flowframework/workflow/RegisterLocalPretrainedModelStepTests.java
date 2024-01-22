@@ -10,6 +10,7 @@ package org.opensearch.flowframework.workflow;
 
 import com.carrotsearch.randomizedtesting.annotations.ThreadLeakScope;
 
+import org.opensearch.action.support.PlainActionFuture;
 import org.opensearch.action.update.UpdateResponse;
 import org.opensearch.common.settings.Settings;
 import org.opensearch.common.unit.TimeValue;
@@ -32,7 +33,6 @@ import org.junit.AfterClass;
 
 import java.util.Collections;
 import java.util.Map;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 
@@ -155,14 +155,14 @@ public class RegisterLocalPretrainedModelStepTests extends OpenSearchTestCase {
             return null;
         }).when(flowFrameworkIndicesHandler).updateResourceInStateIndex(anyString(), anyString(), anyString(), anyString(), any());
 
-        CompletableFuture<WorkflowData> future = registerLocalPretrainedModelStep.execute(
+        PlainActionFuture<WorkflowData> future = registerLocalPretrainedModelStep.execute(
             workflowData.getNodeId(),
             workflowData,
             Collections.emptyMap(),
             Collections.emptyMap()
         );
 
-        future.join();
+        future.actionGet();
 
         verify(machineLearningNodeClient, times(1)).register(any(MLRegisterModelInput.class), any());
         verify(machineLearningNodeClient, times(1)).getTask(any(), any());
@@ -179,7 +179,7 @@ public class RegisterLocalPretrainedModelStepTests extends OpenSearchTestCase {
             return null;
         }).when(machineLearningNodeClient).register(any(MLRegisterModelInput.class), any());
 
-        CompletableFuture<WorkflowData> future = this.registerLocalPretrainedModelStep.execute(
+        PlainActionFuture<WorkflowData> future = this.registerLocalPretrainedModelStep.execute(
             workflowData.getNodeId(),
             workflowData,
             Collections.emptyMap(),
@@ -228,7 +228,7 @@ public class RegisterLocalPretrainedModelStepTests extends OpenSearchTestCase {
             return null;
         }).when(machineLearningNodeClient).getTask(any(), any());
 
-        CompletableFuture<WorkflowData> future = this.registerLocalPretrainedModelStep.execute(
+        PlainActionFuture<WorkflowData> future = this.registerLocalPretrainedModelStep.execute(
             workflowData.getNodeId(),
             workflowData,
             Collections.emptyMap(),
@@ -241,14 +241,13 @@ public class RegisterLocalPretrainedModelStepTests extends OpenSearchTestCase {
     }
 
     public void testMissingInputs() {
-        CompletableFuture<WorkflowData> future = registerLocalPretrainedModelStep.execute(
+        PlainActionFuture<WorkflowData> future = registerLocalPretrainedModelStep.execute(
             "nodeId",
             new WorkflowData(Collections.emptyMap(), "test-id", "test-node-id"),
             Collections.emptyMap(),
             Collections.emptyMap()
         );
         assertTrue(future.isDone());
-        assertTrue(future.isCompletedExceptionally());
         ExecutionException ex = assertThrows(ExecutionException.class, () -> future.get().getContent());
         assertTrue(ex.getCause() instanceof FlowFrameworkException);
         assertTrue(ex.getCause().getMessage().startsWith("Missing required inputs ["));

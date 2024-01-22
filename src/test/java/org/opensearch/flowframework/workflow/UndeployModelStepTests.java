@@ -10,6 +10,7 @@ package org.opensearch.flowframework.workflow;
 
 import org.opensearch.OpenSearchException;
 import org.opensearch.action.FailedNodeException;
+import org.opensearch.action.support.PlainActionFuture;
 import org.opensearch.cluster.ClusterName;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.core.rest.RestStatus;
@@ -23,7 +24,6 @@ import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 
 import org.mockito.Mock;
@@ -68,7 +68,7 @@ public class UndeployModelStepTests extends OpenSearchTestCase {
             return null;
         }).when(machineLearningNodeClient).undeploy(any(String[].class), any(), any());
 
-        CompletableFuture<WorkflowData> future = UndeployModelStep.execute(
+        PlainActionFuture<WorkflowData> future = UndeployModelStep.execute(
             inputData.getNodeId(),
             inputData,
             Map.of("step_1", new WorkflowData(Map.of(MODEL_ID, modelId), "workflowId", "nodeId")),
@@ -83,14 +83,14 @@ public class UndeployModelStepTests extends OpenSearchTestCase {
     public void testNoModelIdInOutput() throws IOException {
         UndeployModelStep UndeployModelStep = new UndeployModelStep(machineLearningNodeClient);
 
-        CompletableFuture<WorkflowData> future = UndeployModelStep.execute(
+        PlainActionFuture<WorkflowData> future = UndeployModelStep.execute(
             inputData.getNodeId(),
             inputData,
             Collections.emptyMap(),
             Collections.emptyMap()
         );
 
-        assertTrue(future.isCompletedExceptionally());
+        assertTrue(future.isDone());
         ExecutionException ex = assertThrows(ExecutionException.class, () -> future.get().getContent());
         assertTrue(ex.getCause() instanceof FlowFrameworkException);
         assertEquals("Missing required inputs [model_id] in workflow [test-id] node [test-node-id]", ex.getCause().getMessage());
@@ -114,7 +114,7 @@ public class UndeployModelStepTests extends OpenSearchTestCase {
             return null;
         }).when(machineLearningNodeClient).undeploy(any(String[].class), any(), any());
 
-        CompletableFuture<WorkflowData> future = UndeployModelStep.execute(
+        PlainActionFuture<WorkflowData> future = UndeployModelStep.execute(
             inputData.getNodeId(),
             inputData,
             Map.of("step_1", new WorkflowData(Map.of(MODEL_ID, "test"), "workflowId", "nodeId")),
@@ -123,7 +123,7 @@ public class UndeployModelStepTests extends OpenSearchTestCase {
 
         verify(machineLearningNodeClient).undeploy(any(String[].class), any(), any());
 
-        assertTrue(future.isCompletedExceptionally());
+        assertTrue(future.isDone());
         ExecutionException ex = assertThrows(ExecutionException.class, () -> future.get().getContent());
         assertTrue(ex.getCause() instanceof OpenSearchException);
         assertEquals("Failed to undeploy model on nodes [failed-node]", ex.getCause().getMessage());

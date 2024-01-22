@@ -10,6 +10,7 @@ package org.opensearch.flowframework.workflow;
 
 import org.opensearch.action.admin.indices.create.CreateIndexRequest;
 import org.opensearch.action.admin.indices.create.CreateIndexResponse;
+import org.opensearch.action.support.PlainActionFuture;
 import org.opensearch.action.update.UpdateResponse;
 import org.opensearch.client.AdminClient;
 import org.opensearch.client.Client;
@@ -31,7 +32,6 @@ import java.io.IOException;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -109,7 +109,7 @@ public class CreateIndexStepTests extends OpenSearchTestCase {
 
         @SuppressWarnings({ "unchecked" })
         ArgumentCaptor<ActionListener<CreateIndexResponse>> actionListenerCaptor = ArgumentCaptor.forClass(ActionListener.class);
-        CompletableFuture<WorkflowData> future = createIndexStep.execute(
+        PlainActionFuture<WorkflowData> future = createIndexStep.execute(
             inputData.getNodeId(),
             inputData,
             Collections.emptyMap(),
@@ -119,7 +119,7 @@ public class CreateIndexStepTests extends OpenSearchTestCase {
         verify(indicesAdminClient, times(1)).create(any(CreateIndexRequest.class), actionListenerCaptor.capture());
         actionListenerCaptor.getValue().onResponse(new CreateIndexResponse(true, true, "demo"));
 
-        assertTrue(future.isDone() && !future.isCompletedExceptionally());
+        assertTrue(future.isDone());
 
         Map<String, Object> outputData = Map.of(INDEX_NAME, "demo");
         assertEquals(outputData, future.get().getContent());
@@ -129,7 +129,7 @@ public class CreateIndexStepTests extends OpenSearchTestCase {
     public void testCreateIndexStepFailure() throws ExecutionException, InterruptedException {
         @SuppressWarnings({ "unchecked" })
         ArgumentCaptor<ActionListener<CreateIndexResponse>> actionListenerCaptor = ArgumentCaptor.forClass(ActionListener.class);
-        CompletableFuture<WorkflowData> future = createIndexStep.execute(
+        PlainActionFuture<WorkflowData> future = createIndexStep.execute(
             inputData.getNodeId(),
             inputData,
             Collections.emptyMap(),
@@ -140,7 +140,7 @@ public class CreateIndexStepTests extends OpenSearchTestCase {
 
         actionListenerCaptor.getValue().onFailure(new Exception("Failed to create an index"));
 
-        assertTrue(future.isCompletedExceptionally());
+        assertTrue(future.isDone());
         ExecutionException ex = assertThrows(ExecutionException.class, () -> future.get().getContent());
         assertTrue(ex.getCause() instanceof Exception);
         assertEquals("Failed to create an index", ex.getCause().getMessage());
