@@ -10,6 +10,7 @@ package org.opensearch.flowframework.transport;
 
 import org.opensearch.action.LatchedActionListener;
 import org.opensearch.action.support.ActionFilters;
+import org.opensearch.action.support.PlainActionFuture;
 import org.opensearch.client.Client;
 import org.opensearch.common.settings.Settings;
 import org.opensearch.common.unit.TimeValue;
@@ -32,7 +33,6 @@ import org.opensearch.transport.TransportService;
 import org.junit.AfterClass;
 
 import java.util.List;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
@@ -122,9 +122,9 @@ public class DeprovisionWorkflowTransportActionTests extends OpenSearchTestCase 
             return null;
         }).when(client).execute(any(GetWorkflowStateAction.class), any(GetWorkflowStateRequest.class), any());
 
-        when(this.deleteConnectorStep.execute(anyString(), any(WorkflowData.class), anyMap(), anyMap())).thenReturn(
-            CompletableFuture.completedFuture(WorkflowData.EMPTY)
-        );
+        PlainActionFuture<WorkflowData> future = PlainActionFuture.newFuture();
+        future.onResponse(WorkflowData.EMPTY);
+        when(this.deleteConnectorStep.execute(anyString(), any(WorkflowData.class), anyMap(), anyMap())).thenReturn(future);
 
         deprovisionWorkflowTransportAction.doExecute(mock(Task.class), workflowRequest, listener);
         ArgumentCaptor<WorkflowResponse> responseCaptor = ArgumentCaptor.forClass(WorkflowResponse.class);
@@ -152,8 +152,8 @@ public class DeprovisionWorkflowTransportActionTests extends OpenSearchTestCase 
             return null;
         }).when(client).execute(any(GetWorkflowStateAction.class), any(GetWorkflowStateRequest.class), any());
 
-        CompletableFuture<WorkflowData> future = new CompletableFuture<>();
-        future.completeExceptionally(new RuntimeException("rte"));
+        PlainActionFuture<WorkflowData> future = PlainActionFuture.newFuture();
+        future.onFailure(new RuntimeException("rte"));
         when(this.deleteConnectorStep.execute(anyString(), any(WorkflowData.class), anyMap(), anyMap())).thenReturn(future);
 
         deprovisionWorkflowTransportAction.doExecute(mock(Task.class), workflowRequest, listener);

@@ -10,6 +10,7 @@ package org.opensearch.flowframework.workflow;
 
 import com.carrotsearch.randomizedtesting.annotations.ThreadLeakScope;
 
+import org.opensearch.action.support.PlainActionFuture;
 import org.opensearch.action.update.UpdateResponse;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.core.index.shard.ShardId;
@@ -23,7 +24,6 @@ import org.opensearch.test.OpenSearchTestCase;
 
 import java.util.Collections;
 import java.util.Map;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 
 import org.mockito.Mock;
@@ -89,7 +89,7 @@ public class RegisterRemoteModelStepTests extends OpenSearchTestCase {
             return null;
         }).when(flowFrameworkIndicesHandler).updateResourceInStateIndex(anyString(), anyString(), anyString(), anyString(), any());
 
-        CompletableFuture<WorkflowData> future = this.registerRemoteModelStep.execute(
+        PlainActionFuture<WorkflowData> future = this.registerRemoteModelStep.execute(
             workflowData.getNodeId(),
             workflowData,
             Collections.emptyMap(),
@@ -101,7 +101,6 @@ public class RegisterRemoteModelStepTests extends OpenSearchTestCase {
         verify(flowFrameworkIndicesHandler, times(1)).updateResourceInStateIndex(anyString(), anyString(), anyString(), anyString(), any());
 
         assertTrue(future.isDone());
-        assertFalse(future.isCompletedExceptionally());
         assertEquals(modelId, future.get().getContent().get(MODEL_ID));
         assertEquals(status, future.get().getContent().get(REGISTER_MODEL_STATUS));
 
@@ -137,7 +136,7 @@ public class RegisterRemoteModelStepTests extends OpenSearchTestCase {
             "test-node-id"
         );
 
-        CompletableFuture<WorkflowData> future = this.registerRemoteModelStep.execute(
+        PlainActionFuture<WorkflowData> future = this.registerRemoteModelStep.execute(
             deployWorkflowData.getNodeId(),
             deployWorkflowData,
             Collections.emptyMap(),
@@ -149,7 +148,6 @@ public class RegisterRemoteModelStepTests extends OpenSearchTestCase {
         verify(flowFrameworkIndicesHandler, times(2)).updateResourceInStateIndex(anyString(), anyString(), anyString(), anyString(), any());
 
         assertTrue(future.isDone());
-        assertFalse(future.isCompletedExceptionally());
         assertEquals(modelId, future.get().getContent().get(MODEL_ID));
         assertEquals(status, future.get().getContent().get(REGISTER_MODEL_STATUS));
     }
@@ -161,14 +159,13 @@ public class RegisterRemoteModelStepTests extends OpenSearchTestCase {
             return null;
         }).when(mlNodeClient).register(any(MLRegisterModelInput.class), any());
 
-        CompletableFuture<WorkflowData> future = this.registerRemoteModelStep.execute(
+        PlainActionFuture<WorkflowData> future = this.registerRemoteModelStep.execute(
             workflowData.getNodeId(),
             workflowData,
             Collections.emptyMap(),
             Collections.emptyMap()
         );
         assertTrue(future.isDone());
-        assertTrue(future.isCompletedExceptionally());
         ExecutionException ex = expectThrows(ExecutionException.class, () -> future.get().getClass());
         assertTrue(ex.getCause() instanceof FlowFrameworkException);
         assertEquals("test", ex.getCause().getMessage());
@@ -176,14 +173,13 @@ public class RegisterRemoteModelStepTests extends OpenSearchTestCase {
     }
 
     public void testMissingInputs() {
-        CompletableFuture<WorkflowData> future = this.registerRemoteModelStep.execute(
+        PlainActionFuture<WorkflowData> future = this.registerRemoteModelStep.execute(
             "nodeId",
             new WorkflowData(Collections.emptyMap(), "test-id", "test-node-id"),
             Collections.emptyMap(),
             Collections.emptyMap()
         );
         assertTrue(future.isDone());
-        assertTrue(future.isCompletedExceptionally());
         ExecutionException ex = assertThrows(ExecutionException.class, () -> future.get().getContent());
         assertTrue(ex.getCause() instanceof FlowFrameworkException);
         assertTrue(ex.getCause().getMessage().startsWith("Missing required inputs ["));

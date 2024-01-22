@@ -8,6 +8,7 @@
  */
 package org.opensearch.flowframework.workflow;
 
+import org.opensearch.action.support.PlainActionFuture;
 import org.opensearch.action.update.UpdateResponse;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.core.index.shard.ShardId;
@@ -25,7 +26,6 @@ import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 
 import org.mockito.ArgumentCaptor;
@@ -91,7 +91,7 @@ public class ModelGroupStepTests extends OpenSearchTestCase {
             return null;
         }).when(flowFrameworkIndicesHandler).updateResourceInStateIndex(anyString(), anyString(), anyString(), anyString(), any());
 
-        CompletableFuture<WorkflowData> future = modelGroupStep.execute(
+        PlainActionFuture<WorkflowData> future = modelGroupStep.execute(
             inputData.getNodeId(),
             inputData,
             Collections.emptyMap(),
@@ -118,7 +118,7 @@ public class ModelGroupStepTests extends OpenSearchTestCase {
             return null;
         }).when(machineLearningNodeClient).registerModelGroup(any(MLRegisterModelGroupInput.class), actionListenerCaptor.capture());
 
-        CompletableFuture<WorkflowData> future = modelGroupStep.execute(
+        PlainActionFuture<WorkflowData> future = modelGroupStep.execute(
             inputData.getNodeId(),
             inputData,
             Collections.emptyMap(),
@@ -127,7 +127,7 @@ public class ModelGroupStepTests extends OpenSearchTestCase {
 
         verify(machineLearningNodeClient).registerModelGroup(any(MLRegisterModelGroupInput.class), actionListenerCaptor.capture());
 
-        assertTrue(future.isCompletedExceptionally());
+        assertTrue(future.isDone());
         ExecutionException ex = assertThrows(ExecutionException.class, () -> future.get().getContent());
         assertTrue(ex.getCause() instanceof FlowFrameworkException);
         assertEquals("Failed to register model group", ex.getCause().getMessage());
@@ -137,14 +137,14 @@ public class ModelGroupStepTests extends OpenSearchTestCase {
     public void testRegisterModelGroupWithNoName() throws IOException {
         RegisterModelGroupStep modelGroupStep = new RegisterModelGroupStep(machineLearningNodeClient, flowFrameworkIndicesHandler);
 
-        CompletableFuture<WorkflowData> future = modelGroupStep.execute(
+        PlainActionFuture<WorkflowData> future = modelGroupStep.execute(
             inputDataWithNoName.getNodeId(),
             inputDataWithNoName,
             Collections.emptyMap(),
             Collections.emptyMap()
         );
 
-        assertTrue(future.isCompletedExceptionally());
+        assertTrue(future.isDone());
         ExecutionException ex = assertThrows(ExecutionException.class, () -> future.get().getContent());
         assertTrue(ex.getCause() instanceof FlowFrameworkException);
         assertEquals("Missing required inputs [name] in workflow [test-id] node [test-node-id]", ex.getCause().getMessage());

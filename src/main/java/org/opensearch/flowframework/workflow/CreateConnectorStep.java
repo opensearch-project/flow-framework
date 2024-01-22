@@ -11,6 +11,7 @@ package org.opensearch.flowframework.workflow;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.opensearch.ExceptionsHelper;
+import org.opensearch.action.support.PlainActionFuture;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.core.rest.RestStatus;
 import org.opensearch.flowframework.exception.FlowFrameworkException;
@@ -33,7 +34,6 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
-import java.util.concurrent.CompletableFuture;
 
 import static org.opensearch.flowframework.common.CommonValue.ACTIONS_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.CREDENTIAL_FIELD;
@@ -70,13 +70,13 @@ public class CreateConnectorStep implements WorkflowStep {
 
     // TODO: need to add retry conflicts here
     @Override
-    public CompletableFuture<WorkflowData> execute(
+    public PlainActionFuture<WorkflowData> execute(
         String currentNodeId,
         WorkflowData currentNodeInputs,
         Map<String, WorkflowData> outputs,
         Map<String, String> previousNodeInputs
     ) {
-        CompletableFuture<WorkflowData> createConnectorFuture = new CompletableFuture<>();
+        PlainActionFuture<WorkflowData> createConnectorFuture = PlainActionFuture.newFuture();
 
         ActionListener<MLCreateConnectorResponse> actionListener = new ActionListener<>() {
 
@@ -93,7 +93,7 @@ public class CreateConnectorStep implements WorkflowStep {
                         mlCreateConnectorResponse.getConnectorId(),
                         ActionListener.wrap(response -> {
                             logger.info("successfully updated resources created in state index: {}", response.getIndex());
-                            createConnectorFuture.complete(
+                            createConnectorFuture.onResponse(
                                 new WorkflowData(
                                     Map.ofEntries(Map.entry(resourceName, mlCreateConnectorResponse.getConnectorId())),
                                     currentNodeInputs.getWorkflowId(),
@@ -102,7 +102,7 @@ public class CreateConnectorStep implements WorkflowStep {
                             );
                         }, exception -> {
                             logger.error("Failed to update new created resource", exception);
-                            createConnectorFuture.completeExceptionally(
+                            createConnectorFuture.onFailure(
                                 new FlowFrameworkException(exception.getMessage(), ExceptionsHelper.status(exception))
                             );
                         })
@@ -110,14 +110,14 @@ public class CreateConnectorStep implements WorkflowStep {
 
                 } catch (Exception e) {
                     logger.error("Failed to parse and update new created resource", e);
-                    createConnectorFuture.completeExceptionally(new FlowFrameworkException(e.getMessage(), ExceptionsHelper.status(e)));
+                    createConnectorFuture.onFailure(new FlowFrameworkException(e.getMessage(), ExceptionsHelper.status(e)));
                 }
             }
 
             @Override
             public void onFailure(Exception e) {
                 logger.error("Failed to create connector");
-                createConnectorFuture.completeExceptionally(new FlowFrameworkException(e.getMessage(), ExceptionsHelper.status(e)));
+                createConnectorFuture.onFailure(new FlowFrameworkException(e.getMessage(), ExceptionsHelper.status(e)));
             }
         };
 
@@ -171,7 +171,7 @@ public class CreateConnectorStep implements WorkflowStep {
 
             mlClient.createConnector(mlInput, actionListener);
         } catch (FlowFrameworkException e) {
-            createConnectorFuture.completeExceptionally(e);
+            createConnectorFuture.onFailure(e);
         }
         return createConnectorFuture;
     }

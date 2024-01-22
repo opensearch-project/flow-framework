@@ -11,6 +11,7 @@ package org.opensearch.flowframework.workflow;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.opensearch.ExceptionsHelper;
+import org.opensearch.action.support.PlainActionFuture;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.core.common.util.CollectionUtils;
 import org.opensearch.flowframework.exception.FlowFrameworkException;
@@ -26,7 +27,6 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.CompletableFuture;
 
 import static org.opensearch.flowframework.common.CommonValue.ADD_ALL_BACKEND_ROLES;
 import static org.opensearch.flowframework.common.CommonValue.BACKEND_ROLES_FIELD;
@@ -61,13 +61,13 @@ public class RegisterModelGroupStep implements WorkflowStep {
     }
 
     @Override
-    public CompletableFuture<WorkflowData> execute(
+    public PlainActionFuture<WorkflowData> execute(
         String currentNodeId,
         WorkflowData currentNodeInputs,
         Map<String, WorkflowData> outputs,
         Map<String, String> previousNodeInputs
     ) {
-        CompletableFuture<WorkflowData> registerModelGroupFuture = new CompletableFuture<>();
+        PlainActionFuture<WorkflowData> registerModelGroupFuture = PlainActionFuture.newFuture();
 
         ActionListener<MLRegisterModelGroupResponse> actionListener = new ActionListener<>() {
             @Override
@@ -82,7 +82,7 @@ public class RegisterModelGroupStep implements WorkflowStep {
                         mlRegisterModelGroupResponse.getModelGroupId(),
                         ActionListener.wrap(updateResponse -> {
                             logger.info("successfully updated resources created in state index: {}", updateResponse.getIndex());
-                            registerModelGroupFuture.complete(
+                            registerModelGroupFuture.onResponse(
                                 new WorkflowData(
                                     Map.ofEntries(
                                         Map.entry(resourceName, mlRegisterModelGroupResponse.getModelGroupId()),
@@ -94,7 +94,7 @@ public class RegisterModelGroupStep implements WorkflowStep {
                             );
                         }, exception -> {
                             logger.error("Failed to update new created resource", exception);
-                            registerModelGroupFuture.completeExceptionally(
+                            registerModelGroupFuture.onFailure(
                                 new FlowFrameworkException(exception.getMessage(), ExceptionsHelper.status(exception))
                             );
                         })
@@ -102,14 +102,14 @@ public class RegisterModelGroupStep implements WorkflowStep {
 
                 } catch (Exception e) {
                     logger.error("Failed to parse and update new created resource", e);
-                    registerModelGroupFuture.completeExceptionally(new FlowFrameworkException(e.getMessage(), ExceptionsHelper.status(e)));
+                    registerModelGroupFuture.onFailure(new FlowFrameworkException(e.getMessage(), ExceptionsHelper.status(e)));
                 }
             }
 
             @Override
             public void onFailure(Exception e) {
                 logger.error("Failed to register model group");
-                registerModelGroupFuture.completeExceptionally(new FlowFrameworkException(e.getMessage(), ExceptionsHelper.status(e)));
+                registerModelGroupFuture.onFailure(new FlowFrameworkException(e.getMessage(), ExceptionsHelper.status(e)));
             }
         };
 
@@ -148,7 +148,7 @@ public class RegisterModelGroupStep implements WorkflowStep {
 
             mlClient.registerModelGroup(mlInput, actionListener);
         } catch (FlowFrameworkException e) {
-            registerModelGroupFuture.completeExceptionally(e);
+            registerModelGroupFuture.onFailure(e);
         }
 
         return registerModelGroupFuture;
