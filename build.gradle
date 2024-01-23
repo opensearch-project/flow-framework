@@ -201,12 +201,13 @@ ext{
             }
         }
 
+        // Using default admin credentials since the install_plugin_configuration script is not used
         cluster.getNodes().forEach { node ->
             var creds = node.getCredentials()
             if (creds.isEmpty()) {
-                creds.add(Map.of('username', 'admin', 'password', 'myStrongPassword!123'))
+                creds.add(Map.of('username', 'admin', 'password', 'admin'))
             } else {
-                creds.get(0).putAll(Map.of('username', 'admin', 'password', 'myStrongPassword!123'))
+                creds.get(0).putAll(Map.of('username', 'admin', 'password', 'admin'))
             }
         }
 
@@ -276,7 +277,7 @@ integTest {
     if (System.getProperty('security.enabled') != null) {
         is_https = is_https == null ? 'true' : is_https
         user = user == null ? 'admin' : user
-        password = password == null ? 'myStrongPassword!123' : password
+        password = password == null ? 'admin' : password
     }
     systemProperty('https', is_https)
     systemProperty('user', user)
@@ -379,7 +380,7 @@ task integTestRemote(type: RestIntegTestTask) {
     if (System.getProperty('security.enabled') != null) {
         is_https = is_https == null ? 'true' : is_https
         user = user == null ? 'admin' : user
-        password = password == null ? 'myStrongPassword!123' : password
+        password = password == null ? 'admin' : password
     }
     systemProperty('https', is_https)
     systemProperty('user', user)
