@@ -201,7 +201,7 @@ ext{
             }
         }
 
-        // Using default admin credentials since the install_plugin_configuration script is not used
+        // Using default admin credentials since the install_plugin_configuration script is not used to configure the security plugin
         cluster.getNodes().forEach { node ->
             var creds = node.getCredentials()
             if (creds.isEmpty()) {
@@ -274,6 +274,7 @@ integTest {
     var is_https = System.getProperty('https')
     var user = System.getProperty('user')
     var password = System.getProperty('password')
+    // Using default admin credentials since the install_plugin_configuration script is not used to configure the security plugin
     if (System.getProperty('security.enabled') != null) {
         is_https = is_https == null ? 'true' : is_https
         user = user == null ? 'admin' : user
@@ -377,6 +378,7 @@ task integTestRemote(type: RestIntegTestTask) {
     var is_https = System.getProperty('https')
     var user = System.getProperty('user')
     var password = System.getProperty('password')
+    // Using default admin credentials since the install_plugin_configuration script is not used to configure the security plugin
     if (System.getProperty('security.enabled') != null) {
         is_https = is_https == null ? 'true' : is_https
         user = user == null ? 'admin' : user
