@@ -35,7 +35,7 @@ buildscript {
 
     dependencies {
         classpath "org.opensearch.gradle:build-tools:${opensearch_version}"
-        classpath "com.diffplug.spotless:spotless-plugin-gradle:6.24.0"
+        classpath "com.diffplug.spotless:spotless-plugin-gradle:6.25.0"
         classpath "com.github.form-com.diff-coverage-gradle:diff-coverage:0.9.5"
     }
 }
@@ -179,69 +179,6 @@ def opensearch_tmp_dir = rootProject.file('build/private/opensearch_tmp').absolu
 opensearch_tmp_dir.mkdirs()
 def _numNodes = findProperty('numNodes') as Integer ?: 1
 
-ext{
-
-    configureSecurityPlugin = { OpenSearchCluster cluster ->
-
-        // Retrieve Security Plugin Zip from zipArchive
-        configurations.secureIntegTestPluginArchive.asFileTree.each {
-            if(it.name.contains("opensearch-security")) {
-                cluster.plugin(provider(new Callable<RegularFile>(){
-                        @Override
-                        RegularFile call() throws Exception {
-                            return new RegularFile() {
-                                @Override
-                                File getAsFile() {
-                                    return it
-                                }
-                            }
-                        }
-                    })
-                )
-            }
-        }
-
-        cluster.getNodes().forEach { node ->
-            var creds = node.getCredentials()
-            if (creds.isEmpty()) {
-                creds.add(Map.of('username', 'admin', 'password', 'admin'))
-            } else {
-                creds.get(0).putAll(Map.of('username', 'admin', 'password', 'admin'))
-            }
-        }
-
-        // Config below including files are copied from security demo configuration
-        ['esnode.pem', 'esnode-key.pem', 'root-ca.pem'].forEach { file ->
-            File local = Paths.get(opensearch_tmp_dir.absolutePath, file).toFile()
-            download.run {
-                src "https://raw.githubusercontent.com/opensearch-project/security/main/bwc-test/src/test/resources/security/" + file
-                dest local
-                overwrite false
-            }
-            cluster.extraConfigFile(file, local)
-        }
-
-        // This configuration is copied from the security plugins demo install:
-        // https://github.com/opensearch-project/security/blob/2.11.1.0/tools/install_demo_configuration.sh#L365-L388
-        cluster.setting("plugins.security.ssl.transport.pemcert_filepath", "esnode.pem")
-        cluster.setting("plugins.security.ssl.transport.pemkey_filepath", "esnode-key.pem")
-        cluster.setting("plugins.security.ssl.transport.pemtrustedcas_filepath", "root-ca.pem")
-        cluster.setting("plugins.security.ssl.transport.enforce_hostname_verification", "false")
-        cluster.setting("plugins.security.ssl.http.enabled", "true")
-        cluster.setting("plugins.security.ssl.http.pemcert_filepath", "esnode.pem")
-        cluster.setting("plugins.security.ssl.http.pemkey_filepath", "esnode-key.pem")
-        cluster.setting("plugins.security.ssl.http.pemtrustedcas_filepath", "root-ca.pem")
-        cluster.setting("plugins.security.allow_unsafe_democertificates", "true")
-        cluster.setting("plugins.security.allow_default_init_securityindex", "true")
-        cluster.setting("plugins.security.unsupported.inject_user.enabled", "true")
-
-        cluster.setting("plugins.security.authcz.admin_dn", "\n- CN=kirk,OU=client,O=client,L=test, C=de")
-        cluster.setting('plugins.security.restapi.roles_enabled', '["all_access", "security_rest_api_access"]')
-        cluster.setting('plugins.security.system_indices.enabled', "true")
-        cluster.setSecure(true)
-    }
-}
-
 test {
     include '**/*Tests.class'
 }
@@ -273,6 +210,7 @@ integTest {
     var is_https = System.getProperty('https')
     var user = System.getProperty('user')
     var password = System.getProperty('password')
+    // Using default admin credentials since the install_plugin_configuration script is not used to configure the security plugin
     if (System.getProperty('security.enabled') != null) {
         is_https = is_https == null ? 'true' : is_https
         user = user == null ? 'admin' : user
@@ -331,7 +269,63 @@ testClusters.integTest {
 
     // Optionally install security
     if (System.getProperty("security.enabled") != null && System.getProperty("security.enabled") == "true") {
-        configureSecurityPlugin(testClusters.integTest)
+        // Retrieve Security Plugin Zip from zipArchive
+        configurations.secureIntegTestPluginArchive.asFileTree.each {
+            if(it.name.contains("opensearch-security")) {
+                plugin(provider(new Callable<RegularFile>(){
+                        @Override
+                        RegularFile call() throws Exception {
+                            return new RegularFile() {
+                                @Override
+                                File getAsFile() {
+                                    return it
+                                }
+                            }
+                        }
+                    })
+                )
+            }
+        }
+
+        // Using default admin credentials since the install_plugin_configuration script is not used to configure the security plugin
+        getNodes().forEach { node ->
+            var creds = node.getCredentials()
+            if (creds.isEmpty()) {
+                creds.add(Map.of('username', 'admin', 'password', 'admin'))
+            } else {
+                creds.get(0).putAll(Map.of('username', 'admin', 'password', 'admin'))
+            }
+        }
+
+        // Config below including files are copied from security demo configuration
+        ['esnode.pem', 'esnode-key.pem', 'root-ca.pem'].forEach { file ->
+            File local = Paths.get(opensearch_tmp_dir.absolutePath, file).toFile()
+            download.run {
+                src "https://raw.githubusercontent.com/opensearch-project/security/main/bwc-test/src/test/resources/security/" + file
+                dest local
+                overwrite false
+            }
+            extraConfigFile(file, local)
+        }
+
+        // This configuration is copied from the security plugins demo install:
+        // https://github.com/opensearch-project/security/blob/2.11.1.0/tools/install_demo_configuration.sh#L365-L388
+        setting("plugins.security.ssl.transport.pemcert_filepath", "esnode.pem")
+        setting("plugins.security.ssl.transport.pemkey_filepath", "esnode-key.pem")
+        setting("plugins.security.ssl.transport.pemtrustedcas_filepath", "root-ca.pem")
+        setting("plugins.security.ssl.transport.enforce_hostname_verification", "false")
+        setting("plugins.security.ssl.http.enabled", "true")
+        setting("plugins.security.ssl.http.pemcert_filepath", "esnode.pem")
+        setting("plugins.security.ssl.http.pemkey_filepath", "esnode-key.pem")
+        setting("plugins.security.ssl.http.pemtrustedcas_filepath", "root-ca.pem")
+        setting("plugins.security.allow_unsafe_democertificates", "true")
+        setting("plugins.security.allow_default_init_securityindex", "true")
+        setting("plugins.security.unsupported.inject_user.enabled", "true")
+
+        setting("plugins.security.authcz.admin_dn", "\n- CN=kirk,OU=client,O=client,L=test, C=de")
+        setting('plugins.security.restapi.roles_enabled', '["all_access", "security_rest_api_access"]')
+        setting('plugins.security.system_indices.enabled', "true")
+        setSecure(true)
     }
 
     // Installs all registered zipArchive dependencies on integTest cluster nodes except security
@@ -376,6 +370,7 @@ task integTestRemote(type: RestIntegTestTask) {
     var is_https = System.getProperty('https')
     var user = System.getProperty('user')
     var password = System.getProperty('password')
+    // Using default admin credentials since the install_plugin_configuration script is not used to configure the security plugin
     if (System.getProperty('security.enabled') != null) {
         is_https = is_https == null ? 'true' : is_https
         user = user == null ? 'admin' : user
