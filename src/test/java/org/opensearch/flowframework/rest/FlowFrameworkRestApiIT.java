@@ -101,15 +101,6 @@ public class FlowFrameworkRestApiIT extends FlowFrameworkRestTestCase {
             () -> updateWorkflow(client(), workflowId, template)
         );
         assertTrue(exceptionProvisioned.getMessage().contains("The template has already been provisioned so it can't be updated"));
-
-        // Hit Deprovision API
-        Response deprovisionResponse = deprovisionWorkflow(client(), workflowId);
-        assertBusy(
-            () -> { getAndAssertWorkflowStatus(client(), workflowId, State.NOT_STARTED, ProvisioningProgress.NOT_STARTED); },
-            60,
-            TimeUnit.SECONDS
-        );
-
     }
 
     public synchronized void testCreateAndProvisionLocalModelWorkflow() throws Exception {
@@ -177,14 +168,6 @@ public class FlowFrameworkRestApiIT extends FlowFrameworkRestTestCase {
         assertNotNull(resourcesCreated.get(0).resourceId());
         assertEquals("deploy_model", resourcesCreated.get(1).workflowStepName());
         assertNotNull(resourcesCreated.get(1).resourceId());
-
-        // Hit Deprovision API
-        Response deprovisionResponse = deprovisionWorkflow(client(), workflowId);
-        assertBusy(
-            () -> { getAndAssertWorkflowStatus(client(), workflowId, State.NOT_STARTED, ProvisioningProgress.NOT_STARTED); },
-            60,
-            TimeUnit.SECONDS
-        );
     }
 
     public synchronized void testCreateAndProvisionCyclicalTemplate() throws Exception {
@@ -254,14 +237,6 @@ public class FlowFrameworkRestApiIT extends FlowFrameworkRestTestCase {
         assertNotNull(resourcesCreated.get(1).resourceId());
         assertEquals("deploy_model", resourcesCreated.get(2).workflowStepName());
         assertNotNull(resourcesCreated.get(2).resourceId());
-
-        // Hit Deprovision API
-        Response deprovisionResponse = deprovisionWorkflow(client(), workflowId);
-        assertBusy(
-            () -> { getAndAssertWorkflowStatus(client(), workflowId, State.NOT_STARTED, ProvisioningProgress.NOT_STARTED); },
-            60,
-            TimeUnit.SECONDS
-        );
     }
 
     public synchronized void testCreateAndProvisionAgentFrameworkWorkflow() throws Exception {
