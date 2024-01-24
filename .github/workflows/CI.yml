@@ -80,6 +80,6 @@ jobs:
         run: |
           ./gradlew integTest yamlRestTest
       - name: Multi Nodes Integration Testing
-        if: matrix.java == '21'
+        if: matrix.java == '17'
         run: |
           ./gradlew integTest -PnumNodes=3
