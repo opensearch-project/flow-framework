@@ -38,7 +38,7 @@ import static org.opensearch.flowframework.common.CommonValue.WORKFLOW_ID;
 
 public class FlowFrameworkRestApiIT extends FlowFrameworkRestTestCase {
 
-    public void testSearchWorkflows() throws Exception {
+    public synchronized void testSearchWorkflows() throws Exception {
 
         // Create a Workflow that has a credential 12345
         Template template = TestHelpers.createTemplateFromFile("createconnector-registerremotemodel-deploymodel.json");
@@ -68,7 +68,7 @@ public class FlowFrameworkRestApiIT extends FlowFrameworkRestTestCase {
         }
     }
 
-    public void testFailedUpdateWorkflow() throws Exception {
+    public synchronized void testFailedUpdateWorkflow() throws Exception {
         Template templateCreation = TestHelpers.createTemplateFromFile("createconnector-registerremotemodel-deploymodel.json");
         Response responseCreate = createWorkflow(client(), templateCreation);
         assertEquals(RestStatus.CREATED, TestHelpers.restStatus(responseCreate));
@@ -104,7 +104,7 @@ public class FlowFrameworkRestApiIT extends FlowFrameworkRestTestCase {
 
     }
 
-    public void testCreateAndProvisionLocalModelWorkflow() throws Exception {
+    public synchronized void testCreateAndProvisionLocalModelWorkflow() throws Exception {
         // Using a 1 step template to register a local model and deploy model
         Template template = TestHelpers.createTemplateFromFile("register-deploylocalsparseencodingmodel.json");
 
@@ -171,7 +171,7 @@ public class FlowFrameworkRestApiIT extends FlowFrameworkRestTestCase {
         assertNotNull(resourcesCreated.get(1).resourceId());
     }
 
-    public void testCreateAndProvisionCyclicalTemplate() throws Exception {
+    public synchronized void testCreateAndProvisionCyclicalTemplate() throws Exception {
 
         // Using a 3 step template to create a connector, register remote model and deploy model
         Template template = TestHelpers.createTemplateFromFile("createconnector-registerremotemodel-deploymodel.json");
@@ -202,7 +202,7 @@ public class FlowFrameworkRestApiIT extends FlowFrameworkRestTestCase {
         assertTrue(exception.getMessage().contains("workflow_step_3->workflow_step_2"));
     }
 
-    public void testCreateAndProvisionRemoteModelWorkflow() throws Exception {
+    public synchronized void testCreateAndProvisionRemoteModelWorkflow() throws Exception {
 
         // Using a 3 step template to create a connector, register remote model and deploy model
         Template template = TestHelpers.createTemplateFromFile("createconnector-registerremotemodel-deploymodel.json");
@@ -239,7 +239,7 @@ public class FlowFrameworkRestApiIT extends FlowFrameworkRestTestCase {
         assertNotNull(resourcesCreated.get(2).resourceId());
     }
 
-    public void testCreateAndProvisionAgentFrameworkWorkflow() throws Exception {
+    public synchronized void testCreateAndProvisionAgentFrameworkWorkflow() throws Exception {
         Template template = TestHelpers.createTemplateFromFile("agent-framework.json");
 
         // Hit Create Workflow API to create agent-framework template, with template validation check and provision parameter
