@@ -410,11 +410,11 @@ task integTestRemote(type: RestIntegTestTask) {
 // test retry configuration
 subprojects {
     apply plugin: "org.gradle.test-retry"
-    tasks.withType(Test).configureEach {
+    tasks.withType(RestIntegTestTask).configureEach {
         retry {
             failOnPassedAfterRetry = false
             maxRetries = 3
-            maxFailures = 10
+            maxFailures = 5
         }
     }
 }
