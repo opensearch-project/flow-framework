@@ -81,10 +81,9 @@ You may type this line on your own when writing your commit messages. However, i
 
 ## Changelog
 
-Flow framework maintains version specific changelog by enforcing a change to the ongoing [CHANGELOG](CHANGELOG.md) file adhering to the [Keep A Changelog](https://keepachangelog.com/en/1.0.0/) format.
+Flow Framework maintains version specific changelog by enforcing a change to the ongoing [CHANGELOG](CHANGELOG.md) file adhering to the [Keep A Changelog](https://keepachangelog.com/en/1.1.0/) format.
 
 Briefly, the changes are curated by version, with the changes to the main branch added chronologically to `Unreleased` version. Further, each version has corresponding sections which list out the category of the change - `Added`, `Changed`, `Deprecated`, `Removed`, `Fixed`, `Security`.
-
 
 ### How to add my changes to [CHANGELOG](CHANGELOG.md)?
 
