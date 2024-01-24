@@ -38,7 +38,7 @@ import static org.opensearch.flowframework.common.CommonValue.WORKFLOW_ID;
 
 public class FlowFrameworkRestApiIT extends FlowFrameworkRestTestCase {
 
-    public synchronized void testSearchWorkflows() throws Exception {
+    public void testSearchWorkflows() throws Exception {
 
         // Create a Workflow that has a credential 12345
         Template template = TestHelpers.createTemplateFromFile("createconnector-registerremotemodel-deploymodel.json");
@@ -101,6 +101,14 @@ public class FlowFrameworkRestApiIT extends FlowFrameworkRestTestCase {
             () -> updateWorkflow(client(), workflowId, template)
         );
         assertTrue(exceptionProvisioned.getMessage().contains("The template has already been provisioned so it can't be updated"));
+
+        // Hit Deprovision API
+        Response deprovisionResponse = deprovisionWorkflow(client(), workflowId);
+        assertBusy(
+            () -> { getAndAssertWorkflowStatus(client(), workflowId, State.NOT_STARTED, ProvisioningProgress.NOT_STARTED); },
+            60,
+            TimeUnit.SECONDS
+        );
 
     }
 
@@ -169,9 +177,17 @@ public class FlowFrameworkRestApiIT extends FlowFrameworkRestTestCase {
         assertNotNull(resourcesCreated.get(0).resourceId());
         assertEquals("deploy_model", resourcesCreated.get(1).workflowStepName());
         assertNotNull(resourcesCreated.get(1).resourceId());
+
+        // Hit Deprovision API
+        Response deprovisionResponse = deprovisionWorkflow(client(), workflowId);
+        assertBusy(
+            () -> { getAndAssertWorkflowStatus(client(), workflowId, State.NOT_STARTED, ProvisioningProgress.NOT_STARTED); },
+            60,
+            TimeUnit.SECONDS
+        );
     }
 
-    public synchronized void testCreateAndProvisionCyclicalTemplate() throws Exception {
+    public void testCreateAndProvisionCyclicalTemplate() throws Exception {
 
         // Using a 3 step template to create a connector, register remote model and deploy model
         Template template = TestHelpers.createTemplateFromFile("createconnector-registerremotemodel-deploymodel.json");
@@ -200,6 +216,7 @@ public class FlowFrameworkRestApiIT extends FlowFrameworkRestTestCase {
         assertTrue(exception.getMessage().contains("Cycle detected"));
         assertTrue(exception.getMessage().contains("workflow_step_2->workflow_step_3"));
         assertTrue(exception.getMessage().contains("workflow_step_3->workflow_step_2"));
+
     }
 
     public synchronized void testCreateAndProvisionRemoteModelWorkflow() throws Exception {
@@ -237,6 +254,14 @@ public class FlowFrameworkRestApiIT extends FlowFrameworkRestTestCase {
         assertNotNull(resourcesCreated.get(1).resourceId());
         assertEquals("deploy_model", resourcesCreated.get(2).workflowStepName());
         assertNotNull(resourcesCreated.get(2).resourceId());
+
+        // Hit Deprovision API
+        Response deprovisionResponse = deprovisionWorkflow(client(), workflowId);
+        assertBusy(
+            () -> { getAndAssertWorkflowStatus(client(), workflowId, State.NOT_STARTED, ProvisioningProgress.NOT_STARTED); },
+            60,
+            TimeUnit.SECONDS
+        );
     }
 
     public synchronized void testCreateAndProvisionAgentFrameworkWorkflow() throws Exception {
