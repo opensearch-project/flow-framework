@@ -35,8 +35,7 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
-        # Don't use 21.0.2 https://github.com/opensearch-project/flow-framework/issues/426
-        java: [11, 21.0.1]
+        java: [11, 21]
         include:
           - os: ubuntu-latest
             java: 17
@@ -64,8 +63,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
-        # Don't use 21.0.2 https://github.com/opensearch-project/flow-framework/issues/426
-        java: [11, 21.0.1]
+        java: [11, 21]
         include:
           - os: ubuntu-latest
             java: 17
@@ -82,6 +80,6 @@ jobs:
         run: |
           ./gradlew integTest yamlRestTest
       - name: Multi Nodes Integration Testing
-        if: matrix.java == '21.0.1'
+        if: matrix.java == '21'
         run: |
           ./gradlew integTest -PnumNodes=3
