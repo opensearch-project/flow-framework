@@ -38,7 +38,7 @@ import static org.opensearch.flowframework.common.CommonValue.WORKFLOW_ID;
 
 public class FlowFrameworkRestApiIT extends FlowFrameworkRestTestCase {
 
-    public void testSearchWorkflows() throws Exception {
+    public synchronized void testSearchWorkflows() throws Exception {
 
         // Create a Workflow that has a credential 12345
         Template template = TestHelpers.createTemplateFromFile("createconnector-registerremotemodel-deploymodel.json");
@@ -187,7 +187,7 @@ public class FlowFrameworkRestApiIT extends FlowFrameworkRestTestCase {
         );
     }
 
-    public void testCreateAndProvisionCyclicalTemplate() throws Exception {
+    public synchronized void testCreateAndProvisionCyclicalTemplate() throws Exception {
 
         // Using a 3 step template to create a connector, register remote model and deploy model
         Template template = TestHelpers.createTemplateFromFile("createconnector-registerremotemodel-deploymodel.json");
