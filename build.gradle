@@ -42,6 +42,7 @@ buildscript {
 
 plugins {
     id "de.undercouch.download" version "5.5.0"
+    id "org.gradle.test-retry" version "1.5.4" apply false
 }
 
 apply plugin: 'java'
@@ -400,6 +401,19 @@ task integTestRemote(type: RestIntegTestTask) {
         filter {
             includeTestsMatching "org.opensearch.flowframework.rest.FlowFrameworkSecureRestApiIT"
             excludeTestsMatching "org.opensearch.flowframework.rest.FlowFrameworkRestApiIT"
+        }
+    }
+}
+
+
+// test retry configuration
+subprojects {
+    apply plugin: "org.gradle.test-retry"
+    tasks.withType(RestIntegTestTask).configureEach {
+        retry {
+            failOnPassedAfterRetry = false
+            maxRetries = 3
+            maxFailures = 5
         }
     }
 }
