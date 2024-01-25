@@ -413,7 +413,7 @@ subprojects {
         retry {
             failOnPassedAfterRetry = false
             maxRetries = 3
-            maxFailures = 5
+            maxFailures = 10
         }
     }
 }
