@@ -42,7 +42,7 @@ buildscript {
 
 plugins {
     id "de.undercouch.download" version "5.5.0"
-    id "org.gradle.test-retry" version "1.5.4" apply false
+    id "org.gradle.test-retry" version "1.5.8" apply false
 }
 
 apply plugin: 'java'
