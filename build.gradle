@@ -253,7 +253,9 @@ integTest {
         systemProperty 'cluster.number_of_nodes', "${_numNodes}"
         // There seems to be an issue when running multi node run or integ tasks with unicast_hosts
         // not being written, the waitForAllConditions ensures it's written
+        // additionally adding condition of yellow cluster
         getClusters().forEach { cluster ->
+            cluster.addWaitForClusterHealth()
             cluster.waitForAllConditions()
         }
     }
@@ -424,7 +426,9 @@ run {
     doFirst {
         // There seems to be an issue when running multi node run or integ tasks with unicast_hosts
         // not being written, the waitForAllConditions ensures it's written
+        // additionally adding condition of yellow cluster
         getClusters().forEach { cluster ->
+            cluster.addWaitForClusterHealth()
             cluster.waitForAllConditions()
         }
     }
