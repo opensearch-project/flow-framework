@@ -1,10 +1,9 @@
 name: "Changelog Verifier"
 on:
-  push:
+  pull_request:
     branches-ignore:
       - 'whitesource-remediate/**'
       - 'backport/**'
-  pull_request:
     branches: main
     types: [opened, edited, review_requested, synchronize, reopened, ready_for_review, labeled, unlabeled]
 
