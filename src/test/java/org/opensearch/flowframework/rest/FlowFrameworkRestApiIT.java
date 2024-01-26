@@ -22,6 +22,7 @@ import org.opensearch.flowframework.model.Workflow;
 import org.opensearch.flowframework.model.WorkflowEdge;
 import org.opensearch.flowframework.model.WorkflowNode;
 import org.opensearch.flowframework.model.WorkflowState;
+import org.junit.ComparisonFailure;
 
 import java.util.Collections;
 import java.util.HashMap;
@@ -281,12 +282,29 @@ public class FlowFrameworkRestApiIT extends FlowFrameworkRestTestCase {
         assertNotNull(resourcesCreated.get(0).resourceId());
 
         // Hit Deprovision API
+        // By design, this may not completely deprovision the first time if it takes >2s to process removals
         Response deprovisionResponse = deprovisionWorkflow(client(), workflowId);
-        assertBusy(
-            () -> { getAndAssertWorkflowStatus(client(), workflowId, State.NOT_STARTED, ProvisioningProgress.NOT_STARTED); },
-            60,
-            TimeUnit.SECONDS
-        );
+        try {
+            assertBusy(
+                () -> { getAndAssertWorkflowStatus(client(), workflowId, State.NOT_STARTED, ProvisioningProgress.NOT_STARTED); },
+                30,
+                TimeUnit.SECONDS
+            );
+        } catch (ComparisonFailure e) {
+            // 202 return if still processing
+            assertEquals(RestStatus.ACCEPTED, TestHelpers.restStatus(deprovisionResponse));
+        }
+        if (TestHelpers.restStatus(deprovisionResponse) == RestStatus.ACCEPTED) {
+            // Short wait before we try again
+            Thread.sleep(10000);
+            deprovisionResponse = deprovisionWorkflow(client(), workflowId);
+            assertBusy(
+                () -> { getAndAssertWorkflowStatus(client(), workflowId, State.NOT_STARTED, ProvisioningProgress.NOT_STARTED); },
+                30,
+                TimeUnit.SECONDS
+            );
+        }
+        assertEquals(RestStatus.OK, TestHelpers.restStatus(deprovisionResponse));
         // Hit Delete API
         Response deleteResponse = deleteWorkflow(client(), workflowId);
         assertEquals(RestStatus.OK, TestHelpers.restStatus(deleteResponse));
