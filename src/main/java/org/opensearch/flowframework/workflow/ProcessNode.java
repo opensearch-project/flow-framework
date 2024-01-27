@@ -21,8 +21,6 @@ import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeoutException;
 
-import static org.opensearch.flowframework.common.CommonValue.WORKFLOW_THREAD_POOL;
-
 /**
  * Representation of a process node in a workflow graph.
  * Tracks predecessor nodes which must be completed before it can start execution.
@@ -37,6 +35,7 @@ public class ProcessNode {
     private final WorkflowData input;
     private final List<ProcessNode> predecessors;
     private final ThreadPool threadPool;
+    private final String threadPoolName;
     private final TimeValue nodeTimeout;
 
     private final PlainActionFuture<WorkflowData> future = PlainActionFuture.newFuture();
@@ -50,6 +49,7 @@ public class ProcessNode {
      * @param input Input required by the node encoded in a {@link WorkflowData} instance.
      * @param predecessors Nodes preceding this one in the workflow
      * @param threadPool The OpenSearch thread pool
+     * @param threadPoolName The thread pool to use
      * @param nodeTimeout The timeout value for executing on this node
      */
     public ProcessNode(
@@ -59,6 +59,7 @@ public class ProcessNode {
         WorkflowData input,
         List<ProcessNode> predecessors,
         ThreadPool threadPool,
+        String threadPoolName,
         TimeValue nodeTimeout
     ) {
         this.id = id;
@@ -67,6 +68,7 @@ public class ProcessNode {
         this.input = input;
         this.predecessors = predecessors;
         this.threadPool = threadPool;
+        this.threadPoolName = threadPoolName;
         this.nodeTimeout = nodeTimeout;
     }
 
@@ -179,7 +181,7 @@ public class ProcessNode {
             } catch (Exception e) {
                 this.future.onFailure(e);
             }
-        }, threadPool.executor(WORKFLOW_THREAD_POOL));
+        }, threadPool.executor(this.threadPoolName));
         return this.future;
     }
 

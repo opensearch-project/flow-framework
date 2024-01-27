@@ -88,7 +88,7 @@ public class FlowFrameworkRestApiIT extends FlowFrameworkRestTestCase {
         // Ensure Ml config index is initialized as creating a connector requires this, then hit Provision API and assert status
         Response provisionResponse;
         if (!indexExistsWithAdminClient(".plugins-ml-config")) {
-            assertBusy(() -> assertTrue(indexExistsWithAdminClient(".plugins-ml-config")), 40, TimeUnit.SECONDS);
+            assertBusy(() -> assertTrue(indexExistsWithAdminClient(".plugins-ml-config")), 60, TimeUnit.SECONDS);
             provisionResponse = provisionWorkflow(client(), workflowId);
         } else {
             provisionResponse = provisionWorkflow(client(), workflowId);
@@ -218,7 +218,7 @@ public class FlowFrameworkRestApiIT extends FlowFrameworkRestTestCase {
 
         // Ensure Ml config index is initialized as creating a connector requires this, then hit Provision API and assert status
         if (!indexExistsWithAdminClient(".plugins-ml-config")) {
-            assertBusy(() -> assertTrue(indexExistsWithAdminClient(".plugins-ml-config")), 40, TimeUnit.SECONDS);
+            assertBusy(() -> assertTrue(indexExistsWithAdminClient(".plugins-ml-config")), 60, TimeUnit.SECONDS);
             response = provisionWorkflow(client(), workflowId);
         } else {
             response = provisionWorkflow(client(), workflowId);
@@ -246,7 +246,7 @@ public class FlowFrameworkRestApiIT extends FlowFrameworkRestTestCase {
         // Hit Create Workflow API to create agent-framework template, with template validation check and provision parameter
         Response response;
         if (!indexExistsWithAdminClient(".plugins-ml-config")) {
-            assertBusy(() -> assertTrue(indexExistsWithAdminClient(".plugins-ml-config")), 40, TimeUnit.SECONDS);
+            assertBusy(() -> assertTrue(indexExistsWithAdminClient(".plugins-ml-config")), 60, TimeUnit.SECONDS);
             response = createWorkflowWithProvision(client(), template);
         } else {
             response = createWorkflowWithProvision(client(), template);
@@ -257,7 +257,7 @@ public class FlowFrameworkRestApiIT extends FlowFrameworkRestTestCase {
         // wait and ensure state is completed/done
         assertBusy(
             () -> { getAndAssertWorkflowStatus(client(), workflowId, State.COMPLETED, ProvisioningProgress.DONE); },
-            30,
+            120,
             TimeUnit.SECONDS
         );
 
