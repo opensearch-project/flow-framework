@@ -22,6 +22,7 @@ import org.opensearch.flowframework.model.Workflow;
 import org.opensearch.flowframework.model.WorkflowEdge;
 import org.opensearch.flowframework.model.WorkflowNode;
 import org.opensearch.flowframework.model.WorkflowState;
+import org.junit.Before;
 import org.junit.ComparisonFailure;
 
 import java.util.Collections;
@@ -30,7 +31,9 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
 
 import static org.opensearch.flowframework.common.CommonValue.CREDENTIAL_FIELD;
@@ -38,6 +41,18 @@ import static org.opensearch.flowframework.common.CommonValue.PROVISION_WORKFLOW
 import static org.opensearch.flowframework.common.CommonValue.WORKFLOW_ID;
 
 public class FlowFrameworkRestApiIT extends FlowFrameworkRestTestCase {
+
+    private static AtomicBoolean waitToStart = new AtomicBoolean(true);
+
+    @Before
+    public void waitToStart() throws Exception {
+        // ML Commons cron job runs every 10 seconds and takes 20+ seconds to initialize .plugins-ml-config index
+        // Delay on the first attempt for 25 seconds to allow this initialization and prevent flaky tests
+        if (waitToStart.getAndSet(false)) {
+            CountDownLatch latch = new CountDownLatch(1);
+            latch.await(25, TimeUnit.SECONDS);
+        }
+    }
 
     public void testSearchWorkflows() throws Exception {
 
@@ -88,7 +103,7 @@ public class FlowFrameworkRestApiIT extends FlowFrameworkRestTestCase {
         // Ensure Ml config index is initialized as creating a connector requires this, then hit Provision API and assert status
         Response provisionResponse;
         if (!indexExistsWithAdminClient(".plugins-ml-config")) {
-            assertBusy(() -> assertTrue(indexExistsWithAdminClient(".plugins-ml-config")), 60, TimeUnit.SECONDS);
+            assertBusy(() -> assertTrue(indexExistsWithAdminClient(".plugins-ml-config")), 40, TimeUnit.SECONDS);
             provisionResponse = provisionWorkflow(client(), workflowId);
         } else {
             provisionResponse = provisionWorkflow(client(), workflowId);
@@ -218,7 +233,7 @@ public class FlowFrameworkRestApiIT extends FlowFrameworkRestTestCase {
 
         // Ensure Ml config index is initialized as creating a connector requires this, then hit Provision API and assert status
         if (!indexExistsWithAdminClient(".plugins-ml-config")) {
-            assertBusy(() -> assertTrue(indexExistsWithAdminClient(".plugins-ml-config")), 60, TimeUnit.SECONDS);
+            assertBusy(() -> assertTrue(indexExistsWithAdminClient(".plugins-ml-config")), 40, TimeUnit.SECONDS);
             response = provisionWorkflow(client(), workflowId);
         } else {
             response = provisionWorkflow(client(), workflowId);
@@ -246,7 +261,7 @@ public class FlowFrameworkRestApiIT extends FlowFrameworkRestTestCase {
         // Hit Create Workflow API to create agent-framework template, with template validation check and provision parameter
         Response response;
         if (!indexExistsWithAdminClient(".plugins-ml-config")) {
-            assertBusy(() -> assertTrue(indexExistsWithAdminClient(".plugins-ml-config")), 60, TimeUnit.SECONDS);
+            assertBusy(() -> assertTrue(indexExistsWithAdminClient(".plugins-ml-config")), 40, TimeUnit.SECONDS);
             response = createWorkflowWithProvision(client(), template);
         } else {
             response = createWorkflowWithProvision(client(), template);

@@ -136,7 +136,7 @@ public class ProcessNodeTests extends OpenSearchTestCase {
             Collections.emptyList(),
             testThreadPool,
             PROVISION_WORKFLOW_THREAD_POOL,
-            TimeValue.timeValueMillis(250)
+            TimeValue.timeValueMillis(500)
         );
         assertEquals("B", nodeB.id());
         assertEquals("test", nodeB.workflowStep().getName());
