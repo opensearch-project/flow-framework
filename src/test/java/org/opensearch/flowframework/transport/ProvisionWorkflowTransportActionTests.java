@@ -38,6 +38,7 @@ import org.opensearch.transport.TransportService;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Consumer;
 
 import org.mockito.ArgumentCaptor;
 
@@ -129,6 +130,13 @@ public class ProvisionWorkflowTransportActionTests extends OpenSearchTestCase {
 
         when(encryptorUtils.decryptTemplateCredentials(any())).thenReturn(template);
 
+        // Bypass isWorkflowNotStarted and force true response
+        doAnswer(invocation -> {
+            Consumer<Boolean> boolConsumer = invocation.getArgument(1);
+            boolConsumer.accept(true);
+            return null;
+        }).when(flowFrameworkIndicesHandler).isWorkflowNotStarted(any(), any(), any());
+
         // Bypass updateFlowFrameworkSystemIndexDoc and stub on response
         doAnswer(invocation -> {
             ActionListener<UpdateResponse> actionListener = invocation.getArgument(2);
@@ -140,6 +148,47 @@ public class ProvisionWorkflowTransportActionTests extends OpenSearchTestCase {
         ArgumentCaptor<WorkflowResponse> responseCaptor = ArgumentCaptor.forClass(WorkflowResponse.class);
         verify(listener, times(1)).onResponse(responseCaptor.capture());
         assertEquals(workflowId, responseCaptor.getValue().getWorkflowId());
+    }
+
+    public void testProvisionWorkflowTwice() {
+
+        String workflowId = "2";
+        @SuppressWarnings("unchecked")
+        ActionListener<WorkflowResponse> listener = mock(ActionListener.class);
+        WorkflowRequest workflowRequest = new WorkflowRequest(workflowId, null);
+
+        // Bypass client.get and stub success case
+        doAnswer(invocation -> {
+            ActionListener<GetResponse> responseListener = invocation.getArgument(1);
+
+            XContentBuilder builder = XContentFactory.jsonBuilder();
+            this.template.toXContent(builder, null);
+            BytesReference templateBytesRef = BytesReference.bytes(builder);
+            GetResult getResult = new GetResult(GLOBAL_CONTEXT_INDEX, workflowId, 1, 1, 1, true, templateBytesRef, null, null);
+            responseListener.onResponse(new GetResponse(getResult));
+            return null;
+        }).when(client).get(any(GetRequest.class), any());
+
+        when(encryptorUtils.decryptTemplateCredentials(any())).thenReturn(template);
+
+        // Bypass isWorkflowNotStarted and force false response
+        doAnswer(invocation -> {
+            Consumer<Boolean> boolConsumer = invocation.getArgument(1);
+            boolConsumer.accept(false);
+            return null;
+        }).when(flowFrameworkIndicesHandler).isWorkflowNotStarted(any(), any(), any());
+
+        // Bypass updateFlowFrameworkSystemIndexDoc and stub on response
+        doAnswer(invocation -> {
+            ActionListener<UpdateResponse> actionListener = invocation.getArgument(2);
+            actionListener.onResponse(mock(UpdateResponse.class));
+            return null;
+        }).when(flowFrameworkIndicesHandler).updateFlowFrameworkSystemIndexDoc(any(), any(), any());
+
+        provisionWorkflowTransportAction.doExecute(mock(Task.class), workflowRequest, listener);
+        ArgumentCaptor<Exception> exceptionCaptor = ArgumentCaptor.forClass(Exception.class);
+        verify(listener, times(1)).onFailure(exceptionCaptor.capture());
+        assertEquals("The template has already been provisioned: 2", exceptionCaptor.getValue().getMessage());
     }
 
     public void testFailedToRetrieveTemplateFromGlobalContext() {
