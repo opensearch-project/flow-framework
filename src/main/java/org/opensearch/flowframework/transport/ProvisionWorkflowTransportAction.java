@@ -141,12 +141,15 @@ public class ProvisionWorkflowTransportAction extends HandledTransportAction<Wor
                                 Map.entry(RESOURCES_CREATED_FIELD, Collections.emptyList())
                             ),
                             ActionListener.wrap(updateResponse -> {
-                                logger.info("updated workflow {} state to PROVISIONING", request.getWorkflowId());
+                                logger.info("updated workflow {} state to {}", request.getWorkflowId(), State.PROVISIONING);
+                                executeWorkflowAsync(workflowId, provisionProcessSequence, listener);
                                 listener.onResponse(new WorkflowResponse(workflowId));
-                            }, exception -> { logger.error("Failed to update workflow state : {}", exception.getMessage()); })
+                            }, exception -> {
+                                String errorMessage = "Failed to update wowrfow state: " + workflowId;
+                                logger.error(errorMessage, exception);
+                                listener.onFailure(new FlowFrameworkException(errorMessage, ExceptionsHelper.status(exception)));
+                            })
                         );
-
-                        executeWorkflowAsync(workflowId, provisionProcessSequence, listener);
                     } else {
                         String errorMessage = "The template has already been provisioned: " + workflowId;
                         logger.error(errorMessage);
