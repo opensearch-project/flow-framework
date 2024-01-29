@@ -274,7 +274,7 @@ public class FlowFrameworkIndicesHandlerTests extends OpenSearchTestCase {
             responseListener.onResponse(new GetResponse(getResult));
             return null;
         }).when(client).get(any(GetRequest.class), any());
-        flowFrameworkIndicesHandler.isWorkflowProvisioned(documentId, function, listener);
+        flowFrameworkIndicesHandler.isWorkflowNotStarted(documentId, function, listener);
         ArgumentCaptor<Exception> exceptionCaptor = ArgumentCaptor.forClass(Exception.class);
         verify(listener, times(1)).onFailure(exceptionCaptor.capture());
         assertTrue(exceptionCaptor.getValue().getMessage().contains("Failed to parse workflow state"));

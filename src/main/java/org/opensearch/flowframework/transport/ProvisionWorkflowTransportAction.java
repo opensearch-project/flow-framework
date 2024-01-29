@@ -130,21 +130,32 @@ public class ProvisionWorkflowTransportAction extends HandledTransportAction<Wor
                 List<ProcessNode> provisionProcessSequence = workflowProcessSorter.sortProcessNodes(provisionWorkflow, workflowId);
                 workflowProcessSorter.validate(provisionProcessSequence, pluginsService);
 
-                flowFrameworkIndicesHandler.updateFlowFrameworkSystemIndexDoc(
-                    workflowId,
-                    Map.ofEntries(
-                        Map.entry(STATE_FIELD, State.PROVISIONING),
-                        Map.entry(PROVISIONING_PROGRESS_FIELD, ProvisioningProgress.IN_PROGRESS),
-                        Map.entry(PROVISION_START_TIME_FIELD, Instant.now().toEpochMilli()),
-                        Map.entry(RESOURCES_CREATED_FIELD, Collections.emptyList())
-                    ),
-                    ActionListener.wrap(updateResponse -> {
-                        logger.info("updated workflow {} state to PROVISIONING", request.getWorkflowId());
-                        listener.onResponse(new WorkflowResponse(workflowId));
-                    }, exception -> { logger.error("Failed to update workflow state : {}", exception.getMessage()); })
-                );
-
-                executeWorkflowAsync(workflowId, provisionProcessSequence, listener);
+                flowFrameworkIndicesHandler.isWorkflowNotStarted(workflowId, workflowIsNotStarted -> {
+                    if (workflowIsNotStarted) {
+                        flowFrameworkIndicesHandler.updateFlowFrameworkSystemIndexDoc(
+                            workflowId,
+                            Map.ofEntries(
+                                Map.entry(STATE_FIELD, State.PROVISIONING),
+                                Map.entry(PROVISIONING_PROGRESS_FIELD, ProvisioningProgress.IN_PROGRESS),
+                                Map.entry(PROVISION_START_TIME_FIELD, Instant.now().toEpochMilli()),
+                                Map.entry(RESOURCES_CREATED_FIELD, Collections.emptyList())
+                            ),
+                            ActionListener.wrap(updateResponse -> {
+                                logger.info("updated workflow {} state to {}", request.getWorkflowId(), State.PROVISIONING);
+                                executeWorkflowAsync(workflowId, provisionProcessSequence, listener);
+                                listener.onResponse(new WorkflowResponse(workflowId));
+                            }, exception -> {
+                                String errorMessage = "Failed to update wowrfow state: " + workflowId;
+                                logger.error(errorMessage, exception);
+                                listener.onFailure(new FlowFrameworkException(errorMessage, ExceptionsHelper.status(exception)));
+                            })
+                        );
+                    } else {
+                        String errorMessage = "The template has already been provisioned: " + workflowId;
+                        logger.error(errorMessage);
+                        listener.onFailure(new FlowFrameworkException(errorMessage, RestStatus.BAD_REQUEST));
+                    }
+                }, listener);
 
             }, exception -> {
                 if (exception instanceof FlowFrameworkException) {
