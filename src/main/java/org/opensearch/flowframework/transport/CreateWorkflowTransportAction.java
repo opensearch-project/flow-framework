@@ -60,7 +60,7 @@ public class CreateWorkflowTransportAction extends HandledTransportAction<Workfl
     private final PluginsService pluginsService;
 
     /**
-     * Intantiates a new CreateWorkflowTransportAction
+     * Instantiates a new CreateWorkflowTransportAction
      * @param transportService the TransportService
      * @param actionFilters action filters
      * @param workflowProcessSorter the workflow process sorter
