@@ -38,8 +38,8 @@ import java.util.concurrent.TimeUnit;
 
 import org.mockito.ArgumentCaptor;
 
+import static org.opensearch.flowframework.common.CommonValue.DEPROVISION_WORKFLOW_THREAD_POOL;
 import static org.opensearch.flowframework.common.CommonValue.FLOW_FRAMEWORK_THREAD_POOL_PREFIX;
-import static org.opensearch.flowframework.common.CommonValue.WORKFLOW_THREAD_POOL;
 import static org.opensearch.flowframework.common.WorkflowResources.CONNECTOR_ID;
 import static org.opensearch.flowframework.common.WorkflowResources.MODEL_ID;
 import static org.mockito.ArgumentMatchers.any;
@@ -57,11 +57,11 @@ public class DeprovisionWorkflowTransportActionTests extends OpenSearchTestCase 
     private static ThreadPool threadPool = new TestThreadPool(
         DeprovisionWorkflowTransportActionTests.class.getName(),
         new ScalingExecutorBuilder(
-            WORKFLOW_THREAD_POOL,
+            DEPROVISION_WORKFLOW_THREAD_POOL,
             1,
             OpenSearchExecutors.allocatedProcessors(Settings.EMPTY),
             TimeValue.timeValueMinutes(5),
-            FLOW_FRAMEWORK_THREAD_POOL_PREFIX + WORKFLOW_THREAD_POOL
+            FLOW_FRAMEWORK_THREAD_POOL_PREFIX + DEPROVISION_WORKFLOW_THREAD_POOL
         )
     );
     private Client client;

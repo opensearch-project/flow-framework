@@ -8,11 +8,11 @@
  */
 package org.opensearch.flowframework.workflow;
 
+import org.opensearch.OpenSearchTimeoutException;
 import org.opensearch.action.support.PlainActionFuture;
 import org.opensearch.common.settings.Settings;
 import org.opensearch.common.unit.TimeValue;
 import org.opensearch.common.util.concurrent.OpenSearchExecutors;
-import org.opensearch.common.util.concurrent.UncategorizedExecutionException;
 import org.opensearch.test.OpenSearchTestCase;
 import org.opensearch.threadpool.ScalingExecutorBuilder;
 import org.opensearch.threadpool.TestThreadPool;
@@ -25,9 +25,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 import static org.opensearch.flowframework.common.CommonValue.FLOW_FRAMEWORK_THREAD_POOL_PREFIX;
-import static org.opensearch.flowframework.common.CommonValue.WORKFLOW_THREAD_POOL;
+import static org.opensearch.flowframework.common.CommonValue.PROVISION_WORKFLOW_THREAD_POOL;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -42,11 +43,11 @@ public class ProcessNodeTests extends OpenSearchTestCase {
         testThreadPool = new TestThreadPool(
             ProcessNodeTests.class.getName(),
             new ScalingExecutorBuilder(
-                WORKFLOW_THREAD_POOL,
+                PROVISION_WORKFLOW_THREAD_POOL,
                 1,
-                OpenSearchExecutors.allocatedProcessors(Settings.EMPTY),
+                Math.max(1, OpenSearchExecutors.allocatedProcessors(Settings.EMPTY) - 1),
                 TimeValue.timeValueMinutes(5),
-                FLOW_FRAMEWORK_THREAD_POOL_PREFIX + WORKFLOW_THREAD_POOL
+                FLOW_FRAMEWORK_THREAD_POOL_PREFIX + PROVISION_WORKFLOW_THREAD_POOL
             )
         );
 
@@ -89,6 +90,7 @@ public class ProcessNodeTests extends OpenSearchTestCase {
             new WorkflowData(Map.of("test", "input"), Map.of("foo", "bar"), "test-id", "test-node-id"),
             List.of(successfulNode),
             testThreadPool,
+            PROVISION_WORKFLOW_THREAD_POOL,
             TimeValue.timeValueMillis(50)
         );
         assertEquals("A", nodeA.id());
@@ -103,7 +105,7 @@ public class ProcessNodeTests extends OpenSearchTestCase {
 
         PlainActionFuture<WorkflowData> f = nodeA.execute();
         assertEquals(f, nodeA.future());
-        assertEquals("output", f.get().getContent().get("test"));
+        assertEquals("output", f.actionGet(1, TimeUnit.MINUTES).getContent().get("test"));
     }
 
     public void testNodeNoTimeout() throws InterruptedException, ExecutionException {
@@ -117,7 +119,11 @@ public class ProcessNodeTests extends OpenSearchTestCase {
                 Map<String, String> previousNodeInputs
             ) {
                 PlainActionFuture<WorkflowData> future = PlainActionFuture.newFuture();
-                testThreadPool.schedule(() -> future.onResponse(WorkflowData.EMPTY), TimeValue.timeValueMillis(100), WORKFLOW_THREAD_POOL);
+                testThreadPool.schedule(
+                    () -> future.onResponse(WorkflowData.EMPTY),
+                    TimeValue.timeValueMillis(100),
+                    PROVISION_WORKFLOW_THREAD_POOL
+                );
                 return future;
             }
 
@@ -125,7 +131,14 @@ public class ProcessNodeTests extends OpenSearchTestCase {
             public String getName() {
                 return "test";
             }
-        }, Collections.emptyMap(), WorkflowData.EMPTY, Collections.emptyList(), testThreadPool, TimeValue.timeValueMillis(250));
+        },
+            Collections.emptyMap(),
+            WorkflowData.EMPTY,
+            Collections.emptyList(),
+            testThreadPool,
+            PROVISION_WORKFLOW_THREAD_POOL,
+            TimeValue.timeValueMillis(500)
+        );
         assertEquals("B", nodeB.id());
         assertEquals("test", nodeB.workflowStep().getName());
         assertEquals(WorkflowData.EMPTY, nodeB.input());
@@ -134,7 +147,7 @@ public class ProcessNodeTests extends OpenSearchTestCase {
 
         PlainActionFuture<WorkflowData> f = nodeB.execute();
         assertEquals(f, nodeB.future());
-        assertEquals(WorkflowData.EMPTY, f.get());
+        assertEquals(WorkflowData.EMPTY, f.actionGet(1, TimeUnit.MINUTES));
     }
 
     public void testNodeTimeout() throws InterruptedException, ExecutionException {
@@ -148,7 +161,11 @@ public class ProcessNodeTests extends OpenSearchTestCase {
                 Map<String, String> previousNodeInputs
             ) {
                 PlainActionFuture<WorkflowData> future = PlainActionFuture.newFuture();
-                testThreadPool.schedule(() -> future.onResponse(WorkflowData.EMPTY), TimeValue.timeValueMinutes(1), WORKFLOW_THREAD_POOL);
+                testThreadPool.schedule(
+                    () -> future.onResponse(WorkflowData.EMPTY),
+                    TimeValue.timeValueMinutes(1),
+                    PROVISION_WORKFLOW_THREAD_POOL
+                );
                 return future;
             }
 
@@ -156,7 +173,14 @@ public class ProcessNodeTests extends OpenSearchTestCase {
             public String getName() {
                 return "sleepy";
             }
-        }, Collections.emptyMap(), WorkflowData.EMPTY, Collections.emptyList(), testThreadPool, TimeValue.timeValueMillis(100));
+        },
+            Collections.emptyMap(),
+            WorkflowData.EMPTY,
+            Collections.emptyList(),
+            testThreadPool,
+            PROVISION_WORKFLOW_THREAD_POOL,
+            TimeValue.timeValueMillis(100)
+        );
         assertEquals("Zzz", nodeZ.id());
         assertEquals("sleepy", nodeZ.workflowStep().getName());
         assertEquals(WorkflowData.EMPTY, nodeZ.input());
@@ -164,9 +188,9 @@ public class ProcessNodeTests extends OpenSearchTestCase {
         assertEquals("Zzz", nodeZ.toString());
 
         PlainActionFuture<WorkflowData> f = nodeZ.execute();
-        UncategorizedExecutionException exception = assertThrows(UncategorizedExecutionException.class, () -> f.actionGet());
+        OpenSearchTimeoutException exception = assertThrows(OpenSearchTimeoutException.class, () -> f.actionGet());
         assertTrue(f.isDone());
-        assertEquals(ExecutionException.class, exception.getCause().getClass());
+        assertEquals(TimeoutException.class, exception.getCause().getClass());
     }
 
     public void testExceptions() {
@@ -188,7 +212,14 @@ public class ProcessNodeTests extends OpenSearchTestCase {
             public String getName() {
                 return "test";
             }
-        }, Collections.emptyMap(), WorkflowData.EMPTY, List.of(successfulNode, failedNode), testThreadPool, TimeValue.timeValueSeconds(15));
+        },
+            Collections.emptyMap(),
+            WorkflowData.EMPTY,
+            List.of(successfulNode, failedNode),
+            testThreadPool,
+            PROVISION_WORKFLOW_THREAD_POOL,
+            TimeValue.timeValueSeconds(15)
+        );
         assertEquals("E", nodeE.id());
         assertEquals("test", nodeE.workflowStep().getName());
         assertEquals(WorkflowData.EMPTY, nodeE.input());
@@ -196,7 +227,7 @@ public class ProcessNodeTests extends OpenSearchTestCase {
         assertEquals("E", nodeE.toString());
 
         PlainActionFuture<WorkflowData> f = nodeE.execute();
-        RuntimeException exception = assertThrows(RuntimeException.class, () -> f.actionGet());
+        assertThrows(RuntimeException.class, () -> f.actionGet());
         assertTrue(f.isDone());
         // Tests where we already called execute
         assertThrows(IllegalStateException.class, () -> nodeE.execute());

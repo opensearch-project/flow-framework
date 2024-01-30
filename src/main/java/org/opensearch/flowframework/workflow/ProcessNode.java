@@ -12,16 +12,12 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.opensearch.action.support.PlainActionFuture;
 import org.opensearch.common.unit.TimeValue;
-import org.opensearch.threadpool.Scheduler.ScheduledCancellable;
 import org.opensearch.threadpool.ThreadPool;
 
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.TimeoutException;
-
-import static org.opensearch.flowframework.common.CommonValue.WORKFLOW_THREAD_POOL;
 
 /**
  * Representation of a process node in a workflow graph.
@@ -37,6 +33,7 @@ public class ProcessNode {
     private final WorkflowData input;
     private final List<ProcessNode> predecessors;
     private final ThreadPool threadPool;
+    private final String threadPoolName;
     private final TimeValue nodeTimeout;
 
     private final PlainActionFuture<WorkflowData> future = PlainActionFuture.newFuture();
@@ -50,6 +47,7 @@ public class ProcessNode {
      * @param input Input required by the node encoded in a {@link WorkflowData} instance.
      * @param predecessors Nodes preceding this one in the workflow
      * @param threadPool The OpenSearch thread pool
+     * @param threadPoolName The thread pool to use
      * @param nodeTimeout The timeout value for executing on this node
      */
     public ProcessNode(
@@ -59,6 +57,7 @@ public class ProcessNode {
         WorkflowData input,
         List<ProcessNode> predecessors,
         ThreadPool threadPool,
+        String threadPoolName,
         TimeValue nodeTimeout
     ) {
         this.id = id;
@@ -67,6 +66,7 @@ public class ProcessNode {
         this.input = input;
         this.predecessors = predecessors;
         this.threadPool = threadPool;
+        this.threadPoolName = threadPoolName;
         this.nodeTimeout = nodeTimeout;
     }
 
@@ -152,17 +152,9 @@ public class ProcessNode {
                     WorkflowData wd = node.future().actionGet();
                     inputMap.put(wd.getNodeId(), wd);
                 }
-                logger.info("Starting {}.", this.id);
 
-                ScheduledCancellable delayExec = null;
-                if (this.nodeTimeout.compareTo(TimeValue.ZERO) > 0) {
-                    delayExec = threadPool.schedule(() -> {
-                        if (!future.isDone()) {
-                            future.onFailure(new TimeoutException("Execute timed out for " + this.id));
-                        }
-                    }, this.nodeTimeout, ThreadPool.Names.SAME);
-                }
                 // record start time for this step.
+                logger.info("Starting {}.", this.id);
                 PlainActionFuture<WorkflowData> stepFuture = this.workflowStep.execute(
                     this.id,
                     this.input,
@@ -170,16 +162,13 @@ public class ProcessNode {
                     this.previousNodeInputs
                 );
                 // If completed exceptionally, this is a no-op
-                future.onResponse(stepFuture.get());
+                future.onResponse(stepFuture.actionGet(this.nodeTimeout));
                 // record end time passing workflow steps
-                if (delayExec != null) {
-                    delayExec.cancel();
-                }
                 logger.info("Finished {}.", this.id);
             } catch (Exception e) {
                 this.future.onFailure(e);
             }
-        }, threadPool.executor(WORKFLOW_THREAD_POOL));
+        }, threadPool.executor(this.threadPoolName));
         return this.future;
     }
 
