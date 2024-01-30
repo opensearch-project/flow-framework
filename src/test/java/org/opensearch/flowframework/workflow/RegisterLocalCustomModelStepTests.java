@@ -41,6 +41,7 @@ import org.mockito.MockitoAnnotations;
 
 import static org.opensearch.action.DocWriteResponse.Result.UPDATED;
 import static org.opensearch.flowframework.common.CommonValue.FLOW_FRAMEWORK_THREAD_POOL_PREFIX;
+import static org.opensearch.flowframework.common.CommonValue.PROVISION_WORKFLOW_THREAD_POOL;
 import static org.opensearch.flowframework.common.CommonValue.REGISTER_MODEL_STATUS;
 import static org.opensearch.flowframework.common.CommonValue.WORKFLOW_STATE_INDEX;
 import static org.opensearch.flowframework.common.CommonValue.WORKFLOW_THREAD_POOL;
@@ -81,9 +82,16 @@ public class RegisterLocalCustomModelStepTests extends OpenSearchTestCase {
             new ScalingExecutorBuilder(
                 WORKFLOW_THREAD_POOL,
                 1,
-                OpenSearchExecutors.allocatedProcessors(Settings.EMPTY),
-                TimeValue.timeValueMinutes(5),
+                Math.max(1, OpenSearchExecutors.allocatedProcessors(Settings.EMPTY) - 1),
+                TimeValue.timeValueMinutes(1),
                 FLOW_FRAMEWORK_THREAD_POOL_PREFIX + WORKFLOW_THREAD_POOL
+            ),
+            new ScalingExecutorBuilder(
+                PROVISION_WORKFLOW_THREAD_POOL,
+                1,
+                Math.max(1, OpenSearchExecutors.allocatedProcessors(Settings.EMPTY) - 1),
+                TimeValue.timeValueMinutes(5),
+                FLOW_FRAMEWORK_THREAD_POOL_PREFIX + PROVISION_WORKFLOW_THREAD_POOL
             )
         );
         this.registerLocalModelStep = new RegisterLocalCustomModelStep(
