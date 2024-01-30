@@ -412,8 +412,8 @@ public class FlowFrameworkIndicesHandler {
         }
         doesTemplateExist(documentId, templateExists -> {
             if (templateExists) {
-                isWorkflowProvisioned(documentId, workflowIsProvisioned -> {
-                    if (workflowIsProvisioned) {
+                isWorkflowNotStarted(documentId, workflowIsNotStarted -> {
+                    if (workflowIsNotStarted) {
                         IndexRequest request = new IndexRequest(GLOBAL_CONTEXT_INDEX).id(documentId);
                         try (
                             XContentBuilder builder = XContentFactory.jsonBuilder();
@@ -474,7 +474,7 @@ public class FlowFrameworkIndicesHandler {
      * @param listener action listener
      * @param <T> action listener response type
      */
-    public <T> void isWorkflowProvisioned(String documentId, Consumer<Boolean> booleanResultConsumer, ActionListener<T> listener) {
+    public <T> void isWorkflowNotStarted(String documentId, Consumer<Boolean> booleanResultConsumer, ActionListener<T> listener) {
         GetRequest getRequest = new GetRequest(WORKFLOW_STATE_INDEX, documentId);
         try (ThreadContext.StoredContext context = client.threadPool().getThreadContext().stashContext()) {
             client.get(getRequest, ActionListener.wrap(response -> {

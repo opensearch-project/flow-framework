@@ -42,11 +42,11 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.stream.Collectors;
 
+import static org.opensearch.flowframework.common.CommonValue.DEPROVISION_WORKFLOW_THREAD_POOL;
 import static org.opensearch.flowframework.common.CommonValue.PROVISIONING_PROGRESS_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.PROVISION_START_TIME_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.RESOURCES_CREATED_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.STATE_FIELD;
-import static org.opensearch.flowframework.common.CommonValue.WORKFLOW_THREAD_POOL;
 import static org.opensearch.flowframework.common.WorkflowResources.getDeprovisionStepByWorkflowStep;
 import static org.opensearch.flowframework.common.WorkflowResources.getResourceByWorkflowStep;
 
@@ -102,7 +102,7 @@ public class DeprovisionWorkflowTransportAction extends HandledTransportAction<W
                 context.restore();
 
                 // Retrieve resources from workflow state and deprovision
-                threadPool.executor(WORKFLOW_THREAD_POOL)
+                threadPool.executor(DEPROVISION_WORKFLOW_THREAD_POOL)
                     .execute(() -> executeDeprovisionSequence(workflowId, response.getWorkflowState().resourcesCreated(), listener));
             }, exception -> {
                 String message = "Failed to get workflow state for workflow " + workflowId;
@@ -143,6 +143,7 @@ public class DeprovisionWorkflowTransportAction extends HandledTransportAction<W
                     new WorkflowData(Map.of(getResourceByWorkflowStep(stepName), resource.resourceId()), workflowId, deprovisionStepId),
                     Collections.emptyList(),
                     this.threadPool,
+                    DEPROVISION_WORKFLOW_THREAD_POOL,
                     flowFrameworkSettings.getRequestTimeout()
                 )
             );
@@ -196,6 +197,7 @@ public class DeprovisionWorkflowTransportAction extends HandledTransportAction<W
                         pn.input(),
                         pn.predecessors(),
                         this.threadPool,
+                        DEPROVISION_WORKFLOW_THREAD_POOL,
                         pn.nodeTimeout()
                     );
                 }).collect(Collectors.toList());

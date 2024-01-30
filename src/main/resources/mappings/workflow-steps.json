@@ -19,7 +19,8 @@
         ],
         "required_plugins":[
             "opensearch-ml"
-        ]
+        ],
+        "timeout": "60s"
     },
     "delete_connector": {
         "inputs": [

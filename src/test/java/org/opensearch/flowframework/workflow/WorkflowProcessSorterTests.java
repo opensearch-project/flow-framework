@@ -43,8 +43,8 @@ import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import static org.opensearch.flowframework.common.CommonValue.DEPROVISION_WORKFLOW_THREAD_POOL;
 import static org.opensearch.flowframework.common.CommonValue.FLOW_FRAMEWORK_THREAD_POOL_PREFIX;
-import static org.opensearch.flowframework.common.CommonValue.WORKFLOW_THREAD_POOL;
 import static org.opensearch.flowframework.common.FlowFrameworkSettings.FLOW_FRAMEWORK_ENABLED;
 import static org.opensearch.flowframework.common.FlowFrameworkSettings.MAX_WORKFLOWS;
 import static org.opensearch.flowframework.common.FlowFrameworkSettings.MAX_WORKFLOW_STEPS;
@@ -112,11 +112,11 @@ public class WorkflowProcessSorterTests extends OpenSearchTestCase {
         testThreadPool = new TestThreadPool(
             WorkflowProcessSorterTests.class.getName(),
             new ScalingExecutorBuilder(
-                WORKFLOW_THREAD_POOL,
+                DEPROVISION_WORKFLOW_THREAD_POOL,
                 1,
-                OpenSearchExecutors.allocatedProcessors(Settings.EMPTY),
+                Math.max(1, OpenSearchExecutors.allocatedProcessors(Settings.EMPTY) - 1),
                 TimeValue.timeValueMinutes(5),
-                FLOW_FRAMEWORK_THREAD_POOL_PREFIX + WORKFLOW_THREAD_POOL
+                FLOW_FRAMEWORK_THREAD_POOL_PREFIX + DEPROVISION_WORKFLOW_THREAD_POOL
             )
         );
         WorkflowStepFactory factory = new WorkflowStepFactory(
@@ -141,7 +141,7 @@ public class WorkflowProcessSorterTests extends OpenSearchTestCase {
         workflow = parseToNodes(
             workflow(
                 List.of(
-                    nodeWithType("default_timeout", "create_connector"),
+                    nodeWithType("default_timeout", "noop"),
                     nodeWithTypeAndTimeout("custom_timeout", "register_local_custom_model", "100ms")
                 ),
                 Collections.emptyList()
@@ -149,7 +149,7 @@ public class WorkflowProcessSorterTests extends OpenSearchTestCase {
         );
         ProcessNode node = workflow.get(0);
         assertEquals("default_timeout", node.id());
-        assertEquals(CreateConnectorStep.class, node.workflowStep().getClass());
+        assertEquals(NoOpStep.class, node.workflowStep().getClass());
         assertEquals(10, node.nodeTimeout().seconds());
         node = workflow.get(1);
         assertEquals("custom_timeout", node.id());
