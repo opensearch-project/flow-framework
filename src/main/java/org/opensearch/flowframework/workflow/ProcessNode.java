@@ -12,14 +12,12 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.opensearch.action.support.PlainActionFuture;
 import org.opensearch.common.unit.TimeValue;
-import org.opensearch.threadpool.Scheduler.ScheduledCancellable;
 import org.opensearch.threadpool.ThreadPool;
 
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.TimeoutException;
 
 /**
  * Representation of a process node in a workflow graph.
@@ -154,17 +152,9 @@ public class ProcessNode {
                     WorkflowData wd = node.future().actionGet();
                     inputMap.put(wd.getNodeId(), wd);
                 }
-                logger.info("Starting {}.", this.id);
 
-                ScheduledCancellable delayExec = null;
-                if (this.nodeTimeout.compareTo(TimeValue.ZERO) > 0) {
-                    delayExec = threadPool.schedule(() -> {
-                        if (!future.isDone()) {
-                            future.onFailure(new TimeoutException("Execute timed out for " + this.id));
-                        }
-                    }, this.nodeTimeout, ThreadPool.Names.SAME);
-                }
                 // record start time for this step.
+                logger.info("Starting {}.", this.id);
                 PlainActionFuture<WorkflowData> stepFuture = this.workflowStep.execute(
                     this.id,
                     this.input,
@@ -172,11 +162,8 @@ public class ProcessNode {
                     this.previousNodeInputs
                 );
                 // If completed exceptionally, this is a no-op
-                future.onResponse(stepFuture.get());
+                future.onResponse(stepFuture.actionGet(this.nodeTimeout));
                 // record end time passing workflow steps
-                if (delayExec != null) {
-                    delayExec.cancel();
-                }
                 logger.info("Finished {}.", this.id);
             } catch (Exception e) {
                 this.future.onFailure(e);
