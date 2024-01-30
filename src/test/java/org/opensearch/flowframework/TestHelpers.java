@@ -113,6 +113,15 @@ public class TestHelpers {
         if (entity != null) {
             request.setEntity(entity);
         }
+        try {
+            return client.performRequest(request);
+        } catch (IOException e) {
+            // In restricted resource cluster, initialization of REST clients on other nodes takes time
+            // Wait 10 seconds and try again
+            try {
+                Thread.sleep(10000);
+            } catch (InterruptedException ie) {}
+        }
         return client.performRequest(request);
     }
 

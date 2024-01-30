@@ -38,6 +38,7 @@ import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import static org.opensearch.flowframework.common.CommonValue.PROVISION_WORKFLOW_THREAD_POOL;
 import static org.opensearch.flowframework.common.FlowFrameworkSettings.MAX_WORKFLOW_STEPS;
 import static org.opensearch.flowframework.model.WorkflowNode.NODE_TIMEOUT_DEFAULT_VALUE;
 import static org.opensearch.flowframework.model.WorkflowNode.NODE_TIMEOUT_FIELD;
@@ -122,6 +123,7 @@ public class WorkflowProcessSorter {
                 data,
                 predecessorNodes,
                 threadPool,
+                PROVISION_WORKFLOW_THREAD_POOL,
                 nodeTimeout
             );
             idToNodeMap.put(processNode.id(), processNode);
