@@ -216,6 +216,9 @@ integTest {
         is_https = is_https == null ? 'true' : is_https
         user = user == null ? 'admin' : user
         password = password == null ? 'admin' : password
+        System.setProperty("https", is_https)
+        System.setProperty("user", user)
+        System.setProperty("password", password)
     }
     systemProperty('https', is_https)
     systemProperty('user', user)
@@ -229,14 +232,14 @@ integTest {
     }
 
     // Exclude integration tests that require security plugin
-    if (System.getProperty("security.enabled") == null || System.getProperty("security.enabled") == "false") {
+    if (System.getProperty("https") == null || System.getProperty("https") == "false") {
         filter {
             excludeTestsMatching "org.opensearch.flowframework.rest.FlowFrameworkSecureRestApiIT"
         }
     }
 
     // Include only secure integration tests in security enabled clusters
-    if (System.getProperty("security.enabled") != null && System.getProperty("security.enabled") == "true") {
+    if (System.getProperty("https") != null && System.getProperty("https") == "true") {
         filter {
             includeTestsMatching "org.opensearch.flowframework.rest.FlowFrameworkSecureRestApiIT"
             excludeTestsMatching "org.opensearch.flowframework.rest.FlowFrameworkRestApiIT"
@@ -269,7 +272,7 @@ testClusters.integTest {
     testDistribution = "ARCHIVE"
 
     // Optionally install security
-    if (System.getProperty("security.enabled") != null && System.getProperty("security.enabled") == "true") {
+    if (System.getProperty("https") != null && System.getProperty("https") == "true") {
         // Retrieve Security Plugin Zip from zipArchive
         configurations.secureIntegTestPluginArchive.asFileTree.each {
             if(it.name.contains("opensearch-security")) {
@@ -376,6 +379,9 @@ task integTestRemote(type: RestIntegTestTask) {
         is_https = is_https == null ? 'true' : is_https
         user = user == null ? 'admin' : user
         password = password == null ? 'admin' : password
+        System.setProperty("https", is_https)
+        System.setProperty("user", user)
+        System.setProperty("password", password)
     }
     systemProperty('https', is_https)
     systemProperty('user', user)
