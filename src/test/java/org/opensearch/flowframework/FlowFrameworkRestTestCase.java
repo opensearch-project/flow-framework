@@ -283,15 +283,25 @@ public abstract class FlowFrameworkRestTestCase extends OpenSearchRestTestCase {
 
             for (Map<String, Object> index : parserList) {
                 String indexName = (String) index.get("index");
-                // Do not reset ML/Flow Framework encryption index as this is needed to encrypt connector credentials
-                if (indexName != null
-                    && !".opendistro_security".equals(indexName)
-                    && !".plugins-ml-config".equals(indexName)
-                    && !".plugins-flow-framework-config".equals(indexName)) {
-                    adminClient().performRequest(new Request("DELETE", "/" + indexName));
+                if (indexName != null) {
+                    // Filter out system index deletion only when running security enabled tests
+                    if (isHttps() && isSystemIndex(indexName)) {
+                        continue;
+                    }
+                    // Do not reset ML/Flow Framework encryption index as this is needed to encrypt connector credentials
+                    if (!".plugins-ml-config".equals(indexName) && !".plugins-flow-framework-config".equals(indexName)) {
+                        adminClient().performRequest(new Request("DELETE", "/" + indexName));
+                    }
                 }
             }
         }
+    }
+
+    private boolean isSystemIndex(String indexName) {
+        return ".opendistro_security".equals(indexName)
+            || indexName.startsWith(".opensearch")
+            || indexName.startsWith(".plugins-flow-framework")
+            || indexName.startsWith(".plugins-ml");
     }
 
     /**
