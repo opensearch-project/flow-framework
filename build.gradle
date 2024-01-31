@@ -333,7 +333,8 @@ testClusters.integTest {
                 '".plugins-ml-config", ' +
                 '".plugins-ml-connector", ' +
                 '".plugins-ml-model-group", ' +
-                '".plugins-ml-model", ".plugins-ml-task", ' +
+                '".plugins-ml-model", ' +
+                '".plugins-ml-task", ' +
                 '".plugins-ml-conversation-meta", ' +
                 '".plugins-ml-conversation-interactions", ' +
                 '".plugins-flow-framework-config", ' +
