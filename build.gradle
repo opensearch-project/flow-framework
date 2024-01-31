@@ -329,6 +329,19 @@ testClusters.integTest {
         setting("plugins.security.authcz.admin_dn", "\n- CN=kirk,OU=client,O=client,L=test, C=de")
         setting('plugins.security.restapi.roles_enabled', '["all_access", "security_rest_api_access"]')
         setting('plugins.security.system_indices.enabled', "true")
+        setting('plugins.security.system_indices.indices', '[' +
+                '".plugins-ml-config", ' +
+                '".plugins-ml-connector", ' +
+                '".plugins-ml-model-group", ' +
+                '".plugins-ml-model", ' +
+                '".plugins-ml-task", ' +
+                '".plugins-ml-conversation-meta", ' +
+                '".plugins-ml-conversation-interactions", ' +
+                '".plugins-flow-framework-config", ' +
+                '".plugins-flow-framework-templates", ' +
+                '".plugins-flow-framework-state"' +
+                ']'
+        )
         setSecure(true)
     }
 
