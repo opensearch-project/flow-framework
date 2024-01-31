@@ -73,6 +73,8 @@ public abstract class FlowFrameworkRestTestCase extends OpenSearchRestTestCase {
     private static RestClient readAccessClient;
     private static RestClient fullAccessClient;
 
+    private RestClient adminClient = adminClient();
+
     @Before
     protected void setUpSettings() throws Exception {
 
@@ -159,6 +161,7 @@ public abstract class FlowFrameworkRestTestCase extends OpenSearchRestTestCase {
                 FULL_ACCESS_USER,
                 fullAccessUserPassword
             ).setSocketTimeout(60000).build();
+            this.adminClient = fullAccessClient;
 
             // Configure read access user and client
             response = createUser(READ_ACCESS_USER, readAccessUserPassword, List.of(READ_ACCESS_ROLE));
@@ -196,16 +199,16 @@ public abstract class FlowFrameworkRestTestCase extends OpenSearchRestTestCase {
 
     // Utility fn for deleting indices. Should only be used when not allowed in a regular context
     // (e.g., deleting system indices)
-    protected static void deleteIndexWithAdminClient(String name) throws IOException {
+    protected void deleteIndexWithAdminClient(String name) throws IOException {
         Request request = new Request("DELETE", "/" + name);
-        adminClient().performRequest(request);
+        adminClient.performRequest(request);
     }
 
     // Utility fn for checking if an index exists. Should only be used when not allowed in a regular context
     // (e.g., checking existence of system indices)
-    public static boolean indexExistsWithAdminClient(String indexName) throws IOException {
+    public boolean indexExistsWithAdminClient(String indexName) throws IOException {
         Request request = new Request("HEAD", "/" + indexName);
-        Response response = adminClient().performRequest(request);
+        Response response = adminClient.performRequest(request);
         return RestStatus.OK.getStatus() == response.getStatusLine().getStatusCode();
     }
 
@@ -272,7 +275,7 @@ public abstract class FlowFrameworkRestTestCase extends OpenSearchRestTestCase {
     @SuppressWarnings("unchecked")
     @After
     protected void wipeAllODFEIndices() throws IOException {
-        Response response = adminClient().performRequest(new Request("GET", "/_cat/indices?format=json&expand_wildcards=all"));
+        Response response = adminClient.performRequest(new Request("GET", "/_cat/indices?format=json&expand_wildcards=all"));
         MediaType xContentType = MediaType.fromMediaType(response.getEntity().getContentType());
         try (
             XContentParser parser = xContentType.xContent()
@@ -297,7 +300,7 @@ public abstract class FlowFrameworkRestTestCase extends OpenSearchRestTestCase {
                     && !".opendistro_security".equals(indexName)
                     && !".plugins-ml-config".equals(indexName)
                     && !".plugins-flow-framework-config".equals(indexName)) {
-                    adminClient().performRequest(new Request("DELETE", "/" + indexName));
+                    adminClient.performRequest(new Request("DELETE", "/" + indexName));
                 }
             }
         }
