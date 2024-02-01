@@ -54,7 +54,7 @@ jobs:
           ./gradlew check -x integTest -x yamlRestTest -x spotlessJava
       - name: Upload Coverage Report
         if: ${{ matrix.codecov }}
-        uses: codecov/codecov-action@v3
+        uses: codecov/codecov-action@v4
         with:
           file: ./build/reports/jacoco/test/jacocoTestReport.xml
   integTest:
