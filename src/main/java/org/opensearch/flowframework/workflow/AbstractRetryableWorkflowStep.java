@@ -75,7 +75,7 @@ public abstract class AbstractRetryableWorkflowStep implements WorkflowStep {
         ActionListener<MLTask> mlTaskListener
     ) {
         CompletableFuture.runAsync(() -> {
-            while (!future.isDone()) {
+            do {
                 mlClient.getTask(taskId, ActionListener.wrap(response -> {
                     switch (response.getState()) {
                         case COMPLETED:
@@ -128,7 +128,7 @@ public abstract class AbstractRetryableWorkflowStep implements WorkflowStep {
                     FutureUtils.cancel(future);
                     Thread.currentThread().interrupt();
                 }
-            }
+            } while (!future.isDone());
         }, threadPool.executor(WORKFLOW_THREAD_POOL));
     }
 
