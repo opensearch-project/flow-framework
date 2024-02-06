@@ -1,0 +1,59 @@
+# This template creates a connector to the public OpenAI model service for GPT 3.5
+# It then registers a model using that connector and deploys it.
+#
+# To use:
+#  - update the "credential" field under the create_openai_connector node.
+#
+# After provisioning:
+#  - returns a workflow ID
+#  - use the status API to get the deployed model ID
+---
+name: Deploy OpenAI Model
+description: Deploy a model using a connector to OpenAI
+use_case: PROVISION
+version:
+  template: 1.0.0
+  compatibility:
+  - 2.12.0
+  - 3.0.0
+# This section defines the provision workflow. Nodes are connected in a graph.
+# Either previous_node_inputs or explicit edges can be used to enforce ordering.
+workflows:
+  provision:
+    # Each id field in a workflow must be unique.
+    nodes:
+    - id: create_openai_connector
+      type: create_connector
+      user_inputs:
+        name: OpenAI Chat Connector
+        description: The connector to public OpenAI model service for GPT 3.5
+        version: '1'
+        protocol: http
+        parameters:
+          endpoint: api.openai.com
+          model: gpt-3.5-turbo
+        credential:
+          openAI_key: 'PUT_YOUR_API_KEY_HERE'
+        actions:
+        - action_type: predict
+          method: POST
+          url: https://${parameters.endpoint}/v1/chat/completions
+    - id: register_openai_model
+      type: register_remote_model
+      previous_node_inputs:
+        create_openai_connector: connector_id
+      user_inputs:
+        name: openAI-gpt-3.5-turbo
+        # Using deploy: true here would both registers and deploy the model
+        # and the deploy model step below could be deleted
+        # deploy: true
+    - id: deploy_openai_model
+      type: deploy_model
+      previous_node_inputs:
+        register_openai_model: model_id
+    # Because the above nodes use previous_node_inputs, these edges are automatically generated.
+    # edges:
+    # - source: create_openai_connector
+    #   dest: register_openai_model
+    # - source: register_openai_model
+    #   dest: deploy_openai_model

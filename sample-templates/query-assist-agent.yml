@@ -1,0 +1,321 @@
+# This template creates connectors to the BedRock service for Claude model
+# and a Sagemaker t2ppl model.
+#
+# It then creates tools in the Agent Framework to create a query assist agent.
+#
+# To use:
+#  - update the "credential" fields under the create_claude_connector node.
+#  - if needed, update region
+#
+# After provisioning:
+#  - returns a workflow ID
+#  - use the status API to get the deployed model IDs and agent IDs
+#  - use those models and agents to create a chat experience
+---
+name: Query Assist Agent
+description: Create a Query Assist Agent using Bedrock and Sagemaker models
+use_case: REGISTER_AGENT
+version:
+  template: 1.0.0
+  compatibility:
+  - 2.12.0
+  - 3.0.0
+# This section defines the provision workflow. Nodes are connected in a graph.
+# Either previous_node_inputs or explicit edges can be used to enforce ordering.
+workflows:
+  provision:
+    nodes:
+    #
+    # SETUP EXTERNAL MODELS
+    #
+    # Create a connector to a BedRock Claude model and deploy the model
+    - id: create_claude_connector
+      type: create_connector
+      user_inputs:
+        name: Claude Instant Runtime Connector
+        version: '1'
+        protocol: aws_sigv4
+        description: The connector to BedRock service for Claude model
+        actions:
+        - headers:
+            x-amz-content-sha256: required
+            content-type: application/json
+          method: POST
+          request_body: '{
+              "prompt":"${parameters.prompt}",
+              "max_tokens_to_sample":${parameters.max_tokens_to_sample},
+              "temperature":${parameters.temperature},  "anthropic_version":"${parameters.anthropic_version}"
+            }'
+          action_type: predict
+          url: https://bedrock-runtime.us-west-2.amazonaws.com/model/anthropic.claude-instant-v1/invoke
+        credential:
+          access_key: 'PUT_YOUR_ACCESS_KEY_HERE'
+          secret_key: 'PUT_YOUR_SECRET_KEY_HERE'
+        parameters:
+          endpoint: bedrock-runtime.us-west-2.amazonaws.com
+          content_type: application/json
+          auth: Sig_V4
+          max_tokens_to_sample: '8000'
+          service_name: bedrock
+          temperature: '0.0001'
+          response_filter: "$.completion"
+          region: us-west-2
+          anthropic_version: bedrock-2023-05-31
+    - id: register_claude_model
+      type: register_remote_model
+      previous_node_inputs:
+        create_claude_connector: connector_id
+      user_inputs:
+        name: claude-instant
+        deploy: true
+    # Create a connector to a Sagemaker T2PPL model and deploy the model
+    - id: create_t2ppl_connector
+      type: create_connector
+      user_inputs:
+        name: 'sagemaker: t2ppl'
+        description: Test connector for Sagemaker t2ppl model
+        version: '1'
+        protocol: aws_sigv4
+        credential:
+          access_key: 'PUT_YOUR_ACCESS_KEY_HERE'
+          secret_key: 'PUT_YOUR_SECRET_KEY_HERE'
+        parameters:
+          region: us-east-1
+          service_name: sagemaker
+        actions:
+        - action_type: predict
+          method: POST
+          headers:
+            content-type: application/json
+          url: https://runtime.sagemaker.us-east-1.amazonaws.com/endpoints/PUT_YOUR_ENDPOINT_HERE/invocations
+          request_body: '{"prompt":"${parameters.prompt}"}'
+    - id: register_t2ppl_model
+      type: register_remote_model
+      previous_node_inputs:
+        create_t2ppl_connector: connector_id
+      user_inputs:
+        name: t2ppl fine-tuned model
+        deploy: true
+    #
+    # SETUP PPL AGENT
+    #
+    # Create a PPLTool
+    - id: TransferQuestionToPPLAndExecuteTool
+      type: create_tool
+      previous_node_inputs:
+        register_t2ppl_model: model_id
+      user_inputs:
+        type: PPLTool
+        name: TransferQuestionToPPLAndExecuteTool
+        description: 'Use this tool to transfer natural language to generate PPL and
+          execute PPL to query inside. Use this tool after you know the index name,
+          otherwise, call IndexRoutingTool first. The input parameters are: {index:IndexName,
+          question:UserQuestion}'
+        parameters:
+          response_filter: "$.completion"
+          execute: false
+          prompt: |
+            Below is an instruction that describes a task, paired with the index and corresponding fields that provides further context. Write a response that appropriately completes the request.
+
+            ### Instruction:
+            I have an opensearch index with fields in the following. Now I have a question: ${indexInfo.question} Can you help me generate a PPL for that?
+
+            ### Index:
+            ${indexInfo.indexName}
+
+            ### Fields:
+            ${indexInfo.mappingInfo}
+
+            ### Response:
+        include_output_in_agent_response: true
+      # Create a flow agent to use the PPLTool
+    - id: ppl_agent
+      type: register_agent
+      previous_node_inputs:
+        TransferQuestionToPPLAndExecuteTool: tools
+      user_inputs:
+        parameters: {}
+        app_type: query_assist
+        name: PPL agent
+        description: this is the PPL agent
+        type: flow
+    #
+    # SETUP RESPONPSE SUMMARY AGENT
+    #
+    # Create a tool to summarize successful results in natural language
+    - id: summarize_success_tool
+      type: create_tool
+      previous_node_inputs:
+        register_claude_model: model_id
+      user_inputs:
+        type: MLModelTool
+        Name: SummarizeSuccessTool
+        description: Use this tool to summarize a PPL success response in query assist
+        parameters:
+          prompt: |2-
+
+
+            Human: You will be given a search response, summarize it as a concise paragraph while considering the following:
+            User's question on index '${parameters.index}': ${parameters.question}
+            PPL (Piped Processing Language) query used: ${parameters.query}
+
+            Give some documents to support your point.
+            Note that the output could be truncated, summarize what you see. Don't mention about total items returned and don't mention about the fact that output is truncated if you see 'Output is too long, truncated' in the response.
+
+            Skip the introduction; go straight into the summarization.
+
+            Use the following pieces of context to answer the users question.
+            If you don't know the answer, just say that you don't know, don't try to make up an answer.
+            ----------------
+            ${parameters.response}
+
+            Assistant:
+          response_filter: "$.completion"
+    # Create a flow agent to use the PPLTool
+    - id: response_summary_agent
+      type: register_agent
+      previous_node_inputs:
+        summarize_success_tool: tools
+      user_inputs:
+        parameters: {}
+        app_type: query_assist
+        name: Response summary agent
+        description: this is the summarize success PPL response agent
+        type: flow
+    #
+    # SETUP ERROR AND SUGGESTIONS AGENT
+    #
+    # Create a tool to summarize error results in natural language
+    - id: summarize_error_tool
+      type: create_tool
+      previous_node_inputs:
+        register_claude_model: model_id
+      user_inputs:
+        type: MLModelTool
+        name: SummarizeErrorTool
+        description: Use this tool to summarize a PPL error response in query assist
+        include_output_in_agent_response: true
+        parameters:
+          prompt: |2-
+
+
+            Human: You will be given an API response with errors, summarize it as a concise paragraph. Do not try to answer the user's question.
+            If the error cannot be fixed, eg. no such field or function not supported, then give suggestions to rephrase the question.
+            It is imperative that you must not give suggestions on how to fix the error or alternative PPL query, or answers to the question.
+
+            Consider the following:
+            User's question on index '${parameters.index}': ${parameters.question}
+            PPL (Piped Processing Language) query used: ${parameters.query}
+
+            Skip the introduction; go straight into the summarization.
+
+            Use the following pieces of context to answer the users question.
+            If you don't know the answer, just say that you don't know, don't try to make up an answer.
+            ----------------
+            ${parameters.response}
+
+            Assistant:
+          response_filter: "$.completion"
+    # Create a tool to give suggestions for future questions
+    - id: suggestions_tool
+      type: create_tool
+      previous_node_inputs:
+        register_claude_model: model_id
+      user_inputs:
+        type: MLModelTool
+        name: SuggestionsTool
+        description: Use this tool to generate possible questions for an index in query
+          assist
+        include_output_in_agent_response: true
+        parameters:
+          prompt: |2-
+
+
+            Human: OpenSearch index: ${parameters.index}
+
+            Recommend 2 or 3 possible questions on this index given the fields below. Only give the questions, do not give descriptions of questions and do not give PPL queries.
+
+            The format for a field is
+            ```
+            - field_name: field_type (sample field value)
+            ```
+
+            Fields:
+            ${parameters.fields}
+
+            Put each question in a <question> tag.
+
+            Assistant:
+          response_filter: "$.completion"
+    # Create a flow agent to summarize the errors and suggest possible questions
+    - id: error_summary_agent
+      type: register_agent
+      previous_node_inputs:
+        summarize_error_tool: tools
+        suggestions_tool: tools
+      user_inputs:
+        parameters: {}
+        app_type: query_assist
+        name: Error summary agent
+        description: this is the agent for summarizing PPL error and give suggested questions
+        tools_order:
+        - summarize_error_tool
+        - suggestions_tool
+        type: flow
+    #
+    # WRAP AGENTS IN AGENT TOOLS FOR ROOT AGENT
+    #
+    - id: ppl_agent_tool
+      type: create_tool
+      previous_node_inputs:
+        ppl_agent: agent_id
+      user_inputs:
+        description: PPL Agent Tool
+        include_output_in_agent_response: true
+        type: AgentTool
+        parameters:
+          max_iteration: '5'
+        name: PPLAgentTool
+    - id: response_summary_agent_tool
+      type: create_tool
+      previous_node_inputs:
+        response_summary_agent: agent_id
+      user_inputs:
+        description: Response Summary Agent Tool
+        include_output_in_agent_response: true
+        type: AgentTool
+        parameters:
+          max_iteration: '5'
+        name: ResponseSummaryPPLAgentTool
+    - id: error_summary_agent_tool
+      type: create_tool
+      previous_node_inputs:
+        error_summary_agent: agent_id
+      user_inputs:
+        description: Error Summary Agent Tool
+        include_output_in_agent_response: true
+        type: AgentTool
+        parameters:
+          max_iteration: '5'
+        name: ErrorSummaryAgentTool
+    # The root agent will use the agent tools
+    - id: root_agent
+      type: register_agent
+      previous_node_inputs:
+        ppl_agent_tool: tools
+        response_summary_agent_tool: tools
+        error_summary_agent_tool: tools
+        register_claude_model: model_id
+      user_inputs:
+        parameters:
+          prompt: Answer the question as best you can.
+        app_type: chatbot
+        name: Root agent
+        description: this is the root agent
+        tools_order:
+        - ppl_agent_tool
+        - response_summary_agent_tool
+        - error_summary_agent_tool
+        memory:
+          type: conversation_index
+        type: flow

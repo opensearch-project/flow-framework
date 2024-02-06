@@ -1,0 +1,59 @@
+{
+  "name": "Deploy OpenAI Model",
+  "description": "Deploy a model using a connector to OpenAI",
+  "use_case": "PROVISION",
+  "version": {
+    "template": "1.0.0",
+    "compatibility": [
+      "2.12.0",
+      "3.0.0"
+    ]
+  },
+  "workflows": {
+    "provision": {
+      "nodes": [
+        {
+          "id": "create_openai_connector",
+          "type": "create_connector",
+          "user_inputs": {
+            "name": "OpenAI Chat Connector",
+            "description": "The connector to public OpenAI model service for GPT 3.5",
+            "version": "1",
+            "protocol": "http",
+            "parameters": {
+              "endpoint": "api.openai.com",
+              "model": "gpt-3.5-turbo"
+            },
+            "credential": {
+              "openAI_key": "PUT_YOUR_API_KEY_HERE"
+            },
+            "actions": [
+              {
+                "action_type": "predict",
+                "method": "POST",
+                "url": "https://${parameters.endpoint}/v1/chat/completions"
+              }
+            ]
+          }
+        },
+        {
+          "id": "register_openai_model",
+          "type": "register_remote_model",
+          "previous_node_inputs": {
+            "create_openai_connector": "connector_id"
+          },
+          "user_inputs": {
+            "name": "openAI-gpt-3.5-turbo"
+          }
+        },
+        {
+          "id": "deploy_openai_model",
+          "type": "deploy_model",
+          "previous_node_inputs": {
+            "register_openai_model": "model_id"
+          }
+        }
+      ]
+    }
+  }
+}
