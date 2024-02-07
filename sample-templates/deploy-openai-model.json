@@ -22,7 +22,8 @@
             "protocol": "http",
             "parameters": {
               "endpoint": "api.openai.com",
-              "model": "gpt-3.5-turbo"
+              "model": "gpt-3.5-turbo",
+              "response_filter": "$.choices[0].message.content"
             },
             "credential": {
               "openAI_key": "PUT_YOUR_API_KEY_HERE"

@@ -69,19 +69,7 @@ workflows:
         parameters:
           response_filter: "$.completion"
           execute: false
-          prompt: |
-            Below is an instruction that describes a task, paired with the index and corresponding fields that provides further context. Write a response that appropriately completes the request.
-
-            ### Instruction:
-            I have an opensearch index with fields in the following. Now I have a question: ${indexInfo.question} Can you help me generate a PPL for that?
-
-            ### Index:
-            ${indexInfo.indexName}
-
-            ### Fields:
-            ${indexInfo.mappingInfo}
-
-            ### Response:
+          model_type: openai
         include_output_in_agent_response: true
       # Create a flow agent to use the PPLTool
     - id: ppl_agent

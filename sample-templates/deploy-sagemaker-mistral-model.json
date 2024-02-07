@@ -35,7 +35,7 @@
                 "headers": {
                   "content-type": "application/json"
                 },
-                "url": "https://runtime.sagemaker.us-east-1.amazonaws.com/endpoints/PUT_YOUR_ENDPOINT_HERE/invocations",
+                "url": "https://PUT_YOUR_CUSTOM_SAGEMAKER_ENDPOINT_HERE",
                 "request_body": "{\"prompt\":\"${parameters.prompt}\"}"
               }
             ]
