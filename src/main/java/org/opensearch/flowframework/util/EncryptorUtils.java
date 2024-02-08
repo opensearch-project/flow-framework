@@ -210,13 +210,14 @@ public class EncryptorUtils {
         return new String(decryptedResult.getResult(), StandardCharsets.UTF_8);
     }
 
+    // TODO : Improve redactTemplateCredentials to redact different fields
     /**
      * Removes the credential fields from a template
      * @param template the template
      * @return the redacted template
      */
     public Template redactTemplateCredentials(Template template) {
-        Template.Builder processedTemplateBuilder = new Template.Builder();
+        Template.Builder redactedTemplateBuilder = new Template.Builder();
 
         Map<String, Workflow> processedWorkflows = new HashMap<>();
         for (Map.Entry<String, Workflow> entry : template.workflows().entrySet()) {
@@ -226,18 +227,11 @@ public class EncryptorUtils {
                 if (node.userInputs().containsKey(CREDENTIAL_FIELD)) {
 
                     // Remove credential field field in node user inputs
-                    Map<String, Object> processedUserInputs = new HashMap<>();
-                    processedUserInputs.putAll(node.userInputs());
+                    Map<String, Object> processedUserInputs = new HashMap<>(node.userInputs());
                     processedUserInputs.remove(CREDENTIAL_FIELD);
 
                     // build new node to add to processed nodes
-                    WorkflowNode processedWorkflowNode = new WorkflowNode(
-                        node.id(),
-                        node.type(),
-                        node.previousNodeInputs(),
-                        processedUserInputs
-                    );
-                    processedNodes.add(processedWorkflowNode);
+                    processedNodes.add(new WorkflowNode(node.id(), node.type(), node.previousNodeInputs(), processedUserInputs));
                 } else {
                     processedNodes.add(node);
                 }
@@ -247,7 +241,7 @@ public class EncryptorUtils {
             processedWorkflows.put(entry.getKey(), new Workflow(entry.getValue().userParams(), processedNodes, entry.getValue().edges()));
         }
 
-        Template processedTemplate = processedTemplateBuilder.name(template.name())
+        Template processedTemplate = redactedTemplateBuilder.name(template.name())
             .description(template.description())
             .useCase(template.useCase())
             .templateVersion(template.templateVersion())

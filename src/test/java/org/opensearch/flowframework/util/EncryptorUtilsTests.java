@@ -192,11 +192,15 @@ public class EncryptorUtilsTests extends OpenSearchTestCase {
     }
 
     public void testRedactTemplateCredential() {
+        // Confirm credentials are present in the non-redacted template
+        WorkflowNode node = testTemplate.workflows().get("provision").nodes().get(0);
+        assertNotNull(node.userInputs().get(CREDENTIAL_FIELD));
+
         // Redact template with credential field
-        Template processedTemplate = encryptorUtils.redactTemplateCredentials(testTemplate);
+        Template redactedTemplate = encryptorUtils.redactTemplateCredentials(testTemplate);
 
         // Validate the credential field has been removed
-        WorkflowNode node = processedTemplate.workflows().get("provision").nodes().get(0);
-        assertNull(node.userInputs().get(CREDENTIAL_FIELD));
+        WorkflowNode redactedNode = redactedTemplate.workflows().get("provision").nodes().get(0);
+        assertNull(redactedNode.userInputs().get(CREDENTIAL_FIELD));
     }
 }
