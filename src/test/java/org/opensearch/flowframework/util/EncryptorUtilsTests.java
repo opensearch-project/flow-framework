@@ -190,4 +190,13 @@ public class EncryptorUtilsTests extends OpenSearchTestCase {
         assertNotNull(decryptedCredential);
         assertEquals(testCredentialValue, decryptedCredential);
     }
+
+    public void testRedactTemplateCredential() {
+        // Redact template with credential field
+        Template processedTemplate = encryptorUtils.redactTemplateCredentials(testTemplate);
+
+        // Validate the credential field has been removed
+        WorkflowNode node = processedTemplate.workflows().get("provision").nodes().get(0);
+        assertNull(node.userInputs().get(CREDENTIAL_FIELD));
+    }
 }

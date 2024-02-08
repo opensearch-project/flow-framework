@@ -211,6 +211,56 @@ public class EncryptorUtils {
     }
 
     /**
+     * Removes the credential fields from a template
+     * @param template the template
+     * @return the redacted template
+     */
+    public Template redactTemplateCredentials(Template template) {
+        Template.Builder processedTemplateBuilder = new Template.Builder();
+
+        Map<String, Workflow> processedWorkflows = new HashMap<>();
+        for (Map.Entry<String, Workflow> entry : template.workflows().entrySet()) {
+
+            List<WorkflowNode> processedNodes = new ArrayList<>();
+            for (WorkflowNode node : entry.getValue().nodes()) {
+                if (node.userInputs().containsKey(CREDENTIAL_FIELD)) {
+
+                    // Remove credential field field in node user inputs
+                    Map<String, Object> processedUserInputs = new HashMap<>();
+                    processedUserInputs.putAll(node.userInputs());
+                    processedUserInputs.remove(CREDENTIAL_FIELD);
+
+                    // build new node to add to processed nodes
+                    WorkflowNode processedWorkflowNode = new WorkflowNode(
+                        node.id(),
+                        node.type(),
+                        node.previousNodeInputs(),
+                        processedUserInputs
+                    );
+                    processedNodes.add(processedWorkflowNode);
+                } else {
+                    processedNodes.add(node);
+                }
+            }
+
+            // Add processed workflow nodes to processed workflows
+            processedWorkflows.put(entry.getKey(), new Workflow(entry.getValue().userParams(), processedNodes, entry.getValue().edges()));
+        }
+
+        Template processedTemplate = processedTemplateBuilder.name(template.name())
+            .description(template.description())
+            .useCase(template.useCase())
+            .templateVersion(template.templateVersion())
+            .compatibilityVersion(template.compatibilityVersion())
+            .workflows(processedWorkflows)
+            .uiMetadata(template.getUiMetadata())
+            .user(template.getUser())
+            .build();
+
+        return processedTemplate;
+    }
+
+    /**
      * Retrieves an existing master key or generates a new key to index
      * @param listener the action listener
      */
