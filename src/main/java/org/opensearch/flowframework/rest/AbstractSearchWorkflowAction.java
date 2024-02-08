@@ -23,10 +23,13 @@ import org.opensearch.rest.RestChannel;
 import org.opensearch.rest.RestRequest;
 import org.opensearch.rest.RestResponse;
 import org.opensearch.rest.action.RestResponseListener;
+import org.opensearch.script.Script;
+import org.opensearch.script.ScriptType;
 import org.opensearch.search.builder.SearchSourceBuilder;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 import static org.opensearch.core.xcontent.ToXContent.EMPTY_PARAMS;
@@ -88,6 +91,15 @@ public abstract class AbstractSearchWorkflowAction<T extends ToXContentObject> e
         searchSourceBuilder.fetchSource(getSourceContext(request, searchSourceBuilder));
         searchSourceBuilder.seqNoAndPrimaryTerm(true).version(true);
         searchSourceBuilder.timeout(flowFrameworkSettings.getRequestTimeout());
+
+        Script script = new Script(
+            ScriptType.INLINE,
+            "painless",
+            "def filteredSource = new HashMap(params._source); def workflows = filteredSource.get(\"workflows\"); if (workflows != null) { def provision = workflows.get(\"provision\"); if (provision != null) { def nodes = provision.get(\"nodes\"); if (nodes != null) { for (node in nodes) { def userInputs = node.get(\"user_inputs\"); if (userInputs != null) { userInputs.remove(\"credential\"); } } } } } return filteredSource;",
+            Collections.emptyMap()
+        );
+        searchSourceBuilder.scriptField("filter", script);
+
         SearchRequest searchRequest = new SearchRequest().source(searchSourceBuilder).indices(index);
         return channel -> client.execute(actionType, searchRequest, search(channel));
     }
