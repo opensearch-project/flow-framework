@@ -8,7 +8,9 @@
  */
 package org.opensearch.flowframework.model;
 
+import org.opensearch.core.rest.RestStatus;
 import org.opensearch.core.xcontent.XContentParser;
+import org.opensearch.flowframework.exception.FlowFrameworkException;
 import org.opensearch.test.OpenSearchTestCase;
 
 import java.io.IOException;
@@ -38,9 +40,9 @@ public class WorkflowStepValidatorTests extends OpenSearchTestCase {
 
     public void testFailedParseWorkflowStepValidator() throws IOException {
         XContentParser parser = TemplateTestJsonUtil.jsonToParser(invalidValidator);
-        IOException ex = expectThrows(IOException.class, () -> WorkflowStepValidator.parse(parser));
+        FlowFrameworkException ex = expectThrows(FlowFrameworkException.class, () -> WorkflowStepValidator.parse(parser));
         assertEquals("Unable to parse field [invalid_field] in a WorkflowStepValidator object.", ex.getMessage());
-
+        assertEquals(RestStatus.BAD_REQUEST, ex.getRestStatus());
     }
 
 }
