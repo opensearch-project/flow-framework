@@ -15,8 +15,10 @@ import org.opensearch.cluster.service.ClusterService;
 import org.opensearch.common.settings.ClusterSettings;
 import org.opensearch.common.settings.Setting;
 import org.opensearch.common.settings.Settings;
+import org.opensearch.core.rest.RestStatus;
 import org.opensearch.core.xcontent.XContentParser;
 import org.opensearch.flowframework.common.FlowFrameworkSettings;
+import org.opensearch.flowframework.exception.FlowFrameworkException;
 import org.opensearch.flowframework.indices.FlowFrameworkIndicesHandler;
 import org.opensearch.flowframework.workflow.WorkflowStepFactory;
 import org.opensearch.ml.client.MachineLearningNodeClient;
@@ -71,8 +73,9 @@ public class WorkflowValidatorTests extends OpenSearchTestCase {
 
     public void testFailedParseWorkflowValidator() throws IOException {
         XContentParser parser = TemplateTestJsonUtil.jsonToParser(invalidWorkflowStepJson);
-        IOException ex = expectThrows(IOException.class, () -> WorkflowValidator.parse(parser));
+        FlowFrameworkException ex = expectThrows(FlowFrameworkException.class, () -> WorkflowValidator.parse(parser));
         assertEquals("Unable to parse field [bad_field] in a WorkflowStepValidator object.", ex.getMessage());
+        assertEquals(RestStatus.BAD_REQUEST, ex.getRestStatus());
     }
 
     public void testWorkflowStepFactoryHasValidators() throws IOException {

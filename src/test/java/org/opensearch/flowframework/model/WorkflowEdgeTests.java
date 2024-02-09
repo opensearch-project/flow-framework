@@ -8,6 +8,8 @@
  */
 package org.opensearch.flowframework.model;
 
+import org.opensearch.core.rest.RestStatus;
+import org.opensearch.flowframework.exception.FlowFrameworkException;
 import org.opensearch.test.OpenSearchTestCase;
 
 import java.io.IOException;
@@ -43,12 +45,17 @@ public class WorkflowEdgeTests extends OpenSearchTestCase {
 
     public void testExceptions() throws IOException {
         String badJson = "{\"badField\":\"A\",\"dest\":\"B\"}";
-        IOException e = assertThrows(IOException.class, () -> WorkflowEdge.parse(TemplateTestJsonUtil.jsonToParser(badJson)));
+        FlowFrameworkException e = assertThrows(
+            FlowFrameworkException.class,
+            () -> WorkflowEdge.parse(TemplateTestJsonUtil.jsonToParser(badJson))
+        );
         assertEquals("Unable to parse field [badField] in an edge object.", e.getMessage());
+        assertEquals(RestStatus.BAD_REQUEST, e.getRestStatus());
 
         String missingJson = "{\"dest\":\"B\"}";
-        e = assertThrows(IOException.class, () -> WorkflowEdge.parse(TemplateTestJsonUtil.jsonToParser(missingJson)));
+        e = assertThrows(FlowFrameworkException.class, () -> WorkflowEdge.parse(TemplateTestJsonUtil.jsonToParser(missingJson)));
         assertEquals("An edge object requires both a source and dest field.", e.getMessage());
+        assertEquals(RestStatus.BAD_REQUEST, e.getRestStatus());
     }
 
 }
