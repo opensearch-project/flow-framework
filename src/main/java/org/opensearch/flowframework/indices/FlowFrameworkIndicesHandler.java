@@ -522,11 +522,10 @@ public class FlowFrameworkIndicesHandler {
         } else {
             try (ThreadContext.StoredContext context = client.threadPool().getThreadContext().stashContext()) {
                 UpdateRequest updateRequest = new UpdateRequest(WORKFLOW_STATE_INDEX, documentId);
-                Map<String, Object> updatedContent = new HashMap<>();
-                updatedContent.putAll(updatedFields);
+                Map<String, Object> updatedContent = new HashMap<>(updatedFields);
                 updateRequest.doc(updatedContent);
                 updateRequest.setRefreshPolicy(WriteRequest.RefreshPolicy.IMMEDIATE);
-                updateRequest.retryOnConflict(3);
+                updateRequest.retryOnConflict(5);
                 // TODO: decide what condition can be considered as an update conflict and add retry strategy
                 client.update(updateRequest, ActionListener.runBefore(listener, context::restore));
             } catch (Exception e) {
