@@ -73,6 +73,8 @@ public class RestCreateWorkflowAction extends BaseRestHandler {
     @Override
     protected RestChannelConsumer prepareRequest(RestRequest request, NodeClient client) throws IOException {
         String workflowId = request.param(WORKFLOW_ID);
+        String[] validation = request.paramAsStringArray(VALIDATION, new String[] { "all" });
+        boolean provision = request.paramAsBoolean(PROVISION_WORKFLOW, false);
         if (!flowFrameworkSettings.isFlowFrameworkEnabled()) {
             FlowFrameworkException ffe = new FlowFrameworkException(
                 "This API is disabled. To enable it, set [" + FLOW_FRAMEWORK_ENABLED.getKey() + "] to true.",
@@ -86,8 +88,6 @@ public class RestCreateWorkflowAction extends BaseRestHandler {
             XContentParser parser = request.contentParser();
             ensureExpectedToken(XContentParser.Token.START_OBJECT, parser.nextToken(), parser);
             Template template = Template.parse(parser);
-            String[] validation = request.paramAsStringArray(VALIDATION, new String[] { "all" });
-            boolean provision = request.paramAsBoolean(PROVISION_WORKFLOW, false);
 
             WorkflowRequest workflowRequest = new WorkflowRequest(workflowId, template, validation, provision);
 
