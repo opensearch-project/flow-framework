@@ -57,6 +57,7 @@ public class RestGetWorkflowStateAction extends BaseRestHandler {
     @Override
     protected BaseRestHandler.RestChannelConsumer prepareRequest(RestRequest request, NodeClient client) throws IOException {
         String workflowId = request.param(WORKFLOW_ID);
+        boolean all = request.paramAsBoolean("all", false);
         try {
             if (!flowFrameworkFeatureEnabledSetting.isFlowFrameworkEnabled()) {
                 throw new FlowFrameworkException(
@@ -75,7 +76,6 @@ public class RestGetWorkflowStateAction extends BaseRestHandler {
                 throw new FlowFrameworkException("workflow_id cannot be null", RestStatus.BAD_REQUEST);
             }
 
-            boolean all = request.paramAsBoolean("all", false);
             GetWorkflowStateRequest getWorkflowRequest = new GetWorkflowStateRequest(workflowId, all);
             return channel -> client.execute(GetWorkflowStateAction.INSTANCE, getWorkflowRequest, ActionListener.wrap(response -> {
                 XContentBuilder builder = response.toXContent(channel.newBuilder(), ToXContent.EMPTY_PARAMS);
