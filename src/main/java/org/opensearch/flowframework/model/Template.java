@@ -13,10 +13,12 @@ import org.opensearch.common.xcontent.LoggingDeprecationHandler;
 import org.opensearch.common.xcontent.json.JsonXContent;
 import org.opensearch.common.xcontent.yaml.YamlXContent;
 import org.opensearch.commons.authuser.User;
+import org.opensearch.core.rest.RestStatus;
 import org.opensearch.core.xcontent.NamedXContentRegistry;
 import org.opensearch.core.xcontent.ToXContentObject;
 import org.opensearch.core.xcontent.XContentBuilder;
 import org.opensearch.core.xcontent.XContentParser;
+import org.opensearch.flowframework.exception.FlowFrameworkException;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -292,7 +294,10 @@ public class Template implements ToXContentObject {
                                 }
                                 break;
                             default:
-                                throw new IOException("Unable to parse field [" + fieldName + "] in a version object.");
+                                throw new FlowFrameworkException(
+                                    "Unable to parse field [" + fieldName + "] in a version object.",
+                                    RestStatus.BAD_REQUEST
+                                );
                         }
                     }
                     break;
@@ -311,11 +316,14 @@ public class Template implements ToXContentObject {
                     user = User.parse(parser);
                     break;
                 default:
-                    throw new IOException("Unable to parse field [" + fieldName + "] in a template object.");
+                    throw new FlowFrameworkException(
+                        "Unable to parse field [" + fieldName + "] in a template object.",
+                        RestStatus.BAD_REQUEST
+                    );
             }
         }
         if (name == null) {
-            throw new IOException("A template object requires a name.");
+            throw new FlowFrameworkException("A template object requires a name.", RestStatus.BAD_REQUEST);
         }
 
         return new Builder().name(name)

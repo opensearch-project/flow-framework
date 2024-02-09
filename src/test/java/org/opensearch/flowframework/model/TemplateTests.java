@@ -9,6 +9,8 @@
 package org.opensearch.flowframework.model;
 
 import org.opensearch.Version;
+import org.opensearch.core.rest.RestStatus;
+import org.opensearch.flowframework.exception.FlowFrameworkException;
 import org.opensearch.test.OpenSearchTestCase;
 
 import java.io.IOException;
@@ -74,15 +76,17 @@ public class TemplateTests extends OpenSearchTestCase {
     }
 
     public void testExceptions() throws IOException {
-        IOException e;
+        FlowFrameworkException e;
 
         String badTemplateField = expectedTemplate.replace("use_case", "badField");
-        e = assertThrows(IOException.class, () -> Template.parse(badTemplateField));
+        e = assertThrows(FlowFrameworkException.class, () -> Template.parse(badTemplateField));
         assertEquals("Unable to parse field [badField] in a template object.", e.getMessage());
+        assertEquals(RestStatus.BAD_REQUEST, e.getRestStatus());
 
         String badVersionField = expectedTemplate.replace("compatibility", "badField");
-        e = assertThrows(IOException.class, () -> Template.parse(badVersionField));
+        e = assertThrows(FlowFrameworkException.class, () -> Template.parse(badVersionField));
         assertEquals("Unable to parse field [version] in a version object.", e.getMessage());
+        assertEquals(RestStatus.BAD_REQUEST, e.getRestStatus());
     }
 
     public void testStrings() throws IOException {

@@ -372,7 +372,10 @@ public class WorkflowState implements ToXContentObject, Writeable {
                                 userOutputs.put(userOutputsFieldName, parseStringToStringMap(parser));
                                 break;
                             default:
-                                throw new IOException("Unable to parse field [" + userOutputsFieldName + "] in a user_outputs object.");
+                                throw new FlowFrameworkException(
+                                    "Unable to parse field [" + userOutputsFieldName + "] in a user_outputs object.",
+                                    RestStatus.BAD_REQUEST
+                                );
                         }
                     }
                     break;
@@ -390,7 +393,10 @@ public class WorkflowState implements ToXContentObject, Writeable {
                     }
                     break;
                 default:
-                    throw new IOException("Unable to parse field [" + fieldName + "] in a workflowState object.");
+                    throw new FlowFrameworkException(
+                        "Unable to parse field [" + fieldName + "] in a workflowState object.",
+                        RestStatus.BAD_REQUEST
+                    );
             }
         }
         return new Builder().workflowId(workflowId)

@@ -9,9 +9,11 @@
 package org.opensearch.flowframework.model;
 
 import org.opensearch.common.unit.TimeValue;
+import org.opensearch.core.rest.RestStatus;
 import org.opensearch.core.xcontent.ToXContentObject;
 import org.opensearch.core.xcontent.XContentBuilder;
 import org.opensearch.core.xcontent.XContentParser;
+import org.opensearch.flowframework.exception.FlowFrameworkException;
 import org.opensearch.flowframework.workflow.ProcessNode;
 import org.opensearch.flowframework.workflow.WorkflowData;
 import org.opensearch.flowframework.workflow.WorkflowStep;
@@ -190,23 +192,29 @@ public class WorkflowNode implements ToXContentObject {
                                         userInputs.put(inputFieldName, parser.bigIntegerValue());
                                         break;
                                     default:
-                                        throw new IOException("Unable to parse field [" + inputFieldName + "] in a node object.");
+                                        throw new FlowFrameworkException(
+                                            "Unable to parse field [" + inputFieldName + "] in a node object.",
+                                            RestStatus.BAD_REQUEST
+                                        );
                                 }
                                 break;
                             case VALUE_BOOLEAN:
                                 userInputs.put(inputFieldName, parser.booleanValue());
                                 break;
                             default:
-                                throw new IOException("Unable to parse field [" + inputFieldName + "] in a node object.");
+                                throw new FlowFrameworkException(
+                                    "Unable to parse field [" + inputFieldName + "] in a node object.",
+                                    RestStatus.BAD_REQUEST
+                                );
                         }
                     }
                     break;
                 default:
-                    throw new IOException("Unable to parse field [" + fieldName + "] in a node object.");
+                    throw new FlowFrameworkException("Unable to parse field [" + fieldName + "] in a node object.", RestStatus.BAD_REQUEST);
             }
         }
         if (id == null || type == null) {
-            throw new IOException("An node object requires both an id and type field.");
+            throw new FlowFrameworkException("An node object requires both an id and type field.", RestStatus.BAD_REQUEST);
         }
 
         return new WorkflowNode(id, type, previousNodeInputs, userInputs);
