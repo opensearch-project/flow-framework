@@ -8,9 +8,11 @@
  */
 package org.opensearch.flowframework.model;
 
+import org.opensearch.core.rest.RestStatus;
 import org.opensearch.core.xcontent.ToXContentObject;
 import org.opensearch.core.xcontent.XContentBuilder;
 import org.opensearch.core.xcontent.XContentParser;
+import org.opensearch.flowframework.exception.FlowFrameworkException;
 
 import java.io.IOException;
 import java.util.HashMap;
@@ -75,11 +77,14 @@ public class PipelineProcessor implements ToXContentObject {
                     params = parseStringToStringMap(parser);
                     break;
                 default:
-                    throw new IOException("Unable to parse field [" + fieldName + "] in a pipeline processor object.");
+                    throw new FlowFrameworkException(
+                        "Unable to parse field [" + fieldName + "] in a pipeline processor object.",
+                        RestStatus.BAD_REQUEST
+                    );
             }
         }
         if (type == null) {
-            throw new IOException("A processor object requires a type field.");
+            throw new FlowFrameworkException("A processor object requires a type field.", RestStatus.BAD_REQUEST);
         }
 
         return new PipelineProcessor(type, params);

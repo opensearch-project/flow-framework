@@ -8,6 +8,8 @@
  */
 package org.opensearch.flowframework.model;
 
+import org.opensearch.core.rest.RestStatus;
+import org.opensearch.flowframework.exception.FlowFrameworkException;
 import org.opensearch.test.OpenSearchTestCase;
 
 import java.io.IOException;
@@ -87,11 +89,16 @@ public class WorkflowNodeTests extends OpenSearchTestCase {
 
     public void testExceptions() throws IOException {
         String badJson = "{\"badField\":\"A\",\"type\":\"a-type\",\"user_inputs\":{\"foo\":\"bar\"}}";
-        IOException e = assertThrows(IOException.class, () -> WorkflowNode.parse(TemplateTestJsonUtil.jsonToParser(badJson)));
+        FlowFrameworkException e = assertThrows(
+            FlowFrameworkException.class,
+            () -> WorkflowNode.parse(TemplateTestJsonUtil.jsonToParser(badJson))
+        );
         assertEquals("Unable to parse field [badField] in a node object.", e.getMessage());
+        assertEquals(RestStatus.BAD_REQUEST, e.getRestStatus());
 
         String missingJson = "{\"id\":\"A\",\"user_inputs\":{\"foo\":\"bar\"}}";
-        e = assertThrows(IOException.class, () -> WorkflowNode.parse(TemplateTestJsonUtil.jsonToParser(missingJson)));
+        e = assertThrows(FlowFrameworkException.class, () -> WorkflowNode.parse(TemplateTestJsonUtil.jsonToParser(missingJson)));
         assertEquals("An node object requires both an id and type field.", e.getMessage());
+        assertEquals(RestStatus.BAD_REQUEST, e.getRestStatus());
     }
 }

@@ -8,9 +8,11 @@
  */
 package org.opensearch.flowframework.model;
 
+import org.opensearch.core.rest.RestStatus;
 import org.opensearch.core.xcontent.ToXContentObject;
 import org.opensearch.core.xcontent.XContentBuilder;
 import org.opensearch.core.xcontent.XContentParser;
+import org.opensearch.flowframework.exception.FlowFrameworkException;
 
 import java.io.IOException;
 import java.util.Objects;
@@ -72,11 +74,14 @@ public class WorkflowEdge implements ToXContentObject {
                     destination = parser.text();
                     break;
                 default:
-                    throw new IOException("Unable to parse field [" + fieldName + "] in an edge object.");
+                    throw new FlowFrameworkException(
+                        "Unable to parse field [" + fieldName + "] in an edge object.",
+                        RestStatus.BAD_REQUEST
+                    );
             }
         }
         if (source == null || destination == null) {
-            throw new IOException("An edge object requires both a source and dest field.");
+            throw new FlowFrameworkException("An edge object requires both a source and dest field.", RestStatus.BAD_REQUEST);
         }
 
         return new WorkflowEdge(source, destination);

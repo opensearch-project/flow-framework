@@ -105,7 +105,10 @@ public class WorkflowStepValidator implements ToXContentObject {
                     }
                     break;
                 default:
-                    throw new IOException("Unable to parse field [" + fieldName + "] in a WorkflowStepValidator object.");
+                    throw new FlowFrameworkException(
+                        "Unable to parse field [" + fieldName + "] in a WorkflowStepValidator object.",
+                        RestStatus.BAD_REQUEST
+                    );
             }
         }
         return new WorkflowStepValidator(parsedInputs, parsedOutputs, requiredPlugins, timeout);
