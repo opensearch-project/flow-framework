@@ -1,0 +1,65 @@
+# This template creates a connector to the SageMaker service for a Mistral model
+# It then registers a model using that connector and deploys it.
+#
+# To use:
+#  - update the "credential" fields under the create_mistral_connector node.
+#  - update the sagemaker endpoint
+#  - if needed, update region
+#
+# After provisioning:
+#  - returns a workflow ID
+#  - use the status API to get the deployed model ID
+---
+name: Deploy Mistral Model
+description: Deploy a model using a connector to SageMaker Mistral model
+use_case: PROVISION
+version:
+  template: 1.0.0
+  compatibility:
+  - 2.12.0
+  - 3.0.0
+# This section defines the provision workflow. Nodes are connected in a graph.
+# Either previous_node_inputs or explicit edges can be used to enforce ordering.
+workflows:
+  provision:
+    # Each id field in a workflow must be unique.
+    nodes:
+    - id: create_mistral_connector
+      type: create_connector
+      user_inputs:
+        name: 'sagemaker: mistral'
+        description: Test connector for Sagemaker mistral model
+        version: '1'
+        protocol: aws_sigv4
+        credential:
+          access_key: 'PUT_YOUR_ACCESS_KEY_HERE'
+          secret_key: 'PUT_YOUR_SECRET_KEY_HERE'
+        parameters:
+          region: us-east-1
+          service_name: sagemaker
+        actions:
+        - action_type: predict
+          method: POST
+          headers:
+            content-type: application/json
+          url: 'https://PUT_YOUR_CUSTOM_SAGEMAKER_ENDPOINT_HERE'
+          request_body: '{"prompt":"${parameters.prompt}"}'
+    - id: register_mistral_model
+      type: register_remote_model
+      previous_node_inputs:
+        create_mistral_connector: connector_id
+      user_inputs:
+        name: mistral fine-tuned model
+        # Using deploy: true here would both registers and deploy the model
+        # and the deploy model step below could be deleted
+        # deploy: true
+    - id: deploy_mistral_model
+      type: deploy_model
+      previous_node_inputs:
+        register_mistral_model: model_id
+    # Because the above nodes use previous_node_inputs, these edges are automatically generated.
+    # edges:
+    # - source: create_mistral_connector
+    #   dest: register_mistral_model
+    # - source: register_mistral_model
+    #   dest: deploy_mistral_model
