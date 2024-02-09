@@ -13,6 +13,7 @@ import org.opensearch.action.get.GetRequest;
 import org.opensearch.action.get.GetResponse;
 import org.opensearch.action.support.ActionFilters;
 import org.opensearch.client.Client;
+import org.opensearch.cluster.service.ClusterService;
 import org.opensearch.common.settings.Settings;
 import org.opensearch.common.util.concurrent.ThreadContext;
 import org.opensearch.common.xcontent.XContentFactory;
@@ -25,6 +26,7 @@ import org.opensearch.flowframework.model.Template;
 import org.opensearch.flowframework.model.Workflow;
 import org.opensearch.flowframework.model.WorkflowEdge;
 import org.opensearch.flowframework.model.WorkflowNode;
+import org.opensearch.flowframework.util.EncryptorUtils;
 import org.opensearch.index.get.GetResult;
 import org.opensearch.tasks.Task;
 import org.opensearch.test.OpenSearchTestCase;
@@ -53,6 +55,7 @@ public class GetWorkflowTransportActionTests extends OpenSearchTestCase {
     private GetWorkflowTransportAction getTemplateTransportAction;
     private FlowFrameworkIndicesHandler flowFrameworkIndicesHandler;
     private Template template;
+    private EncryptorUtils encryptorUtils;
 
     @Override
     public void setUp() throws Exception {
@@ -60,11 +63,13 @@ public class GetWorkflowTransportActionTests extends OpenSearchTestCase {
         this.threadPool = mock(ThreadPool.class);
         this.client = mock(Client.class);
         this.flowFrameworkIndicesHandler = mock(FlowFrameworkIndicesHandler.class);
+        this.encryptorUtils = new EncryptorUtils(mock(ClusterService.class), client);
         this.getTemplateTransportAction = new GetWorkflowTransportAction(
             mock(TransportService.class),
             mock(ActionFilters.class),
             flowFrameworkIndicesHandler,
-            client
+            client,
+            encryptorUtils
         );
 
         Version templateVersion = Version.fromString("1.0.0");

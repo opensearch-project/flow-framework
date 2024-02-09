@@ -22,6 +22,7 @@ import org.opensearch.core.rest.RestStatus;
 import org.opensearch.flowframework.exception.FlowFrameworkException;
 import org.opensearch.flowframework.indices.FlowFrameworkIndicesHandler;
 import org.opensearch.flowframework.model.Template;
+import org.opensearch.flowframework.util.EncryptorUtils;
 import org.opensearch.tasks.Task;
 import org.opensearch.transport.TransportService;
 
@@ -35,12 +36,14 @@ public class GetWorkflowTransportAction extends HandledTransportAction<WorkflowR
     private final Logger logger = LogManager.getLogger(GetWorkflowTransportAction.class);
     private final FlowFrameworkIndicesHandler flowFrameworkIndicesHandler;
     private final Client client;
+    private final EncryptorUtils encryptorUtils;
 
     /**
      * Instantiates a new GetWorkflowTransportAction instance
      * @param transportService the transport service
      * @param actionFilters action filters
      * @param flowFrameworkIndicesHandler The Flow Framework indices handler
+     * @param encryptorUtils Encryptor utils
      * @param client the Opensearch Client
      */
     @Inject
@@ -48,11 +51,13 @@ public class GetWorkflowTransportAction extends HandledTransportAction<WorkflowR
         TransportService transportService,
         ActionFilters actionFilters,
         FlowFrameworkIndicesHandler flowFrameworkIndicesHandler,
-        Client client
+        Client client,
+        EncryptorUtils encryptorUtils
     ) {
         super(GetWorkflowAction.NAME, transportService, actionFilters, WorkflowRequest::new);
         this.flowFrameworkIndicesHandler = flowFrameworkIndicesHandler;
         this.client = client;
+        this.encryptorUtils = encryptorUtils;
     }
 
     @Override
@@ -75,7 +80,9 @@ public class GetWorkflowTransportAction extends HandledTransportAction<WorkflowR
                             )
                         );
                     } else {
-                        listener.onResponse(new GetWorkflowResponse(Template.parse(response.getSourceAsString())));
+                        // Remove any credential from response
+                        Template template = encryptorUtils.redactTemplateCredentials(Template.parse(response.getSourceAsString()));
+                        listener.onResponse(new GetWorkflowResponse(template));
                     }
                 }, exception -> {
                     logger.error("Failed to retrieve template from global context.", exception);

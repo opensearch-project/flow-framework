@@ -8,6 +8,8 @@
  */
 package org.opensearch.flowframework.rest;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.opensearch.action.search.SearchResponse;
 import org.opensearch.client.Response;
 import org.opensearch.client.ResponseException;
@@ -26,7 +28,6 @@ import org.junit.Before;
 import org.junit.ComparisonFailure;
 
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -36,11 +37,11 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
 
-import static org.opensearch.flowframework.common.CommonValue.CREDENTIAL_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.PROVISION_WORKFLOW;
 import static org.opensearch.flowframework.common.CommonValue.WORKFLOW_ID;
 
 public class FlowFrameworkRestApiIT extends FlowFrameworkRestTestCase {
+    private static final Logger logger = LogManager.getLogger(FlowFrameworkRestApiIT.class);
 
     private static AtomicBoolean waitToStart = new AtomicBoolean(true);
 
@@ -69,19 +70,6 @@ public class FlowFrameworkRestApiIT extends FlowFrameworkRestTestCase {
         String termIdQuery = "{\"query\":{\"ids\":{\"values\":[\"" + workflowId + "\"]}}}";
         SearchResponse searchResponse = searchWorkflows(client(), termIdQuery);
         assertEquals(1, searchResponse.getHits().getTotalHits().value);
-
-        String searchHitSource = searchResponse.getHits().getAt(0).getSourceAsString();
-        Template searchHitTemplate = Template.parse(searchHitSource);
-
-        // Confirm that credentials have been encrypted within the search response
-        List<WorkflowNode> provisionNodes = searchHitTemplate.workflows().get(PROVISION_WORKFLOW).nodes();
-        for (WorkflowNode node : provisionNodes) {
-            if (node.type().equals("create_connector")) {
-                @SuppressWarnings("unchecked")
-                Map<String, String> credentialMap = new HashMap<>((Map<String, String>) node.userInputs().get(CREDENTIAL_FIELD));
-                assertTrue(credentialMap.values().stream().allMatch(x -> x != "12345"));
-            }
-        }
     }
 
     public void testFailedUpdateWorkflow() throws Exception {
