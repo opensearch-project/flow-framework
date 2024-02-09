@@ -242,8 +242,12 @@ public class WorkflowProcessSorterTests extends OpenSearchTestCase {
 
     public void testNoEdges() throws IOException {
         List<String> workflow;
-        Exception ex = assertThrows(IOException.class, () -> parse(workflow(Collections.emptyList(), Collections.emptyList())));
+        FlowFrameworkException ex = assertThrows(
+            FlowFrameworkException.class,
+            () -> parse(workflow(Collections.emptyList(), Collections.emptyList()))
+        );
         assertEquals(MUST_HAVE_AT_LEAST_ONE_NODE, ex.getMessage());
+        assertEquals(RestStatus.BAD_REQUEST, ex.getRestStatus());
 
         workflow = parse(workflow(List.of(node("A")), Collections.emptyList()));
         assertEquals(1, workflow.size());

@@ -8,9 +8,11 @@
  */
 package org.opensearch.flowframework.model;
 
+import org.opensearch.core.rest.RestStatus;
 import org.opensearch.core.xcontent.ToXContentObject;
 import org.opensearch.core.xcontent.XContentBuilder;
 import org.opensearch.core.xcontent.XContentParser;
+import org.opensearch.flowframework.exception.FlowFrameworkException;
 import org.opensearch.flowframework.workflow.WorkflowData;
 
 import java.io.IOException;
@@ -118,7 +120,7 @@ public class Workflow implements ToXContentObject {
 
         }
         if (nodes.isEmpty()) {
-            throw new IOException("A workflow must have at least one node.");
+            throw new FlowFrameworkException("A workflow must have at least one node.", RestStatus.BAD_REQUEST);
         }
         // Iterate the nodes and infer edges from previous node inputs
         List<WorkflowEdge> inferredEdges = nodes.stream()

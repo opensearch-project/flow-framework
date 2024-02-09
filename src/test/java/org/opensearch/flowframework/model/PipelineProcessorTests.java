@@ -8,6 +8,8 @@
  */
 package org.opensearch.flowframework.model;
 
+import org.opensearch.core.rest.RestStatus;
+import org.opensearch.flowframework.exception.FlowFrameworkException;
 import org.opensearch.test.OpenSearchTestCase;
 
 import java.io.IOException;
@@ -32,12 +34,17 @@ public class PipelineProcessorTests extends OpenSearchTestCase {
 
     public void testExceptions() throws IOException {
         String badJson = "{\"badField\":\"foo\",\"params\":{\"bar\":\"baz\"}}";
-        IOException e = assertThrows(IOException.class, () -> PipelineProcessor.parse(TemplateTestJsonUtil.jsonToParser(badJson)));
+        FlowFrameworkException e = assertThrows(
+            FlowFrameworkException.class,
+            () -> PipelineProcessor.parse(TemplateTestJsonUtil.jsonToParser(badJson))
+        );
         assertEquals("Unable to parse field [badField] in a pipeline processor object.", e.getMessage());
+        assertEquals(RestStatus.BAD_REQUEST, e.getRestStatus());
 
         String noTypeJson = "{\"params\":{\"bar\":\"baz\"}}";
-        e = assertThrows(IOException.class, () -> PipelineProcessor.parse(TemplateTestJsonUtil.jsonToParser(noTypeJson)));
+        e = assertThrows(FlowFrameworkException.class, () -> PipelineProcessor.parse(TemplateTestJsonUtil.jsonToParser(noTypeJson)));
         assertEquals("A processor object requires a type field.", e.getMessage());
+        assertEquals(RestStatus.BAD_REQUEST, e.getRestStatus());
     }
 
 }
