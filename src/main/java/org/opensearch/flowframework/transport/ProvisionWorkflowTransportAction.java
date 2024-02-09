@@ -35,12 +35,11 @@ import org.opensearch.threadpool.ThreadPool;
 import org.opensearch.transport.TransportService;
 
 import java.time.Instant;
-import java.util.ArrayList;
 import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import java.util.concurrent.CancellationException;
 import java.util.stream.Collectors;
 
 import static org.opensearch.flowframework.common.CommonValue.ERROR_FIELD;
@@ -192,9 +191,9 @@ public class ProvisionWorkflowTransportAction extends HandledTransportAction<Wor
      * @param workflowId The workflowId associated with the workflow that is executing
      */
     private void executeWorkflow(List<ProcessNode> workflowSequence, String workflowId) {
+        String currentStepId = "";
         try {
-
-            List<PlainActionFuture<?>> workflowFutureList = new ArrayList<>();
+            Map<String, PlainActionFuture<?>> workflowFutureMap = new LinkedHashMap<>();
             for (ProcessNode processNode : workflowSequence) {
                 List<ProcessNode> predecessors = processNode.predecessors();
 
@@ -210,11 +209,14 @@ public class ProvisionWorkflowTransportAction extends HandledTransportAction<Wor
                         )
                 );
 
-                workflowFutureList.add(processNode.execute());
+                workflowFutureMap.put(processNode.id(), processNode.execute());
             }
 
-            // Attempt to join each workflow step future, may throw a ExecutionException if any step completes exceptionally
-            workflowFutureList.forEach(PlainActionFuture::actionGet);
+            // Attempt to complete each workflow step future, may throw a ExecutionException if any step completes exceptionally
+            for (Map.Entry<String, PlainActionFuture<?>> e : workflowFutureMap.entrySet()) {
+                currentStepId = e.getKey();
+                e.getValue().actionGet();
+            }
 
             logger.info("Provisioning completed successfully for workflow {}", workflowId);
             flowFrameworkIndicesHandler.updateFlowFrameworkSystemIndexDoc(
@@ -229,15 +231,10 @@ public class ProvisionWorkflowTransportAction extends HandledTransportAction<Wor
                 }, exception -> { logger.error("Failed to update workflow state : {}", exception.getMessage(), exception); })
             );
         } catch (Exception ex) {
-            logger.error("Provisioning failed for workflow: {}", workflowId, ex);
-            String errorMessage;
-            if (ex instanceof CancellationException) {
-                errorMessage = "A step in the workflow was cancelled.";
-            } else if (ex.getCause() != null) {
-                errorMessage = ex.getCause().getMessage();
-            } else {
-                errorMessage = ex.getMessage();
-            }
+            logger.error("Provisioning failed for workflow {} during step {}.", workflowId, currentStepId, ex);
+            String errorMessage = (ex.getCause() == null ? ex.getClass().getName() : ex.getCause().getClass().getName())
+                + " during step "
+                + currentStepId;
             flowFrameworkIndicesHandler.updateFlowFrameworkSystemIndexDoc(
                 workflowId,
                 Map.ofEntries(
