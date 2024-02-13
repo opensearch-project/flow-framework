@@ -1,7 +1,7 @@
 - [Developer Guide](#developer-guide)
     - [Forking and Cloning](#forking-and-cloning)
     - [Install Prerequisites](#install-prerequisites)
-        - [JDK 14](#jdk-14)
+        - [Java](#java)
     - [Setup](#setup)
     - [Build](#build)
         - [Building from the command line](#building-from-the-command-line)
@@ -10,6 +10,7 @@
     - [Publishing](#publishing)
         - [Publishing to Maven Local](#publishing-to-maven-local)
         - [Generating artifacts](#generating-artifacts)
+    - [Adding Workflow Steps](#adding-workflow-steps)
 
 ## Developer Guide
 
@@ -19,9 +20,11 @@ Fork this repository on GitHub, and clone locally with `git clone`.
 
 ### Install Prerequisites
 
-#### JDK 14
+See [OpenSearch requirements](https://github.com/opensearch-project/OpenSearch/blob/main/DEVELOPER_GUIDE.md#install-prerequisites).
 
-OpenSearch components build using Java 14 at a minimum. This means you must have a JDK 14 installed with the environment variable `JAVA_HOME` referencing the path to Java home for your JDK 14 installation, e.g. `JAVA_HOME=/usr/lib/jvm/jdk-14`.
+#### Java
+
+Flow Framework code currently maintains compatibility with JDK 11. Other plugins may require newer Java versions if used.
 
 ### Setup
 
@@ -60,6 +63,7 @@ merged to main, the workflow will create a backport PR to the `2.x` branch.
 ### Publishing
 
 #### Publishing to Maven Local
+
 Run the below command to publish the artifacts to maven local.
 ```./gradlew publishToMavenLocal```
 
@@ -93,8 +97,17 @@ snapshots/
                 ├── maven-metadata.xml.sha1
                 ├── maven-metadata.xml.sha256
                 └── maven-metadata.xml.sha512
-
-
 ```
+
 1. Change the url from ``"https://aws.oss.sonatype.org/content/repositories/snapshots"`` to your local path and comment out the credentials under publishing/repositories in build.gradle.
 2. Run ```./gradlew publishPluginZipPublicationToSnapshotsRepository```.
+
+### Adding Workflow Steps
+
+To add functionality to workflows, add new Workflow Steps to the [`org.opensearch.flowframework.workflow`](https://github.com/opensearch-project/flow-framework/tree/main/src/main/java/org/opensearch/flowframework/workflow) package.
+1. Implement the [Workflow](https://github.com/opensearch-project/flow-framework/blob/main/src/main/java/org/opensearch/flowframework/workflow/WorkflowStep.java) interface. See existing steps for examples for input, output, and API execution.
+2. Choose a unique name for the step which is not used by other steps. This will align with the `step_type` field in the templates and should be descriptive of what the step does.
+3. Add a constructor and call it from the [WorkflowStepFactory](https://github.com/opensearch-project/flow-framework/blob/main/src/main/java/org/opensearch/flowframework/workflow/WorkflowStepFactory.java).
+4. Add a configuration to the [`workflow-steps.json`](https://github.com/dbwiddis/flow-framework/blob/main/src/main/resources/mappings/workflow-steps.json) file specifying required inputs, outputs, required plugins, and optionally a different timeout than the default.
+5. If your step provisions a resource that should be deprovisioned, create the corresponding step and add both steps to the [`WorkflowResources`](https://github.com/opensearch-project/flow-framework/blob/main/src/main/java/org/opensearch/flowframework/common/WorkflowResources.java) enum.
+6. Write unit and integration tests.
