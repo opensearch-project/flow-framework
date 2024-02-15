@@ -23,6 +23,7 @@ import org.opensearch.ml.client.MachineLearningNodeClient;
 import org.opensearch.threadpool.ThreadPool;
 
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -86,7 +87,14 @@ public class WorkflowStepFactory {
         stepMap.put(DeleteAgentStep.NAME, () -> new DeleteAgentStep(mlClient));
     }
 
+    /**
+     * Enum encapsulating the different step names, their inputs, outputs, required plugin and timeout of the step
+     */
+
     public enum WorkflowSteps {
+
+        NOOP("noop", Collections.emptyList(), Collections.emptyList(), Collections.emptyList(), null),
+
         CREATE_CONNECTOR(
             "create_connector",
             Arrays.asList("name", "description", "version", "protocol", "parameters", "credential", "actions"),
@@ -290,6 +298,10 @@ public class WorkflowStepFactory {
 
     }
 
+    /**
+     * Get the object of WorkflowValidator consisting of workflow steps
+     * @return WorkflowValidator
+     */
     public WorkflowValidator getWorkflowValidator() {
         Map<String, WorkflowStepValidator> workflowStepValidators = new HashMap<>();
 

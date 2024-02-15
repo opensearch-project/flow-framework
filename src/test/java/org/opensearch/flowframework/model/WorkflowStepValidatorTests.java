@@ -8,12 +8,12 @@
  */
 package org.opensearch.flowframework.model;
 
-import org.opensearch.core.rest.RestStatus;
-import org.opensearch.core.xcontent.XContentParser;
-import org.opensearch.flowframework.exception.FlowFrameworkException;
+import org.opensearch.flowframework.workflow.WorkflowStepFactory;
 import org.opensearch.test.OpenSearchTestCase;
 
 import java.io.IOException;
+import java.util.HashMap;
+import java.util.Map;
 
 public class WorkflowStepValidatorTests extends OpenSearchTestCase {
 
@@ -28,21 +28,18 @@ public class WorkflowStepValidatorTests extends OpenSearchTestCase {
     }
 
     public void testParseWorkflowStepValidator() throws IOException {
-        XContentParser parser = TemplateTestJsonUtil.jsonToParser(validValidator);
-        WorkflowStepValidator workflowStepValidator = WorkflowStepValidator.parse(parser);
 
-        assertEquals(1, workflowStepValidator.getInputs().size());
-        assertEquals(1, workflowStepValidator.getOutputs().size());
+        Map<String, WorkflowStepValidator> workflowStepValidators = new HashMap<>();
+        workflowStepValidators.put(
+            WorkflowStepFactory.WorkflowSteps.CREATE_CONNECTOR.getWorkflowStep(),
+            WorkflowStepFactory.WorkflowSteps.CREATE_CONNECTOR.getWorkflowStepValidator()
+        );
 
-        assertEquals("input_value", workflowStepValidator.getInputs().get(0));
-        assertEquals("output_value", workflowStepValidator.getOutputs().get(0));
-    }
+        assertEquals(7, WorkflowStepFactory.WorkflowSteps.CREATE_CONNECTOR.getInputs().size());
+        assertEquals(1, WorkflowStepFactory.WorkflowSteps.CREATE_CONNECTOR.getOutputs().size());
 
-    public void testFailedParseWorkflowStepValidator() throws IOException {
-        XContentParser parser = TemplateTestJsonUtil.jsonToParser(invalidValidator);
-        FlowFrameworkException ex = expectThrows(FlowFrameworkException.class, () -> WorkflowStepValidator.parse(parser));
-        assertEquals("Unable to parse field [invalid_field] in a WorkflowStepValidator object.", ex.getMessage());
-        assertEquals(RestStatus.BAD_REQUEST, ex.getRestStatus());
+        assertEquals("name", WorkflowStepFactory.WorkflowSteps.CREATE_CONNECTOR.getInputs().get(0));
+        assertEquals("connector_id", WorkflowStepFactory.WorkflowSteps.CREATE_CONNECTOR.getOutputs().get(0));
     }
 
 }

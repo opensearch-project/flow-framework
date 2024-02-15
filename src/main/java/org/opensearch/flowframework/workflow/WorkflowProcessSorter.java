@@ -42,7 +42,10 @@ import static org.opensearch.flowframework.common.FlowFrameworkSettings.MAX_WORK
 import static org.opensearch.flowframework.model.WorkflowNode.NODE_TIMEOUT_DEFAULT_VALUE;
 import static org.opensearch.flowframework.model.WorkflowNode.NODE_TIMEOUT_FIELD;
 import static org.opensearch.flowframework.model.WorkflowNode.USER_INPUTS_FIELD;
-import static org.opensearch.flowframework.workflow.WorkflowStepFactory.WorkflowSteps.*;
+import static org.opensearch.flowframework.workflow.WorkflowStepFactory.WorkflowSteps.getInputByWorkflowType;
+import static org.opensearch.flowframework.workflow.WorkflowStepFactory.WorkflowSteps.getOutputByWorkflowType;
+import static org.opensearch.flowframework.workflow.WorkflowStepFactory.WorkflowSteps.getRequiredPluginsByWorkflowType;
+import static org.opensearch.flowframework.workflow.WorkflowStepFactory.WorkflowSteps.getTimeoutByWorkflowType;
 
 /**
  * Converts a workflow of nodes and edges into a topologically sorted list of Process Nodes.
@@ -177,7 +180,6 @@ public class WorkflowProcessSorter {
     /**
      * Validates a sorted workflow, determines if each process node's user inputs and predecessor outputs match the expected workflow step inputs
      * @param processNodes A list of process nodes
-     * @param validator The validation definitions for the workflow steps
      * @throws Exception on validation failure
      */
     public void validateGraph(List<ProcessNode> processNodes) throws Exception {

@@ -34,6 +34,7 @@ public class GetWorkflowStepTransportAction extends HandledTransportAction<Actio
      * Instantiates a new GetWorkflowStepTransportAction instance
      * @param transportService the transport service
      * @param actionFilters action filters
+     * @param workflowStepFactory The factory instantiating workflow steps
      */
     @Inject
     public GetWorkflowStepTransportAction(

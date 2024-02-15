@@ -15,10 +15,7 @@ import org.opensearch.cluster.service.ClusterService;
 import org.opensearch.common.settings.ClusterSettings;
 import org.opensearch.common.settings.Setting;
 import org.opensearch.common.settings.Settings;
-import org.opensearch.core.rest.RestStatus;
-import org.opensearch.core.xcontent.XContentParser;
 import org.opensearch.flowframework.common.FlowFrameworkSettings;
-import org.opensearch.flowframework.exception.FlowFrameworkException;
 import org.opensearch.flowframework.indices.FlowFrameworkIndicesHandler;
 import org.opensearch.flowframework.workflow.WorkflowStepFactory;
 import org.opensearch.ml.client.MachineLearningNodeClient;
@@ -27,7 +24,9 @@ import org.opensearch.threadpool.ThreadPool;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -58,24 +57,25 @@ public class WorkflowValidatorTests extends OpenSearchTestCase {
     }
 
     public void testParseWorkflowValidator() throws IOException {
+        Map<String, WorkflowStepValidator> workflowStepValidators = new HashMap<>();
+        workflowStepValidators.put(
+            WorkflowStepFactory.WorkflowSteps.CREATE_CONNECTOR.getWorkflowStep(),
+            WorkflowStepFactory.WorkflowSteps.CREATE_CONNECTOR.getWorkflowStepValidator()
+        );
+        workflowStepValidators.put(
+            WorkflowStepFactory.WorkflowSteps.DELETE_MODEL.getWorkflowStep(),
+            WorkflowStepFactory.WorkflowSteps.DELETE_MODEL.getWorkflowStepValidator()
+        );
 
-        XContentParser parser = TemplateTestJsonUtil.jsonToParser(validWorkflowStepJson);
-        WorkflowValidator validator = WorkflowValidator.parse(parser);
+        WorkflowValidator validator = new WorkflowValidator(workflowStepValidators);
 
         assertEquals(2, validator.getWorkflowStepValidators().size());
-        assertTrue(validator.getWorkflowStepValidators().keySet().contains("workflow_step_1"));
-        assertEquals(2, validator.getWorkflowStepValidators().get("workflow_step_1").getInputs().size());
-        assertEquals(1, validator.getWorkflowStepValidators().get("workflow_step_1").getOutputs().size());
-        assertTrue(validator.getWorkflowStepValidators().keySet().contains("workflow_step_2"));
-        assertEquals(3, validator.getWorkflowStepValidators().get("workflow_step_2").getInputs().size());
-        assertEquals(3, validator.getWorkflowStepValidators().get("workflow_step_2").getOutputs().size());
-    }
-
-    public void testFailedParseWorkflowValidator() throws IOException {
-        XContentParser parser = TemplateTestJsonUtil.jsonToParser(invalidWorkflowStepJson);
-        FlowFrameworkException ex = expectThrows(FlowFrameworkException.class, () -> WorkflowValidator.parse(parser));
-        assertEquals("Unable to parse field [bad_field] in a WorkflowStepValidator object.", ex.getMessage());
-        assertEquals(RestStatus.BAD_REQUEST, ex.getRestStatus());
+        assertTrue(validator.getWorkflowStepValidators().keySet().contains("create_connector"));
+        assertEquals(7, validator.getWorkflowStepValidators().get("create_connector").getInputs().size());
+        assertEquals(1, validator.getWorkflowStepValidators().get("create_connector").getOutputs().size());
+        assertTrue(validator.getWorkflowStepValidators().keySet().contains("delete_model"));
+        assertEquals(1, validator.getWorkflowStepValidators().get("delete_model").getInputs().size());
+        assertEquals(1, validator.getWorkflowStepValidators().get("delete_model").getOutputs().size());
     }
 
     public void testWorkflowStepFactoryHasValidators() throws IOException {
