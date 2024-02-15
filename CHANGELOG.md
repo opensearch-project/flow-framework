@@ -3,10 +3,9 @@ CHANGELOG
 
 Inspired from [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
-2.12.0 Initial Release
-## [Unreleased]
+## [Unreleased 2.x]
 ### Added
-- Github workflow for changelog verification ([#440](https://github.com/opensearch-project/flow-framework/pull/440))
+- Moved workflow-steps.json to Enum ([#523](https://github.com/opensearch-project/flow-framework/pull/523))
 
 ### Changed
 
