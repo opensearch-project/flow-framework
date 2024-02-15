@@ -62,62 +62,6 @@ public class WorkflowStepValidator implements ToXContentObject {
     }
 
     /**
-     * Parse raw json content into a WorkflowStepValidator instance
-     * @param parser json based content parser
-     * @return an instance of the WorkflowStepValidator
-     * @throws IOException if the content cannot be parsed correctly
-     */
-    /*public static WorkflowStepValidator parse(XContentParser parser) throws IOException {
-        List<String> parsedInputs = new ArrayList<>();
-        List<String> parsedOutputs = new ArrayList<>();
-        List<String> requiredPlugins = new ArrayList<>();
-        TimeValue timeout = null;
-
-        ensureExpectedToken(XContentParser.Token.START_OBJECT, parser.currentToken(), parser);
-        while (parser.nextToken() != XContentParser.Token.END_OBJECT) {
-            String fieldName = parser.currentName();
-            parser.nextToken();
-            switch (fieldName) {
-                case INPUTS_FIELD:
-                    ensureExpectedToken(XContentParser.Token.START_ARRAY, parser.currentToken(), parser);
-                    while (parser.nextToken() != XContentParser.Token.END_ARRAY) {
-                        parsedInputs.add(parser.text());
-                    }
-                    break;
-                case OUTPUTS_FIELD:
-                    ensureExpectedToken(XContentParser.Token.START_ARRAY, parser.currentToken(), parser);
-                    while (parser.nextToken() != XContentParser.Token.END_ARRAY) {
-                        parsedOutputs.add(parser.text());
-                    }
-                    break;
-                case REQUIRED_PLUGINS:
-                    ensureExpectedToken(XContentParser.Token.START_ARRAY, parser.currentToken(), parser);
-                    while (parser.nextToken() != XContentParser.Token.END_ARRAY) {
-                        requiredPlugins.add(parser.text());
-                    }
-                    break;
-                case TIMEOUT:
-                    try {
-                        timeout = TimeValue.parseTimeValue(parser.text(), TIMEOUT);
-                    } catch (IllegalArgumentException e) {
-                        logger.error("Failed to parse TIMEOUT value for field [{}]", fieldName, e);
-                        throw new FlowFrameworkException(
-                            "Failed to parse workflow-step.json file for field [" + fieldName + "]",
-                            RestStatus.INTERNAL_SERVER_ERROR
-                        );
-                    }
-                    break;
-                default:
-                    throw new FlowFrameworkException(
-                        "Unable to parse field [" + fieldName + "] in a WorkflowStepValidator object.",
-                        RestStatus.BAD_REQUEST
-                    );
-            }
-        }
-        return new WorkflowStepValidator(parsedInputs, parsedOutputs, requiredPlugins, timeout);
-    }*/
-
-    /**
      * Get the required inputs
      * @return the inputs
      */

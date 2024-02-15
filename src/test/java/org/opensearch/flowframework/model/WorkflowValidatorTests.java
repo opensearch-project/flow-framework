@@ -106,8 +106,7 @@ public class WorkflowValidatorTests extends OpenSearchTestCase {
             flowFrameworkSettings
         );
 
-        // Read in workflow-steps.json
-        WorkflowValidator workflowValidator = WorkflowValidator.parse("mappings/workflow-steps.json");
+        WorkflowValidator workflowValidator = workflowStepFactory.getWorkflowValidator();
 
         // Get all workflow step validator types
         List<String> registeredWorkflowValidatorTypes = new ArrayList<String>(workflowValidator.getWorkflowStepValidators().keySet());

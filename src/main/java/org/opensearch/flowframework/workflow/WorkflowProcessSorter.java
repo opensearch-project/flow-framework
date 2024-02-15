@@ -19,7 +19,6 @@ import org.opensearch.flowframework.exception.FlowFrameworkException;
 import org.opensearch.flowframework.model.Workflow;
 import org.opensearch.flowframework.model.WorkflowEdge;
 import org.opensearch.flowframework.model.WorkflowNode;
-import org.opensearch.flowframework.model.WorkflowValidator;
 import org.opensearch.plugins.PluginInfo;
 import org.opensearch.plugins.PluginsService;
 import org.opensearch.threadpool.ThreadPool;
@@ -140,14 +139,13 @@ public class WorkflowProcessSorter {
      * @throws Exception if validation fails
      */
     public void validate(List<ProcessNode> processNodes, PluginsService pluginsService) throws Exception {
-        WorkflowValidator validator = readWorkflowValidator();
         List<String> installedPlugins = pluginsService.info()
             .getPluginInfos()
             .stream()
             .map(PluginInfo::getName)
             .collect(Collectors.toList());
         validatePluginsInstalled(processNodes, installedPlugins);
-        validateGraph(processNodes, validator);
+        validateGraph(processNodes);
     }
 
     /**
@@ -182,7 +180,7 @@ public class WorkflowProcessSorter {
      * @param validator The validation definitions for the workflow steps
      * @throws Exception on validation failure
      */
-    public void validateGraph(List<ProcessNode> processNodes, WorkflowValidator validator) throws Exception {
+    public void validateGraph(List<ProcessNode> processNodes) throws Exception {
 
         // Iterate through process nodes in graph
         for (ProcessNode processNode : processNodes) {
@@ -219,18 +217,6 @@ public class WorkflowProcessSorter {
                     RestStatus.BAD_REQUEST
                 );
             }
-        }
-    }
-
-    private WorkflowValidator readWorkflowValidator() {
-        try {
-            return workflowStepFactory.getWorkflowValidator();
-        } catch (Exception e) {
-            logger.error("Failed at reading workflow-steps mapping file", e);
-            throw new FlowFrameworkException(
-                "Failed at reading workflow-steps.json mapping file for a new workflow.",
-                RestStatus.INTERNAL_SERVER_ERROR
-            );
         }
     }
 

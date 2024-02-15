@@ -31,37 +31,6 @@ public class WorkflowValidator implements ToXContentObject {
     }
 
     /**
-     * Parse raw json content into a WorkflowValidator instance
-     * @param parser json based content parser
-     * @return an instance of the WorkflowValidator
-     * @throws IOException if the content cannot be parsed correctly
-     */
-    /*public static WorkflowValidator parse(XContentParser parser) throws IOException {
-
-        Map<String, WorkflowStepValidator> workflowStepValidators = new HashMap<>();
-
-        ensureExpectedToken(XContentParser.Token.START_OBJECT, parser.currentToken(), parser);
-        while (parser.nextToken() != XContentParser.Token.END_OBJECT) {
-            String type = parser.currentName();
-            ensureExpectedToken(XContentParser.Token.START_OBJECT, parser.nextToken(), parser);
-            workflowStepValidators.put(type, WorkflowStepValidator.parse(parser));
-        }
-        return new WorkflowValidator(workflowStepValidators);
-    }*/
-
-    /**
-     * Parse a workflow step JSON file into a WorkflowValidator object
-     *
-     * @param file the file name of the workflow step json
-     * @return A {@link WorkflowValidator} represented by the JSON
-     * @throws IOException on failure to read and parse the json file
-     */
-    /*public static WorkflowValidator parse(String file) throws IOException {
-        String json = ParseUtils.resourceToString("/" + file);
-        return parse(ParseUtils.jsonToParser(json));
-    }*/
-
-    /**
      * Output this object in a compact JSON string.
      *
      * @return a JSON representation of the template.
