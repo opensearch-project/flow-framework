@@ -456,11 +456,7 @@ public class WorkflowProcessSorterTests extends OpenSearchTestCase {
         );
         List<ProcessNode> sortedProcessNodes = workflowProcessSorter.sortProcessNodes(workflow, "123");
 
-        workflowProcessSorter.validatePluginsInstalled(
-            sortedProcessNodes,
-            validator,
-            List.of("opensearch-flow-framework", "opensearch-ml")
-        );
+        workflowProcessSorter.validatePluginsInstalled(sortedProcessNodes, List.of("opensearch-flow-framework", "opensearch-ml"));
     }
 
     public void testFailedInstalledPluginValidation() throws Exception {
@@ -504,7 +500,7 @@ public class WorkflowProcessSorterTests extends OpenSearchTestCase {
 
         FlowFrameworkException exception = expectThrows(
             FlowFrameworkException.class,
-            () -> workflowProcessSorter.validatePluginsInstalled(sortedProcessNodes, validator, List.of("opensearch-flow-framework"))
+            () -> workflowProcessSorter.validatePluginsInstalled(sortedProcessNodes, List.of("opensearch-flow-framework"))
         );
 
         assertEquals(

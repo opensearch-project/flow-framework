@@ -43,6 +43,7 @@ import static org.opensearch.flowframework.common.FlowFrameworkSettings.MAX_WORK
 import static org.opensearch.flowframework.model.WorkflowNode.NODE_TIMEOUT_DEFAULT_VALUE;
 import static org.opensearch.flowframework.model.WorkflowNode.NODE_TIMEOUT_FIELD;
 import static org.opensearch.flowframework.model.WorkflowNode.USER_INPUTS_FIELD;
+import static org.opensearch.flowframework.workflow.WorkflowStepFactory.WorkflowSteps.*;
 
 /**
  * Converts a workflow of nodes and edges into a topologically sorted list of Process Nodes.
@@ -145,25 +146,23 @@ public class WorkflowProcessSorter {
             .stream()
             .map(PluginInfo::getName)
             .collect(Collectors.toList());
-        validatePluginsInstalled(processNodes, validator, installedPlugins);
+        validatePluginsInstalled(processNodes, installedPlugins);
         validateGraph(processNodes, validator);
     }
 
     /**
      * Validates a sorted workflow, determines if each process node's required plugins are currently installed
      * @param processNodes A list of process nodes
-     * @param validator The validation definitions for the workflow steps
      * @param installedPlugins The list of installed plugins
      * @throws Exception on validation failure
      */
-    public void validatePluginsInstalled(List<ProcessNode> processNodes, WorkflowValidator validator, List<String> installedPlugins)
-        throws Exception {
+    public void validatePluginsInstalled(List<ProcessNode> processNodes, List<String> installedPlugins) throws Exception {
         // Iterate through process nodes in graph
         for (ProcessNode processNode : processNodes) {
 
             // Retrieve required plugins of this node based on type
             String nodeType = processNode.workflowStep().getName();
-            List<String> requiredPlugins = new ArrayList<>(validator.getWorkflowStepValidators().get(nodeType).getRequiredPlugins());
+            List<String> requiredPlugins = new ArrayList<>(getRequiredPluginsByWorkflowType(nodeType));
             if (!installedPlugins.containsAll(requiredPlugins)) {
                 requiredPlugins.removeAll(installedPlugins);
                 throw new FlowFrameworkException(
@@ -196,7 +195,7 @@ public class WorkflowProcessSorter {
 
             // Compile a list of outputs from the predecessor nodes based on type
             List<String> predecessorOutputs = predecessorNodeTypes.stream()
-                .map(nodeType -> validator.getWorkflowStepValidators().get(nodeType).getOutputs())
+                .map(nodeType -> getOutputByWorkflowType(nodeType))
                 .flatMap(Collection::stream)
                 .collect(Collectors.toList());
 
@@ -208,9 +207,7 @@ public class WorkflowProcessSorter {
                 .collect(Collectors.toList());
 
             // Retrieve list of required inputs from the current process node and compare
-            List<String> expectedInputs = new ArrayList<>(
-                validator.getWorkflowStepValidators().get(processNode.workflowStep().getName()).getInputs()
-            );
+            List<String> expectedInputs = new ArrayList<>(getInputByWorkflowType(processNode.workflowStep().getName()));
 
             if (!allInputs.containsAll(expectedInputs)) {
                 expectedInputs.removeAll(allInputs);
@@ -245,9 +242,7 @@ public class WorkflowProcessSorter {
      * @return the timeout value
      */
     protected TimeValue parseTimeout(WorkflowNode node) {
-        WorkflowValidator validator = readWorkflowValidator();
-        TimeValue nodeTimeoutValue = Optional.ofNullable(validator.getWorkflowStepValidators().get(node.type()).getTimeout())
-            .orElse(NODE_TIMEOUT_DEFAULT_VALUE);
+        TimeValue nodeTimeoutValue = Optional.ofNullable(getTimeoutByWorkflowType(node.type())).orElse(NODE_TIMEOUT_DEFAULT_VALUE);
         String nodeTimeoutAsString = nodeTimeoutValue.getSeconds() + "s";
         String timeoutValue = (String) node.userInputs().getOrDefault(NODE_TIMEOUT_FIELD, nodeTimeoutAsString);
         String fieldName = String.join(".", node.id(), USER_INPUTS_FIELD, NODE_TIMEOUT_FIELD);

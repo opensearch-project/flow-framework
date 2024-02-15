@@ -8,6 +8,8 @@
  */
 package org.opensearch.flowframework.workflow;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.opensearch.client.Client;
 import org.opensearch.cluster.service.ClusterService;
 import org.opensearch.common.unit.TimeValue;
@@ -20,10 +22,10 @@ import org.opensearch.flowframework.model.WorkflowValidator;
 import org.opensearch.ml.client.MachineLearningNodeClient;
 import org.opensearch.threadpool.ThreadPool;
 
-import java.util.HashMap;
-import java.util.Map;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -36,6 +38,7 @@ import static java.util.concurrent.TimeUnit.SECONDS;
 public class WorkflowStepFactory {
 
     private final Map<String, Supplier<WorkflowStep>> stepMap = new HashMap<>();
+    private static final Logger logger = LogManager.getLogger(WorkflowStepFactory.class);
 
     /**
      * Instantiate this class.
@@ -86,19 +89,72 @@ public class WorkflowStepFactory {
     public enum WorkflowSteps {
         CREATE_CONNECTOR(
             "create_connector",
-            Arrays.asList("name ", "description", "version", "protocol", "parameters", "credential", "actions"),
+            Arrays.asList("name", "description", "version", "protocol", "parameters", "credential", "actions"),
             Arrays.asList("connector_id"),
+            Arrays.asList("opensearch-ml"),
+            new TimeValue(60, SECONDS)
+        ),
+
+        REGISTER_LOCAL_CUSTOM_MODEL(
+            "register_local_custom_model",
+            Arrays.asList(
+                "name",
+                "version",
+                "model_format",
+                "function_name",
+                "model_content_hash_value",
+                "url",
+                "model_type",
+                "embedding_dimension",
+                "framework_type"
+            ),
+            Arrays.asList("model_id", "register_model_status"),
+            Arrays.asList("opensearch-ml"),
+            new TimeValue(60, SECONDS)
+        ),
+
+        REGISTER_LOCAL_SPARSE_ENCODING_MODEL(
+            "register_local_sparse_encoding_model",
+            Arrays.asList("name", "version", "model_format", "function_name", "model_content_hash_value", "url"),
+            Arrays.asList("model_id", "register_model_status"),
+            Arrays.asList("opensearch-ml"),
+            new TimeValue(60, SECONDS)
+        ),
+        REGISTER_LOCAL_PRETRAINED_MODEL(
+            "register_local_pretrained_model",
+            Arrays.asList("name", "version", "model_format"),
+            Arrays.asList("model_id", "register_model_status"),
             Arrays.asList("opensearch-ml"),
             new TimeValue(60, SECONDS)
         ),
 
         REGISTER_REMOTE_MODEL(
             "register_remote_model",
-            Arrays.asList("name ", "connector_id"),
+            Arrays.asList("name", "connector_id"),
             Arrays.asList("model_id", "register_model_status"),
             Arrays.asList("opensearch-ml"),
             null
         ),
+
+        REGISTER_MODEL_GROUP(
+            "register_model_group",
+            Arrays.asList("name"),
+            Arrays.asList("model_group_id", "model_group_status"),
+            Arrays.asList("opensearch-ml"),
+            null
+        ),
+
+        DEPLOY_MODEL(
+            "deploy_model",
+            Arrays.asList("model_id"),
+            Arrays.asList("deploy_model_status"),
+            Arrays.asList("opensearch-ml"),
+            new TimeValue(15, SECONDS)
+        ),
+
+        UNDEPLOY_MODEL("undeploy_model", Arrays.asList("model_id"), Arrays.asList("success"), Arrays.asList("opensearch-ml"), null),
+
+        DELETE_MODEL("delete_model", Arrays.asList("model_id"), Arrays.asList("model_id"), Arrays.asList("opensearch-ml"), null),
 
         DELETE_CONNECTOR(
             "delete_connector",
@@ -106,7 +162,13 @@ public class WorkflowStepFactory {
             Arrays.asList("connector_id"),
             Arrays.asList("opensearch-ml"),
             null
-        );
+        ),
+
+        REGISTER_AGENT("register_agent", Arrays.asList("name", "type"), Arrays.asList("agent_id"), Arrays.asList("opensearch-ml"), null),
+
+        DELETE_AGENT("delete_agent", Arrays.asList("agent_id"), Arrays.asList("agent_id"), Arrays.asList("opensearch-ml"), null),
+
+        CREATE_TOOL("create_tool", Arrays.asList("type"), Arrays.asList("tools"), Arrays.asList("opensearch-ml"), null);
 
         private final String workflowStep;
         private final List<String> inputs;
@@ -153,6 +215,78 @@ public class WorkflowStepFactory {
         public WorkflowStepValidator getWorkflowStepValidator() {
             return new WorkflowStepValidator(workflowStep, inputs, outputs, requiredPlugins, timeout);
         };
+
+        /**
+         * Gets the timeout based on the workflowStep.
+         * @param workflowStep workflow step type
+         * @return the resource that will be created
+         * @throws FlowFrameworkException if workflow step doesn't exist in enum
+         */
+        public static TimeValue getTimeoutByWorkflowType(String workflowStep) throws FlowFrameworkException {
+            if (workflowStep != null && !workflowStep.isEmpty()) {
+                for (WorkflowSteps mapping : values()) {
+                    if (workflowStep.equals(mapping.getWorkflowStep())) {
+                        return mapping.getTimeout();
+                    }
+                }
+            }
+            logger.error("Unable to find workflow timeout for step: {}", workflowStep);
+            throw new FlowFrameworkException("Unable to find workflow timeout for step: " + workflowStep, RestStatus.BAD_REQUEST);
+        }
+
+        /**
+         * Gets the required plugins based on the workflowStep.
+         * @param workflowStep workflow step type
+         * @return the resource that will be created
+         * @throws FlowFrameworkException if workflow step doesn't exist in enum
+         */
+        public static List<String> getRequiredPluginsByWorkflowType(String workflowStep) throws FlowFrameworkException {
+            if (workflowStep != null && !workflowStep.isEmpty()) {
+                for (WorkflowSteps mapping : values()) {
+                    if (workflowStep.equals(mapping.getWorkflowStep())) {
+                        return mapping.getRequiredPlugins();
+                    }
+                }
+            }
+            logger.error("Unable to find workflow required plugins for step: {}", workflowStep);
+            throw new FlowFrameworkException("Unable to find workflow required plugins for step: " + workflowStep, RestStatus.BAD_REQUEST);
+        }
+
+        /**
+         * Gets the output based on the workflowStep.
+         * @param workflowStep workflow step type
+         * @return the resource that will be created
+         * @throws FlowFrameworkException if workflow step doesn't exist in enum
+         */
+        public static List<String> getOutputByWorkflowType(String workflowStep) throws FlowFrameworkException {
+            if (workflowStep != null && !workflowStep.isEmpty()) {
+                for (WorkflowSteps mapping : values()) {
+                    if (workflowStep.equals(mapping.getWorkflowStep())) {
+                        return mapping.getOutputs();
+                    }
+                }
+            }
+            logger.error("Unable to find workflow output for step: {}", workflowStep);
+            throw new FlowFrameworkException("Unable to find workflow output for step: " + workflowStep, RestStatus.BAD_REQUEST);
+        }
+
+        /**
+         * Gets the input based on the workflowStep.
+         * @param workflowStep workflow step type
+         * @return the resource that will be created
+         * @throws FlowFrameworkException if workflow step doesn't exist in enum
+         */
+        public static List<String> getInputByWorkflowType(String workflowStep) throws FlowFrameworkException {
+            if (workflowStep != null && !workflowStep.isEmpty()) {
+                for (WorkflowSteps mapping : values()) {
+                    if (workflowStep.equals(mapping.getWorkflowStep())) {
+                        return mapping.getInputs();
+                    }
+                }
+            }
+            logger.error("Unable to find workflow input for step: {}", workflowStep);
+            throw new FlowFrameworkException("Unable to find workflow input for step: " + workflowStep, RestStatus.BAD_REQUEST);
+        }
 
     }
 

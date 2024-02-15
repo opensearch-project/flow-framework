@@ -31,7 +31,11 @@ public class GetWorkflowStepTransportActionTests extends OpenSearchTestCase {
     public void setUp() throws Exception {
         super.setUp();
 
-        this.getWorkflowStepTransportAction = new GetWorkflowStepTransportAction(mock(TransportService.class), mock(ActionFilters.class), mock(WorkflowStepFactory.class));
+        this.getWorkflowStepTransportAction = new GetWorkflowStepTransportAction(
+            mock(TransportService.class),
+            mock(ActionFilters.class),
+            mock(WorkflowStepFactory.class)
+        );
     }
 
     public void testGetWorkflowStepAction() throws IOException {
