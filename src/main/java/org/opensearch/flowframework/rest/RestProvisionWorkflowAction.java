@@ -27,7 +27,11 @@ import org.opensearch.rest.RestRequest;
 import java.io.IOException;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
+import java.util.stream.Collectors;
 
+import static org.opensearch.flowframework.common.CommonValue.PROVISION_WORKFLOW;
+import static org.opensearch.flowframework.common.CommonValue.VALIDATION;
 import static org.opensearch.flowframework.common.CommonValue.WORKFLOW_ID;
 import static org.opensearch.flowframework.common.CommonValue.WORKFLOW_URI;
 import static org.opensearch.flowframework.common.FlowFrameworkSettings.FLOW_FRAMEWORK_ENABLED;
@@ -68,6 +72,12 @@ public class RestProvisionWorkflowAction extends BaseRestHandler {
     @Override
     protected RestChannelConsumer prepareRequest(RestRequest request, NodeClient client) throws IOException {
         String workflowId = request.param(WORKFLOW_ID);
+        final List<String> excludeParams = List.of(WORKFLOW_ID, VALIDATION, PROVISION_WORKFLOW);
+        Map<String, String> params = request.params()
+            .entrySet()
+            .stream()
+            .filter(e -> !WORKFLOW_ID.equals(e.getKey()))
+            .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
         try {
             if (!flowFrameworkFeatureEnabledSetting.isFlowFrameworkEnabled()) {
                 throw new FlowFrameworkException(
@@ -85,7 +95,7 @@ public class RestProvisionWorkflowAction extends BaseRestHandler {
                 throw new FlowFrameworkException("workflow_id cannot be null", RestStatus.BAD_REQUEST);
             }
             // Create request and provision
-            WorkflowRequest workflowRequest = new WorkflowRequest(workflowId, null);
+            WorkflowRequest workflowRequest = new WorkflowRequest(workflowId, null, params);
             return channel -> client.execute(ProvisionWorkflowAction.INSTANCE, workflowRequest, ActionListener.wrap(response -> {
                 XContentBuilder builder = response.toXContent(channel.newBuilder(), ToXContent.EMPTY_PARAMS);
                 channel.sendResponse(new BytesRestResponse(RestStatus.OK, builder));
