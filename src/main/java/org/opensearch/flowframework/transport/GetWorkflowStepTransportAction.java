@@ -18,6 +18,7 @@ import org.opensearch.common.inject.Inject;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.flowframework.exception.FlowFrameworkException;
 import org.opensearch.flowframework.model.WorkflowValidator;
+import org.opensearch.flowframework.workflow.WorkflowStepFactory;
 import org.opensearch.tasks.Task;
 import org.opensearch.transport.TransportService;
 
@@ -27,6 +28,7 @@ import org.opensearch.transport.TransportService;
 public class GetWorkflowStepTransportAction extends HandledTransportAction<ActionRequest, GetWorkflowStepResponse> {
 
     private final Logger logger = LogManager.getLogger(GetWorkflowStepTransportAction.class);
+    private final WorkflowStepFactory workflowStepFactory;
 
     /**
      * Instantiates a new GetWorkflowStepTransportAction instance
@@ -34,14 +36,20 @@ public class GetWorkflowStepTransportAction extends HandledTransportAction<Actio
      * @param actionFilters action filters
      */
     @Inject
-    public GetWorkflowStepTransportAction(TransportService transportService, ActionFilters actionFilters) {
+    public GetWorkflowStepTransportAction(
+        TransportService transportService,
+        ActionFilters actionFilters,
+        WorkflowStepFactory workflowStepFactory
+    ) {
         super(GetWorkflowStepAction.NAME, transportService, actionFilters, WorkflowRequest::new);
+        this.workflowStepFactory = workflowStepFactory;
     }
 
     @Override
     protected void doExecute(Task task, ActionRequest request, ActionListener<GetWorkflowStepResponse> listener) {
         try {
-            listener.onResponse(new GetWorkflowStepResponse(WorkflowValidator.parse("mappings/workflow-steps.json")));
+            WorkflowValidator workflowValidator = this.workflowStepFactory.getWorkflowValidator();
+            listener.onResponse(new GetWorkflowStepResponse(workflowValidator));
         } catch (Exception e) {
             logger.error("Failed to retrieve workflow step json.", e);
             listener.onFailure(new FlowFrameworkException(e.getMessage(), ExceptionsHelper.status(e)));

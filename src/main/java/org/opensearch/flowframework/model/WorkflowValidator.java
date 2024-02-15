@@ -11,14 +11,9 @@ package org.opensearch.flowframework.model;
 import org.opensearch.common.xcontent.json.JsonXContent;
 import org.opensearch.core.xcontent.ToXContentObject;
 import org.opensearch.core.xcontent.XContentBuilder;
-import org.opensearch.core.xcontent.XContentParser;
-import org.opensearch.flowframework.util.ParseUtils;
 
 import java.io.IOException;
-import java.util.HashMap;
 import java.util.Map;
-
-import static org.opensearch.core.xcontent.XContentParserUtils.ensureExpectedToken;
 
 /**
  * This represents the workflow steps json which maps each step to expected inputs and outputs
@@ -41,7 +36,7 @@ public class WorkflowValidator implements ToXContentObject {
      * @return an instance of the WorkflowValidator
      * @throws IOException if the content cannot be parsed correctly
      */
-    public static WorkflowValidator parse(XContentParser parser) throws IOException {
+    /*public static WorkflowValidator parse(XContentParser parser) throws IOException {
 
         Map<String, WorkflowStepValidator> workflowStepValidators = new HashMap<>();
 
@@ -52,7 +47,7 @@ public class WorkflowValidator implements ToXContentObject {
             workflowStepValidators.put(type, WorkflowStepValidator.parse(parser));
         }
         return new WorkflowValidator(workflowStepValidators);
-    }
+    }*/
 
     /**
      * Parse a workflow step JSON file into a WorkflowValidator object
@@ -61,10 +56,10 @@ public class WorkflowValidator implements ToXContentObject {
      * @return A {@link WorkflowValidator} represented by the JSON
      * @throws IOException on failure to read and parse the json file
      */
-    public static WorkflowValidator parse(String file) throws IOException {
+    /*public static WorkflowValidator parse(String file) throws IOException {
         String json = ParseUtils.resourceToString("/" + file);
         return parse(ParseUtils.jsonToParser(json));
-    }
+    }*/
 
     /**
      * Output this object in a compact JSON string.

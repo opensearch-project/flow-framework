@@ -88,6 +88,7 @@ public class WorkflowProcessSorterTests extends OpenSearchTestCase {
     private static ClusterService clusterService = mock(ClusterService.class);
     private static WorkflowValidator validator;
     private static FlowFrameworkSettings flowFrameworkSettings;
+    private static WorkflowStepFactory workflowStepFactory;
 
     @BeforeClass
     public static void setup() throws IOException {
@@ -128,7 +129,7 @@ public class WorkflowProcessSorterTests extends OpenSearchTestCase {
             flowFrameworkSettings
         );
         workflowProcessSorter = new WorkflowProcessSorter(factory, testThreadPool, clusterService, client, flowFrameworkSettings);
-        validator = WorkflowValidator.parse("mappings/workflow-steps.json");
+        validator = workflowStepFactory.getWorkflowValidator();
     }
 
     @AfterClass

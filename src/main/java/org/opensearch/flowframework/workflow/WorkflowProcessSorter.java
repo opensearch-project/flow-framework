@@ -227,7 +227,7 @@ public class WorkflowProcessSorter {
 
     private WorkflowValidator readWorkflowValidator() {
         try {
-            return WorkflowValidator.parse("mappings/workflow-steps.json");
+            return workflowStepFactory.getWorkflowValidator();
         } catch (Exception e) {
             logger.error("Failed at reading workflow-steps mapping file", e);
             throw new FlowFrameworkException(

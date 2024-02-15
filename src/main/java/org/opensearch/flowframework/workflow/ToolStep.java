@@ -31,6 +31,7 @@ import static org.opensearch.flowframework.common.WorkflowResources.MODEL_ID;
 /**
  * Step to register a tool for an agent
  */
+@SuppressWarnings("unchecked")
 public class ToolStep implements WorkflowStep {
 
     private static final Logger logger = LogManager.getLogger(ToolStep.class);
