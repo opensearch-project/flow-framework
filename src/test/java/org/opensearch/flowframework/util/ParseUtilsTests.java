@@ -89,7 +89,8 @@ public class ParseUtilsTests extends OpenSearchTestCase {
                 Map.entry("param1", 2),
                 Map.entry("content3", "${{step1.output1}}"),
                 Map.entry("nestedMap", Map.of("content4", "${{step3.output3}}")),
-                Map.entry("nestedList", List.of("${{step4.output4}}"))
+                Map.entry("nestedList", List.of("${{step4.output4}}")),
+                Map.entry("content5", "${{pathparam1}} plus ${{pathparam1}} is ${{pathparam2}} but I didn't replace ${{pathparam3}}")
             ),
             Map.of("param1", "value1"),
             "workflowId",
@@ -110,8 +111,8 @@ public class ParseUtilsTests extends OpenSearchTestCase {
         );
         Map<String, String> previousNodeInputs = Map.of("step2", "output2");
         Set<String> requiredKeys = Set.of("param1", "content1");
-        Set<String> optionalKeys = Set.of("output1", "output2", "content3", "nestedMap", "nestedList", "no-output");
-        Map<String, String> params = Map.of("param1", "value1");
+        Set<String> optionalKeys = Set.of("output1", "output2", "content3", "nestedMap", "nestedList", "no-output", "content5");
+        Map<String, String> params = Map.ofEntries(Map.entry("pathparam1", "one"), Map.entry("pathparam2", "two"));
         Map<String, Object> inputs = ParseUtils.getInputsFromPreviousSteps(
             requiredKeys,
             optionalKeys,
@@ -126,7 +127,6 @@ public class ParseUtilsTests extends OpenSearchTestCase {
         assertEquals("outputvalue1", inputs.get("output1"));
         assertEquals("step2outputvalue2", inputs.get("output2"));
 
-        // FIXME add a substitution test for params here
         // Substitutions
         assertEquals("outputvalue1", inputs.get("content3"));
         @SuppressWarnings("unchecked")
@@ -135,6 +135,7 @@ public class ParseUtilsTests extends OpenSearchTestCase {
         @SuppressWarnings("unchecked")
         List<String> nestedList = (List<String>) inputs.get("nestedList");
         assertEquals(List.of("step4outputvalue4"), nestedList);
+        assertEquals("one plus one is two but I didn't replace ${{pathparam3}}", inputs.get("content5"));
         assertNull(inputs.get("no-output"));
 
         Set<String> missingRequiredKeys = Set.of("not-here");
