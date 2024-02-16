@@ -26,7 +26,6 @@ import java.util.Collections;
 import java.util.Map;
 import java.util.Set;
 
-import static org.opensearch.flowframework.common.CommonValue.REGISTER_MODEL_STATUS;
 import static org.opensearch.flowframework.common.WorkflowResources.MODEL_ID;
 import static org.opensearch.flowframework.common.WorkflowResources.getResourceByWorkflowStep;
 
@@ -89,7 +88,7 @@ public class DeployModelStep extends AbstractRetryableWorkflowStep {
                         String id = getResourceId(mlTask);
                         deployModelFuture.onResponse(
                             new WorkflowData(
-                                Map.ofEntries(Map.entry(resourceName, id), Map.entry(REGISTER_MODEL_STATUS, mlTask.getState().name())),
+                                Map.ofEntries(Map.entry(resourceName, id), Map.entry(MODEL_ID, mlTask.getModelId())),
                                 currentNodeInputs.getWorkflowId(),
                                 currentNodeId
                             )

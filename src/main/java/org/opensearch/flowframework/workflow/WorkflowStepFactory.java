@@ -69,7 +69,6 @@ public class WorkflowStepFactory {
         stepMap.put(CreateConnectorStep.NAME, () -> new CreateConnectorStep(mlClient, flowFrameworkIndicesHandler));
         stepMap.put(DeleteConnectorStep.NAME, () -> new DeleteConnectorStep(mlClient));
         stepMap.put(RegisterModelGroupStep.NAME, () -> new RegisterModelGroupStep(mlClient, flowFrameworkIndicesHandler));
-        stepMap.put(NoOpStep.NAME, NoOpStep::new);
         stepMap.put(ToolStep.NAME, ToolStep::new);
         stepMap.put(RegisterAgentStep.NAME, () -> new RegisterAgentStep(mlClient, flowFrameworkIndicesHandler));
         stepMap.put(DeleteAgentStep.NAME, () -> new DeleteAgentStep(mlClient));
