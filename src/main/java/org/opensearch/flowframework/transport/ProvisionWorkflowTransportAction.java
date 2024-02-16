@@ -149,7 +149,7 @@ public class ProvisionWorkflowTransportAction extends HandledTransportAction<Wor
                                 listener.onResponse(new WorkflowResponse(workflowId));
                             }, exception -> {
                                 String errorMessage = "Failed to update wowrfow state: " + workflowId;
-                                logger.error(errorMessage, exception);
+                                logger.error(errorMessage);
                                 listener.onFailure(new FlowFrameworkException(errorMessage, ExceptionsHelper.status(exception)));
                             })
                         );
@@ -159,19 +159,20 @@ public class ProvisionWorkflowTransportAction extends HandledTransportAction<Wor
                         listener.onFailure(new FlowFrameworkException(errorMessage, RestStatus.BAD_REQUEST));
                     }
                 }, listener);
-
             }, exception -> {
                 if (exception instanceof FlowFrameworkException) {
-                    logger.error("Workflow validation failed for workflow : " + workflowId);
+                    logger.error("Workflow validation failed for workflow {}", workflowId);
                     listener.onFailure(exception);
                 } else {
-                    logger.error("Failed to retrieve template from global context.", exception);
-                    listener.onFailure(new FlowFrameworkException(exception.getMessage(), ExceptionsHelper.status(exception)));
+                    String errorMessage = "Failed to retrieve template from global context";
+                    logger.error(errorMessage);
+                    listener.onFailure(new FlowFrameworkException(errorMessage, ExceptionsHelper.status(exception)));
                 }
             }));
         } catch (Exception e) {
-            logger.error("Failed to retrieve template from global context.", e);
-            listener.onFailure(new FlowFrameworkException(e.getMessage(), ExceptionsHelper.status(e)));
+            String errorMessage = "Failed to retrieve template from global context";
+            logger.error(errorMessage);
+            listener.onFailure(new FlowFrameworkException(errorMessage, ExceptionsHelper.status(e)));
         }
     }
 
@@ -185,7 +186,7 @@ public class ProvisionWorkflowTransportAction extends HandledTransportAction<Wor
         try {
             threadPool.executor(PROVISION_WORKFLOW_THREAD_POOL).execute(() -> { executeWorkflow(workflowSequence, workflowId); });
         } catch (Exception exception) {
-            listener.onFailure(new FlowFrameworkException(exception.getMessage(), ExceptionsHelper.status(exception)));
+            listener.onFailure(new FlowFrameworkException("Failed to execute workflow " + workflowId, ExceptionsHelper.status(exception)));
         }
     }
 
@@ -232,10 +233,10 @@ public class ProvisionWorkflowTransportAction extends HandledTransportAction<Wor
                 ),
                 ActionListener.wrap(updateResponse -> {
                     logger.info("updated workflow {} state to {}", workflowId, State.COMPLETED);
-                }, exception -> { logger.error("Failed to update workflow state : {}", exception.getMessage(), exception); })
+                }, exception -> { logger.error("Failed to update workflow state"); })
             );
         } catch (Exception ex) {
-            logger.error("Provisioning failed for workflow {} during step {}.", workflowId, currentStepId, ex);
+            logger.error("Provisioning failed for workflow {} during step {}.", workflowId, currentStepId);
             String errorMessage = (ex.getCause() == null ? ex.getClass().getName() : ex.getCause().getClass().getName())
                 + " during step "
                 + currentStepId;
@@ -249,7 +250,7 @@ public class ProvisionWorkflowTransportAction extends HandledTransportAction<Wor
                 ),
                 ActionListener.wrap(updateResponse -> {
                     logger.info("updated workflow {} state to {}", workflowId, State.FAILED);
-                }, exceptionState -> { logger.error("Failed to update workflow state : {}", exceptionState.getMessage(), ex); })
+                }, exceptionState -> { logger.error("Failed to update workflow state"); })
             );
         }
     }

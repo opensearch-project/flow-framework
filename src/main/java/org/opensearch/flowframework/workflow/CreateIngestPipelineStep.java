@@ -127,8 +127,9 @@ public class CreateIngestPipelineStep implements WorkflowStep {
                         buildIngestPipelineRequestContent(description, modelId, type, inputFieldName, outputFieldName)
                     );
                 } catch (IOException e) {
-                    logger.error("Failed to create ingest pipeline configuration: " + e.getMessage());
-                    createIngestPipelineFuture.onFailure(e);
+                    String errorMessage = "Failed to create ingest pipeline configuration";
+                    logger.error(errorMessage);
+                    createIngestPipelineFuture.onFailure(new FlowFrameworkException(errorMessage, ExceptionsHelper.status(e)));
                 }
                 break;
             }
@@ -164,21 +165,24 @@ public class CreateIngestPipelineStep implements WorkflowStep {
                                 )
                             );
                         }, exception -> {
-                            logger.error("Failed to update new created resource", exception);
+                            String errorMessage = "Failed to update new created resource";
+                            logger.error(errorMessage);
                             createIngestPipelineFuture.onFailure(
-                                new FlowFrameworkException(exception.getMessage(), ExceptionsHelper.status(exception))
+                                new FlowFrameworkException(errorMessage, ExceptionsHelper.status(exception))
                             );
                         })
                     );
 
                 } catch (Exception e) {
-                    logger.error("Failed to parse and update new created resource", e);
-                    createIngestPipelineFuture.onFailure(new FlowFrameworkException(e.getMessage(), ExceptionsHelper.status(e)));
+                    String errorMessage = "Failed to parse and update new created resource";
+                    logger.error(errorMessage);
+                    createIngestPipelineFuture.onFailure(new FlowFrameworkException(errorMessage, ExceptionsHelper.status(e)));
                 }
 
             }, exception -> {
-                logger.error("Failed to create ingest pipeline : " + exception.getMessage());
-                createIngestPipelineFuture.onFailure(exception);
+                String errorMessage = "Failed to create ingest pipeline";
+                logger.error(errorMessage);
+                createIngestPipelineFuture.onFailure(new FlowFrameworkException(errorMessage, ExceptionsHelper.status(exception)));
             }));
         }
 

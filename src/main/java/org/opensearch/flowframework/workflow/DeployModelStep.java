@@ -90,14 +90,19 @@ public class DeployModelStep extends AbstractRetryableWorkflowStep {
                         deployModelFuture.onResponse(
                             new WorkflowData(Map.of(resourceName, id), currentNodeInputs.getWorkflowId(), currentNodeId)
                         );
-                    }, e -> { deployModelFuture.onFailure(new FlowFrameworkException(e.getMessage(), ExceptionsHelper.status(e))); })
+                    },
+                        e -> {
+                            deployModelFuture.onFailure(new FlowFrameworkException("Failed to deploy model", ExceptionsHelper.status(e)));
+                        }
+                    )
                 );
             }
 
             @Override
             public void onFailure(Exception e) {
-                logger.error("Failed to deploy model");
-                deployModelFuture.onFailure(new FlowFrameworkException(e.getMessage(), ExceptionsHelper.status(e)));
+                String errorMessage = "Failed to deploy model";
+                logger.error(errorMessage);
+                deployModelFuture.onFailure(new FlowFrameworkException(errorMessage, ExceptionsHelper.status(e)));
             }
         };
 

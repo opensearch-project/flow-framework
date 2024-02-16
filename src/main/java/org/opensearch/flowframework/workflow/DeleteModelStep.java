@@ -69,8 +69,9 @@ public class DeleteModelStep implements WorkflowStep {
 
             @Override
             public void onFailure(Exception e) {
-                logger.error("Failed to delete model");
-                deleteModelFuture.onFailure(new FlowFrameworkException(e.getMessage(), ExceptionsHelper.status(e)));
+                String errorMessage = "Failed to delete model";
+                logger.error(errorMessage);
+                deleteModelFuture.onFailure(new FlowFrameworkException(errorMessage, ExceptionsHelper.status(e)));
             }
         };
 

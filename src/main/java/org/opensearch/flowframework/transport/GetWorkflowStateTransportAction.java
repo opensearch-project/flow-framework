@@ -77,10 +77,9 @@ public class GetWorkflowStateTransportAction extends HandledTransportAction<GetW
                         WorkflowState workflowState = WorkflowState.parse(parser);
                         listener.onResponse(new GetWorkflowStateResponse(workflowState, request.getAll()));
                     } catch (Exception e) {
-                        logger.error("Failed to parse workflowState: " + r.getId(), e);
-                        listener.onFailure(
-                            new FlowFrameworkException("Failed to parse workflowState: " + r.getId(), RestStatus.BAD_REQUEST)
-                        );
+                        String errorMessage = "Failed to parse workflowState: " + r.getId();
+                        logger.error(errorMessage);
+                        listener.onFailure(new FlowFrameworkException(errorMessage, RestStatus.BAD_REQUEST));
                     }
                 } else {
                     listener.onFailure(new FlowFrameworkException("Fail to find workflow", RestStatus.NOT_FOUND));
@@ -89,13 +88,15 @@ public class GetWorkflowStateTransportAction extends HandledTransportAction<GetW
                 if (e instanceof IndexNotFoundException) {
                     listener.onFailure(new FlowFrameworkException("Fail to find workflow", RestStatus.NOT_FOUND));
                 } else {
-                    logger.error("Failed to get workflow status of: " + workflowId, e);
-                    listener.onFailure(new FlowFrameworkException("Failed to get workflow status of: " + workflowId, RestStatus.NOT_FOUND));
+                    String errorMessage = "Failed to get workflow status of: " + workflowId;
+                    logger.error(errorMessage);
+                    listener.onFailure(new FlowFrameworkException(errorMessage, RestStatus.NOT_FOUND));
                 }
             }), context::restore));
         } catch (Exception e) {
-            logger.error("Failed to get workflow: " + workflowId, e);
-            listener.onFailure(new FlowFrameworkException(e.getMessage(), ExceptionsHelper.status(e)));
+            String errorMessage = "Failed to get workflow: " + workflowId;
+            logger.error(errorMessage);
+            listener.onFailure(new FlowFrameworkException(errorMessage, ExceptionsHelper.status(e)));
         }
     }
 }

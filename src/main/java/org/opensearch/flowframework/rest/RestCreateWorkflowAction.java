@@ -125,16 +125,24 @@ public class RestCreateWorkflowAction extends BaseRestHandler {
                 try {
                     FlowFrameworkException ex = exception instanceof FlowFrameworkException
                         ? (FlowFrameworkException) exception
-                        : new FlowFrameworkException(exception.getMessage(), ExceptionsHelper.status(exception));
+                        : new FlowFrameworkException("Failed to create workflow.", ExceptionsHelper.status(exception));
                     XContentBuilder exceptionBuilder = ex.toXContent(channel.newErrorBuilder(), ToXContent.EMPTY_PARAMS);
                     channel.sendResponse(new BytesRestResponse(ex.getRestStatus(), exceptionBuilder));
                 } catch (IOException e) {
-                    logger.error("Failed to send back provision workflow exception", e);
-                    channel.sendResponse(new BytesRestResponse(ExceptionsHelper.status(e), e.getMessage()));
+                    String errorMessage = "IOException: Failed to send back create workflow exception";
+                    logger.error(errorMessage);
+                    channel.sendResponse(new BytesRestResponse(ExceptionsHelper.status(e), errorMessage));
                 }
             }));
-        } catch (Exception e) {
-            FlowFrameworkException ex = new FlowFrameworkException(e.getMessage(), RestStatus.BAD_REQUEST);
+        } catch (FlowFrameworkException e) {
+            return channel -> channel.sendResponse(
+                new BytesRestResponse(e.getRestStatus(), e.toXContent(channel.newErrorBuilder(), ToXContent.EMPTY_PARAMS))
+            );
+        } catch (IOException e) {
+            FlowFrameworkException ex = new FlowFrameworkException(
+                "IOException: template content invalid for specified Content-Type.",
+                RestStatus.BAD_REQUEST
+            );
             return channel -> channel.sendResponse(
                 new BytesRestResponse(ex.getRestStatus(), ex.toXContent(channel.newErrorBuilder(), ToXContent.EMPTY_PARAMS))
             );

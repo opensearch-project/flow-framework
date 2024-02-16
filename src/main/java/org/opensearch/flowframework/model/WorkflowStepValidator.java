@@ -22,8 +22,6 @@ import java.util.List;
  */
 public class WorkflowStepValidator implements ToXContentObject {
 
-    private static final Logger logger = LogManager.getLogger(WorkflowStepValidator.class);
-
     /** Inputs field name */
     private static final String INPUTS_FIELD = "inputs";
     /** Outputs field name */
@@ -33,7 +31,6 @@ public class WorkflowStepValidator implements ToXContentObject {
     /** Timeout field name */
     private static final String TIMEOUT = "timeout";
 
-    private String workflowStep;
     private List<String> inputs;
     private List<String> outputs;
     private List<String> requiredPlugins;
@@ -41,20 +38,17 @@ public class WorkflowStepValidator implements ToXContentObject {
 
     /**
      * Instantiate the object representing a Workflow Step validator
-     * @param workflowStep name of the workflow step
      * @param inputs the workflow step inputs
      * @param outputs the workflow step outputs
      * @param requiredPlugins the required plugins for this workflow step
      * @param timeout the timeout for this workflow step
      */
     public WorkflowStepValidator(
-        String workflowStep,
         List<String> inputs,
         List<String> outputs,
         List<String> requiredPlugins,
         TimeValue timeout
     ) {
-        this.workflowStep = workflowStep;
         this.inputs = inputs;
         this.outputs = outputs;
         this.requiredPlugins = requiredPlugins;

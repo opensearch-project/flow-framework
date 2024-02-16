@@ -66,12 +66,9 @@ public class GetWorkflowStepTransportAction extends HandledTransportAction<Workf
             }
             listener.onResponse(new GetWorkflowStepResponse(workflowValidator));
         } catch (Exception e) {
-            if (e instanceof FlowFrameworkException) {
-                logger.error(e.getMessage());
-                listener.onFailure(e);
-            }
-            logger.error("Failed to retrieve workflow step json.", e);
-            listener.onFailure(new FlowFrameworkException(e.getMessage(), ExceptionsHelper.status(e)));
+            String errorMessage = "Failed to retrieve workflow step json.";
+            logger.error(errorMessage, e);
+            listener.onFailure(new FlowFrameworkException(errorMessage, ExceptionsHelper.status(e)));
         }
     }
 }

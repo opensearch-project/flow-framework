@@ -205,7 +205,6 @@ public class DeployModelStepTests extends OpenSearchTestCase {
 
         String status = MLTaskState.RUNNING.name();
         MLTaskType mlTaskType = MLTaskType.DEPLOY_MODEL;
-        String testErrorMessage = "error";
 
         @SuppressWarnings("unchecked")
         ArgumentCaptor<ActionListener<MLDeployModelResponse>> actionListenerCaptor = ArgumentCaptor.forClass(ActionListener.class);
@@ -232,7 +231,7 @@ public class DeployModelStepTests extends OpenSearchTestCase {
                 null,
                 null,
                 null,
-                testErrorMessage,
+                "error",
                 null,
                 false
             );
@@ -250,6 +249,6 @@ public class DeployModelStepTests extends OpenSearchTestCase {
 
         ExecutionException ex = expectThrows(ExecutionException.class, () -> future.get().getClass());
         assertTrue(ex.getCause() instanceof FlowFrameworkException);
-        assertEquals("Deploy model failed with error : " + testErrorMessage, ex.getCause().getMessage());
+        assertEquals("Failed to deploy model", ex.getCause().getMessage());
     }
 }

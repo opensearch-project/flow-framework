@@ -69,8 +69,9 @@ public class DeleteAgentStep implements WorkflowStep {
 
             @Override
             public void onFailure(Exception e) {
-                logger.error("Failed to delete agent");
-                deleteAgentFuture.onFailure(new FlowFrameworkException(e.getMessage(), ExceptionsHelper.status(e)));
+                String errorMessage = "Failed to delete agent";
+                logger.error(errorMessage);
+                deleteAgentFuture.onFailure(new FlowFrameworkException(errorMessage, ExceptionsHelper.status(e)));
             }
         };
 

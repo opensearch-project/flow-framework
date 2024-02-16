@@ -282,7 +282,7 @@ public class EncryptorUtils {
                         this.masterKey = generatedKey;
                         listener.onResponse(true);
                     }, indexException -> {
-                        logger.error("Failed to index config", indexException);
+                        logger.error("Failed to index config");
                         listener.onFailure(indexException);
                     }));
 
@@ -293,12 +293,12 @@ public class EncryptorUtils {
                     listener.onResponse(true);
                 }
             }, getRequestException -> {
-                logger.error("Failed to search for config from config index", getRequestException);
+                logger.error("Failed to search for config from config index");
                 listener.onFailure(getRequestException);
             }));
 
         } catch (Exception e) {
-            logger.error("Failed to retrieve config from config index", e);
+            logger.error("Failed to retrieve config from config index");
             listener.onFailure(e);
         }
     }
@@ -320,9 +320,13 @@ public class EncryptorUtils {
                     if (response.isExists()) {
                         this.masterKey = (String) response.getSourceAsMap().get(MASTER_KEY);
                     } else {
-                        throw new FlowFrameworkException("Config has not been initialized", RestStatus.NOT_FOUND);
+                        throw new FlowFrameworkException("Master key has not been initialized in config index", RestStatus.NOT_FOUND);
                     }
-                }, exception -> { throw new FlowFrameworkException(exception.getMessage(), ExceptionsHelper.status(exception)); }));
+                },
+                    exception -> {
+                        throw new FlowFrameworkException("Failed to get master key from config index", ExceptionsHelper.status(exception));
+                    }
+                ));
             }
         }
     }

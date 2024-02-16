@@ -69,8 +69,9 @@ public class DeleteConnectorStep implements WorkflowStep {
 
             @Override
             public void onFailure(Exception e) {
-                logger.error("Failed to delete connector");
-                deleteConnectorFuture.onFailure(new FlowFrameworkException(e.getMessage(), ExceptionsHelper.status(e)));
+                String errorMessage = "Failed to delete connector";
+                logger.error(errorMessage);
+                deleteConnectorFuture.onFailure(new FlowFrameworkException(errorMessage, ExceptionsHelper.status(e)));
             }
         };
 

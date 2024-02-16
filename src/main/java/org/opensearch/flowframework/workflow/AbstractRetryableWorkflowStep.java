@@ -92,15 +92,17 @@ public abstract class AbstractRetryableWorkflowStep implements WorkflowStep {
                                         logger.info("successfully updated resources created in state index: {}", updateResponse.getIndex());
                                         mlTaskListener.onResponse(response);
                                     }, exception -> {
-                                        logger.error("Failed to update new created resource", exception);
+                                        String errorMessage = "Failed to update new created resource";
+                                        logger.error(errorMessage);
                                         mlTaskListener.onFailure(
-                                            new FlowFrameworkException(exception.getMessage(), ExceptionsHelper.status(exception))
+                                            new FlowFrameworkException(errorMessage, ExceptionsHelper.status(exception))
                                         );
                                     })
                                 );
                             } catch (Exception e) {
-                                logger.error("Failed to parse and update new created resource", e);
-                                mlTaskListener.onFailure(new FlowFrameworkException(e.getMessage(), ExceptionsHelper.status(e)));
+                                String errorMessage = "Failed to parse and update new created resource";
+                                logger.error(errorMessage);
+                                mlTaskListener.onFailure(new FlowFrameworkException(errorMessage, ExceptionsHelper.status(e)));
                             }
                             break;
                         case FAILED:
@@ -118,7 +120,7 @@ public abstract class AbstractRetryableWorkflowStep implements WorkflowStep {
                             // Task started or running, do nothing
                     }
                 }, exception -> {
-                    String errorMessage = workflowStep + " failed with error : " + exception.getMessage();
+                    String errorMessage = workflowStep + " failed";
                     logger.error(errorMessage);
                     mlTaskListener.onFailure(new FlowFrameworkException(errorMessage, RestStatus.BAD_REQUEST));
                 }));

@@ -82,8 +82,9 @@ public class UndeployModelStep implements WorkflowStep {
 
             @Override
             public void onFailure(Exception e) {
-                logger.error("Failed to unldeploy model");
-                undeployModelFuture.onFailure(new FlowFrameworkException(e.getMessage(), ExceptionsHelper.status(e)));
+                String errorMessage = "Failed to undeploy model";
+                logger.error(errorMessage);
+                undeployModelFuture.onFailure(new FlowFrameworkException(errorMessage, ExceptionsHelper.status(e)));
             }
         };
 
