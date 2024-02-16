@@ -28,10 +28,9 @@ import java.io.IOException;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
-import static org.opensearch.flowframework.common.CommonValue.PROVISION_WORKFLOW;
-import static org.opensearch.flowframework.common.CommonValue.VALIDATION;
 import static org.opensearch.flowframework.common.CommonValue.WORKFLOW_ID;
 import static org.opensearch.flowframework.common.CommonValue.WORKFLOW_URI;
 import static org.opensearch.flowframework.common.FlowFrameworkSettings.FLOW_FRAMEWORK_ENABLED;
@@ -72,12 +71,11 @@ public class RestProvisionWorkflowAction extends BaseRestHandler {
     @Override
     protected RestChannelConsumer prepareRequest(RestRequest request, NodeClient client) throws IOException {
         String workflowId = request.param(WORKFLOW_ID);
-        final List<String> excludeParams = List.of(WORKFLOW_ID, VALIDATION, PROVISION_WORKFLOW);
         Map<String, String> params = request.params()
-            .entrySet()
+            .keySet()
             .stream()
-            .filter(e -> !WORKFLOW_ID.equals(e.getKey()))
-            .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
+            .filter(k -> !WORKFLOW_ID.equals(k))
+            .collect(Collectors.toMap(Function.identity(), request::param));
         try {
             if (!flowFrameworkFeatureEnabledSetting.isFlowFrameworkEnabled()) {
                 throw new FlowFrameworkException(
