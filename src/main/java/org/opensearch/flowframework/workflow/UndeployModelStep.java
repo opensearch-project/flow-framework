@@ -54,7 +54,8 @@ public class UndeployModelStep implements WorkflowStep {
         String currentNodeId,
         WorkflowData currentNodeInputs,
         Map<String, WorkflowData> outputs,
-        Map<String, String> previousNodeInputs
+        Map<String, String> previousNodeInputs,
+        Map<String, String> params
     ) {
         PlainActionFuture<WorkflowData> undeployModelFuture = PlainActionFuture.newFuture();
 
@@ -95,7 +96,8 @@ public class UndeployModelStep implements WorkflowStep {
                 optionalKeys,
                 currentNodeInputs,
                 outputs,
-                previousNodeInputs
+                previousNodeInputs,
+                params
             );
 
             String modelId = inputs.get(MODEL_ID).toString();

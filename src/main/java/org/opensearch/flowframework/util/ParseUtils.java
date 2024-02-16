@@ -248,6 +248,7 @@ public class ParseUtils {
      * @param currentNodeInputs Input params and content for this node, from workflow parsing
      * @param outputs WorkflowData content of previous steps
      * @param previousNodeInputs Input params for this node that come from previous steps
+     * @param params Params that came from REST path
      * @return A map containing the requiredInputKeys with their corresponding values,
      *         and optionalInputKeys with their corresponding values if present.
      *         Throws a {@link FlowFrameworkException} if a required key is not present.
@@ -257,7 +258,8 @@ public class ParseUtils {
         Set<String> optionalInputKeys,
         WorkflowData currentNodeInputs,
         Map<String, WorkflowData> outputs,
-        Map<String, String> previousNodeInputs
+        Map<String, String> previousNodeInputs,
+        Map<String, String> params
     ) {
         // Mutable set to ensure all required keys are used
         Set<String> requiredKeys = new HashSet<>(requiredInputKeys);

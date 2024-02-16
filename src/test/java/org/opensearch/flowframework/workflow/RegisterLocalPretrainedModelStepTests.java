@@ -167,6 +167,7 @@ public class RegisterLocalPretrainedModelStepTests extends OpenSearchTestCase {
             workflowData.getNodeId(),
             workflowData,
             Collections.emptyMap(),
+            Collections.emptyMap(),
             Collections.emptyMap()
         );
 
@@ -190,6 +191,7 @@ public class RegisterLocalPretrainedModelStepTests extends OpenSearchTestCase {
         PlainActionFuture<WorkflowData> future = this.registerLocalPretrainedModelStep.execute(
             workflowData.getNodeId(),
             workflowData,
+            Collections.emptyMap(),
             Collections.emptyMap(),
             Collections.emptyMap()
         );
@@ -240,6 +242,7 @@ public class RegisterLocalPretrainedModelStepTests extends OpenSearchTestCase {
             workflowData.getNodeId(),
             workflowData,
             Collections.emptyMap(),
+            Collections.emptyMap(),
             Collections.emptyMap()
         );
 
@@ -252,6 +255,7 @@ public class RegisterLocalPretrainedModelStepTests extends OpenSearchTestCase {
         PlainActionFuture<WorkflowData> future = registerLocalPretrainedModelStep.execute(
             "nodeId",
             new WorkflowData(Collections.emptyMap(), "test-id", "test-node-id"),
+            Collections.emptyMap(),
             Collections.emptyMap(),
             Collections.emptyMap()
         );

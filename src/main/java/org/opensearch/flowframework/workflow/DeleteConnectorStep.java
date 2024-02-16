@@ -49,7 +49,8 @@ public class DeleteConnectorStep implements WorkflowStep {
         String currentNodeId,
         WorkflowData currentNodeInputs,
         Map<String, WorkflowData> outputs,
-        Map<String, String> previousNodeInputs
+        Map<String, String> previousNodeInputs,
+        Map<String, String> params
     ) {
         PlainActionFuture<WorkflowData> deleteConnectorFuture = PlainActionFuture.newFuture();
 
@@ -82,7 +83,8 @@ public class DeleteConnectorStep implements WorkflowStep {
                 optionalKeys,
                 currentNodeInputs,
                 outputs,
-                previousNodeInputs
+                previousNodeInputs,
+                params
             );
             String connectorId = (String) inputs.get(CONNECTOR_ID);
 

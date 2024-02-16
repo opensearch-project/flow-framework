@@ -23,13 +23,15 @@ public interface WorkflowStep {
      * @param currentNodeInputs Input params and content for this node, from workflow parsing
      * @param outputs WorkflowData content of previous steps.
      * @param previousNodeInputs Input params for this node that come from previous steps
+     * @param params Params passed on the REST path
      * @return A CompletableFuture of the building block. This block should return immediately, but not be completed until the step executes, containing either the step's output data or {@link WorkflowData#EMPTY} which may be passed to follow-on steps.
      */
     PlainActionFuture<WorkflowData> execute(
         String currentNodeId,
         WorkflowData currentNodeInputs,
         Map<String, WorkflowData> outputs,
-        Map<String, String> previousNodeInputs
+        Map<String, String> previousNodeInputs,
+        Map<String, String> params
     );
 
     /**

@@ -74,7 +74,8 @@ public class ProcessNodeTests extends OpenSearchTestCase {
                 String currentNodeId,
                 WorkflowData currentNodeInputs,
                 Map<String, WorkflowData> outputs,
-                Map<String, String> previousNodeInputs
+                Map<String, String> previousNodeInputs,
+                Map<String, String> params
             ) {
                 PlainActionFuture<WorkflowData> f = PlainActionFuture.newFuture();
                 f.onResponse(new WorkflowData(Map.of("test", "output"), "test-id", "test-node-id"));
@@ -119,7 +120,8 @@ public class ProcessNodeTests extends OpenSearchTestCase {
                 String currentNodeId,
                 WorkflowData currentNodeInputs,
                 Map<String, WorkflowData> outputs,
-                Map<String, String> previousNodeInputs
+                Map<String, String> previousNodeInputs,
+                Map<String, String> params
             ) {
                 PlainActionFuture<WorkflowData> future = PlainActionFuture.newFuture();
                 testThreadPool.schedule(
@@ -162,7 +164,8 @@ public class ProcessNodeTests extends OpenSearchTestCase {
                 String currentNodeId,
                 WorkflowData currentNodeInputs,
                 Map<String, WorkflowData> outputs,
-                Map<String, String> previousNodeInputs
+                Map<String, String> previousNodeInputs,
+                Map<String, String> params
             ) {
                 PlainActionFuture<WorkflowData> future = PlainActionFuture.newFuture();
                 testThreadPool.schedule(
@@ -206,7 +209,8 @@ public class ProcessNodeTests extends OpenSearchTestCase {
                 String currentNodeId,
                 WorkflowData currentNodeInputs,
                 Map<String, WorkflowData> outputs,
-                Map<String, String> previousNodeInputs
+                Map<String, String> previousNodeInputs,
+                Map<String, String> params
             ) {
                 PlainActionFuture<WorkflowData> f = PlainActionFuture.newFuture();
                 f.onResponse(WorkflowData.EMPTY);

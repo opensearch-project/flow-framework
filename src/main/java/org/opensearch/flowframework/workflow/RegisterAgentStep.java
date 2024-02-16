@@ -82,7 +82,8 @@ public class RegisterAgentStep implements WorkflowStep {
         String currentNodeId,
         WorkflowData currentNodeInputs,
         Map<String, WorkflowData> outputs,
-        Map<String, String> previousNodeInputs
+        Map<String, String> previousNodeInputs,
+        Map<String, String> params
     ) {
 
         String workflowId = currentNodeInputs.getWorkflowId();
@@ -150,7 +151,8 @@ public class RegisterAgentStep implements WorkflowStep {
                 optionalKeys,
                 currentNodeInputs,
                 outputs,
-                previousNodeInputs
+                previousNodeInputs,
+                params
             );
 
             String type = (String) inputs.get(TYPE);
@@ -163,8 +165,10 @@ public class RegisterAgentStep implements WorkflowStep {
                 : getStringToStringMap(llmParams, LLM_PARAMETERS);
             String[] toolsOrder = (String[]) inputs.get(TOOLS_ORDER_FIELD);
             List<MLToolSpec> toolsList = getTools(toolsOrder, previousNodeInputs, outputs);
-            Object params = inputs.get(PARAMETERS_FIELD);
-            Map<String, String> parameters = params == null ? Collections.emptyMap() : getStringToStringMap(params, PARAMETERS_FIELD);
+            Object parameters = inputs.get(PARAMETERS_FIELD);
+            Map<String, String> parametersMap = parameters == null
+                ? Collections.emptyMap()
+                : getStringToStringMap(parameters, PARAMETERS_FIELD);
             MLMemorySpec memory = getMLMemorySpec(inputs.get(MEMORY_FIELD));
             Instant createdTime = Instant.now();
             Instant lastUpdateTime = createdTime;
@@ -191,7 +195,7 @@ public class RegisterAgentStep implements WorkflowStep {
 
             builder.type(type)
                 .tools(toolsList)
-                .parameters(parameters)
+                .parameters(parametersMap)
                 .createdTime(createdTime)
                 .lastUpdateTime(lastUpdateTime)
                 .appType(appType);

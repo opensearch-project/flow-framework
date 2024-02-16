@@ -171,7 +171,8 @@ public class ProcessNode {
                     this.id,
                     this.input,
                     inputMap,
-                    this.previousNodeInputs
+                    this.previousNodeInputs,
+                    this.params
                 );
                 // If completed exceptionally, this is a no-op
                 future.onResponse(stepFuture.actionGet(this.nodeTimeout));
