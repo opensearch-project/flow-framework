@@ -39,6 +39,7 @@ import org.opensearch.tasks.Task;
 import org.opensearch.transport.TransportService;
 
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
@@ -282,7 +283,7 @@ public class CreateWorkflowTransportAction extends HandledTransportAction<Workfl
 
     private void validateWorkflows(Template template) throws Exception {
         for (Workflow workflow : template.workflows().values()) {
-            List<ProcessNode> sortedNodes = workflowProcessSorter.sortProcessNodes(workflow, null);
+            List<ProcessNode> sortedNodes = workflowProcessSorter.sortProcessNodes(workflow, null, Collections.emptyMap());
             workflowProcessSorter.validate(sortedNodes, pluginsService);
         }
     }
