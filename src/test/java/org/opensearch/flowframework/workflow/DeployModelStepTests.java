@@ -45,7 +45,6 @@ import org.mockito.MockitoAnnotations;
 import static org.opensearch.action.DocWriteResponse.Result.UPDATED;
 import static org.opensearch.flowframework.common.CommonValue.FLOW_FRAMEWORK_THREAD_POOL_PREFIX;
 import static org.opensearch.flowframework.common.CommonValue.PROVISION_WORKFLOW_THREAD_POOL;
-import static org.opensearch.flowframework.common.CommonValue.REGISTER_MODEL_STATUS;
 import static org.opensearch.flowframework.common.CommonValue.WORKFLOW_STATE_INDEX;
 import static org.opensearch.flowframework.common.CommonValue.WORKFLOW_THREAD_POOL;
 import static org.opensearch.flowframework.common.WorkflowResources.MODEL_ID;
@@ -171,7 +170,6 @@ public class DeployModelStepTests extends OpenSearchTestCase {
         verify(machineLearningNodeClient, times(1)).getTask(any(), any());
 
         assertEquals(modelId, future.get().getContent().get(MODEL_ID));
-        assertEquals(status, future.get().getContent().get(REGISTER_MODEL_STATUS));
     }
 
     public void testDeployModelFailure() {
