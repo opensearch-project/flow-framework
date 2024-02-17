@@ -616,7 +616,7 @@ public abstract class FlowFrameworkRestTestCase extends OpenSearchRestTestCase {
 
         Response response = getWorkflowStatus(client, workflowId, true);
 
-        // Parse workflow state from response and retreieve resources created
+        // Parse workflow state from response and retrieve resources created
         MediaType mediaType = MediaType.fromMediaType(response.getEntity().getContentType());
         try (
             XContentParser parser = mediaType.xContent()

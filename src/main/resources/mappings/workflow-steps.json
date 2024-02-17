@@ -116,7 +116,7 @@
             "model_id"
         ],
         "outputs":[
-            "deploy_model_status"
+            "model_id"
         ],
         "required_plugins":[
             "opensearch-ml"
