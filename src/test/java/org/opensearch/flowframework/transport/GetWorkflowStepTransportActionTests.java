@@ -10,6 +10,7 @@ package org.opensearch.flowframework.transport;
 
 import org.opensearch.action.support.ActionFilters;
 import org.opensearch.core.action.ActionListener;
+import org.opensearch.flowframework.workflow.WorkflowStepFactory;
 import org.opensearch.tasks.Task;
 import org.opensearch.test.OpenSearchTestCase;
 import org.opensearch.transport.TransportService;
@@ -30,7 +31,11 @@ public class GetWorkflowStepTransportActionTests extends OpenSearchTestCase {
     public void setUp() throws Exception {
         super.setUp();
 
-        this.getWorkflowStepTransportAction = new GetWorkflowStepTransportAction(mock(TransportService.class), mock(ActionFilters.class));
+        this.getWorkflowStepTransportAction = new GetWorkflowStepTransportAction(
+            mock(TransportService.class),
+            mock(ActionFilters.class),
+            mock(WorkflowStepFactory.class)
+        );
     }
 
     public void testGetWorkflowStepAction() throws IOException {
