@@ -188,4 +188,6 @@ public class CommonValue {
     public static final String RESOURCE_TYPE = "resource_type";
     /** The field name for the resource id */
     public static final String RESOURCE_ID = "resource_id";
+    /** The field name for the opensearch-ml plugin */
+    public static final String OPENSEARCH_ML = "opensearch-ml";
 }

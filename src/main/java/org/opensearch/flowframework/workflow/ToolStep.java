@@ -106,6 +106,7 @@ public class ToolStep implements WorkflowStep {
         Map<String, String> previousNodeInputs,
         Map<String, WorkflowData> outputs
     ) {
+        @SuppressWarnings("unchecked")
         Map<String, String> parametersMap = (Map<String, String>) parameters;
         Optional<String> previousNodeModel = previousNodeInputs.entrySet()
             .stream()
