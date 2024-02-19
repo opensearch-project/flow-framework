@@ -14,6 +14,7 @@ import org.opensearch.core.common.io.stream.StreamOutput;
 import org.opensearch.core.xcontent.ToXContentObject;
 import org.opensearch.core.xcontent.XContentBuilder;
 import org.opensearch.flowframework.model.WorkflowValidator;
+import org.opensearch.flowframework.workflow.WorkflowStepFactory;
 
 import java.io.IOException;
 
@@ -23,6 +24,7 @@ import java.io.IOException;
 public class GetWorkflowStepResponse extends ActionResponse implements ToXContentObject {
 
     private WorkflowValidator workflowValidator;
+    private WorkflowStepFactory workflowStepFactory;
 
     /**
      * Instantiates a new GetWorkflowStepResponse from an input stream
@@ -31,7 +33,7 @@ public class GetWorkflowStepResponse extends ActionResponse implements ToXConten
      */
     public GetWorkflowStepResponse(StreamInput in) throws IOException {
         super(in);
-        this.workflowValidator = WorkflowValidator.parse(in.readString());
+        this.workflowValidator = this.workflowStepFactory.getWorkflowValidator();
     }
 
     /**

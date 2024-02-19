@@ -8,41 +8,33 @@
  */
 package org.opensearch.flowframework.model;
 
-import org.opensearch.core.rest.RestStatus;
-import org.opensearch.core.xcontent.XContentParser;
-import org.opensearch.flowframework.exception.FlowFrameworkException;
+import org.opensearch.flowframework.workflow.WorkflowStepFactory;
 import org.opensearch.test.OpenSearchTestCase;
 
 import java.io.IOException;
+import java.util.HashMap;
+import java.util.Map;
 
 public class WorkflowStepValidatorTests extends OpenSearchTestCase {
-
-    private String validValidator;
-    private String invalidValidator;
 
     @Override
     public void setUp() throws Exception {
         super.setUp();
-        validValidator = "{\"inputs\":[\"input_value\"],\"outputs\":[\"output_value\"]}";
-        invalidValidator = "{\"inputs\":[\"input_value\"],\"invalid_field\":[\"output_value\"]}";
     }
 
     public void testParseWorkflowStepValidator() throws IOException {
-        XContentParser parser = TemplateTestJsonUtil.jsonToParser(validValidator);
-        WorkflowStepValidator workflowStepValidator = WorkflowStepValidator.parse(parser);
 
-        assertEquals(1, workflowStepValidator.getInputs().size());
-        assertEquals(1, workflowStepValidator.getOutputs().size());
+        Map<String, WorkflowStepValidator> workflowStepValidators = new HashMap<>();
+        workflowStepValidators.put(
+            WorkflowStepFactory.WorkflowSteps.CREATE_CONNECTOR.getWorkflowStepName(),
+            WorkflowStepFactory.WorkflowSteps.CREATE_CONNECTOR.getWorkflowStepValidator()
+        );
 
-        assertEquals("input_value", workflowStepValidator.getInputs().get(0));
-        assertEquals("output_value", workflowStepValidator.getOutputs().get(0));
-    }
+        assertEquals(7, WorkflowStepFactory.WorkflowSteps.CREATE_CONNECTOR.inputs().size());
+        assertEquals(1, WorkflowStepFactory.WorkflowSteps.CREATE_CONNECTOR.outputs().size());
 
-    public void testFailedParseWorkflowStepValidator() throws IOException {
-        XContentParser parser = TemplateTestJsonUtil.jsonToParser(invalidValidator);
-        FlowFrameworkException ex = expectThrows(FlowFrameworkException.class, () -> WorkflowStepValidator.parse(parser));
-        assertEquals("Unable to parse field [invalid_field] in a WorkflowStepValidator object.", ex.getMessage());
-        assertEquals(RestStatus.BAD_REQUEST, ex.getRestStatus());
+        assertEquals("name", WorkflowStepFactory.WorkflowSteps.CREATE_CONNECTOR.inputs().get(0));
+        assertEquals("connector_id", WorkflowStepFactory.WorkflowSteps.CREATE_CONNECTOR.outputs().get(0));
     }
 
 }
