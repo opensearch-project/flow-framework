@@ -73,31 +73,8 @@ public class RestProvisionWorkflowAction extends BaseRestHandler {
     @Override
     protected RestChannelConsumer prepareRequest(RestRequest request, NodeClient client) throws IOException {
         String workflowId = request.param(WORKFLOW_ID);
-        // Get any other params from path
-        Map<String, String> params = request.params()
-            .keySet()
-            .stream()
-            .filter(k -> !WORKFLOW_ID.equals(k))
-            .collect(Collectors.toMap(Function.identity(), request::param));
         try {
-            // If body is included get any params from body
-            if (request.hasContent()) {
-                try (XContentParser parser = request.contentParser()) {
-                    ensureExpectedToken(XContentParser.Token.START_OBJECT, parser.nextToken(), parser);
-                    while (parser.nextToken() != XContentParser.Token.END_OBJECT) {
-                        String key = parser.currentName();
-                        if (params.containsKey(key)) {
-                            throw new FlowFrameworkException("Duplicate key " + key, RestStatus.BAD_REQUEST);
-                        }
-                        if (parser.nextToken() != XContentParser.Token.VALUE_STRING) {
-                            throw new FlowFrameworkException("Request body fields must have string values", RestStatus.BAD_REQUEST);
-                        }
-                        params.put(key, parser.text());
-                    }
-                } catch (IOException e) {
-                    throw new FlowFrameworkException("Request body parsing failed", RestStatus.BAD_REQUEST);
-                }
-            }
+            Map<String, String> params = parseParamsAndContent(request);
             if (!flowFrameworkFeatureEnabledSetting.isFlowFrameworkEnabled()) {
                 throw new FlowFrameworkException(
                     "This API is disabled. To enable it, update the setting [" + FLOW_FRAMEWORK_ENABLED.getKey() + "] to true.",
@@ -132,4 +109,31 @@ public class RestProvisionWorkflowAction extends BaseRestHandler {
         }
     }
 
+    private Map<String, String> parseParamsAndContent(RestRequest request) {
+        // Get any other params from path
+        Map<String, String> params = request.params()
+            .keySet()
+            .stream()
+            .filter(k -> !WORKFLOW_ID.equals(k))
+            .collect(Collectors.toMap(Function.identity(), request::param));
+        // If body is included get any params from body
+        if (request.hasContent()) {
+            try (XContentParser parser = request.contentParser()) {
+                ensureExpectedToken(XContentParser.Token.START_OBJECT, parser.nextToken(), parser);
+                while (parser.nextToken() != XContentParser.Token.END_OBJECT) {
+                    String key = parser.currentName();
+                    if (params.containsKey(key)) {
+                        throw new FlowFrameworkException("Duplicate key " + key, RestStatus.BAD_REQUEST);
+                    }
+                    if (parser.nextToken() != XContentParser.Token.VALUE_STRING) {
+                        throw new FlowFrameworkException("Request body fields must have string values", RestStatus.BAD_REQUEST);
+                    }
+                    params.put(key, parser.text());
+                }
+            } catch (IOException e) {
+                throw new FlowFrameworkException("Request body parsing failed", RestStatus.BAD_REQUEST);
+            }
+        }
+        return params;
+    }
 }
