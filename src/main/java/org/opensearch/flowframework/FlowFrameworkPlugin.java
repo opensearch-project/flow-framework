@@ -121,8 +121,6 @@ public class FlowFrameworkPlugin extends Plugin implements ActionPlugin {
         );
         WorkflowStepFactory workflowStepFactory = new WorkflowStepFactory(
             threadPool,
-            clusterService,
-            client,
             mlClient,
             flowFrameworkIndicesHandler,
             flowFrameworkSettings

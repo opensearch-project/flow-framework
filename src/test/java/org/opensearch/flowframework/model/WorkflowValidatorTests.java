@@ -8,13 +8,6 @@
  */
 package org.opensearch.flowframework.model;
 
-import org.opensearch.client.AdminClient;
-import org.opensearch.client.Client;
-import org.opensearch.client.ClusterAdminClient;
-import org.opensearch.cluster.service.ClusterService;
-import org.opensearch.common.settings.ClusterSettings;
-import org.opensearch.common.settings.Setting;
-import org.opensearch.common.settings.Settings;
 import org.opensearch.flowframework.common.FlowFrameworkSettings;
 import org.opensearch.flowframework.indices.FlowFrameworkIndicesHandler;
 import org.opensearch.flowframework.workflow.WorkflowStepFactory;
@@ -27,14 +20,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
-import static org.opensearch.flowframework.common.FlowFrameworkSettings.FLOW_FRAMEWORK_ENABLED;
-import static org.opensearch.flowframework.common.FlowFrameworkSettings.MAX_WORKFLOWS;
-import static org.opensearch.flowframework.common.FlowFrameworkSettings.TASK_REQUEST_RETRY_DURATION;
-import static org.opensearch.flowframework.common.FlowFrameworkSettings.WORKFLOW_REQUEST_TIMEOUT;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -174,26 +160,11 @@ public class WorkflowValidatorTests extends OpenSearchTestCase {
     public void testWorkflowStepFactoryHasValidators() throws IOException {
 
         ThreadPool threadPool = mock(ThreadPool.class);
-        ClusterService clusterService = mock(ClusterService.class);
-        ClusterAdminClient clusterAdminClient = mock(ClusterAdminClient.class);
-        AdminClient adminClient = mock(AdminClient.class);
-        Client client = mock(Client.class);
-        when(client.admin()).thenReturn(adminClient);
-        when(adminClient.cluster()).thenReturn(clusterAdminClient);
         MachineLearningNodeClient mlClient = mock(MachineLearningNodeClient.class);
         FlowFrameworkIndicesHandler flowFrameworkIndicesHandler = mock(FlowFrameworkIndicesHandler.class);
 
-        final Set<Setting<?>> settingsSet = Stream.concat(
-            ClusterSettings.BUILT_IN_CLUSTER_SETTINGS.stream(),
-            Stream.of(FLOW_FRAMEWORK_ENABLED, MAX_WORKFLOWS, WORKFLOW_REQUEST_TIMEOUT, TASK_REQUEST_RETRY_DURATION)
-        ).collect(Collectors.toSet());
-        ClusterSettings clusterSettings = new ClusterSettings(Settings.EMPTY, settingsSet);
-        when(clusterService.getClusterSettings()).thenReturn(clusterSettings);
-
         WorkflowStepFactory workflowStepFactory = new WorkflowStepFactory(
             threadPool,
-            clusterService,
-            client,
             mlClient,
             flowFrameworkIndicesHandler,
             flowFrameworkSettings
