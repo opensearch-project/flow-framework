@@ -10,8 +10,6 @@ package org.opensearch.flowframework.workflow;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.opensearch.client.Client;
-import org.opensearch.cluster.service.ClusterService;
 import org.opensearch.common.unit.TimeValue;
 import org.opensearch.core.common.Strings;
 import org.opensearch.core.rest.RestStatus;
@@ -61,37 +59,47 @@ public class WorkflowStepFactory {
 
     private final Map<String, Supplier<WorkflowStep>> stepMap = new HashMap<>();
     private static final Logger logger = LogManager.getLogger(WorkflowStepFactory.class);
-    private static ThreadPool threadPool;
-    private static MachineLearningNodeClient mlClient;
-    private static FlowFrameworkIndicesHandler flowFrameworkIndicesHandler;
-    private static FlowFrameworkSettings flowFrameworkSettings;
 
     /**
      * Instantiate this class.
      *
      * @param threadPool The OpenSearch thread pool
-     * @param clusterService The OpenSearch cluster service
-     * @param client The OpenSearch client steps can use
      * @param mlClient Machine Learning client to perform ml operations
      * @param flowFrameworkIndicesHandler FlowFrameworkIndicesHandler class to update system indices
      * @param flowFrameworkSettings common settings of the plugin
      */
     public WorkflowStepFactory(
         ThreadPool threadPool,
-        ClusterService clusterService,
-        Client client,
         MachineLearningNodeClient mlClient,
         FlowFrameworkIndicesHandler flowFrameworkIndicesHandler,
         FlowFrameworkSettings flowFrameworkSettings
     ) {
-        this.threadPool = threadPool;
-        this.mlClient = mlClient;
-        this.flowFrameworkIndicesHandler = flowFrameworkIndicesHandler;
-        this.flowFrameworkSettings = flowFrameworkSettings;
-        // Initialize the WorkflowSteps enum inside the constructor
-        for (WorkflowSteps workflowStep : WorkflowSteps.values()) {
-            stepMap.put(workflowStep.getWorkflowStepName(), workflowStep.step());
-        }
+        stepMap.put(NoOpStep.NAME, NoOpStep::new);
+        stepMap.put(
+            RegisterLocalCustomModelStep.NAME,
+            () -> new RegisterLocalCustomModelStep(threadPool, mlClient, flowFrameworkIndicesHandler, flowFrameworkSettings)
+        );
+        stepMap.put(
+            RegisterLocalSparseEncodingModelStep.NAME,
+            () -> new RegisterLocalSparseEncodingModelStep(threadPool, mlClient, flowFrameworkIndicesHandler, flowFrameworkSettings)
+        );
+        stepMap.put(
+            RegisterLocalPretrainedModelStep.NAME,
+            () -> new RegisterLocalPretrainedModelStep(threadPool, mlClient, flowFrameworkIndicesHandler, flowFrameworkSettings)
+        );
+        stepMap.put(RegisterRemoteModelStep.NAME, () -> new RegisterRemoteModelStep(mlClient, flowFrameworkIndicesHandler));
+        stepMap.put(DeleteModelStep.NAME, () -> new DeleteModelStep(mlClient));
+        stepMap.put(
+            DeployModelStep.NAME,
+            () -> new DeployModelStep(threadPool, mlClient, flowFrameworkIndicesHandler, flowFrameworkSettings)
+        );
+        stepMap.put(UndeployModelStep.NAME, () -> new UndeployModelStep(mlClient));
+        stepMap.put(CreateConnectorStep.NAME, () -> new CreateConnectorStep(mlClient, flowFrameworkIndicesHandler));
+        stepMap.put(DeleteConnectorStep.NAME, () -> new DeleteConnectorStep(mlClient));
+        stepMap.put(RegisterModelGroupStep.NAME, () -> new RegisterModelGroupStep(mlClient, flowFrameworkIndicesHandler));
+        stepMap.put(ToolStep.NAME, ToolStep::new);
+        stepMap.put(RegisterAgentStep.NAME, () -> new RegisterAgentStep(mlClient, flowFrameworkIndicesHandler));
+        stepMap.put(DeleteAgentStep.NAME, () -> new DeleteAgentStep(mlClient));
     }
 
     /**
@@ -101,7 +109,7 @@ public class WorkflowStepFactory {
     public enum WorkflowSteps {
 
         /** Noop Step */
-        NOOP("noop", Collections.emptyList(), Collections.emptyList(), Collections.emptyList(), null, NoOpStep::new),
+        NOOP("noop", Collections.emptyList(), Collections.emptyList(), Collections.emptyList(), null),
 
         /** Create Connector Step */
         CREATE_CONNECTOR(
@@ -109,8 +117,7 @@ public class WorkflowStepFactory {
             List.of(NAME_FIELD, DESCRIPTION_FIELD, VERSION_FIELD, PROTOCOL_FIELD, PARAMETERS_FIELD, CREDENTIAL_FIELD, ACTIONS_FIELD),
             List.of(CONNECTOR_ID),
             List.of(OPENSEARCH_ML),
-            TimeValue.timeValueSeconds(60),
-            () -> new CreateConnectorStep(mlClient, flowFrameworkIndicesHandler)
+            TimeValue.timeValueSeconds(60)
         ),
 
         /** Register Local Custom Model Step */
@@ -129,8 +136,7 @@ public class WorkflowStepFactory {
             ),
             List.of(MODEL_ID, REGISTER_MODEL_STATUS),
             List.of(OPENSEARCH_ML),
-            TimeValue.timeValueSeconds(60),
-            () -> new RegisterLocalCustomModelStep(threadPool, mlClient, flowFrameworkIndicesHandler, flowFrameworkSettings)
+            TimeValue.timeValueSeconds(60)
         ),
 
         /** Register Local Sparse Encoding Model Step */
@@ -139,8 +145,7 @@ public class WorkflowStepFactory {
             List.of(NAME_FIELD, VERSION_FIELD, MODEL_FORMAT, FUNCTION_NAME, MODEL_CONTENT_HASH_VALUE, URL),
             List.of(MODEL_ID, REGISTER_MODEL_STATUS),
             List.of(OPENSEARCH_ML),
-            TimeValue.timeValueSeconds(60),
-            () -> new RegisterLocalSparseEncodingModelStep(threadPool, mlClient, flowFrameworkIndicesHandler, flowFrameworkSettings)
+            TimeValue.timeValueSeconds(60)
         ),
 
         /** Register Local Pretrained Model Step */
@@ -149,8 +154,7 @@ public class WorkflowStepFactory {
             List.of(NAME_FIELD, VERSION_FIELD, MODEL_FORMAT),
             List.of(MODEL_ID, REGISTER_MODEL_STATUS),
             List.of(OPENSEARCH_ML),
-            TimeValue.timeValueSeconds(60),
-            () -> new RegisterLocalPretrainedModelStep(threadPool, mlClient, flowFrameworkIndicesHandler, flowFrameworkSettings)
+            TimeValue.timeValueSeconds(60)
         ),
 
         /** Register Remote Model Step */
@@ -159,8 +163,7 @@ public class WorkflowStepFactory {
             List.of(NAME_FIELD, CONNECTOR_ID),
             List.of(MODEL_ID, REGISTER_MODEL_STATUS),
             List.of(OPENSEARCH_ML),
-            null,
-            () -> new RegisterRemoteModelStep(mlClient, flowFrameworkIndicesHandler)
+            null
         ),
 
         /** Register Model Group Step */
@@ -169,94 +172,42 @@ public class WorkflowStepFactory {
             List.of(NAME_FIELD),
             List.of(MODEL_GROUP_ID, MODEL_GROUP_STATUS),
             List.of(OPENSEARCH_ML),
-            null,
-            () -> new RegisterModelGroupStep(mlClient, flowFrameworkIndicesHandler)
+            null
         ),
 
         /** Deploy Model Step */
-        DEPLOY_MODEL(
-            DeployModelStep.NAME,
-            List.of(MODEL_ID),
-            List.of(MODEL_ID),
-            List.of(OPENSEARCH_ML),
-            TimeValue.timeValueSeconds(15),
-            () -> new DeployModelStep(threadPool, mlClient, flowFrameworkIndicesHandler, flowFrameworkSettings)
-        ),
+        DEPLOY_MODEL(DeployModelStep.NAME, List.of(MODEL_ID), List.of(MODEL_ID), List.of(OPENSEARCH_ML), TimeValue.timeValueSeconds(15)),
 
         /** Undeploy Model Step */
-        UNDEPLOY_MODEL(
-            UndeployModelStep.NAME,
-            List.of(MODEL_ID),
-            List.of(SUCCESS),
-            List.of(OPENSEARCH_ML),
-            null,
-            () -> new UndeployModelStep(mlClient)
-        ),
+        UNDEPLOY_MODEL(UndeployModelStep.NAME, List.of(MODEL_ID), List.of(SUCCESS), List.of(OPENSEARCH_ML), null),
 
         /** Delete Model Step */
-        DELETE_MODEL(
-            DeleteModelStep.NAME,
-            List.of(MODEL_ID),
-            List.of(MODEL_ID),
-            List.of(OPENSEARCH_ML),
-            null,
-            () -> new DeleteModelStep(mlClient)
-        ),
+        DELETE_MODEL(DeleteModelStep.NAME, List.of(MODEL_ID), List.of(MODEL_ID), List.of(OPENSEARCH_ML), null),
 
         /** Delete Connector Step */
-        DELETE_CONNECTOR(
-            DeleteConnectorStep.NAME,
-            List.of(CONNECTOR_ID),
-            List.of(CONNECTOR_ID),
-            List.of(OPENSEARCH_ML),
-            null,
-            () -> new DeleteConnectorStep(mlClient)
-        ),
+        DELETE_CONNECTOR(DeleteConnectorStep.NAME, List.of(CONNECTOR_ID), List.of(CONNECTOR_ID), List.of(OPENSEARCH_ML), null),
 
         /** Register Agent Step */
-        REGISTER_AGENT(
-            RegisterAgentStep.NAME,
-            List.of(NAME_FIELD, TYPE),
-            List.of(AGENT_ID),
-            List.of(OPENSEARCH_ML),
-            null,
-            () -> new RegisterAgentStep(mlClient, flowFrameworkIndicesHandler)
-        ),
+        REGISTER_AGENT(RegisterAgentStep.NAME, List.of(NAME_FIELD, TYPE), List.of(AGENT_ID), List.of(OPENSEARCH_ML), null),
 
         /** Delete Agent Step */
-        DELETE_AGENT(
-            DeleteAgentStep.NAME,
-            List.of(AGENT_ID),
-            List.of(AGENT_ID),
-            List.of(OPENSEARCH_ML),
-            null,
-            () -> new DeleteAgentStep(mlClient)
-        ),
+        DELETE_AGENT(DeleteAgentStep.NAME, List.of(AGENT_ID), List.of(AGENT_ID), List.of(OPENSEARCH_ML), null),
 
         /** Create Tool Step */
-        CREATE_TOOL(ToolStep.NAME, List.of(TYPE), List.of(TOOLS_FIELD), List.of(OPENSEARCH_ML), null, ToolStep::new);
+        CREATE_TOOL(ToolStep.NAME, List.of(TYPE), List.of(TOOLS_FIELD), List.of(OPENSEARCH_ML), null);
 
         private final String workflowStepName;
         private final List<String> inputs;
         private final List<String> outputs;
         private final List<String> requiredPlugins;
         private final TimeValue timeout;
-        private final Supplier<WorkflowStep> workflowStep;
 
-        WorkflowSteps(
-            String workflowStepName,
-            List<String> inputs,
-            List<String> outputs,
-            List<String> requiredPlugins,
-            TimeValue timeout,
-            Supplier<WorkflowStep> workflowStep
-        ) {
+        WorkflowSteps(String workflowStepName, List<String> inputs, List<String> outputs, List<String> requiredPlugins, TimeValue timeout) {
             this.workflowStepName = workflowStepName;
             this.inputs = List.copyOf(inputs);
             this.outputs = List.copyOf(outputs);
             this.requiredPlugins = requiredPlugins;
             this.timeout = timeout;
-            this.workflowStep = workflowStep;
         }
 
         /**
@@ -297,14 +248,6 @@ public class WorkflowStepFactory {
          */
         public TimeValue timeout() {
             return timeout;
-        }
-
-        /**
-         * Get the step
-         * @return the step
-         */
-        public Supplier<WorkflowStep> step() {
-            return workflowStep;
         }
 
         /**
