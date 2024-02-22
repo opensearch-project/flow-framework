@@ -49,7 +49,8 @@ public class DeleteAgentStep implements WorkflowStep {
         String currentNodeId,
         WorkflowData currentNodeInputs,
         Map<String, WorkflowData> outputs,
-        Map<String, String> previousNodeInputs
+        Map<String, String> previousNodeInputs,
+        Map<String, String> params
     ) {
         PlainActionFuture<WorkflowData> deleteAgentFuture = PlainActionFuture.newFuture();
 
@@ -82,7 +83,8 @@ public class DeleteAgentStep implements WorkflowStep {
                 optionalKeys,
                 currentNodeInputs,
                 outputs,
-                previousNodeInputs
+                previousNodeInputs,
+                params
             );
             String agentId = (String) inputs.get(AGENT_ID);
 

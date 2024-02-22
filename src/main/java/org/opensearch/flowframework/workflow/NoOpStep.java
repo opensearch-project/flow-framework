@@ -28,7 +28,8 @@ public class NoOpStep implements WorkflowStep {
         String currentNodeId,
         WorkflowData currentNodeInputs,
         Map<String, WorkflowData> outputs,
-        Map<String, String> previousNodeInputs
+        Map<String, String> previousNodeInputs,
+        Map<String, String> params
     ) {
         PlainActionFuture<WorkflowData> future = PlainActionFuture.newFuture();
         future.onResponse(WorkflowData.EMPTY);

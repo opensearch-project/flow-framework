@@ -74,7 +74,8 @@ public class ProcessNodeTests extends OpenSearchTestCase {
                 String currentNodeId,
                 WorkflowData currentNodeInputs,
                 Map<String, WorkflowData> outputs,
-                Map<String, String> previousNodeInputs
+                Map<String, String> previousNodeInputs,
+                Map<String, String> params
             ) {
                 PlainActionFuture<WorkflowData> f = PlainActionFuture.newFuture();
                 f.onResponse(new WorkflowData(Map.of("test", "output"), "test-id", "test-node-id"));
@@ -87,6 +88,7 @@ public class ProcessNodeTests extends OpenSearchTestCase {
             }
         },
             Collections.emptyMap(),
+            Collections.emptyMap(),
             new WorkflowData(Map.of("test", "input"), Map.of("foo", "bar"), "test-id", "test-node-id"),
             List.of(successfulNode),
             testThreadPool,
@@ -95,6 +97,8 @@ public class ProcessNodeTests extends OpenSearchTestCase {
         );
         assertEquals("A", nodeA.id());
         assertEquals("test", nodeA.workflowStep().getName());
+        assertEquals(Collections.emptyMap(), nodeA.previousNodeInputs());
+        assertEquals(Collections.emptyMap(), nodeA.params());
         assertEquals("input", nodeA.input().getContent().get("test"));
         assertEquals("bar", nodeA.input().getParams().get("foo"));
         assertEquals("test-id", nodeA.input().getWorkflowId());
@@ -116,7 +120,8 @@ public class ProcessNodeTests extends OpenSearchTestCase {
                 String currentNodeId,
                 WorkflowData currentNodeInputs,
                 Map<String, WorkflowData> outputs,
-                Map<String, String> previousNodeInputs
+                Map<String, String> previousNodeInputs,
+                Map<String, String> params
             ) {
                 PlainActionFuture<WorkflowData> future = PlainActionFuture.newFuture();
                 testThreadPool.schedule(
@@ -132,6 +137,7 @@ public class ProcessNodeTests extends OpenSearchTestCase {
                 return "test";
             }
         },
+            Collections.emptyMap(),
             Collections.emptyMap(),
             WorkflowData.EMPTY,
             Collections.emptyList(),
@@ -158,7 +164,8 @@ public class ProcessNodeTests extends OpenSearchTestCase {
                 String currentNodeId,
                 WorkflowData currentNodeInputs,
                 Map<String, WorkflowData> outputs,
-                Map<String, String> previousNodeInputs
+                Map<String, String> previousNodeInputs,
+                Map<String, String> params
             ) {
                 PlainActionFuture<WorkflowData> future = PlainActionFuture.newFuture();
                 testThreadPool.schedule(
@@ -174,6 +181,7 @@ public class ProcessNodeTests extends OpenSearchTestCase {
                 return "sleepy";
             }
         },
+            Collections.emptyMap(),
             Collections.emptyMap(),
             WorkflowData.EMPTY,
             Collections.emptyList(),
@@ -201,7 +209,8 @@ public class ProcessNodeTests extends OpenSearchTestCase {
                 String currentNodeId,
                 WorkflowData currentNodeInputs,
                 Map<String, WorkflowData> outputs,
-                Map<String, String> previousNodeInputs
+                Map<String, String> previousNodeInputs,
+                Map<String, String> params
             ) {
                 PlainActionFuture<WorkflowData> f = PlainActionFuture.newFuture();
                 f.onResponse(WorkflowData.EMPTY);
@@ -213,6 +222,7 @@ public class ProcessNodeTests extends OpenSearchTestCase {
                 return "test";
             }
         },
+            Collections.emptyMap(),
             Collections.emptyMap(),
             WorkflowData.EMPTY,
             List.of(successfulNode, failedNode),

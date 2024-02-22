@@ -30,6 +30,7 @@ public class ProcessNode {
     private final String id;
     private final WorkflowStep workflowStep;
     private final Map<String, String> previousNodeInputs;
+    private final Map<String, String> params;
     private final WorkflowData input;
     private final List<ProcessNode> predecessors;
     private final ThreadPool threadPool;
@@ -44,6 +45,7 @@ public class ProcessNode {
      * @param id A string identifying the workflow step
      * @param workflowStep A java class implementing {@link WorkflowStep} to be executed when it's this node's turn.
      * @param previousNodeInputs A map of expected inputs coming from predecessor nodes used in graph validation
+     * @param params Params passed on the REST path
      * @param input Input required by the node encoded in a {@link WorkflowData} instance.
      * @param predecessors Nodes preceding this one in the workflow
      * @param threadPool The OpenSearch thread pool
@@ -54,6 +56,7 @@ public class ProcessNode {
         String id,
         WorkflowStep workflowStep,
         Map<String, String> previousNodeInputs,
+        Map<String, String> params,
         WorkflowData input,
         List<ProcessNode> predecessors,
         ThreadPool threadPool,
@@ -63,6 +66,7 @@ public class ProcessNode {
         this.id = id;
         this.workflowStep = workflowStep;
         this.previousNodeInputs = previousNodeInputs;
+        this.params = params;
         this.input = input;
         this.predecessors = predecessors;
         this.threadPool = threadPool;
@@ -92,6 +96,14 @@ public class ProcessNode {
      */
     public Map<String, String> previousNodeInputs() {
         return previousNodeInputs;
+    }
+
+    /**
+     * Returns the REST path params
+     * @return the REST path params
+     */
+    public Map<String, String> params() {
+        return params;
     }
 
     /**
@@ -159,7 +171,8 @@ public class ProcessNode {
                     this.id,
                     this.input,
                     inputMap,
-                    this.previousNodeInputs
+                    this.previousNodeInputs,
+                    this.params
                 );
                 // If completed exceptionally, this is a no-op
                 future.onResponse(stepFuture.actionGet(this.nodeTimeout));

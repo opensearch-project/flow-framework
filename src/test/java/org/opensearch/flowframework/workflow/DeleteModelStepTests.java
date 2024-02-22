@@ -64,7 +64,8 @@ public class DeleteModelStepTests extends OpenSearchTestCase {
             inputData.getNodeId(),
             inputData,
             Map.of("step_1", new WorkflowData(Map.of(MODEL_ID, modelId), "workflowId", "nodeId")),
-            Map.of("step_1", MODEL_ID)
+            Map.of("step_1", MODEL_ID),
+            Collections.emptyMap()
         );
         verify(machineLearningNodeClient).deleteModel(any(String.class), any());
 
@@ -78,6 +79,7 @@ public class DeleteModelStepTests extends OpenSearchTestCase {
         PlainActionFuture<WorkflowData> future = deleteModelStep.execute(
             inputData.getNodeId(),
             inputData,
+            Collections.emptyMap(),
             Collections.emptyMap(),
             Collections.emptyMap()
         );
@@ -101,7 +103,8 @@ public class DeleteModelStepTests extends OpenSearchTestCase {
             inputData.getNodeId(),
             inputData,
             Map.of("step_1", new WorkflowData(Map.of(MODEL_ID, "test"), "workflowId", "nodeId")),
-            Map.of("step_1", MODEL_ID)
+            Map.of("step_1", MODEL_ID),
+            Collections.emptyMap()
         );
 
         verify(machineLearningNodeClient).deleteModel(any(String.class), any());

@@ -93,6 +93,7 @@ public class RegisterRemoteModelStepTests extends OpenSearchTestCase {
             workflowData.getNodeId(),
             workflowData,
             Collections.emptyMap(),
+            Collections.emptyMap(),
             Collections.emptyMap()
         );
 
@@ -140,6 +141,7 @@ public class RegisterRemoteModelStepTests extends OpenSearchTestCase {
             deployWorkflowData.getNodeId(),
             deployWorkflowData,
             Collections.emptyMap(),
+            Collections.emptyMap(),
             Collections.emptyMap()
         );
 
@@ -163,6 +165,7 @@ public class RegisterRemoteModelStepTests extends OpenSearchTestCase {
             workflowData.getNodeId(),
             workflowData,
             Collections.emptyMap(),
+            Collections.emptyMap(),
             Collections.emptyMap()
         );
         assertTrue(future.isDone());
@@ -176,6 +179,7 @@ public class RegisterRemoteModelStepTests extends OpenSearchTestCase {
         PlainActionFuture<WorkflowData> future = this.registerRemoteModelStep.execute(
             "nodeId",
             new WorkflowData(Collections.emptyMap(), "test-id", "test-node-id"),
+            Collections.emptyMap(),
             Collections.emptyMap(),
             Collections.emptyMap()
         );

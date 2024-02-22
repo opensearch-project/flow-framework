@@ -113,6 +113,7 @@ public class CreateIndexStepTests extends OpenSearchTestCase {
             inputData.getNodeId(),
             inputData,
             Collections.emptyMap(),
+            Collections.emptyMap(),
             Collections.emptyMap()
         );
         assertFalse(future.isDone());
@@ -132,6 +133,7 @@ public class CreateIndexStepTests extends OpenSearchTestCase {
         PlainActionFuture<WorkflowData> future = createIndexStep.execute(
             inputData.getNodeId(),
             inputData,
+            Collections.emptyMap(),
             Collections.emptyMap(),
             Collections.emptyMap()
         );

@@ -23,6 +23,7 @@ public class NoOpStepTests extends OpenSearchTestCase {
             "nodeId",
             WorkflowData.EMPTY,
             Collections.emptyMap(),
+            Collections.emptyMap(),
             Collections.emptyMap()
         );
         assertTrue(future.isDone());

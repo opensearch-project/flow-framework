@@ -94,6 +94,7 @@ public class CreateIngestPipelineStepTests extends OpenSearchTestCase {
             inputData.getNodeId(),
             inputData,
             Collections.emptyMap(),
+            Collections.emptyMap(),
             Collections.emptyMap()
         );
 
@@ -116,6 +117,7 @@ public class CreateIngestPipelineStepTests extends OpenSearchTestCase {
         PlainActionFuture<WorkflowData> future = createIngestPipelineStep.execute(
             inputData.getNodeId(),
             inputData,
+            Collections.emptyMap(),
             Collections.emptyMap(),
             Collections.emptyMap()
         );
@@ -151,6 +153,7 @@ public class CreateIngestPipelineStepTests extends OpenSearchTestCase {
         PlainActionFuture<WorkflowData> future = createIngestPipelineStep.execute(
             incorrectData.getNodeId(),
             incorrectData,
+            Collections.emptyMap(),
             Collections.emptyMap(),
             Collections.emptyMap()
         );

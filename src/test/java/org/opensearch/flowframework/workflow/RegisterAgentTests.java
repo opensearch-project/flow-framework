@@ -109,6 +109,7 @@ public class RegisterAgentTests extends OpenSearchTestCase {
             inputData.getNodeId(),
             inputData,
             Collections.emptyMap(),
+            Collections.emptyMap(),
             Collections.emptyMap()
         );
 
@@ -140,6 +141,7 @@ public class RegisterAgentTests extends OpenSearchTestCase {
         PlainActionFuture<WorkflowData> future = registerAgentStep.execute(
             inputData.getNodeId(),
             inputData,
+            Collections.emptyMap(),
             Collections.emptyMap(),
             Collections.emptyMap()
         );

@@ -44,6 +44,7 @@ public class ToolStepTests extends OpenSearchTestCase {
             inputData.getNodeId(),
             inputData,
             Collections.emptyMap(),
+            Collections.emptyMap(),
             Collections.emptyMap()
         );
 
