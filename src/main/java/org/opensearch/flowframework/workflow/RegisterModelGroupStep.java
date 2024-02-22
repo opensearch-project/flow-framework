@@ -65,7 +65,8 @@ public class RegisterModelGroupStep implements WorkflowStep {
         String currentNodeId,
         WorkflowData currentNodeInputs,
         Map<String, WorkflowData> outputs,
-        Map<String, String> previousNodeInputs
+        Map<String, String> previousNodeInputs,
+        Map<String, String> params
     ) {
         PlainActionFuture<WorkflowData> registerModelGroupFuture = PlainActionFuture.newFuture();
 
@@ -122,7 +123,8 @@ public class RegisterModelGroupStep implements WorkflowStep {
                 optionalKeys,
                 currentNodeInputs,
                 outputs,
-                previousNodeInputs
+                previousNodeInputs,
+                params
             );
             String modelGroupName = (String) inputs.get(NAME_FIELD);
             String description = (String) inputs.get(DESCRIPTION_FIELD);

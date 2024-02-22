@@ -16,6 +16,8 @@ import org.opensearch.core.common.io.stream.StreamOutput;
 import org.opensearch.flowframework.model.Template;
 
 import java.io.IOException;
+import java.util.Collections;
+import java.util.Map;
 
 /**
  * Transport Request to create, provision, and deprovision a workflow
@@ -43,12 +45,27 @@ public class WorkflowRequest extends ActionRequest {
     private boolean provision;
 
     /**
-     * Instantiates a new WorkflowRequest, set validation to false and set requestTimeout and maxWorkflows to null
+     * Params map
+     */
+    private Map<String, String> params;
+
+    /**
+     * Instantiates a new WorkflowRequest, set validation to all, no provisioning
      * @param workflowId the documentId of the workflow
      * @param template the use case template which describes the workflow
      */
     public WorkflowRequest(@Nullable String workflowId, @Nullable Template template) {
-        this(workflowId, template, new String[] { "all" }, false);
+        this(workflowId, template, new String[] { "all" }, false, Collections.emptyMap());
+    }
+
+    /**
+     * Instantiates a new WorkflowRequest with params map, set validation to all, provisioning to true
+     * @param workflowId the documentId of the workflow
+     * @param template the use case template which describes the workflow
+     * @param params The parameters from the REST path
+     */
+    public WorkflowRequest(String workflowId, @Nullable Template template, Map<String, String> params) {
+        this(workflowId, template, new String[] { "all" }, true, params);
     }
 
     /**
@@ -57,12 +74,23 @@ public class WorkflowRequest extends ActionRequest {
      * @param template the use case template which describes the workflow
      * @param validation flag to indicate if validation is necessary
      * @param provision flag to indicate if provision is necessary
+     * @param params map of REST path params. If provision is false, must be an empty map.
      */
-    public WorkflowRequest(@Nullable String workflowId, @Nullable Template template, String[] validation, boolean provision) {
+    public WorkflowRequest(
+        @Nullable String workflowId,
+        @Nullable Template template,
+        String[] validation,
+        boolean provision,
+        Map<String, String> params
+    ) {
         this.workflowId = workflowId;
         this.template = template;
         this.validation = validation;
         this.provision = provision;
+        if (!provision && !params.isEmpty()) {
+            throw new IllegalArgumentException("Params may only be included when provisioning.");
+        }
+        this.params = params;
     }
 
     /**
@@ -77,6 +105,7 @@ public class WorkflowRequest extends ActionRequest {
         this.template = templateJson == null ? null : Template.parse(templateJson);
         this.validation = in.readStringArray();
         this.provision = in.readBoolean();
+        this.params = this.provision ? in.readMap(StreamInput::readString, StreamInput::readString) : Collections.emptyMap();
     }
 
     /**
@@ -113,6 +142,14 @@ public class WorkflowRequest extends ActionRequest {
         return this.provision;
     }
 
+    /**
+     * Gets the params map
+     * @return the params map
+     */
+    public Map<String, String> getParams() {
+        return Map.copyOf(this.params);
+    }
+
     @Override
     public void writeTo(StreamOutput out) throws IOException {
         super.writeTo(out);
@@ -120,6 +157,9 @@ public class WorkflowRequest extends ActionRequest {
         out.writeOptionalString(template == null ? null : template.toJson());
         out.writeStringArray(validation);
         out.writeBoolean(provision);
+        if (provision) {
+            out.writeMap(params, StreamOutput::writeString, StreamOutput::writeString);
+        }
     }
 
     @Override

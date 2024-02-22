@@ -248,6 +248,7 @@ public class ParseUtils {
      * @param currentNodeInputs Input params and content for this node, from workflow parsing
      * @param outputs WorkflowData content of previous steps
      * @param previousNodeInputs Input params for this node that come from previous steps
+     * @param params Params that came from REST path
      * @return A map containing the requiredInputKeys with their corresponding values,
      *         and optionalInputKeys with their corresponding values if present.
      *         Throws a {@link FlowFrameworkException} if a required key is not present.
@@ -257,7 +258,8 @@ public class ParseUtils {
         Set<String> optionalInputKeys,
         WorkflowData currentNodeInputs,
         Map<String, WorkflowData> outputs,
-        Map<String, String> previousNodeInputs
+        Map<String, String> previousNodeInputs,
+        Map<String, String> params
     ) {
         // Mutable set to ensure all required keys are used
         Set<String> requiredKeys = new HashSet<>(requiredInputKeys);
@@ -308,11 +310,11 @@ public class ParseUtils {
                     Map<String, Object> valueMap = (Map<String, Object>) value;
                     value = valueMap.entrySet()
                         .stream()
-                        .collect(Collectors.toMap(Map.Entry::getKey, e -> conditionallySubstitute(e.getValue(), outputs)));
+                        .collect(Collectors.toMap(Map.Entry::getKey, e -> conditionallySubstitute(e.getValue(), outputs, params)));
                 } else if (value instanceof List) {
-                    value = ((List<?>) value).stream().map(v -> conditionallySubstitute(v, outputs)).collect(Collectors.toList());
+                    value = ((List<?>) value).stream().map(v -> conditionallySubstitute(v, outputs, params)).collect(Collectors.toList());
                 } else {
-                    value = conditionallySubstitute(value, outputs);
+                    value = conditionallySubstitute(value, outputs, params);
                 }
                 // Add value to inputs and mark that a required key was present
                 inputs.put(key, value);
@@ -336,14 +338,20 @@ public class ParseUtils {
         return inputs;
     }
 
-    private static Object conditionallySubstitute(Object value, Map<String, WorkflowData> outputs) {
+    private static Object conditionallySubstitute(Object value, Map<String, WorkflowData> outputs, Map<String, String> params) {
         if (value instanceof String) {
             Matcher m = SUBSTITUTION_PATTERN.matcher((String) value);
             if (m.matches()) {
+                // Try matching a previous step+value pair
                 WorkflowData data = outputs.get(m.group(1));
                 if (data != null && data.getContent().containsKey(m.group(2))) {
                     return data.getContent().get(m.group(2));
                 }
+            }
+            // Replace all params if present
+            for (Entry<String, String> e : params.entrySet()) {
+                String regex = "\\$\\{\\{\\s*" + Pattern.quote(e.getKey()) + "\\s*\\}\\}";
+                value = ((String) value).replaceAll(regex, e.getValue());
             }
         }
         return value;

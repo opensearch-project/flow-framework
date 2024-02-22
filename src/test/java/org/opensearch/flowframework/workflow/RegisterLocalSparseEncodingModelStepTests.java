@@ -170,6 +170,7 @@ public class RegisterLocalSparseEncodingModelStepTests extends OpenSearchTestCas
             workflowData.getNodeId(),
             workflowData,
             Collections.emptyMap(),
+            Collections.emptyMap(),
             Collections.emptyMap()
         );
 
@@ -193,6 +194,7 @@ public class RegisterLocalSparseEncodingModelStepTests extends OpenSearchTestCas
         PlainActionFuture<WorkflowData> future = this.registerLocalSparseEncodingModelStep.execute(
             workflowData.getNodeId(),
             workflowData,
+            Collections.emptyMap(),
             Collections.emptyMap(),
             Collections.emptyMap()
         );
@@ -243,6 +245,7 @@ public class RegisterLocalSparseEncodingModelStepTests extends OpenSearchTestCas
             workflowData.getNodeId(),
             workflowData,
             Collections.emptyMap(),
+            Collections.emptyMap(),
             Collections.emptyMap()
         );
 
@@ -255,6 +258,7 @@ public class RegisterLocalSparseEncodingModelStepTests extends OpenSearchTestCas
         PlainActionFuture<WorkflowData> future = registerLocalSparseEncodingModelStep.execute(
             "nodeId",
             new WorkflowData(Collections.emptyMap(), "test-id", "test-node-id"),
+            Collections.emptyMap(),
             Collections.emptyMap(),
             Collections.emptyMap()
         );

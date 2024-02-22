@@ -63,7 +63,8 @@ public class CreateIndexStep implements WorkflowStep {
         String currentNodeId,
         WorkflowData currentNodeInputs,
         Map<String, WorkflowData> outputs,
-        Map<String, String> previousNodeInputs
+        Map<String, String> previousNodeInputs,
+        Map<String, String> params
     ) {
         PlainActionFuture<WorkflowData> createIndexFuture = PlainActionFuture.newFuture();
         ActionListener<CreateIndexResponse> actionListener = new ActionListener<>() {

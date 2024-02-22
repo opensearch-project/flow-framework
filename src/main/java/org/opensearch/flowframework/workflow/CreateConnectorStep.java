@@ -74,7 +74,8 @@ public class CreateConnectorStep implements WorkflowStep {
         String currentNodeId,
         WorkflowData currentNodeInputs,
         Map<String, WorkflowData> outputs,
-        Map<String, String> previousNodeInputs
+        Map<String, String> previousNodeInputs,
+        Map<String, String> params
     ) {
         PlainActionFuture<WorkflowData> createConnectorFuture = PlainActionFuture.newFuture();
 
@@ -138,7 +139,8 @@ public class CreateConnectorStep implements WorkflowStep {
                 optionalKeys,
                 currentNodeInputs,
                 outputs,
-                previousNodeInputs
+                previousNodeInputs,
+                params
             );
 
             String name = (String) inputs.get(NAME_FIELD);

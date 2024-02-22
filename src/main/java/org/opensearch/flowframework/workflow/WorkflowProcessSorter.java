@@ -87,9 +87,10 @@ public class WorkflowProcessSorter {
      * Sort a workflow into a topologically sorted list of process nodes.
      * @param workflow A workflow with (unsorted) nodes and edges which define predecessors and successors
      * @param workflowId The workflowId associated with the step
+     * @param params Parameters passed on the REST path
      * @return A list of Process Nodes sorted topologically.  All predecessors of any node will occur prior to it in the list.
      */
-    public List<ProcessNode> sortProcessNodes(Workflow workflow, String workflowId) {
+    public List<ProcessNode> sortProcessNodes(Workflow workflow, String workflowId, Map<String, String> params) {
         if (workflow.nodes().size() > this.maxWorkflowSteps) {
             throw new FlowFrameworkException(
                 "Workflow "
@@ -122,6 +123,7 @@ public class WorkflowProcessSorter {
             ProcessNode processNode = new ProcessNode(
                 node.id(),
                 step,
+                params,
                 node.previousNodeInputs(),
                 data,
                 predecessorNodes,

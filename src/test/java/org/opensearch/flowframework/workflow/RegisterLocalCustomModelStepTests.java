@@ -173,6 +173,7 @@ public class RegisterLocalCustomModelStepTests extends OpenSearchTestCase {
             workflowData.getNodeId(),
             workflowData,
             Collections.emptyMap(),
+            Collections.emptyMap(),
             Collections.emptyMap()
         );
 
@@ -196,6 +197,7 @@ public class RegisterLocalCustomModelStepTests extends OpenSearchTestCase {
         PlainActionFuture<WorkflowData> future = this.registerLocalModelStep.execute(
             workflowData.getNodeId(),
             workflowData,
+            Collections.emptyMap(),
             Collections.emptyMap(),
             Collections.emptyMap()
         );
@@ -246,6 +248,7 @@ public class RegisterLocalCustomModelStepTests extends OpenSearchTestCase {
             workflowData.getNodeId(),
             workflowData,
             Collections.emptyMap(),
+            Collections.emptyMap(),
             Collections.emptyMap()
         );
 
@@ -258,6 +261,7 @@ public class RegisterLocalCustomModelStepTests extends OpenSearchTestCase {
         PlainActionFuture<WorkflowData> future = registerLocalModelStep.execute(
             "nodeId",
             new WorkflowData(Collections.emptyMap(), "test-id", "test-node-id"),
+            Collections.emptyMap(),
             Collections.emptyMap(),
             Collections.emptyMap()
         );

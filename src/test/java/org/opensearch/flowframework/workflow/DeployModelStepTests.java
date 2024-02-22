@@ -161,6 +161,7 @@ public class DeployModelStepTests extends OpenSearchTestCase {
             inputData.getNodeId(),
             inputData,
             Collections.emptyMap(),
+            Collections.emptyMap(),
             Collections.emptyMap()
         );
 
@@ -186,6 +187,7 @@ public class DeployModelStepTests extends OpenSearchTestCase {
         PlainActionFuture<WorkflowData> future = deployModel.execute(
             inputData.getNodeId(),
             inputData,
+            Collections.emptyMap(),
             Collections.emptyMap(),
             Collections.emptyMap()
         );
@@ -241,6 +243,7 @@ public class DeployModelStepTests extends OpenSearchTestCase {
         PlainActionFuture<WorkflowData> future = this.deployModel.execute(
             inputData.getNodeId(),
             inputData,
+            Collections.emptyMap(),
             Collections.emptyMap(),
             Collections.emptyMap()
         );

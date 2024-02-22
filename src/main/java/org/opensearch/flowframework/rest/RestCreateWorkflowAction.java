@@ -29,6 +29,9 @@ import org.opensearch.rest.RestRequest;
 import java.io.IOException;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 import static org.opensearch.core.xcontent.XContentParserUtils.ensureExpectedToken;
 import static org.opensearch.flowframework.common.CommonValue.PROVISION_WORKFLOW;
@@ -75,10 +78,35 @@ public class RestCreateWorkflowAction extends BaseRestHandler {
         String workflowId = request.param(WORKFLOW_ID);
         String[] validation = request.paramAsStringArray(VALIDATION, new String[] { "all" });
         boolean provision = request.paramAsBoolean(PROVISION_WORKFLOW, false);
+        final List<String> validCreateParams = List.of(WORKFLOW_ID, VALIDATION, PROVISION_WORKFLOW);
+        // If provisioning, consume all other params and pass to provision transport action
+        Map<String, String> params = provision
+            ? request.params()
+                .keySet()
+                .stream()
+                .filter(k -> !validCreateParams.contains(k))
+                .collect(Collectors.toMap(Function.identity(), request::param))
+            : request.params()
+                .entrySet()
+                .stream()
+                .filter(e -> !validCreateParams.contains(e.getKey()))
+                .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
         if (!flowFrameworkSettings.isFlowFrameworkEnabled()) {
             FlowFrameworkException ffe = new FlowFrameworkException(
                 "This API is disabled. To enable it, set [" + FLOW_FRAMEWORK_ENABLED.getKey() + "] to true.",
                 RestStatus.FORBIDDEN
+            );
+            return channel -> channel.sendResponse(
+                new BytesRestResponse(ffe.getRestStatus(), ffe.toXContent(channel.newErrorBuilder(), ToXContent.EMPTY_PARAMS))
+            );
+        }
+        if (!provision && !params.isEmpty()) {
+            // Consume params and content so custom exception is processed
+            params.keySet().stream().forEach(request::param);
+            request.content();
+            FlowFrameworkException ffe = new FlowFrameworkException(
+                "Only the parameters " + validCreateParams + " are permitted unless the provision parameter is set to true.",
+                RestStatus.BAD_REQUEST
             );
             return channel -> channel.sendResponse(
                 new BytesRestResponse(ffe.getRestStatus(), ffe.toXContent(channel.newErrorBuilder(), ToXContent.EMPTY_PARAMS))
@@ -89,7 +117,7 @@ public class RestCreateWorkflowAction extends BaseRestHandler {
             ensureExpectedToken(XContentParser.Token.START_OBJECT, parser.nextToken(), parser);
             Template template = Template.parse(parser);
 
-            WorkflowRequest workflowRequest = new WorkflowRequest(workflowId, template, validation, provision);
+            WorkflowRequest workflowRequest = new WorkflowRequest(workflowId, template, validation, provision, params);
 
             return channel -> client.execute(CreateWorkflowAction.INSTANCE, workflowRequest, ActionListener.wrap(response -> {
                 XContentBuilder builder = response.toXContent(channel.newBuilder(), ToXContent.EMPTY_PARAMS);
