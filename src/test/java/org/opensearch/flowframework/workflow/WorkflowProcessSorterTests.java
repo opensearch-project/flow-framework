@@ -73,7 +73,7 @@ public class WorkflowProcessSorterTests extends OpenSearchTestCase {
 
     // Wrap parser into node list
     private static List<ProcessNode> parseToNodes(String json) throws IOException {
-        return workflowProcessSorter.sortProcessNodes(parseToWorkflow(json), "123");
+        return workflowProcessSorter.sortProcessNodes(parseToWorkflow(json), "123", Collections.emptyMap());
     }
 
     // Wrap parser into string list
@@ -376,7 +376,7 @@ public class WorkflowProcessSorterTests extends OpenSearchTestCase {
             List.of(edge1, edge2)
         );
 
-        List<ProcessNode> sortedProcessNodes = workflowProcessSorter.sortProcessNodes(workflow, "123");
+        List<ProcessNode> sortedProcessNodes = workflowProcessSorter.sortProcessNodes(workflow, "123", Collections.emptyMap());
         workflowProcessSorter.validateGraph(sortedProcessNodes);
     }
 
@@ -398,7 +398,7 @@ public class WorkflowProcessSorterTests extends OpenSearchTestCase {
         WorkflowEdge edge = new WorkflowEdge(registerModel.id(), deployModel.id());
         Workflow workflow = new Workflow(Collections.emptyMap(), List.of(registerModel, deployModel), List.of(edge));
 
-        List<ProcessNode> sortedProcessNodes = workflowProcessSorter.sortProcessNodes(workflow, "123");
+        List<ProcessNode> sortedProcessNodes = workflowProcessSorter.sortProcessNodes(workflow, "123", Collections.emptyMap());
         FlowFrameworkException ex = expectThrows(
             FlowFrameworkException.class,
             () -> workflowProcessSorter.validateGraph(sortedProcessNodes)
@@ -444,7 +444,7 @@ public class WorkflowProcessSorterTests extends OpenSearchTestCase {
             List.of(createConnector, registerModel, deployModel),
             List.of(edge1, edge2)
         );
-        List<ProcessNode> sortedProcessNodes = workflowProcessSorter.sortProcessNodes(workflow, "123");
+        List<ProcessNode> sortedProcessNodes = workflowProcessSorter.sortProcessNodes(workflow, "123", Collections.emptyMap());
 
         workflowProcessSorter.validatePluginsInstalled(sortedProcessNodes, List.of("opensearch-flow-framework", "opensearch-ml"));
     }
@@ -486,7 +486,7 @@ public class WorkflowProcessSorterTests extends OpenSearchTestCase {
             List.of(createConnector, registerModel, deployModel),
             List.of(edge1, edge2)
         );
-        List<ProcessNode> sortedProcessNodes = workflowProcessSorter.sortProcessNodes(workflow, "123");
+        List<ProcessNode> sortedProcessNodes = workflowProcessSorter.sortProcessNodes(workflow, "123", Collections.emptyMap());
 
         FlowFrameworkException exception = expectThrows(
             FlowFrameworkException.class,

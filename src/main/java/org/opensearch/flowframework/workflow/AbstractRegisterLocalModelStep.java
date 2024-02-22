@@ -79,7 +79,8 @@ public abstract class AbstractRegisterLocalModelStep extends AbstractRetryableWo
         String currentNodeId,
         WorkflowData currentNodeInputs,
         Map<String, WorkflowData> outputs,
-        Map<String, String> previousNodeInputs
+        Map<String, String> previousNodeInputs,
+        Map<String, String> params
     ) {
 
         PlainActionFuture<WorkflowData> registerLocalModelFuture = PlainActionFuture.newFuture();
@@ -90,7 +91,8 @@ public abstract class AbstractRegisterLocalModelStep extends AbstractRetryableWo
                 getOptionalKeys(),
                 currentNodeInputs,
                 outputs,
-                previousNodeInputs
+                previousNodeInputs,
+                params
             );
 
             // Extract common fields of OS provided text-embedding, sparse encoding and custom models

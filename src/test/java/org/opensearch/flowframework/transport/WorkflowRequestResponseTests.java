@@ -61,6 +61,8 @@ public class WorkflowRequestResponseTests extends OpenSearchTestCase {
         assertNull(nullIdRequest.getWorkflowId());
         assertEquals(template, nullIdRequest.getTemplate());
         assertNull(nullIdRequest.validate());
+        assertFalse(nullIdRequest.isProvision());
+        assertTrue(nullIdRequest.getParams().isEmpty());
 
         BytesStreamOutput out = new BytesStreamOutput();
         nullIdRequest.writeTo(out);
@@ -70,6 +72,9 @@ public class WorkflowRequestResponseTests extends OpenSearchTestCase {
 
         assertEquals(nullIdRequest.getWorkflowId(), streamInputRequest.getWorkflowId());
         assertEquals(nullIdRequest.getTemplate().toJson(), streamInputRequest.getTemplate().toJson());
+        assertNull(nullIdRequest.validate());
+        assertFalse(nullIdRequest.isProvision());
+        assertTrue(nullIdRequest.getParams().isEmpty());
     }
 
     public void testNullTemplateWorkflowRequest() throws IOException {
@@ -77,6 +82,8 @@ public class WorkflowRequestResponseTests extends OpenSearchTestCase {
         assertNotNull(nullTemplateRequest.getWorkflowId());
         assertNull(nullTemplateRequest.getTemplate());
         assertNull(nullTemplateRequest.validate());
+        assertFalse(nullTemplateRequest.isProvision());
+        assertTrue(nullTemplateRequest.getParams().isEmpty());
 
         BytesStreamOutput out = new BytesStreamOutput();
         nullTemplateRequest.writeTo(out);
@@ -86,6 +93,9 @@ public class WorkflowRequestResponseTests extends OpenSearchTestCase {
 
         assertEquals(nullTemplateRequest.getWorkflowId(), streamInputRequest.getWorkflowId());
         assertEquals(nullTemplateRequest.getTemplate(), streamInputRequest.getTemplate());
+        assertNull(nullTemplateRequest.validate());
+        assertFalse(nullTemplateRequest.isProvision());
+        assertTrue(nullTemplateRequest.getParams().isEmpty());
     }
 
     public void testWorkflowRequest() throws IOException {
@@ -93,6 +103,8 @@ public class WorkflowRequestResponseTests extends OpenSearchTestCase {
         assertNotNull(workflowRequest.getWorkflowId());
         assertEquals(template, workflowRequest.getTemplate());
         assertNull(workflowRequest.validate());
+        assertFalse(workflowRequest.isProvision());
+        assertTrue(workflowRequest.getParams().isEmpty());
 
         BytesStreamOutput out = new BytesStreamOutput();
         workflowRequest.writeTo(out);
@@ -102,7 +114,38 @@ public class WorkflowRequestResponseTests extends OpenSearchTestCase {
 
         assertEquals(workflowRequest.getWorkflowId(), streamInputRequest.getWorkflowId());
         assertEquals(workflowRequest.getTemplate().toJson(), streamInputRequest.getTemplate().toJson());
+        assertNull(workflowRequest.validate());
+        assertFalse(workflowRequest.isProvision());
+        assertTrue(workflowRequest.getParams().isEmpty());
+    }
 
+    public void testWorkflowRequestWithParams() throws IOException {
+        WorkflowRequest workflowRequest = new WorkflowRequest("123", template, Map.of("foo", "bar"));
+        assertNotNull(workflowRequest.getWorkflowId());
+        assertEquals(template, workflowRequest.getTemplate());
+        assertNull(workflowRequest.validate());
+        assertTrue(workflowRequest.isProvision());
+        assertEquals("bar", workflowRequest.getParams().get("foo"));
+
+        BytesStreamOutput out = new BytesStreamOutput();
+        workflowRequest.writeTo(out);
+        BytesStreamInput in = new BytesStreamInput(BytesReference.toBytes(out.bytes()));
+
+        WorkflowRequest streamInputRequest = new WorkflowRequest(in);
+
+        assertEquals(workflowRequest.getWorkflowId(), streamInputRequest.getWorkflowId());
+        assertEquals(workflowRequest.getTemplate().toJson(), streamInputRequest.getTemplate().toJson());
+        assertNull(workflowRequest.validate());
+        assertTrue(workflowRequest.isProvision());
+        assertEquals("bar", workflowRequest.getParams().get("foo"));
+    }
+
+    public void testWorkflowRequestWithParamsNoProvision() throws IOException {
+        IllegalArgumentException ex = assertThrows(
+            IllegalArgumentException.class,
+            () -> new WorkflowRequest("123", template, new String[] { "all" }, false, Map.of("foo", "bar"))
+        );
+        assertEquals("Params may only be included when provisioning.", ex.getMessage());
     }
 
     public void testWorkflowResponse() throws IOException {

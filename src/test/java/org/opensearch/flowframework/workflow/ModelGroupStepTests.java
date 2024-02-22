@@ -95,6 +95,7 @@ public class ModelGroupStepTests extends OpenSearchTestCase {
             inputData.getNodeId(),
             inputData,
             Collections.emptyMap(),
+            Collections.emptyMap(),
             Collections.emptyMap()
         );
 
@@ -122,6 +123,7 @@ public class ModelGroupStepTests extends OpenSearchTestCase {
             inputData.getNodeId(),
             inputData,
             Collections.emptyMap(),
+            Collections.emptyMap(),
             Collections.emptyMap()
         );
 
@@ -140,6 +142,7 @@ public class ModelGroupStepTests extends OpenSearchTestCase {
         PlainActionFuture<WorkflowData> future = modelGroupStep.execute(
             inputDataWithNoName.getNodeId(),
             inputDataWithNoName,
+            Collections.emptyMap(),
             Collections.emptyMap(),
             Collections.emptyMap()
         );

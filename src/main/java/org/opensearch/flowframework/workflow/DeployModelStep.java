@@ -64,7 +64,8 @@ public class DeployModelStep extends AbstractRetryableWorkflowStep {
         String currentNodeId,
         WorkflowData currentNodeInputs,
         Map<String, WorkflowData> outputs,
-        Map<String, String> previousNodeInputs
+        Map<String, String> previousNodeInputs,
+        Map<String, String> params
     ) {
 
         PlainActionFuture<WorkflowData> deployModelFuture = PlainActionFuture.newFuture();
@@ -109,7 +110,8 @@ public class DeployModelStep extends AbstractRetryableWorkflowStep {
                 optionalKeys,
                 currentNodeInputs,
                 outputs,
-                previousNodeInputs
+                previousNodeInputs,
+                params
             );
 
             String modelId = (String) inputs.get(MODEL_ID);

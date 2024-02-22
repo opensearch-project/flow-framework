@@ -124,7 +124,7 @@ public class DeprovisionWorkflowTransportActionTests extends OpenSearchTestCase 
 
         PlainActionFuture<WorkflowData> future = PlainActionFuture.newFuture();
         future.onResponse(WorkflowData.EMPTY);
-        when(this.deleteConnectorStep.execute(anyString(), any(WorkflowData.class), anyMap(), anyMap())).thenReturn(future);
+        when(this.deleteConnectorStep.execute(anyString(), any(WorkflowData.class), anyMap(), anyMap(), anyMap())).thenReturn(future);
 
         deprovisionWorkflowTransportAction.doExecute(mock(Task.class), workflowRequest, listener);
         ArgumentCaptor<WorkflowResponse> responseCaptor = ArgumentCaptor.forClass(WorkflowResponse.class);
@@ -154,7 +154,7 @@ public class DeprovisionWorkflowTransportActionTests extends OpenSearchTestCase 
 
         PlainActionFuture<WorkflowData> future = PlainActionFuture.newFuture();
         future.onFailure(new RuntimeException("rte"));
-        when(this.deleteConnectorStep.execute(anyString(), any(WorkflowData.class), anyMap(), anyMap())).thenReturn(future);
+        when(this.deleteConnectorStep.execute(anyString(), any(WorkflowData.class), anyMap(), anyMap(), anyMap())).thenReturn(future);
 
         deprovisionWorkflowTransportAction.doExecute(mock(Task.class), workflowRequest, listener);
         ArgumentCaptor<Exception> exceptionCaptor = ArgumentCaptor.forClass(Exception.class);

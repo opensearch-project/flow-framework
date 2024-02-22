@@ -9,10 +9,13 @@
 package org.opensearch.flowframework.rest;
 
 import org.opensearch.client.node.NodeClient;
+import org.opensearch.core.action.ActionListener;
 import org.opensearch.core.common.bytes.BytesArray;
 import org.opensearch.core.rest.RestStatus;
 import org.opensearch.core.xcontent.MediaTypeRegistry;
 import org.opensearch.flowframework.common.FlowFrameworkSettings;
+import org.opensearch.flowframework.transport.WorkflowRequest;
+import org.opensearch.flowframework.transport.WorkflowResponse;
 import org.opensearch.rest.RestHandler.Route;
 import org.opensearch.rest.RestRequest;
 import org.opensearch.test.OpenSearchTestCase;
@@ -21,8 +24,11 @@ import org.opensearch.test.rest.FakeRestRequest;
 
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 
 import static org.opensearch.flowframework.common.CommonValue.WORKFLOW_URI;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -49,7 +55,7 @@ public class RestProvisionWorkflowActionTests extends OpenSearchTestCase {
         assertEquals("provision_workflow_action", name);
     }
 
-    public void testRestProvisiionWorkflowActionRoutes() {
+    public void testRestProvisionWorkflowActionRoutes() {
         List<Route> routes = provisionWorkflowRestAction.routes();
         assertEquals(1, routes.size());
         assertEquals(RestRequest.Method.POST, routes.get(0).getMethod());
@@ -71,20 +77,61 @@ public class RestProvisionWorkflowActionTests extends OpenSearchTestCase {
         assertTrue(channel.capturedResponse().content().utf8ToString().contains("workflow_id cannot be null"));
     }
 
-    public void testInvalidRequestWithContent() {
+    public void testContentParsing() throws Exception {
         RestRequest request = new FakeRestRequest.Builder(xContentRegistry()).withMethod(RestRequest.Method.POST)
             .withPath(this.provisionWorkflowPath)
-            .withContent(new BytesArray("request body"), MediaTypeRegistry.JSON)
+            .withParams(Map.of("workflow_id", "abc"))
+            .withContent(new BytesArray("{\"foo\": \"bar\"}"), MediaTypeRegistry.JSON)
             .build();
 
         FakeRestChannel channel = new FakeRestChannel(request, false, 1);
-        IllegalArgumentException ex = expectThrows(IllegalArgumentException.class, () -> {
-            provisionWorkflowRestAction.handleRequest(request, channel, nodeClient);
-        });
-        assertEquals(
-            "request [POST /_plugins/_flow_framework/workflow/{workflow_id}/_provision] does not support having a body",
-            ex.getMessage()
-        );
+        doAnswer(invocation -> {
+            ActionListener<WorkflowResponse> actionListener = invocation.getArgument(2);
+            actionListener.onResponse(new WorkflowResponse("id-123"));
+            return null;
+        }).when(nodeClient).execute(any(), any(WorkflowRequest.class), any());
+        provisionWorkflowRestAction.handleRequest(request, channel, nodeClient);
+        assertEquals(RestStatus.OK, channel.capturedResponse().status());
+        assertTrue(channel.capturedResponse().content().utf8ToString().contains("id-123"));
+    }
+
+    public void testContentParsingDuplicate() throws Exception {
+        RestRequest request = new FakeRestRequest.Builder(xContentRegistry()).withMethod(RestRequest.Method.POST)
+            .withPath(this.provisionWorkflowPath)
+            .withParams(Map.ofEntries(Map.entry("workflow_id", "abc"), Map.entry("foo", "bar")))
+            .withContent(new BytesArray("{\"bar\": \"none\", \"foo\": \"baz\"}"), MediaTypeRegistry.JSON)
+            .build();
+
+        FakeRestChannel channel = new FakeRestChannel(request, false, 1);
+        provisionWorkflowRestAction.handleRequest(request, channel, nodeClient);
+        assertEquals(RestStatus.BAD_REQUEST, channel.capturedResponse().status());
+        // assertEquals("", channel.capturedResponse().content().utf8ToString());
+        assertTrue(channel.capturedResponse().content().utf8ToString().contains("Duplicate key foo"));
+    }
+
+    public void testContentParsingBadType() throws Exception {
+        RestRequest request = new FakeRestRequest.Builder(xContentRegistry()).withMethod(RestRequest.Method.POST)
+            .withPath(this.provisionWorkflowPath)
+            .withParams(Map.of("workflow_id", "abc"))
+            .withContent(new BytesArray("{\"foo\": 123}"), MediaTypeRegistry.JSON)
+            .build();
+
+        FakeRestChannel channel = new FakeRestChannel(request, false, 1);
+        provisionWorkflowRestAction.handleRequest(request, channel, nodeClient);
+        assertEquals(RestStatus.BAD_REQUEST, channel.capturedResponse().status());
+        assertTrue(channel.capturedResponse().content().utf8ToString().contains("Request body fields must have string values"));
+    }
+
+    public void testContentParsingError() throws Exception {
+        RestRequest request = new FakeRestRequest.Builder(xContentRegistry()).withMethod(RestRequest.Method.POST)
+            .withPath(this.provisionWorkflowPath)
+            .withContent(new BytesArray("not json"), MediaTypeRegistry.JSON)
+            .build();
+
+        FakeRestChannel channel = new FakeRestChannel(request, false, 1);
+        provisionWorkflowRestAction.handleRequest(request, channel, nodeClient);
+        assertEquals(RestStatus.BAD_REQUEST, channel.capturedResponse().status());
+        assertTrue(channel.capturedResponse().content().utf8ToString().contains("Request body parsing failed"));
     }
 
     public void testFeatureFlagNotEnabled() throws Exception {

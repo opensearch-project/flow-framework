@@ -63,7 +63,8 @@ public class RegisterRemoteModelStep implements WorkflowStep {
         String currentNodeId,
         WorkflowData currentNodeInputs,
         Map<String, WorkflowData> outputs,
-        Map<String, String> previousNodeInputs
+        Map<String, String> previousNodeInputs,
+        Map<String, String> params
     ) {
 
         PlainActionFuture<WorkflowData> registerRemoteModelFuture = PlainActionFuture.newFuture();
@@ -77,7 +78,8 @@ public class RegisterRemoteModelStep implements WorkflowStep {
                 optionalKeys,
                 currentNodeInputs,
                 outputs,
-                previousNodeInputs
+                previousNodeInputs,
+                params
             );
 
             String modelName = (String) inputs.get(NAME_FIELD);

@@ -103,6 +103,7 @@ public class CreateConnectorStepTests extends OpenSearchTestCase {
             inputData.getNodeId(),
             inputData,
             Collections.emptyMap(),
+            Collections.emptyMap(),
             Collections.emptyMap()
         );
 
@@ -124,6 +125,7 @@ public class CreateConnectorStepTests extends OpenSearchTestCase {
         PlainActionFuture<WorkflowData> future = createConnectorStep.execute(
             inputData.getNodeId(),
             inputData,
+            Collections.emptyMap(),
             Collections.emptyMap(),
             Collections.emptyMap()
         );

@@ -10,6 +10,7 @@ package org.opensearch.flowframework.rest;
 
 import org.opensearch.Version;
 import org.opensearch.client.node.NodeClient;
+import org.opensearch.core.action.ActionListener;
 import org.opensearch.core.common.bytes.BytesArray;
 import org.opensearch.core.rest.RestStatus;
 import org.opensearch.core.xcontent.MediaTypeRegistry;
@@ -19,6 +20,8 @@ import org.opensearch.flowframework.model.Template;
 import org.opensearch.flowframework.model.Workflow;
 import org.opensearch.flowframework.model.WorkflowEdge;
 import org.opensearch.flowframework.model.WorkflowNode;
+import org.opensearch.flowframework.transport.WorkflowRequest;
+import org.opensearch.flowframework.transport.WorkflowResponse;
 import org.opensearch.rest.RestHandler.Route;
 import org.opensearch.rest.RestRequest;
 import org.opensearch.test.OpenSearchTestCase;
@@ -30,12 +33,16 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 
+import static org.opensearch.flowframework.common.CommonValue.PROVISION_WORKFLOW;
 import static org.opensearch.flowframework.common.CommonValue.WORKFLOW_URI;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 public class RestCreateWorkflowActionTests extends OpenSearchTestCase {
 
+    private String validTemplate;
     private String invalidTemplate;
     private RestCreateWorkflowAction createWorkflowRestAction;
     private String createWorkflowPath;
@@ -70,7 +77,8 @@ public class RestCreateWorkflowActionTests extends OpenSearchTestCase {
         );
 
         // Invalid template configuration, wrong field name
-        this.invalidTemplate = template.toJson().replace("use_case", "invalid");
+        this.validTemplate = template.toJson();
+        this.invalidTemplate = this.validTemplate.replace("use_case", "invalid");
         this.createWorkflowRestAction = new RestCreateWorkflowAction(flowFrameworkFeatureEnabledSetting);
         this.createWorkflowPath = String.format(Locale.ROOT, "%s", WORKFLOW_URI);
         this.updateWorkflowPath = String.format(Locale.ROOT, "%s/{%s}", WORKFLOW_URI, "workflow_id");
@@ -90,6 +98,42 @@ public class RestCreateWorkflowActionTests extends OpenSearchTestCase {
         assertEquals(this.createWorkflowPath, routes.get(0).getPath());
         assertEquals(this.updateWorkflowPath, routes.get(1).getPath());
 
+    }
+
+    public void testCreateWorkflowRequestWithParamsAndProvision() throws Exception {
+        RestRequest request = new FakeRestRequest.Builder(xContentRegistry()).withMethod(RestRequest.Method.POST)
+            .withPath(this.createWorkflowPath)
+            .withParams(Map.ofEntries(Map.entry(PROVISION_WORKFLOW, "true"), Map.entry("foo", "bar")))
+            .withContent(new BytesArray(validTemplate), MediaTypeRegistry.JSON)
+            .build();
+        FakeRestChannel channel = new FakeRestChannel(request, false, 1);
+        doAnswer(invocation -> {
+            ActionListener<WorkflowResponse> actionListener = invocation.getArgument(2);
+            actionListener.onResponse(new WorkflowResponse("id-123"));
+            return null;
+        }).when(nodeClient).execute(any(), any(WorkflowRequest.class), any());
+        createWorkflowRestAction.handleRequest(request, channel, nodeClient);
+        assertEquals(RestStatus.CREATED, channel.capturedResponse().status());
+        assertTrue(channel.capturedResponse().content().utf8ToString().contains("id-123"));
+    }
+
+    public void testCreateWorkflowRequestWithParamsButNoProvision() throws Exception {
+        RestRequest request = new FakeRestRequest.Builder(xContentRegistry()).withMethod(RestRequest.Method.POST)
+            .withPath(this.createWorkflowPath)
+            .withParams(Map.of("foo", "bar"))
+            .withContent(new BytesArray(validTemplate), MediaTypeRegistry.JSON)
+            .build();
+        FakeRestChannel channel = new FakeRestChannel(request, false, 1);
+        createWorkflowRestAction.handleRequest(request, channel, nodeClient);
+        assertEquals(RestStatus.BAD_REQUEST, channel.capturedResponse().status());
+        assertTrue(
+            channel.capturedResponse()
+                .content()
+                .utf8ToString()
+                .contains(
+                    "Only the parameters [workflow_id, validation, provision] are permitted unless the provision parameter is set to true."
+                )
+        );
     }
 
     public void testInvalidCreateWorkflowRequest() throws Exception {

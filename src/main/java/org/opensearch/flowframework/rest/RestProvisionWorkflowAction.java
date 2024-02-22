@@ -16,6 +16,7 @@ import org.opensearch.core.action.ActionListener;
 import org.opensearch.core.rest.RestStatus;
 import org.opensearch.core.xcontent.ToXContent;
 import org.opensearch.core.xcontent.XContentBuilder;
+import org.opensearch.core.xcontent.XContentParser;
 import org.opensearch.flowframework.common.FlowFrameworkSettings;
 import org.opensearch.flowframework.exception.FlowFrameworkException;
 import org.opensearch.flowframework.transport.ProvisionWorkflowAction;
@@ -27,7 +28,11 @@ import org.opensearch.rest.RestRequest;
 import java.io.IOException;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
+import static org.opensearch.core.xcontent.XContentParserUtils.ensureExpectedToken;
 import static org.opensearch.flowframework.common.CommonValue.WORKFLOW_ID;
 import static org.opensearch.flowframework.common.CommonValue.WORKFLOW_URI;
 import static org.opensearch.flowframework.common.FlowFrameworkSettings.FLOW_FRAMEWORK_ENABLED;
@@ -69,23 +74,19 @@ public class RestProvisionWorkflowAction extends BaseRestHandler {
     protected RestChannelConsumer prepareRequest(RestRequest request, NodeClient client) throws IOException {
         String workflowId = request.param(WORKFLOW_ID);
         try {
+            Map<String, String> params = parseParamsAndContent(request);
             if (!flowFrameworkFeatureEnabledSetting.isFlowFrameworkEnabled()) {
                 throw new FlowFrameworkException(
                     "This API is disabled. To enable it, update the setting [" + FLOW_FRAMEWORK_ENABLED.getKey() + "] to true.",
                     RestStatus.FORBIDDEN
                 );
             }
-            // Validate content
-            if (request.hasContent()) {
-                // BaseRestHandler will give appropriate error message
-                return channel -> channel.sendResponse(null);
-            }
             // Validate params
             if (workflowId == null) {
                 throw new FlowFrameworkException("workflow_id cannot be null", RestStatus.BAD_REQUEST);
             }
             // Create request and provision
-            WorkflowRequest workflowRequest = new WorkflowRequest(workflowId, null);
+            WorkflowRequest workflowRequest = new WorkflowRequest(workflowId, null, params);
             return channel -> client.execute(ProvisionWorkflowAction.INSTANCE, workflowRequest, ActionListener.wrap(response -> {
                 XContentBuilder builder = response.toXContent(channel.newBuilder(), ToXContent.EMPTY_PARAMS);
                 channel.sendResponse(new BytesRestResponse(RestStatus.OK, builder));
@@ -108,4 +109,31 @@ public class RestProvisionWorkflowAction extends BaseRestHandler {
         }
     }
 
+    private Map<String, String> parseParamsAndContent(RestRequest request) {
+        // Get any other params from path
+        Map<String, String> params = request.params()
+            .keySet()
+            .stream()
+            .filter(k -> !WORKFLOW_ID.equals(k))
+            .collect(Collectors.toMap(Function.identity(), request::param));
+        // If body is included get any params from body
+        if (request.hasContent()) {
+            try (XContentParser parser = request.contentParser()) {
+                ensureExpectedToken(XContentParser.Token.START_OBJECT, parser.nextToken(), parser);
+                while (parser.nextToken() != XContentParser.Token.END_OBJECT) {
+                    String key = parser.currentName();
+                    if (params.containsKey(key)) {
+                        throw new FlowFrameworkException("Duplicate key " + key, RestStatus.BAD_REQUEST);
+                    }
+                    if (parser.nextToken() != XContentParser.Token.VALUE_STRING) {
+                        throw new FlowFrameworkException("Request body fields must have string values", RestStatus.BAD_REQUEST);
+                    }
+                    params.put(key, parser.text());
+                }
+            } catch (IOException e) {
+                throw new FlowFrameworkException("Request body parsing failed", RestStatus.BAD_REQUEST);
+            }
+        }
+        return params;
+    }
 }
