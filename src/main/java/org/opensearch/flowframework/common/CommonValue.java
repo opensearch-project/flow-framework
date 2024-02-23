@@ -65,7 +65,7 @@ public class CommonValue {
     /** The field name for provision workflow within a use case template*/
     public static final String PROVISION_WORKFLOW = "provision";
     /** The field name for workflow steps. This field represents the name of the workflow steps to be fetched. */
-    public static final String STEP = "step";
+    public static final String WORKFLOW_STEP = "workflow_step";
 
     /*
      * Constants associated with plugin configuration

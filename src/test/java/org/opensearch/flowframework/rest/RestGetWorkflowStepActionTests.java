@@ -92,7 +92,7 @@ public class RestGetWorkflowStepActionTests extends OpenSearchTestCase {
 
     public void testWorkflowSteps() throws Exception {
         RestRequest request = new FakeRestRequest.Builder(xContentRegistry()).withMethod(RestRequest.Method.GET)
-            .withPath(this.getPath + "?step=create_connector")
+            .withPath(this.getPath + "?workflow_step=create_connector")
             .build();
 
         FakeRestChannel channel = new FakeRestChannel(request, false, 1);
