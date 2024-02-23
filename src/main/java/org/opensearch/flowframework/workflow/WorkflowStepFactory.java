@@ -33,6 +33,8 @@ import static org.opensearch.flowframework.common.CommonValue.DESCRIPTION_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.EMBEDDING_DIMENSION;
 import static org.opensearch.flowframework.common.CommonValue.FRAMEWORK_TYPE;
 import static org.opensearch.flowframework.common.CommonValue.FUNCTION_NAME;
+import static org.opensearch.flowframework.common.CommonValue.HOSTNAME_FIELD;
+import static org.opensearch.flowframework.common.CommonValue.HTTP_HOST_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.MODEL_CONTENT_HASH_VALUE;
 import static org.opensearch.flowframework.common.CommonValue.MODEL_FORMAT;
 import static org.opensearch.flowframework.common.CommonValue.MODEL_GROUP_STATUS;
@@ -40,8 +42,10 @@ import static org.opensearch.flowframework.common.CommonValue.MODEL_TYPE;
 import static org.opensearch.flowframework.common.CommonValue.NAME_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.OPENSEARCH_ML;
 import static org.opensearch.flowframework.common.CommonValue.PARAMETERS_FIELD;
+import static org.opensearch.flowframework.common.CommonValue.PORT_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.PROTOCOL_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.REGISTER_MODEL_STATUS;
+import static org.opensearch.flowframework.common.CommonValue.SCHEME_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.SUCCESS;
 import static org.opensearch.flowframework.common.CommonValue.TOOLS_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.TYPE;
@@ -100,6 +104,7 @@ public class WorkflowStepFactory {
         stepMap.put(ToolStep.NAME, ToolStep::new);
         stepMap.put(RegisterAgentStep.NAME, () -> new RegisterAgentStep(mlClient, flowFrameworkIndicesHandler));
         stepMap.put(DeleteAgentStep.NAME, () -> new DeleteAgentStep(mlClient));
+        stepMap.put(HttpHostStep.NAME, HttpHostStep::new);
     }
 
     /**
@@ -194,7 +199,16 @@ public class WorkflowStepFactory {
         DELETE_AGENT(DeleteAgentStep.NAME, List.of(AGENT_ID), List.of(AGENT_ID), List.of(OPENSEARCH_ML), null),
 
         /** Create Tool Step */
-        CREATE_TOOL(ToolStep.NAME, List.of(TYPE), List.of(TOOLS_FIELD), List.of(OPENSEARCH_ML), null);
+        CREATE_TOOL(ToolStep.NAME, List.of(TYPE), List.of(TOOLS_FIELD), List.of(OPENSEARCH_ML), null),
+
+        /** Http Host Step */
+        HTTP_HOST(
+            HttpHostStep.NAME,
+            List.of(SCHEME_FIELD, HOSTNAME_FIELD, PORT_FIELD),
+            List.of(HTTP_HOST_FIELD),
+            Collections.emptyList(),
+            null
+        );
 
         private final String workflowStepName;
         private final List<String> inputs;
