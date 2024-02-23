@@ -158,6 +158,14 @@ public class CommonValue {
     public static final String CREATED_TIME = "created_time";
     /** The last updated time field for an agent */
     public static final String LAST_UPDATED_TIME_FIELD = "last_updated_time";
+    /** HttpHost */
+    public static final String HTTP_HOST_FIELD = "http_host";
+    /** Http scheme */
+    public static final String SCHEME_FIELD = "scheme";
+    /** Http hostname */
+    public static final String HOSTNAME_FIELD = "hostname";
+    /** Http port */
+    public static final String PORT_FIELD = "port";
 
     /*
      * Constants associated with resource provisioning / state
