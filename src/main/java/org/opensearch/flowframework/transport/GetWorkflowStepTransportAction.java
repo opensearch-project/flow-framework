@@ -51,10 +51,13 @@ public class GetWorkflowStepTransportAction extends HandledTransportAction<Workf
     @Override
     protected void doExecute(Task task, WorkflowRequest request, ActionListener<GetWorkflowStepResponse> listener) {
         try {
-
-            List<String> steps = new ArrayList<>(request.getParams().values());
-            WorkflowValidator workflowValidator = this.workflowStepFactory.getWorkflowValidatorByStep(steps);
-
+            List<String> steps = new ArrayList<>(request.getParams().keySet());
+            WorkflowValidator workflowValidator;
+            if (steps.isEmpty()) {
+                workflowValidator = this.workflowStepFactory.getWorkflowValidator();
+            } else {
+                workflowValidator = this.workflowStepFactory.getWorkflowValidatorByStep(steps);
+            }
             listener.onResponse(new GetWorkflowStepResponse(workflowValidator));
         } catch (Exception e) {
             logger.error("Failed to retrieve workflow step json.", e);

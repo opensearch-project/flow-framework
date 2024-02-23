@@ -31,7 +31,8 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 
-import static org.opensearch.flowframework.common.CommonValue.*;
+import static org.opensearch.flowframework.common.CommonValue.STEPS;
+import static org.opensearch.flowframework.common.CommonValue.WORKFLOW_URI;
 import static org.opensearch.flowframework.common.FlowFrameworkSettings.FLOW_FRAMEWORK_ENABLED;
 
 /**
@@ -75,7 +76,7 @@ public class RestGetWorkflowStepAction extends BaseRestHandler {
 
             Map<String, String> params = new HashMap<>();
             for (String step : steps) {
-                params.put(STEPS, step);
+                params.put(step, STEPS);
             }
 
             WorkflowRequest workflowRequest = new WorkflowRequest(null, null, params);
