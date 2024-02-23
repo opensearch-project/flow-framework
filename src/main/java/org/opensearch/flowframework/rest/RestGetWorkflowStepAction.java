@@ -31,7 +31,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 
-import static org.opensearch.flowframework.common.CommonValue.STEPS;
+import static org.opensearch.flowframework.common.CommonValue.STEP;
 import static org.opensearch.flowframework.common.CommonValue.WORKFLOW_URI;
 import static org.opensearch.flowframework.common.FlowFrameworkSettings.FLOW_FRAMEWORK_ENABLED;
 
@@ -65,7 +65,7 @@ public class RestGetWorkflowStepAction extends BaseRestHandler {
     @Override
     protected RestChannelConsumer prepareRequest(RestRequest request, NodeClient client) throws IOException {
 
-        String[] steps = request.paramAsStringArray(STEPS, Strings.EMPTY_ARRAY);
+        String[] steps = request.paramAsStringArray(STEP, Strings.EMPTY_ARRAY);
         try {
             if (!flowFrameworkSettings.isFlowFrameworkEnabled()) {
                 throw new FlowFrameworkException(
@@ -76,7 +76,7 @@ public class RestGetWorkflowStepAction extends BaseRestHandler {
 
             Map<String, String> params = new HashMap<>();
             for (String step : steps) {
-                params.put(step, STEPS);
+                params.put(step, STEP);
             }
 
             WorkflowRequest workflowRequest = new WorkflowRequest(null, null, params);

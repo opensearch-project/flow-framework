@@ -364,6 +364,11 @@ public class WorkflowStepFactory {
         return new WorkflowValidator(workflowStepValidators);
     }
 
+    /**
+     * Get the object of WorkflowValidator consisting of passed workflow steps
+     * @param steps workflow steps
+     * @return WorkflowValidator
+     */
     public WorkflowValidator getWorkflowValidatorByStep(List<String> steps) {
         Map<String, WorkflowStepValidator> workflowStepValidators = new HashMap<>();
 
@@ -371,6 +376,10 @@ public class WorkflowStepFactory {
             if (steps.contains(mapping.getWorkflowStepName())) {
                 workflowStepValidators.put(mapping.getWorkflowStepName(), mapping.getWorkflowStepValidator());
             }
+        }
+
+        if (workflowStepValidators.isEmpty()) {
+            throw new FlowFrameworkException("Please only use only valid step name", RestStatus.BAD_REQUEST);
         }
 
         return new WorkflowValidator(workflowStepValidators);

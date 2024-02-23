@@ -45,6 +45,5 @@ public class GetWorkflowStepTransportActionTests extends OpenSearchTestCase {
 
         ArgumentCaptor<GetWorkflowStepResponse> stepCaptor = ArgumentCaptor.forClass(GetWorkflowStepResponse.class);
         verify(listener, times(1)).onResponse(stepCaptor.capture());
-
     }
 }

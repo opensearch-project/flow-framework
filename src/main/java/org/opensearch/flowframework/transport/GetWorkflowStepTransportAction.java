@@ -60,6 +60,10 @@ public class GetWorkflowStepTransportAction extends HandledTransportAction<Workf
             }
             listener.onResponse(new GetWorkflowStepResponse(workflowValidator));
         } catch (Exception e) {
+            if (e instanceof FlowFrameworkException) {
+                logger.error("Please only use only valid step name");
+                listener.onFailure(e);
+            }
             logger.error("Failed to retrieve workflow step json.", e);
             listener.onFailure(new FlowFrameworkException(e.getMessage(), ExceptionsHelper.status(e)));
         }
