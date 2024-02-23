@@ -15,14 +15,18 @@ import org.opensearch.action.support.ActionFilters;
 import org.opensearch.action.support.HandledTransportAction;
 import org.opensearch.common.inject.Inject;
 import org.opensearch.core.action.ActionListener;
+import org.opensearch.core.common.Strings;
 import org.opensearch.flowframework.exception.FlowFrameworkException;
 import org.opensearch.flowframework.model.WorkflowValidator;
 import org.opensearch.flowframework.workflow.WorkflowStepFactory;
 import org.opensearch.tasks.Task;
 import org.opensearch.transport.TransportService;
 
-import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
+
+import static org.opensearch.flowframework.common.CommonValue.WORKFLOW_STEP;
 
 /**
  * Transport action to retrieve a workflow step json
@@ -51,7 +55,9 @@ public class GetWorkflowStepTransportAction extends HandledTransportAction<Workf
     @Override
     protected void doExecute(Task task, WorkflowRequest request, ActionListener<GetWorkflowStepResponse> listener) {
         try {
-            List<String> steps = new ArrayList<>(request.getParams().keySet());
+            List<String> steps = request.getParams().size() > 0
+                ? Arrays.asList(Strings.splitStringByCommaToArray(request.getParams().get(WORKFLOW_STEP)))
+                : Collections.emptyList();
             WorkflowValidator workflowValidator;
             if (steps.isEmpty()) {
                 workflowValidator = this.workflowStepFactory.getWorkflowValidator();
@@ -61,7 +67,7 @@ public class GetWorkflowStepTransportAction extends HandledTransportAction<Workf
             listener.onResponse(new GetWorkflowStepResponse(workflowValidator));
         } catch (Exception e) {
             if (e instanceof FlowFrameworkException) {
-                logger.error("Please only use only valid step name");
+                logger.error("Invalid step name");
                 listener.onFailure(e);
             }
             logger.error("Failed to retrieve workflow step json.", e);

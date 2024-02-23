@@ -23,8 +23,10 @@ import org.opensearch.threadpool.ThreadPool;
 
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.function.Supplier;
 
 import static org.opensearch.flowframework.common.CommonValue.ACTIONS_FIELD;
@@ -371,15 +373,18 @@ public class WorkflowStepFactory {
      */
     public WorkflowValidator getWorkflowValidatorByStep(List<String> steps) {
         Map<String, WorkflowStepValidator> workflowStepValidators = new HashMap<>();
+        Set<String> invalidSteps = new HashSet<>(steps);
 
         for (WorkflowSteps mapping : WorkflowSteps.values()) {
-            if (steps.contains(mapping.getWorkflowStepName())) {
+            String step = mapping.getWorkflowStepName();
+            if (steps.contains(step)) {
                 workflowStepValidators.put(mapping.getWorkflowStepName(), mapping.getWorkflowStepValidator());
+                invalidSteps.remove(step);
             }
         }
 
-        if (workflowStepValidators.isEmpty()) {
-            throw new FlowFrameworkException("Please only use only valid step name", RestStatus.BAD_REQUEST);
+        if (!invalidSteps.isEmpty()) {
+            throw new FlowFrameworkException("Invalid step name: " + invalidSteps, RestStatus.BAD_REQUEST);
         }
 
         return new WorkflowValidator(workflowStepValidators);

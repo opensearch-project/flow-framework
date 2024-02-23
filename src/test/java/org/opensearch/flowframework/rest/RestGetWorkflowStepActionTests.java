@@ -111,7 +111,7 @@ public class RestGetWorkflowStepActionTests extends OpenSearchTestCase {
 
     public void testFailedWorkflowSteps() throws Exception {
         RestRequest request = new FakeRestRequest.Builder(xContentRegistry()).withMethod(RestRequest.Method.GET)
-            .withPath(this.getPath + "?step=xyz")
+            .withPath(this.getPath + "?workflow_step=xyz")
             .build();
 
         FakeRestChannel channel = new FakeRestChannel(request, false, 1);
@@ -127,7 +127,7 @@ public class RestGetWorkflowStepActionTests extends OpenSearchTestCase {
             FlowFrameworkException.class,
             () -> restGetWorkflowStepAction.handleRequest(request, channel, nodeClient)
         );
-        assertEquals("Please only use only valid step name", exception.getMessage());
+        assertEquals("Invalid step name: [xyz]", exception.getMessage());
     }
 
     public void testFeatureFlagNotEnabled() throws Exception {

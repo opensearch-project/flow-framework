@@ -13,7 +13,6 @@ import org.apache.logging.log4j.Logger;
 import org.opensearch.ExceptionsHelper;
 import org.opensearch.client.node.NodeClient;
 import org.opensearch.core.action.ActionListener;
-import org.opensearch.core.common.Strings;
 import org.opensearch.core.rest.RestStatus;
 import org.opensearch.core.xcontent.ToXContent;
 import org.opensearch.core.xcontent.XContentBuilder;
@@ -26,7 +25,7 @@ import org.opensearch.rest.BytesRestResponse;
 import org.opensearch.rest.RestRequest;
 
 import java.io.IOException;
-import java.util.HashMap;
+import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -64,8 +63,6 @@ public class RestGetWorkflowStepAction extends BaseRestHandler {
 
     @Override
     protected RestChannelConsumer prepareRequest(RestRequest request, NodeClient client) throws IOException {
-
-        String[] steps = request.paramAsStringArray(WORKFLOW_STEP, Strings.EMPTY_ARRAY);
         try {
             if (!flowFrameworkSettings.isFlowFrameworkEnabled()) {
                 throw new FlowFrameworkException(
@@ -74,10 +71,9 @@ public class RestGetWorkflowStepAction extends BaseRestHandler {
                 );
             }
 
-            Map<String, String> params = new HashMap<>();
-            for (String step : steps) {
-                params.put(step, WORKFLOW_STEP);
-            }
+            Map<String, String> params = request.hasParam(WORKFLOW_STEP)
+                ? Map.of(WORKFLOW_STEP, request.param(WORKFLOW_STEP))
+                : Collections.emptyMap();
 
             WorkflowRequest workflowRequest = new WorkflowRequest(null, null, params);
             return channel -> client.execute(GetWorkflowStepAction.INSTANCE, workflowRequest, ActionListener.wrap(response -> {
