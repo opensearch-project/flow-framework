@@ -40,9 +40,12 @@ public class HttpHostStep implements WorkflowStep {
         String currentNodeId,
         WorkflowData currentNodeInputs,
         Map<String, WorkflowData> outputs,
-        Map<String, String> previousNodeInputs
+        Map<String, String> previousNodeInputs,
+        Map<String, String> params
     ) {
         Set<String> requiredKeys = Set.of(SCHEME_FIELD, HOSTNAME_FIELD, PORT_FIELD);
+        // TODO Possibly add credentials fields here
+        // See ML Commons MLConnectorInput class and its usage
         Set<String> optionalKeys = Collections.emptySet();
 
         try {
@@ -51,11 +54,12 @@ public class HttpHostStep implements WorkflowStep {
                 optionalKeys,
                 currentNodeInputs,
                 outputs,
-                previousNodeInputs
+                previousNodeInputs,
+                params
             );
 
             String scheme = validScheme(inputs.get(SCHEME_FIELD));
-            String hostname = inputs.get(HOSTNAME_FIELD).toString();
+            String hostname = validHostName(inputs.get(HOSTNAME_FIELD));
             int port = validPort(inputs.get(PORT_FIELD));
 
             HttpHost httpHost = new HttpHost(scheme, hostname, port);
@@ -82,6 +86,14 @@ public class HttpHostStep implements WorkflowStep {
             return scheme;
         }
         throw new FlowFrameworkException("http_host scheme must be http or https", RestStatus.BAD_REQUEST);
+    }
+
+    private String validHostName(Object o) {
+        // TODO Add validation:
+        // Prevent use of localhost or private IP address ranges
+        // See ML Commons MLHttpClientFactory.java methods for examples
+        // Possibly consider an allowlist of addresses
+        return o.toString();
     }
 
     private int validPort(Object o) {

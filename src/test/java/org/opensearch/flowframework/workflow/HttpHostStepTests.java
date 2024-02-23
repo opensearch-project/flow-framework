@@ -38,6 +38,7 @@ public class HttpHostStepTests extends OpenSearchTestCase {
             inputData.getNodeId(),
             inputData,
             Collections.emptyMap(),
+            Collections.emptyMap(),
             Collections.emptyMap()
         );
 
@@ -62,6 +63,7 @@ public class HttpHostStepTests extends OpenSearchTestCase {
             badSchemeData.getNodeId(),
             badSchemeData,
             Collections.emptyMap(),
+            Collections.emptyMap(),
             Collections.emptyMap()
         );
 
@@ -84,6 +86,7 @@ public class HttpHostStepTests extends OpenSearchTestCase {
             badPortData.getNodeId(),
             badPortData,
             Collections.emptyMap(),
+            Collections.emptyMap(),
             Collections.emptyMap()
         );
 
@@ -105,6 +108,7 @@ public class HttpHostStepTests extends OpenSearchTestCase {
         PlainActionFuture<WorkflowData> future = httpHostStep.execute(
             noParsePortData.getNodeId(),
             noParsePortData,
+            Collections.emptyMap(),
             Collections.emptyMap(),
             Collections.emptyMap()
         );
