@@ -364,6 +364,18 @@ public class WorkflowStepFactory {
         return new WorkflowValidator(workflowStepValidators);
     }
 
+    public WorkflowValidator getWorkflowValidatorByStep(List<String> steps) {
+        Map<String, WorkflowStepValidator> workflowStepValidators = new HashMap<>();
+
+        for (WorkflowSteps mapping : WorkflowSteps.values()) {
+            if (steps.contains(mapping.getWorkflowStepName())) {
+                workflowStepValidators.put(mapping.getWorkflowStepName(), mapping.getWorkflowStepValidator());
+            }
+        }
+
+        return new WorkflowValidator(workflowStepValidators);
+    }
+
     /**
      * Create a new instance of a {@link WorkflowStep}.
      * @param type The type of instance to create

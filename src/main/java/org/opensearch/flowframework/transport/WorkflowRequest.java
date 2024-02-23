@@ -64,7 +64,7 @@ public class WorkflowRequest extends ActionRequest {
      * @param template the use case template which describes the workflow
      * @param params The parameters from the REST path
      */
-    public WorkflowRequest(String workflowId, @Nullable Template template, Map<String, String> params) {
+    public WorkflowRequest(@Nullable String workflowId, @Nullable Template template, Map<String, String> params) {
         this(workflowId, template, new String[] { "all" }, true, params);
     }
 

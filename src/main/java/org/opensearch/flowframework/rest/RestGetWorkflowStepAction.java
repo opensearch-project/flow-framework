@@ -11,25 +11,27 @@ package org.opensearch.flowframework.rest;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.opensearch.ExceptionsHelper;
-import org.opensearch.action.ActionRequest;
-import org.opensearch.action.ActionRequestValidationException;
 import org.opensearch.client.node.NodeClient;
 import org.opensearch.core.action.ActionListener;
+import org.opensearch.core.common.Strings;
 import org.opensearch.core.rest.RestStatus;
 import org.opensearch.core.xcontent.ToXContent;
 import org.opensearch.core.xcontent.XContentBuilder;
 import org.opensearch.flowframework.common.FlowFrameworkSettings;
 import org.opensearch.flowframework.exception.FlowFrameworkException;
 import org.opensearch.flowframework.transport.GetWorkflowStepAction;
+import org.opensearch.flowframework.transport.WorkflowRequest;
 import org.opensearch.rest.BaseRestHandler;
 import org.opensearch.rest.BytesRestResponse;
 import org.opensearch.rest.RestRequest;
 
 import java.io.IOException;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 
-import static org.opensearch.flowframework.common.CommonValue.WORKFLOW_URI;
+import static org.opensearch.flowframework.common.CommonValue.*;
 import static org.opensearch.flowframework.common.FlowFrameworkSettings.FLOW_FRAMEWORK_ENABLED;
 
 /**
@@ -60,7 +62,9 @@ public class RestGetWorkflowStepAction extends BaseRestHandler {
     }
 
     @Override
-    protected RestChannelConsumer prepareRequest(RestRequest restRequest, NodeClient client) throws IOException {
+    protected RestChannelConsumer prepareRequest(RestRequest request, NodeClient client) throws IOException {
+
+        String[] steps = request.paramAsStringArray(STEPS, Strings.EMPTY_ARRAY);
         try {
             if (!flowFrameworkSettings.isFlowFrameworkEnabled()) {
                 throw new FlowFrameworkException(
@@ -69,13 +73,13 @@ public class RestGetWorkflowStepAction extends BaseRestHandler {
                 );
             }
 
-            ActionRequest request = new ActionRequest() {
-                @Override
-                public ActionRequestValidationException validate() {
-                    return null;
-                }
-            };
-            return channel -> client.execute(GetWorkflowStepAction.INSTANCE, request, ActionListener.wrap(response -> {
+            Map<String, String> params = new HashMap<>();
+            for (String step : steps) {
+                params.put(STEPS, step);
+            }
+
+            WorkflowRequest workflowRequest = new WorkflowRequest(null, null, params);
+            return channel -> client.execute(GetWorkflowStepAction.INSTANCE, workflowRequest, ActionListener.wrap(response -> {
                 XContentBuilder builder = response.toXContent(channel.newBuilder(), ToXContent.EMPTY_PARAMS);
                 channel.sendResponse(new BytesRestResponse(RestStatus.OK, builder));
             }, exception -> {
