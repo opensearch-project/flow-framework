@@ -8,7 +8,7 @@
  */
 package org.opensearch.flowframework.workflow;
 
-import org.apache.hc.core5.http.HttpHost;
+import org.apache.http.HttpHost;
 import org.opensearch.action.support.PlainActionFuture;
 import org.opensearch.flowframework.exception.FlowFrameworkException;
 import org.opensearch.test.OpenSearchTestCase;

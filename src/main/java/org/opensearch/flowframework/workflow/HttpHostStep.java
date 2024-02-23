@@ -8,7 +8,7 @@
  */
 package org.opensearch.flowframework.workflow;
 
-import org.apache.hc.core5.http.HttpHost;
+import org.apache.http.HttpHost;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.opensearch.action.support.PlainActionFuture;
@@ -62,7 +62,7 @@ public class HttpHostStep implements WorkflowStep {
             String hostname = validHostName(inputs.get(HOSTNAME_FIELD));
             int port = validPort(inputs.get(PORT_FIELD));
 
-            HttpHost httpHost = new HttpHost(scheme, hostname, port);
+            HttpHost httpHost = new HttpHost(hostname, port, scheme);
 
             hostFuture.onResponse(
                 new WorkflowData(
