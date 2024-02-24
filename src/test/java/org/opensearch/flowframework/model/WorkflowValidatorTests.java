@@ -11,15 +11,17 @@ package org.opensearch.flowframework.model;
 import org.opensearch.flowframework.common.FlowFrameworkSettings;
 import org.opensearch.flowframework.indices.FlowFrameworkIndicesHandler;
 import org.opensearch.flowframework.workflow.WorkflowStepFactory;
+import org.opensearch.flowframework.workflow.WorkflowStepFactory.WorkflowSteps;
 import org.opensearch.ml.client.MachineLearningNodeClient;
 import org.opensearch.test.OpenSearchTestCase;
 import org.opensearch.threadpool.ThreadPool;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.HashMap;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -37,67 +39,12 @@ public class WorkflowValidatorTests extends OpenSearchTestCase {
     }
 
     public void testParseWorkflowValidator() throws IOException {
-        Map<String, WorkflowStepValidator> workflowStepValidators = new HashMap<>();
-        workflowStepValidators.put(
-            WorkflowStepFactory.WorkflowSteps.CREATE_CONNECTOR.getWorkflowStepName(),
-            WorkflowStepFactory.WorkflowSteps.CREATE_CONNECTOR.getWorkflowStepValidator()
-        );
-        workflowStepValidators.put(
-            WorkflowStepFactory.WorkflowSteps.DELETE_MODEL.getWorkflowStepName(),
-            WorkflowStepFactory.WorkflowSteps.DELETE_MODEL.getWorkflowStepValidator()
-        );
-        workflowStepValidators.put(
-            WorkflowStepFactory.WorkflowSteps.DEPLOY_MODEL.getWorkflowStepName(),
-            WorkflowStepFactory.WorkflowSteps.DEPLOY_MODEL.getWorkflowStepValidator()
-        );
-        workflowStepValidators.put(
-            WorkflowStepFactory.WorkflowSteps.REGISTER_LOCAL_CUSTOM_MODEL.getWorkflowStepName(),
-            WorkflowStepFactory.WorkflowSteps.REGISTER_LOCAL_CUSTOM_MODEL.getWorkflowStepValidator()
-        );
-        workflowStepValidators.put(
-            WorkflowStepFactory.WorkflowSteps.REGISTER_LOCAL_PRETRAINED_MODEL.getWorkflowStepName(),
-            WorkflowStepFactory.WorkflowSteps.REGISTER_LOCAL_PRETRAINED_MODEL.getWorkflowStepValidator()
-        );
-        workflowStepValidators.put(
-            WorkflowStepFactory.WorkflowSteps.REGISTER_LOCAL_SPARSE_ENCODING_MODEL.getWorkflowStepName(),
-            WorkflowStepFactory.WorkflowSteps.REGISTER_LOCAL_SPARSE_ENCODING_MODEL.getWorkflowStepValidator()
-        );
-        workflowStepValidators.put(
-            WorkflowStepFactory.WorkflowSteps.REGISTER_REMOTE_MODEL.getWorkflowStepName(),
-            WorkflowStepFactory.WorkflowSteps.REGISTER_REMOTE_MODEL.getWorkflowStepValidator()
-        );
-        workflowStepValidators.put(
-            WorkflowStepFactory.WorkflowSteps.REGISTER_MODEL_GROUP.getWorkflowStepName(),
-            WorkflowStepFactory.WorkflowSteps.REGISTER_MODEL_GROUP.getWorkflowStepValidator()
-        );
-        workflowStepValidators.put(
-            WorkflowStepFactory.WorkflowSteps.REGISTER_AGENT.getWorkflowStepName(),
-            WorkflowStepFactory.WorkflowSteps.REGISTER_AGENT.getWorkflowStepValidator()
-        );
-        workflowStepValidators.put(
-            WorkflowStepFactory.WorkflowSteps.CREATE_TOOL.getWorkflowStepName(),
-            WorkflowStepFactory.WorkflowSteps.CREATE_TOOL.getWorkflowStepValidator()
-        );
-        workflowStepValidators.put(
-            WorkflowStepFactory.WorkflowSteps.UNDEPLOY_MODEL.getWorkflowStepName(),
-            WorkflowStepFactory.WorkflowSteps.UNDEPLOY_MODEL.getWorkflowStepValidator()
-        );
-        workflowStepValidators.put(
-            WorkflowStepFactory.WorkflowSteps.DELETE_CONNECTOR.getWorkflowStepName(),
-            WorkflowStepFactory.WorkflowSteps.DELETE_CONNECTOR.getWorkflowStepValidator()
-        );
-        workflowStepValidators.put(
-            WorkflowStepFactory.WorkflowSteps.DELETE_AGENT.getWorkflowStepName(),
-            WorkflowStepFactory.WorkflowSteps.DELETE_AGENT.getWorkflowStepValidator()
-        );
-        workflowStepValidators.put(
-            WorkflowStepFactory.WorkflowSteps.NOOP.getWorkflowStepName(),
-            WorkflowStepFactory.WorkflowSteps.NOOP.getWorkflowStepValidator()
-        );
+        Map<String, WorkflowStepValidator> workflowStepValidators = Arrays.stream(WorkflowSteps.values())
+            .collect(Collectors.toMap(WorkflowSteps::getWorkflowStepName, WorkflowSteps::getWorkflowStepValidator));
 
         WorkflowValidator validator = new WorkflowValidator(workflowStepValidators);
 
-        assertEquals(14, validator.getWorkflowStepValidators().size());
+        assertEquals(15, validator.getWorkflowStepValidators().size());
 
         assertTrue(validator.getWorkflowStepValidators().keySet().contains("create_connector"));
         assertEquals(7, validator.getWorkflowStepValidators().get("create_connector").getInputs().size());
@@ -155,6 +102,9 @@ public class WorkflowValidatorTests extends OpenSearchTestCase {
         assertEquals(0, validator.getWorkflowStepValidators().get("noop").getInputs().size());
         assertEquals(0, validator.getWorkflowStepValidators().get("noop").getOutputs().size());
 
+        assertTrue(validator.getWorkflowStepValidators().keySet().contains("http_host"));
+        assertEquals(3, validator.getWorkflowStepValidators().get("http_host").getInputs().size());
+        assertEquals(1, validator.getWorkflowStepValidators().get("http_host").getOutputs().size());
     }
 
     public void testWorkflowStepFactoryHasValidators() throws IOException {
