@@ -16,13 +16,17 @@ import org.opensearch.test.OpenSearchTestCase;
 import org.opensearch.transport.TransportService;
 
 import java.io.IOException;
+import java.util.HashMap;
+import java.util.Map;
 
 import org.mockito.ArgumentCaptor;
 
+import static org.opensearch.flowframework.common.CommonValue.WORKFLOW_STEP;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
+@SuppressWarnings("unchecked")
 public class GetWorkflowStepTransportActionTests extends OpenSearchTestCase {
 
     private GetWorkflowStepTransportAction getWorkflowStepTransportAction;
@@ -45,5 +49,18 @@ public class GetWorkflowStepTransportActionTests extends OpenSearchTestCase {
 
         ArgumentCaptor<GetWorkflowStepResponse> stepCaptor = ArgumentCaptor.forClass(GetWorkflowStepResponse.class);
         verify(listener, times(1)).onResponse(stepCaptor.capture());
+    }
+
+    public void testGetWorkflowStepValidator() throws IOException {
+        Map<String, String> params = new HashMap<>();
+        params.put(WORKFLOW_STEP, "create_connector, delete_model");
+
+        WorkflowRequest workflowRequest = new WorkflowRequest(null, null, params);
+        ActionListener<GetWorkflowStepResponse> listener = mock(ActionListener.class);
+        getWorkflowStepTransportAction.doExecute(mock(Task.class), workflowRequest, listener);
+        ArgumentCaptor<GetWorkflowStepResponse> stepCaptor = ArgumentCaptor.forClass(GetWorkflowStepResponse.class);
+        verify(listener, times(1)).onResponse(stepCaptor.capture());
+        assertEquals(GetWorkflowStepResponse.class, stepCaptor.getValue().getClass());
+
     }
 }
