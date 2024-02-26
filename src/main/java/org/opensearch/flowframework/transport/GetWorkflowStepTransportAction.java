@@ -67,7 +67,7 @@ public class GetWorkflowStepTransportAction extends HandledTransportAction<Workf
             listener.onResponse(new GetWorkflowStepResponse(workflowValidator));
         } catch (Exception e) {
             if (e instanceof FlowFrameworkException) {
-                logger.error("Invalid step name");
+                logger.error(e.getMessage());
                 listener.onFailure(e);
             }
             logger.error("Failed to retrieve workflow step json.", e);
