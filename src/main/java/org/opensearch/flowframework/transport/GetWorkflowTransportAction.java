@@ -85,12 +85,12 @@ public class GetWorkflowTransportAction extends HandledTransportAction<WorkflowR
                     }
                 }, exception -> {
                     String errorMessage = "Failed to retrieve template (" + workflowId + ") from global context.";
-                    logger.error(errorMessage);
+                    logger.error(errorMessage, exception);
                     listener.onFailure(new FlowFrameworkException(errorMessage, ExceptionsHelper.status(exception)));
                 }));
             } catch (Exception e) {
                 String errorMessage = "Failed to retrieve template (" + workflowId + ") from global context.";
-                logger.error(errorMessage);
+                logger.error(errorMessage, e);
                 listener.onFailure(new FlowFrameworkException(errorMessage, ExceptionsHelper.status(e)));
             }
         } else {

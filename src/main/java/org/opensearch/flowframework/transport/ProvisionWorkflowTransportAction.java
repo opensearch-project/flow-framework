@@ -148,13 +148,13 @@ public class ProvisionWorkflowTransportAction extends HandledTransportAction<Wor
                                 listener.onResponse(new WorkflowResponse(workflowId));
                             }, exception -> {
                                 String errorMessage = "Failed to update workflow state: " + workflowId;
-                                logger.error(errorMessage);
+                                logger.error(errorMessage, exception);
                                 listener.onFailure(new FlowFrameworkException(errorMessage, ExceptionsHelper.status(exception)));
                             })
                         );
                     } else {
                         String errorMessage = "The template has already been provisioned: " + workflowId;
-                        logger.error(errorMessage);
+                        logger.info(errorMessage);
                         listener.onFailure(new FlowFrameworkException(errorMessage, RestStatus.BAD_REQUEST));
                     }
                 }, listener);
@@ -164,13 +164,13 @@ public class ProvisionWorkflowTransportAction extends HandledTransportAction<Wor
                     listener.onFailure(exception);
                 } else {
                     String errorMessage = "Failed to retrieve template from global context for workflow " + workflowId;
-                    logger.error(errorMessage);
+                    logger.error(errorMessage, exception);
                     listener.onFailure(new FlowFrameworkException(errorMessage, ExceptionsHelper.status(exception)));
                 }
             }));
         } catch (Exception e) {
             String errorMessage = "Failed to retrieve template from global context for workflow " + workflowId;
-            logger.error(errorMessage);
+            logger.error(errorMessage, e);
             listener.onFailure(new FlowFrameworkException(errorMessage, ExceptionsHelper.status(e)));
         }
     }
@@ -232,10 +232,10 @@ public class ProvisionWorkflowTransportAction extends HandledTransportAction<Wor
                 ),
                 ActionListener.wrap(updateResponse -> {
                     logger.info("updated workflow {} state to {}", workflowId, State.COMPLETED);
-                }, exception -> { logger.error("Failed to update workflow state for workflow {}", workflowId); })
+                }, exception -> { logger.error("Failed to update workflow state for workflow {}", workflowId, exception); })
             );
         } catch (Exception ex) {
-            logger.error("Provisioning failed for workflow {} during step {}.", workflowId, currentStepId);
+            logger.error("Provisioning failed for workflow {} during step {}.", workflowId, currentStepId, ex);
             String errorMessage = (ex.getCause() == null ? ex.getClass().getName() : ex.getCause().getClass().getName())
                 + " during step "
                 + currentStepId;
@@ -249,7 +249,7 @@ public class ProvisionWorkflowTransportAction extends HandledTransportAction<Wor
                 ),
                 ActionListener.wrap(updateResponse -> {
                     logger.info("updated workflow {} state to {}", workflowId, State.FAILED);
-                }, exceptionState -> { logger.error("Failed to update workflow state for workflow {}", workflowId); })
+                }, exceptionState -> { logger.error("Failed to update workflow state for workflow {}", workflowId, exceptionState); })
             );
         }
     }

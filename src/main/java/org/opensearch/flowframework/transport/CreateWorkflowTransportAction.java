@@ -110,7 +110,7 @@ public class CreateWorkflowTransportAction extends HandledTransportAction<Workfl
                 validateWorkflows(templateWithUser);
             } catch (Exception e) {
                 String errorMessage = "Workflow validation failed for template " + templateWithUser.name();
-                logger.error(errorMessage);
+                logger.error(errorMessage, e);
                 listener.onFailure(
                     e instanceof FlowFrameworkException ? e : new FlowFrameworkException(errorMessage, ExceptionsHelper.status(e))
                 );
@@ -163,7 +163,7 @@ public class CreateWorkflowTransportAction extends HandledTransportAction<Workfl
                                                             listener.onResponse(new WorkflowResponse(provisionResponse.getWorkflowId()));
                                                         }, exception -> {
                                                             String errorMessage = "Provisioning failed.";
-                                                            logger.error(errorMessage);
+                                                            logger.error(errorMessage, exception);
                                                             if (exception instanceof FlowFrameworkException) {
                                                                 listener.onFailure(exception);
                                                             } else {
@@ -181,7 +181,7 @@ public class CreateWorkflowTransportAction extends HandledTransportAction<Workfl
                                                 }
                                             }, exception -> {
                                                 String errorMessage = "Failed to save workflow state";
-                                                logger.error(errorMessage);
+                                                logger.error(errorMessage, exception);
                                                 if (exception instanceof FlowFrameworkException) {
                                                     listener.onFailure(exception);
                                                 } else {
@@ -191,7 +191,7 @@ public class CreateWorkflowTransportAction extends HandledTransportAction<Workfl
                                         );
                                     }, exception -> {
                                         String errorMessage = "Failed to save use case template";
-                                        logger.error(errorMessage);
+                                        logger.error(errorMessage, exception);
                                         if (exception instanceof FlowFrameworkException) {
                                             listener.onFailure(exception);
                                         } else {
@@ -204,7 +204,7 @@ public class CreateWorkflowTransportAction extends HandledTransportAction<Workfl
                             }
                         }, exception -> {
                             String errorMessage = "Failed to initialize config index";
-                            logger.error(errorMessage);
+                            logger.error(errorMessage, exception);
                             if (exception instanceof FlowFrameworkException) {
                                 listener.onFailure(exception);
                             } else {
@@ -214,7 +214,7 @@ public class CreateWorkflowTransportAction extends HandledTransportAction<Workfl
                     }
                 }, exception -> {
                     String errorMessage = "Failed to update use case template " + request.getWorkflowId();
-                    logger.error(errorMessage);
+                    logger.error(errorMessage, exception);
                     if (exception instanceof FlowFrameworkException) {
                         listener.onFailure(exception);
                     } else {
@@ -239,7 +239,7 @@ public class CreateWorkflowTransportAction extends HandledTransportAction<Workfl
                             listener.onResponse(new WorkflowResponse(request.getWorkflowId()));
                         }, exception -> {
                             String errorMessage = "Failed to update workflow " + request.getWorkflowId() + " in template index";
-                            logger.error(errorMessage);
+                            logger.error(errorMessage, exception);
                             if (exception instanceof FlowFrameworkException) {
                                 listener.onFailure(exception);
                             } else {
@@ -249,7 +249,7 @@ public class CreateWorkflowTransportAction extends HandledTransportAction<Workfl
                     );
                 }, exception -> {
                     String errorMessage = "Failed to update use case template " + request.getWorkflowId();
-                    logger.error(errorMessage);
+                    logger.error(errorMessage, exception);
                     if (exception instanceof FlowFrameworkException) {
                         listener.onFailure(exception);
                     } else {
@@ -280,12 +280,12 @@ public class CreateWorkflowTransportAction extends HandledTransportAction<Workfl
                     internalListener.onResponse(searchResponse.getHits().getTotalHits().value < maxWorkflow);
                 }, exception -> {
                     String errorMessage = "Unable to fetch the workflows";
-                    logger.error(errorMessage);
+                    logger.error(errorMessage, exception);
                     internalListener.onFailure(new FlowFrameworkException(errorMessage, ExceptionsHelper.status(exception)));
                 }));
             } catch (Exception e) {
                 String errorMessage = "Unable to fetch the workflows";
-                logger.error(errorMessage);
+                logger.error(errorMessage, e);
                 internalListener.onFailure(new FlowFrameworkException(errorMessage, ExceptionsHelper.status(e)));
             }
         }

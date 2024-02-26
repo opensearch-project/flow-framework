@@ -49,7 +49,7 @@ public class SearchWorkflowStateTransportAction extends HandledTransportAction<S
             logger.info("Searching workflow states in global context");
             client.search(request, ActionListener.runBefore(actionListener, context::restore));
         } catch (Exception e) {
-            logger.error("Failed to search workflow states in global context");
+            logger.error("Failed to search workflow states in global context", e);
             actionListener.onFailure(e);
         }
     }

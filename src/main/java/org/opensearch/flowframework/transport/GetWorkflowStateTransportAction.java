@@ -79,7 +79,7 @@ public class GetWorkflowStateTransportAction extends HandledTransportAction<GetW
                         listener.onResponse(new GetWorkflowStateResponse(workflowState, request.getAll()));
                     } catch (Exception e) {
                         String errorMessage = "Failed to parse workflowState: " + r.getId();
-                        logger.error(errorMessage);
+                        logger.error(errorMessage, e);
                         listener.onFailure(new FlowFrameworkException(errorMessage, RestStatus.BAD_REQUEST));
                     }
                 } else {
@@ -90,13 +90,13 @@ public class GetWorkflowStateTransportAction extends HandledTransportAction<GetW
                     listener.onFailure(new FlowFrameworkException("Fail to find workflow " + workflowId, RestStatus.NOT_FOUND));
                 } else {
                     String errorMessage = "Failed to get workflow status of: " + workflowId;
-                    logger.error(errorMessage);
+                    logger.error(errorMessage, e);
                     listener.onFailure(new FlowFrameworkException(errorMessage, RestStatus.NOT_FOUND));
                 }
             }), context::restore));
         } catch (Exception e) {
             String errorMessage = "Failed to get workflow: " + workflowId;
-            logger.error(errorMessage);
+            logger.error(errorMessage, e);
             listener.onFailure(new FlowFrameworkException(errorMessage, ExceptionsHelper.status(e)));
         }
     }

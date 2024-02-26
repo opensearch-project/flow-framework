@@ -107,12 +107,12 @@ public class DeprovisionWorkflowTransportAction extends HandledTransportAction<W
                     .execute(() -> executeDeprovisionSequence(workflowId, response.getWorkflowState().resourcesCreated(), listener));
             }, exception -> {
                 String errorMessage = "Failed to get workflow state for workflow " + workflowId;
-                logger.error(errorMessage);
+                logger.error(errorMessage, exception);
                 listener.onFailure(new FlowFrameworkException(errorMessage, ExceptionsHelper.status(exception)));
             }));
         } catch (Exception e) {
             String errorMessage = "Failed to retrieve template from global context.";
-            logger.error(errorMessage);
+            logger.error(errorMessage, e);
             listener.onFailure(new FlowFrameworkException(errorMessage, ExceptionsHelper.status(e)));
         }
     }
@@ -235,7 +235,7 @@ public class DeprovisionWorkflowTransportAction extends HandledTransportAction<W
                 ),
                 ActionListener.wrap(updateResponse -> {
                     logger.info("updated workflow {} state to NOT_STARTED", workflowId);
-                }, exception -> { logger.error("Failed to update workflow state"); })
+                }, exception -> { logger.error("Failed to update workflow state", exception); })
             );
             // return workflow ID
             listener.onResponse(new WorkflowResponse(workflowId));
@@ -251,7 +251,7 @@ public class DeprovisionWorkflowTransportAction extends HandledTransportAction<W
                 ),
                 ActionListener.wrap(updateResponse -> {
                     logger.info("updated workflow {} state to COMPLETED", workflowId);
-                }, exception -> { logger.error("Failed to update workflow {} state", workflowId); })
+                }, exception -> { logger.error("Failed to update workflow {} state", workflowId, exception); })
             );
             // give user list of remaining resources
             listener.onFailure(
