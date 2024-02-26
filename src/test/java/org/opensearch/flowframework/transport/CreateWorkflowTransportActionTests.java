@@ -217,7 +217,7 @@ public class CreateWorkflowTransportActionTests extends OpenSearchTestCase {
         createWorkflowTransportAction.doExecute(mock(Task.class), workflowRequest, listener);
         ArgumentCaptor<Exception> exceptionCaptor = ArgumentCaptor.forClass(Exception.class);
         verify(listener, times(1)).onFailure(exceptionCaptor.capture());
-        assertEquals(("Maximum workflows limit reached 2"), exceptionCaptor.getValue().getMessage());
+        assertEquals(("Maximum workflows limit reached: 2"), exceptionCaptor.getValue().getMessage());
     }
 
     public void testMaxWorkflowWithNoIndex() {

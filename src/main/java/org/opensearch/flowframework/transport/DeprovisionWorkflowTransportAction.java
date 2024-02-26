@@ -98,6 +98,7 @@ public class DeprovisionWorkflowTransportAction extends HandledTransportAction<W
 
         // Stash thread context to interact with system index
         try (ThreadContext.StoredContext context = client.threadPool().getThreadContext().stashContext()) {
+            logger.info("Querying state for workflow: {}", workflowId);
             client.execute(GetWorkflowStateAction.INSTANCE, getStateRequest, ActionListener.wrap(response -> {
                 context.restore();
 

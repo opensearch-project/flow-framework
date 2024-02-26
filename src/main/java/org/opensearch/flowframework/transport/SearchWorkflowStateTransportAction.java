@@ -8,6 +8,8 @@
  */
 package org.opensearch.flowframework.transport;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.opensearch.action.search.SearchRequest;
 import org.opensearch.action.search.SearchResponse;
 import org.opensearch.action.support.ActionFilters;
@@ -23,6 +25,8 @@ import org.opensearch.transport.TransportService;
  * Transport Action to search workflow states
  */
 public class SearchWorkflowStateTransportAction extends HandledTransportAction<SearchRequest, SearchResponse> {
+
+    private final Logger logger = LogManager.getLogger(SearchWorkflowStateTransportAction.class);
 
     private Client client;
 
@@ -40,10 +44,12 @@ public class SearchWorkflowStateTransportAction extends HandledTransportAction<S
 
     @Override
     protected void doExecute(Task task, SearchRequest request, ActionListener<SearchResponse> actionListener) {
-        // TODO: AccessController should take care of letting the user with right permission to view the workflow
+        // AccessController should take care of letting the user with right permission to view the workflow
         try (ThreadContext.StoredContext context = client.threadPool().getThreadContext().stashContext()) {
+            logger.info("Searching workflow states in global context");
             client.search(request, ActionListener.runBefore(actionListener, context::restore));
         } catch (Exception e) {
+            logger.error("Failed to search workflow states in global context");
             actionListener.onFailure(e);
         }
     }

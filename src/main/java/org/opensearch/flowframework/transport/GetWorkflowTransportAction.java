@@ -34,6 +34,7 @@ import static org.opensearch.flowframework.common.CommonValue.GLOBAL_CONTEXT_IND
 public class GetWorkflowTransportAction extends HandledTransportAction<WorkflowRequest, GetWorkflowResponse> {
 
     private final Logger logger = LogManager.getLogger(GetWorkflowTransportAction.class);
+
     private final FlowFrameworkIndicesHandler flowFrameworkIndicesHandler;
     private final Client client;
     private final EncryptorUtils encryptorUtils;
@@ -69,33 +70,33 @@ public class GetWorkflowTransportAction extends HandledTransportAction<WorkflowR
 
             // Retrieve workflow by ID
             try (ThreadContext.StoredContext context = client.threadPool().getThreadContext().stashContext()) {
+                logger.info("Querying workflow from global context: {}", workflowId);
                 client.get(getRequest, ActionListener.wrap(response -> {
                     context.restore();
 
                     if (!response.isExists()) {
-                        listener.onFailure(
-                            new FlowFrameworkException(
-                                "Failed to retrieve template (" + workflowId + ") from global context.",
-                                RestStatus.NOT_FOUND
-                            )
-                        );
+                        String errorMessage = "Failed to retrieve template (" + workflowId + ") from global context.";
+                        logger.error(errorMessage);
+                        listener.onFailure(new FlowFrameworkException(errorMessage, RestStatus.NOT_FOUND));
                     } else {
                         // Remove any credential from response
                         Template template = encryptorUtils.redactTemplateCredentials(Template.parse(response.getSourceAsString()));
                         listener.onResponse(new GetWorkflowResponse(template));
                     }
                 }, exception -> {
-                    String errorMessage = "Failed to retrieve template from global context";
+                    String errorMessage = "Failed to retrieve template (" + workflowId + ") from global context.";
                     logger.error(errorMessage);
                     listener.onFailure(new FlowFrameworkException(errorMessage, ExceptionsHelper.status(exception)));
                 }));
             } catch (Exception e) {
-                String errorMessage = "Failed to retrieve template from global context";
+                String errorMessage = "Failed to retrieve template (" + workflowId + ") from global context.";
                 logger.error(errorMessage);
                 listener.onFailure(new FlowFrameworkException(errorMessage, ExceptionsHelper.status(e)));
             }
         } else {
-            listener.onFailure(new FlowFrameworkException("There are no templates in the global_context", RestStatus.NOT_FOUND));
+            String errorMessage = "There are no templates in the global_context";
+            logger.error(errorMessage);
+            listener.onFailure(new FlowFrameworkException(errorMessage, RestStatus.NOT_FOUND));
         }
 
     }

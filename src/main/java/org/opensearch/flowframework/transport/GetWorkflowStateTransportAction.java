@@ -70,6 +70,7 @@ public class GetWorkflowStateTransportAction extends HandledTransportAction<GetW
         User user = ParseUtils.getUserContext(client);
         GetRequest getRequest = new GetRequest(WORKFLOW_STATE_INDEX).id(workflowId);
         try (ThreadContext.StoredContext context = client.threadPool().getThreadContext().stashContext()) {
+            logger.info("Querying state workflow doc: {}", workflowId);
             client.get(getRequest, ActionListener.runBefore(ActionListener.wrap(r -> {
                 if (r != null && r.isExists()) {
                     try (XContentParser parser = ParseUtils.createXContentParserFromRegistry(xContentRegistry, r.getSourceAsBytesRef())) {
@@ -82,11 +83,11 @@ public class GetWorkflowStateTransportAction extends HandledTransportAction<GetW
                         listener.onFailure(new FlowFrameworkException(errorMessage, RestStatus.BAD_REQUEST));
                     }
                 } else {
-                    listener.onFailure(new FlowFrameworkException("Fail to find workflow", RestStatus.NOT_FOUND));
+                    listener.onFailure(new FlowFrameworkException("Fail to find workflow " + workflowId, RestStatus.NOT_FOUND));
                 }
             }, e -> {
                 if (e instanceof IndexNotFoundException) {
-                    listener.onFailure(new FlowFrameworkException("Fail to find workflow", RestStatus.NOT_FOUND));
+                    listener.onFailure(new FlowFrameworkException("Fail to find workflow " + workflowId, RestStatus.NOT_FOUND));
                 } else {
                     String errorMessage = "Failed to get workflow status of: " + workflowId;
                     logger.error(errorMessage);

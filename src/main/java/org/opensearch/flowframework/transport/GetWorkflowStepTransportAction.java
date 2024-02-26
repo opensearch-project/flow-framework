@@ -34,6 +34,7 @@ import static org.opensearch.flowframework.common.CommonValue.WORKFLOW_STEP;
 public class GetWorkflowStepTransportAction extends HandledTransportAction<WorkflowRequest, GetWorkflowStepResponse> {
 
     private final Logger logger = LogManager.getLogger(GetWorkflowStepTransportAction.class);
+
     private final WorkflowStepFactory workflowStepFactory;
 
     /**
@@ -55,6 +56,7 @@ public class GetWorkflowStepTransportAction extends HandledTransportAction<Workf
     @Override
     protected void doExecute(Task task, WorkflowRequest request, ActionListener<GetWorkflowStepResponse> listener) {
         try {
+            logger.info("Getting workflow validator from the WorkflowStepFactory");
             List<String> steps = request.getParams().size() > 0
                 ? Arrays.asList(Strings.splitStringByCommaToArray(request.getParams().get(WORKFLOW_STEP)))
                 : Collections.emptyList();

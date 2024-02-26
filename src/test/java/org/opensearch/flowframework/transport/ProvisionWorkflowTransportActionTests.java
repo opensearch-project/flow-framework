@@ -205,7 +205,7 @@ public class ProvisionWorkflowTransportActionTests extends OpenSearchTestCase {
         ArgumentCaptor<Exception> exceptionCaptor = ArgumentCaptor.forClass(Exception.class);
 
         verify(listener, times(1)).onFailure(exceptionCaptor.capture());
-        assertEquals("Failed to retrieve template from global context", exceptionCaptor.getValue().getMessage());
+        assertEquals("Failed to retrieve template from global context for workflow 1", exceptionCaptor.getValue().getMessage());
     }
 
 }
