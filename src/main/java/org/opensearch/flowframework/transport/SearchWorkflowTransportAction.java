@@ -26,7 +26,7 @@ public class SearchWorkflowTransportAction extends HandledTransportAction<Search
     private Client client;
 
     /**
-     * Intantiates a new CreateWorkflowTransportAction
+     * Instantiates a new CreateWorkflowTransportAction
      * @param transportService the TransportService
      * @param actionFilters action filters
      * @param client The client used to make the request to OS

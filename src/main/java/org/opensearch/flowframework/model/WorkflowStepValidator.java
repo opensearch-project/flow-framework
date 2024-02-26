@@ -8,8 +8,6 @@
  */
 package org.opensearch.flowframework.model;
 
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import org.opensearch.common.unit.TimeValue;
 import org.opensearch.core.xcontent.ToXContentObject;
 import org.opensearch.core.xcontent.XContentBuilder;
@@ -43,12 +41,7 @@ public class WorkflowStepValidator implements ToXContentObject {
      * @param requiredPlugins the required plugins for this workflow step
      * @param timeout the timeout for this workflow step
      */
-    public WorkflowStepValidator(
-        List<String> inputs,
-        List<String> outputs,
-        List<String> requiredPlugins,
-        TimeValue timeout
-    ) {
+    public WorkflowStepValidator(List<String> inputs, List<String> outputs, List<String> requiredPlugins, TimeValue timeout) {
         this.inputs = inputs;
         this.outputs = outputs;
         this.requiredPlugins = requiredPlugins;

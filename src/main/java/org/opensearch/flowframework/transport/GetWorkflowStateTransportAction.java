@@ -46,7 +46,7 @@ public class GetWorkflowStateTransportAction extends HandledTransportAction<GetW
     private final NamedXContentRegistry xContentRegistry;
 
     /**
-     * Intantiates a new GetWorkflowStateTransportAction
+     * Instantiates a new GetWorkflowStateTransportAction
      * @param transportService The TransportService
      * @param actionFilters action filters
      * @param client The client used to make the request to OS

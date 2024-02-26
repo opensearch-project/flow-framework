@@ -36,7 +36,6 @@ public class DeployModelStep extends AbstractRetryableWorkflowStep {
     private static final Logger logger = LogManager.getLogger(DeployModelStep.class);
 
     private final MachineLearningNodeClient mlClient;
-    private final FlowFrameworkIndicesHandler flowFrameworkIndicesHandler;
 
     /** The name of this step, used as a key in the template and the {@link WorkflowStepFactory} */
     public static final String NAME = "deploy_model";
@@ -56,7 +55,6 @@ public class DeployModelStep extends AbstractRetryableWorkflowStep {
     ) {
         super(threadPool, mlClient, flowFrameworkIndicesHandler, flowFrameworkSettings);
         this.mlClient = mlClient;
-        this.flowFrameworkIndicesHandler = flowFrameworkIndicesHandler;
     }
 
     @Override
