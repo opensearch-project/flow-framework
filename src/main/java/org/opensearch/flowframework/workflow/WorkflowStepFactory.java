@@ -23,8 +23,10 @@ import org.opensearch.threadpool.ThreadPool;
 
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.function.Supplier;
 
 import static org.opensearch.flowframework.common.CommonValue.ACTIONS_FIELD;
@@ -359,6 +361,30 @@ public class WorkflowStepFactory {
 
         for (WorkflowSteps mapping : WorkflowSteps.values()) {
             workflowStepValidators.put(mapping.getWorkflowStepName(), mapping.getWorkflowStepValidator());
+        }
+
+        return new WorkflowValidator(workflowStepValidators);
+    }
+
+    /**
+     * Get the object of WorkflowValidator consisting of passed workflow steps
+     * @param steps workflow steps
+     * @return WorkflowValidator
+     */
+    public WorkflowValidator getWorkflowValidatorByStep(List<String> steps) {
+        Map<String, WorkflowStepValidator> workflowStepValidators = new HashMap<>();
+        Set<String> invalidSteps = new HashSet<>(steps);
+
+        for (WorkflowSteps mapping : WorkflowSteps.values()) {
+            String step = mapping.getWorkflowStepName();
+            if (steps.contains(step)) {
+                workflowStepValidators.put(mapping.getWorkflowStepName(), mapping.getWorkflowStepValidator());
+                invalidSteps.remove(step);
+            }
+        }
+
+        if (!invalidSteps.isEmpty()) {
+            throw new FlowFrameworkException("Invalid step name: " + invalidSteps, RestStatus.BAD_REQUEST);
         }
 
         return new WorkflowValidator(workflowStepValidators);
