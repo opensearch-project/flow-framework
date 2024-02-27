@@ -127,12 +127,7 @@ public class RestCreateWorkflowActionTests extends OpenSearchTestCase {
         createWorkflowRestAction.handleRequest(request, channel, nodeClient);
         assertEquals(RestStatus.BAD_REQUEST, channel.capturedResponse().status());
         assertTrue(
-            channel.capturedResponse()
-                .content()
-                .utf8ToString()
-                .contains(
-                    "Only the parameters [workflow_id, validation, provision] are permitted unless the provision parameter is set to true."
-                )
+            channel.capturedResponse().content().utf8ToString().contains("are permitted unless the provision parameter is set to true.")
         );
     }
 

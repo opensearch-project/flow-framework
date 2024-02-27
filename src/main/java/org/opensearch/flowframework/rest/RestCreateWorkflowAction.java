@@ -78,18 +78,17 @@ public class RestCreateWorkflowAction extends BaseRestHandler {
         String workflowId = request.param(WORKFLOW_ID);
         String[] validation = request.paramAsStringArray(VALIDATION, new String[] { "all" });
         boolean provision = request.paramAsBoolean(PROVISION_WORKFLOW, false);
-        final List<String> validCreateParams = List.of(WORKFLOW_ID, VALIDATION, PROVISION_WORKFLOW);
         // If provisioning, consume all other params and pass to provision transport action
         Map<String, String> params = provision
             ? request.params()
                 .keySet()
                 .stream()
-                .filter(k -> !validCreateParams.contains(k))
+                .filter(k -> !request.consumedParams().contains(k))
                 .collect(Collectors.toMap(Function.identity(), request::param))
             : request.params()
                 .entrySet()
                 .stream()
-                .filter(e -> !validCreateParams.contains(e.getKey()))
+                .filter(e -> !request.consumedParams().contains(e.getKey()))
                 .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
         if (!flowFrameworkSettings.isFlowFrameworkEnabled()) {
             FlowFrameworkException ffe = new FlowFrameworkException(
@@ -105,7 +104,7 @@ public class RestCreateWorkflowAction extends BaseRestHandler {
             params.keySet().stream().forEach(request::param);
             request.content();
             FlowFrameworkException ffe = new FlowFrameworkException(
-                "Only the parameters " + validCreateParams + " are permitted unless the provision parameter is set to true.",
+                "Only the parameters " + request.consumedParams() + " are permitted unless the provision parameter is set to true.",
                 RestStatus.BAD_REQUEST
             );
             return channel -> channel.sendResponse(
