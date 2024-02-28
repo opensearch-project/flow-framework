@@ -128,7 +128,7 @@ public class CreateIngestPipelineStep implements WorkflowStep {
                     );
                 } catch (IOException e) {
                     String errorMessage = "Failed to create ingest pipeline configuration";
-                    logger.error(errorMessage);
+                    logger.error(errorMessage, e);
                     createIngestPipelineFuture.onFailure(new FlowFrameworkException(errorMessage, ExceptionsHelper.status(e)));
                 }
                 break;
@@ -166,7 +166,7 @@ public class CreateIngestPipelineStep implements WorkflowStep {
                             );
                         }, exception -> {
                             String errorMessage = "Failed to update new created resource";
-                            logger.error(errorMessage);
+                            logger.error(errorMessage, exception);
                             createIngestPipelineFuture.onFailure(
                                 new FlowFrameworkException(errorMessage, ExceptionsHelper.status(exception))
                             );
@@ -175,13 +175,13 @@ public class CreateIngestPipelineStep implements WorkflowStep {
 
                 } catch (Exception e) {
                     String errorMessage = "Failed to parse and update new created resource";
-                    logger.error(errorMessage);
+                    logger.error(errorMessage, e);
                     createIngestPipelineFuture.onFailure(new FlowFrameworkException(errorMessage, ExceptionsHelper.status(e)));
                 }
 
             }, exception -> {
                 String errorMessage = "Failed to create ingest pipeline";
-                logger.error(errorMessage);
+                logger.error(errorMessage, exception);
                 createIngestPipelineFuture.onFailure(new FlowFrameworkException(errorMessage, ExceptionsHelper.status(exception)));
             }));
         }

@@ -282,7 +282,7 @@ public class EncryptorUtils {
                         this.masterKey = generatedKey;
                         listener.onResponse(true);
                     }, indexException -> {
-                        logger.error("Failed to index config");
+                        logger.error("Failed to index config", indexException);
                         listener.onFailure(indexException);
                     }));
 
@@ -293,12 +293,12 @@ public class EncryptorUtils {
                     listener.onResponse(true);
                 }
             }, getRequestException -> {
-                logger.error("Failed to search for config from config index");
+                logger.error("Failed to search for config from config index", getRequestException);
                 listener.onFailure(getRequestException);
             }));
 
         } catch (Exception e) {
-            logger.error("Failed to retrieve config from config index");
+            logger.error("Failed to retrieve config from config index", e);
             listener.onFailure(e);
         }
     }

@@ -90,13 +90,13 @@ public class CreateIndexStep implements WorkflowStep {
                             );
                         }, exception -> {
                             String errorMessage = "Failed to update new created resource";
-                            logger.error(errorMessage);
+                            logger.error(errorMessage, exception);
                             createIndexFuture.onFailure(new FlowFrameworkException(errorMessage, ExceptionsHelper.status(exception)));
                         })
                     );
                 } catch (Exception e) {
                     String errorMessage = "Failed to parse and update new created resource";
-                    logger.error(errorMessage);
+                    logger.error(errorMessage, e);
                     createIndexFuture.onFailure(new FlowFrameworkException(errorMessage, ExceptionsHelper.status(e)));
                 }
             }
@@ -104,7 +104,7 @@ public class CreateIndexStep implements WorkflowStep {
             @Override
             public void onFailure(Exception e) {
                 String errorMessage = "Failed to create an index";
-                logger.error(errorMessage);
+                logger.error(errorMessage, e);
                 createIndexFuture.onFailure(new FlowFrameworkException(errorMessage, ExceptionsHelper.status(e)));
             }
         };
@@ -130,7 +130,7 @@ public class CreateIndexStep implements WorkflowStep {
             }
         } catch (Exception e) {
             String errorMessage = "Failed to find the correct resource for the workflow step";
-            logger.error(errorMessage);
+            logger.error(errorMessage, e);
             createIndexFuture.onFailure(new FlowFrameworkException(errorMessage, ExceptionsHelper.status(e)));
         }
 

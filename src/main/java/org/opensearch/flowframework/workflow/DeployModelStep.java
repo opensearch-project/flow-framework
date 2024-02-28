@@ -99,7 +99,7 @@ public class DeployModelStep extends AbstractRetryableWorkflowStep {
             @Override
             public void onFailure(Exception e) {
                 String errorMessage = "Failed to deploy model";
-                logger.error(errorMessage);
+                logger.error(errorMessage, e);
                 deployModelFuture.onFailure(new FlowFrameworkException(errorMessage, ExceptionsHelper.status(e)));
             }
         };

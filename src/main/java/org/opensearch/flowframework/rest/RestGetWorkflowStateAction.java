@@ -89,7 +89,7 @@ public class RestGetWorkflowStateAction extends BaseRestHandler {
                     channel.sendResponse(new BytesRestResponse(ex.getRestStatus(), exceptionBuilder));
                 } catch (IOException e) {
                     String errorMessage = "IOException: Failed to send back get workflow state exception";
-                    logger.error(errorMessage);
+                    logger.error(errorMessage, e);
                     channel.sendResponse(new BytesRestResponse(ExceptionsHelper.status(e), errorMessage));
                 }
             }));

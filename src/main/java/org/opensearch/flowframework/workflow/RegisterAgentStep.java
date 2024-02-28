@@ -112,7 +112,7 @@ public class RegisterAgentStep implements WorkflowStep {
                             );
                         }, exception -> {
                             String errorMessage = "Failed to update new created resource";
-                            logger.error(errorMessage);
+                            logger.error(errorMessage, exception);
                             registerAgentModelFuture.onFailure(
                                 new FlowFrameworkException(errorMessage, ExceptionsHelper.status(exception))
                             );
@@ -121,7 +121,7 @@ public class RegisterAgentStep implements WorkflowStep {
 
                 } catch (Exception e) {
                     String errorMessage = "Failed to parse and update new created resource";
-                    logger.error(errorMessage);
+                    logger.error(errorMessage, e);
                     registerAgentModelFuture.onFailure(new FlowFrameworkException(errorMessage, ExceptionsHelper.status(e)));
                 }
             }
@@ -129,7 +129,7 @@ public class RegisterAgentStep implements WorkflowStep {
             @Override
             public void onFailure(Exception e) {
                 String errorMessage = "Failed to register the agent";
-                logger.error(errorMessage);
+                logger.error(errorMessage, e);
                 registerAgentModelFuture.onFailure(new FlowFrameworkException(errorMessage, ExceptionsHelper.status(e)));
             }
         };

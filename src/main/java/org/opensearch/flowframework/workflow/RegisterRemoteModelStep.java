@@ -128,7 +128,7 @@ public class RegisterRemoteModelStep implements WorkflowStep {
                                             completeRegisterFuture(deployUpdateResponse, resourceName, mlRegisterModelResponse);
                                         }, deployUpdateException -> {
                                             String errorMessage = "Failed to update simulated deploy step resource";
-                                            logger.error(errorMessage);
+                                            logger.error(errorMessage, deployUpdateException);
                                             registerRemoteModelFuture.onFailure(
                                                 new FlowFrameworkException(errorMessage, ExceptionsHelper.status(deployUpdateException))
                                             );
@@ -139,7 +139,7 @@ public class RegisterRemoteModelStep implements WorkflowStep {
                                 }
                             }, exception -> {
                                 String errorMessage = "Failed to update new created resource";
-                                logger.error(errorMessage);
+                                logger.error(errorMessage, exception);
                                 registerRemoteModelFuture.onFailure(
                                     new FlowFrameworkException(errorMessage, ExceptionsHelper.status(exception))
                                 );
@@ -148,7 +148,7 @@ public class RegisterRemoteModelStep implements WorkflowStep {
 
                     } catch (Exception e) {
                         String errorMessage = "Failed to parse and update new created resource";
-                        logger.error(errorMessage);
+                        logger.error(errorMessage, e);
                         registerRemoteModelFuture.onFailure(new FlowFrameworkException(errorMessage, ExceptionsHelper.status(e)));
                     }
                 }
@@ -170,7 +170,7 @@ public class RegisterRemoteModelStep implements WorkflowStep {
                 @Override
                 public void onFailure(Exception e) {
                     String errorMessage = "Failed to register remote model";
-                    logger.error(errorMessage);
+                    logger.error(errorMessage, e);
                     registerRemoteModelFuture.onFailure(new FlowFrameworkException(errorMessage, ExceptionsHelper.status(e)));
                 }
             });

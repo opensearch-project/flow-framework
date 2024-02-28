@@ -93,7 +93,7 @@ public abstract class AbstractRetryableWorkflowStep implements WorkflowStep {
                                         mlTaskListener.onResponse(response);
                                     }, exception -> {
                                         String errorMessage = "Failed to update new created resource";
-                                        logger.error(errorMessage);
+                                        logger.error(errorMessage, exception);
                                         mlTaskListener.onFailure(
                                             new FlowFrameworkException(errorMessage, ExceptionsHelper.status(exception))
                                         );
@@ -101,7 +101,7 @@ public abstract class AbstractRetryableWorkflowStep implements WorkflowStep {
                                 );
                             } catch (Exception e) {
                                 String errorMessage = "Failed to parse and update new created resource";
-                                logger.error(errorMessage);
+                                logger.error(errorMessage, e);
                                 mlTaskListener.onFailure(new FlowFrameworkException(errorMessage, ExceptionsHelper.status(e)));
                             }
                             break;
@@ -121,7 +121,7 @@ public abstract class AbstractRetryableWorkflowStep implements WorkflowStep {
                     }
                 }, exception -> {
                     String errorMessage = workflowStep + " failed";
-                    logger.error(errorMessage);
+                    logger.error(errorMessage, exception);
                     mlTaskListener.onFailure(new FlowFrameworkException(errorMessage, RestStatus.BAD_REQUEST));
                 }));
                 try {

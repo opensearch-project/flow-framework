@@ -95,7 +95,7 @@ public class RegisterModelGroupStep implements WorkflowStep {
                             );
                         }, exception -> {
                             String errorMessage = "Failed to update new created resource";
-                            logger.error(errorMessage);
+                            logger.error(errorMessage, exception);
                             registerModelGroupFuture.onFailure(
                                 new FlowFrameworkException(errorMessage, ExceptionsHelper.status(exception))
                             );
@@ -104,7 +104,7 @@ public class RegisterModelGroupStep implements WorkflowStep {
 
                 } catch (Exception e) {
                     String errorMessage = "Failed to parse and update new created resource";
-                    logger.error(errorMessage);
+                    logger.error(errorMessage, e);
                     registerModelGroupFuture.onFailure(new FlowFrameworkException(errorMessage, ExceptionsHelper.status(e)));
                 }
             }
@@ -112,7 +112,7 @@ public class RegisterModelGroupStep implements WorkflowStep {
             @Override
             public void onFailure(Exception e) {
                 String errorMessage = "Failed to register model group";
-                logger.error(errorMessage);
+                logger.error(errorMessage, e);
                 registerModelGroupFuture.onFailure(new FlowFrameworkException(errorMessage, ExceptionsHelper.status(e)));
             }
         };
