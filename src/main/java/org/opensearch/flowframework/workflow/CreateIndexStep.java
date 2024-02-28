@@ -89,7 +89,12 @@ public class CreateIndexStep implements WorkflowStep {
                                 )
                             );
                         }, exception -> {
-                            String errorMessage = "Failed to update new created resource";
+                            String errorMessage = "Failed to update new created "
+                                + currentNodeId
+                                + " resource "
+                                + getName()
+                                + " id "
+                                + createIndexResponse.index();
                             logger.error(errorMessage, exception);
                             createIndexFuture.onFailure(new FlowFrameworkException(errorMessage, ExceptionsHelper.status(exception)));
                         })
@@ -129,7 +134,7 @@ public class CreateIndexStep implements WorkflowStep {
                 }
             }
         } catch (Exception e) {
-            String errorMessage = "Failed to find the correct resource for the workflow step";
+            String errorMessage = "Failed to find the correct resource for the workflow step " + NAME;
             logger.error(errorMessage, e);
             createIndexFuture.onFailure(new FlowFrameworkException(errorMessage, ExceptionsHelper.status(e)));
         }

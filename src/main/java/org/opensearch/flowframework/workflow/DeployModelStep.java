@@ -68,42 +68,6 @@ public class DeployModelStep extends AbstractRetryableWorkflowStep {
 
         PlainActionFuture<WorkflowData> deployModelFuture = PlainActionFuture.newFuture();
 
-        ActionListener<MLDeployModelResponse> actionListener = new ActionListener<>() {
-            @Override
-            public void onResponse(MLDeployModelResponse mlDeployModelResponse) {
-                logger.info("Model deployment state {}", mlDeployModelResponse.getStatus());
-                String taskId = mlDeployModelResponse.getTaskId();
-
-                // Attempt to retrieve the model ID
-                retryableGetMlTask(
-                    currentNodeInputs.getWorkflowId(),
-                    currentNodeId,
-                    deployModelFuture,
-                    taskId,
-                    "Deploy model",
-                    ActionListener.wrap(mlTask -> {
-                        // Deployed Model Resource has been updated
-                        String resourceName = getResourceByWorkflowStep(getName());
-                        String id = getResourceId(mlTask);
-                        deployModelFuture.onResponse(
-                            new WorkflowData(Map.of(resourceName, id), currentNodeInputs.getWorkflowId(), currentNodeId)
-                        );
-                    },
-                        e -> {
-                            deployModelFuture.onFailure(new FlowFrameworkException("Failed to deploy model", ExceptionsHelper.status(e)));
-                        }
-                    )
-                );
-            }
-
-            @Override
-            public void onFailure(Exception e) {
-                String errorMessage = "Failed to deploy model";
-                logger.error(errorMessage, e);
-                deployModelFuture.onFailure(new FlowFrameworkException(errorMessage, ExceptionsHelper.status(e)));
-            }
-        };
-
         Set<String> requiredKeys = Set.of(MODEL_ID);
         Set<String> optionalKeys = Collections.emptySet();
 
@@ -119,7 +83,43 @@ public class DeployModelStep extends AbstractRetryableWorkflowStep {
 
             String modelId = (String) inputs.get(MODEL_ID);
 
-            mlClient.deploy(modelId, actionListener);
+            mlClient.deploy(modelId, new ActionListener<>() {
+                @Override
+                public void onResponse(MLDeployModelResponse mlDeployModelResponse) {
+                    logger.info("Model deployment state {}", mlDeployModelResponse.getStatus());
+                    String taskId = mlDeployModelResponse.getTaskId();
+
+                    // Attempt to retrieve the model ID
+                    retryableGetMlTask(
+                        currentNodeInputs.getWorkflowId(),
+                        currentNodeId,
+                        deployModelFuture,
+                        taskId,
+                        "Deploy model",
+                        ActionListener.wrap(mlTask -> {
+                            // Deployed Model Resource has been updated
+                            String resourceName = getResourceByWorkflowStep(getName());
+                            String id = getResourceId(mlTask);
+                            deployModelFuture.onResponse(
+                                new WorkflowData(Map.of(resourceName, id), currentNodeInputs.getWorkflowId(), currentNodeId)
+                            );
+                        },
+                            e -> {
+                                deployModelFuture.onFailure(
+                                    new FlowFrameworkException("Failed to deploy model", ExceptionsHelper.status(e))
+                                );
+                            }
+                        )
+                    );
+                }
+
+                @Override
+                public void onFailure(Exception e) {
+                    String errorMessage = "Failed to deploy model " + modelId;
+                    logger.error(errorMessage, e);
+                    deployModelFuture.onFailure(new FlowFrameworkException(errorMessage, ExceptionsHelper.status(e)));
+                }
+            });
         } catch (FlowFrameworkException e) {
             deployModelFuture.onFailure(e);
         }

@@ -193,7 +193,7 @@ public abstract class AbstractRegisterLocalModelStep extends AbstractRetryableWo
                                         )
                                     );
                                 }, deployUpdateException -> {
-                                    String errorMessage = "Failed to update simulated deploy step resource";
+                                    String errorMessage = "Failed to update simulated deploy step resource " + id;
                                     logger.error(errorMessage, deployUpdateException);
                                     registerLocalModelFuture.onFailure(
                                         new FlowFrameworkException(errorMessage, ExceptionsHelper.status(deployUpdateException))
@@ -212,7 +212,7 @@ public abstract class AbstractRegisterLocalModelStep extends AbstractRetryableWo
                     }, exception -> { registerLocalModelFuture.onFailure(exception); })
                 );
             }, exception -> {
-                String errorMessage = "Failed to register local model";
+                String errorMessage = "Failed to register local model in step " + currentNodeId;
                 logger.error(errorMessage, exception);
                 registerLocalModelFuture.onFailure(new FlowFrameworkException(errorMessage, ExceptionsHelper.status(exception)));
             }));

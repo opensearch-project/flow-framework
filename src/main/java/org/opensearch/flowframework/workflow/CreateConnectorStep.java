@@ -83,9 +83,8 @@ public class CreateConnectorStep implements WorkflowStep {
 
             @Override
             public void onResponse(MLCreateConnectorResponse mlCreateConnectorResponse) {
-
+                String resourceName = getResourceByWorkflowStep(getName());
                 try {
-                    String resourceName = getResourceByWorkflowStep(getName());
                     logger.info("Created connector successfully");
                     flowFrameworkIndicesHandler.updateResourceInStateIndex(
                         currentNodeInputs.getWorkflowId(),
@@ -102,7 +101,12 @@ public class CreateConnectorStep implements WorkflowStep {
                                 )
                             );
                         }, exception -> {
-                            String errorMessage = "Failed to update new created resource";
+                            String errorMessage = "Failed to update new created "
+                                + currentNodeId
+                                + " resource "
+                                + getName()
+                                + " id "
+                                + mlCreateConnectorResponse.getConnectorId();
                             logger.error(errorMessage, exception);
                             createConnectorFuture.onFailure(new FlowFrameworkException(errorMessage, ExceptionsHelper.status(exception)));
                         })

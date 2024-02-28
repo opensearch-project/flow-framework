@@ -54,27 +54,6 @@ public class DeleteConnectorStep implements WorkflowStep {
     ) {
         PlainActionFuture<WorkflowData> deleteConnectorFuture = PlainActionFuture.newFuture();
 
-        ActionListener<DeleteResponse> actionListener = new ActionListener<>() {
-
-            @Override
-            public void onResponse(DeleteResponse deleteResponse) {
-                deleteConnectorFuture.onResponse(
-                    new WorkflowData(
-                        Map.ofEntries(Map.entry(CONNECTOR_ID, deleteResponse.getId())),
-                        currentNodeInputs.getWorkflowId(),
-                        currentNodeInputs.getNodeId()
-                    )
-                );
-            }
-
-            @Override
-            public void onFailure(Exception e) {
-                String errorMessage = "Failed to delete connector";
-                logger.error(errorMessage, e);
-                deleteConnectorFuture.onFailure(new FlowFrameworkException(errorMessage, ExceptionsHelper.status(e)));
-            }
-        };
-
         Set<String> requiredKeys = Set.of(CONNECTOR_ID);
         Set<String> optionalKeys = Collections.emptySet();
 
@@ -89,7 +68,25 @@ public class DeleteConnectorStep implements WorkflowStep {
             );
             String connectorId = (String) inputs.get(CONNECTOR_ID);
 
-            mlClient.deleteConnector(connectorId, actionListener);
+            mlClient.deleteConnector(connectorId, new ActionListener<>() {
+                @Override
+                public void onResponse(DeleteResponse deleteResponse) {
+                    deleteConnectorFuture.onResponse(
+                        new WorkflowData(
+                            Map.ofEntries(Map.entry(CONNECTOR_ID, deleteResponse.getId())),
+                            currentNodeInputs.getWorkflowId(),
+                            currentNodeInputs.getNodeId()
+                        )
+                    );
+                }
+
+                @Override
+                public void onFailure(Exception e) {
+                    String errorMessage = "Failed to delete connector " + connectorId;
+                    logger.error(errorMessage, e);
+                    deleteConnectorFuture.onFailure(new FlowFrameworkException(errorMessage, ExceptionsHelper.status(e)));
+                }
+            });
         } catch (FlowFrameworkException e) {
             deleteConnectorFuture.onFailure(e);
         }

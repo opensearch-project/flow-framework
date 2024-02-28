@@ -77,11 +77,11 @@ public abstract class AbstractRetryableWorkflowStep implements WorkflowStep {
         CompletableFuture.runAsync(() -> {
             do {
                 mlClient.getTask(taskId, ActionListener.wrap(response -> {
+                    String resourceName = getResourceByWorkflowStep(getName());
+                    String id = getResourceId(response);
                     switch (response.getState()) {
                         case COMPLETED:
                             try {
-                                String resourceName = getResourceByWorkflowStep(getName());
-                                String id = getResourceId(response);
                                 logger.info("{} successful for {} and {} {}", workflowStep, workflowId, resourceName, id);
                                 flowFrameworkIndicesHandler.updateResourceInStateIndex(
                                     workflowId,
@@ -92,7 +92,12 @@ public abstract class AbstractRetryableWorkflowStep implements WorkflowStep {
                                         logger.info("successfully updated resources created in state index: {}", updateResponse.getIndex());
                                         mlTaskListener.onResponse(response);
                                     }, exception -> {
-                                        String errorMessage = "Failed to update new created resource";
+                                        String errorMessage = "Failed to update new created "
+                                            + nodeId
+                                            + " resource "
+                                            + getName()
+                                            + " id "
+                                            + id;
                                         logger.error(errorMessage, exception);
                                         mlTaskListener.onFailure(
                                             new FlowFrameworkException(errorMessage, ExceptionsHelper.status(exception))
@@ -100,7 +105,7 @@ public abstract class AbstractRetryableWorkflowStep implements WorkflowStep {
                                     })
                                 );
                             } catch (Exception e) {
-                                String errorMessage = "Failed to parse and update new created resource";
+                                String errorMessage = "Failed to parse and update new created resource " + resourceName + " id " + id;
                                 logger.error(errorMessage, e);
                                 mlTaskListener.onFailure(new FlowFrameworkException(errorMessage, ExceptionsHelper.status(e)));
                             }

@@ -19,6 +19,7 @@ import org.opensearch.common.xcontent.XContentFactory;
 import org.opensearch.common.xcontent.XContentType;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.core.common.bytes.BytesReference;
+import org.opensearch.core.rest.RestStatus;
 import org.opensearch.core.xcontent.XContentBuilder;
 import org.opensearch.flowframework.exception.FlowFrameworkException;
 import org.opensearch.flowframework.indices.FlowFrameworkIndicesHandler;
@@ -120,14 +121,14 @@ public class CreateIngestPipelineStep implements WorkflowStep {
                 }
             }
 
-            // Determmine if fields have been populated, else iterate over remaining workflow data
+            // Determine if fields have been populated, else iterate over remaining workflow data
             if (Stream.of(pipelineId, description, modelId, type, inputFieldName, outputFieldName).allMatch(x -> x != null)) {
                 try {
                     configuration = BytesReference.bytes(
                         buildIngestPipelineRequestContent(description, modelId, type, inputFieldName, outputFieldName)
                     );
                 } catch (IOException e) {
-                    String errorMessage = "Failed to create ingest pipeline configuration";
+                    String errorMessage = "Failed to create ingest pipeline configuration for " + currentNodeId;
                     logger.error(errorMessage, e);
                     createIngestPipelineFuture.onFailure(new FlowFrameworkException(errorMessage, ExceptionsHelper.status(e)));
                 }
@@ -138,7 +139,10 @@ public class CreateIngestPipelineStep implements WorkflowStep {
         if (configuration == null) {
             // Required workflow data not found
             createIngestPipelineFuture.onFailure(
-                new IllegalArgumentException("Failed to create ingest pipeline, required inputs not found")
+                new FlowFrameworkException(
+                    "Failed to create ingest pipeline for " + currentNodeId + ", required inputs not found",
+                    RestStatus.BAD_REQUEST
+                )
             );
         } else {
             // Create PutPipelineRequest and execute
@@ -165,7 +169,12 @@ public class CreateIngestPipelineStep implements WorkflowStep {
                                 )
                             );
                         }, exception -> {
-                            String errorMessage = "Failed to update new created resource";
+                            String errorMessage = "Failed to update new created "
+                                + currentNodeId
+                                + " resource "
+                                + getName()
+                                + " id "
+                                + putPipelineRequest.getId();
                             logger.error(errorMessage, exception);
                             createIngestPipelineFuture.onFailure(
                                 new FlowFrameworkException(errorMessage, ExceptionsHelper.status(exception))

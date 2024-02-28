@@ -127,7 +127,8 @@ public class RegisterRemoteModelStep implements WorkflowStep {
                                         ActionListener.wrap(deployUpdateResponse -> {
                                             completeRegisterFuture(deployUpdateResponse, resourceName, mlRegisterModelResponse);
                                         }, deployUpdateException -> {
-                                            String errorMessage = "Failed to update simulated deploy step resource";
+                                            String errorMessage = "Failed to update simulated deploy step resource "
+                                                + mlRegisterModelResponse.getModelId();
                                             logger.error(errorMessage, deployUpdateException);
                                             registerRemoteModelFuture.onFailure(
                                                 new FlowFrameworkException(errorMessage, ExceptionsHelper.status(deployUpdateException))
@@ -138,7 +139,12 @@ public class RegisterRemoteModelStep implements WorkflowStep {
                                     completeRegisterFuture(response, resourceName, mlRegisterModelResponse);
                                 }
                             }, exception -> {
-                                String errorMessage = "Failed to update new created resource";
+                                String errorMessage = "Failed to update new created "
+                                    + currentNodeId
+                                    + " resource "
+                                    + getName()
+                                    + " id "
+                                    + mlRegisterModelResponse.getModelId();
                                 logger.error(errorMessage, exception);
                                 registerRemoteModelFuture.onFailure(
                                     new FlowFrameworkException(errorMessage, ExceptionsHelper.status(exception))

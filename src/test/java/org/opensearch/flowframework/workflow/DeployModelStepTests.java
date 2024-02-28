@@ -196,7 +196,7 @@ public class DeployModelStepTests extends OpenSearchTestCase {
 
         ExecutionException ex = assertThrows(ExecutionException.class, () -> future.get().getContent());
         assertTrue(ex.getCause() instanceof FlowFrameworkException);
-        assertEquals("Failed to deploy model", ex.getCause().getMessage());
+        assertEquals("Failed to deploy model modelId", ex.getCause().getMessage());
     }
 
     public void testDeployModelTaskFailure() throws IOException, InterruptedException, ExecutionException {

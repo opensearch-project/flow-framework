@@ -94,7 +94,12 @@ public class RegisterModelGroupStep implements WorkflowStep {
                                 )
                             );
                         }, exception -> {
-                            String errorMessage = "Failed to update new created resource";
+                            String errorMessage = "Failed to update new created "
+                                + currentNodeId
+                                + " resource "
+                                + getName()
+                                + " id "
+                                + mlRegisterModelGroupResponse.getModelGroupId();
                             logger.error(errorMessage, exception);
                             registerModelGroupFuture.onFailure(
                                 new FlowFrameworkException(errorMessage, ExceptionsHelper.status(exception))

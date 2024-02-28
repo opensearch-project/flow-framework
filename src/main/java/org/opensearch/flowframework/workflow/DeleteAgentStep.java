@@ -54,27 +54,6 @@ public class DeleteAgentStep implements WorkflowStep {
     ) {
         PlainActionFuture<WorkflowData> deleteAgentFuture = PlainActionFuture.newFuture();
 
-        ActionListener<DeleteResponse> actionListener = new ActionListener<>() {
-
-            @Override
-            public void onResponse(DeleteResponse deleteResponse) {
-                deleteAgentFuture.onResponse(
-                    new WorkflowData(
-                        Map.ofEntries(Map.entry(AGENT_ID, deleteResponse.getId())),
-                        currentNodeInputs.getWorkflowId(),
-                        currentNodeInputs.getNodeId()
-                    )
-                );
-            }
-
-            @Override
-            public void onFailure(Exception e) {
-                String errorMessage = "Failed to delete agent";
-                logger.error(errorMessage, e);
-                deleteAgentFuture.onFailure(new FlowFrameworkException(errorMessage, ExceptionsHelper.status(e)));
-            }
-        };
-
         Set<String> requiredKeys = Set.of(AGENT_ID);
         Set<String> optionalKeys = Collections.emptySet();
 
@@ -89,7 +68,25 @@ public class DeleteAgentStep implements WorkflowStep {
             );
             String agentId = (String) inputs.get(AGENT_ID);
 
-            mlClient.deleteAgent(agentId, actionListener);
+            mlClient.deleteAgent(agentId, new ActionListener<>() {
+                @Override
+                public void onResponse(DeleteResponse deleteResponse) {
+                    deleteAgentFuture.onResponse(
+                        new WorkflowData(
+                            Map.ofEntries(Map.entry(AGENT_ID, deleteResponse.getId())),
+                            currentNodeInputs.getWorkflowId(),
+                            currentNodeInputs.getNodeId()
+                        )
+                    );
+                }
+
+                @Override
+                public void onFailure(Exception e) {
+                    String errorMessage = "Failed to delete agent " + agentId;
+                    logger.error(errorMessage, e);
+                    deleteAgentFuture.onFailure(new FlowFrameworkException(errorMessage, ExceptionsHelper.status(e)));
+                }
+            });
         } catch (FlowFrameworkException e) {
             deleteAgentFuture.onFailure(e);
         }

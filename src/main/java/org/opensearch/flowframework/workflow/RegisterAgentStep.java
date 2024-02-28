@@ -111,7 +111,12 @@ public class RegisterAgentStep implements WorkflowStep {
                                 )
                             );
                         }, exception -> {
-                            String errorMessage = "Failed to update new created resource";
+                            String errorMessage = "Failed to update new created "
+                                + currentNodeId
+                                + " resource "
+                                + getName()
+                                + " id "
+                                + mlRegisterAgentResponse.getAgentId();
                             logger.error(errorMessage, exception);
                             registerAgentModelFuture.onFailure(
                                 new FlowFrameworkException(errorMessage, ExceptionsHelper.status(exception))

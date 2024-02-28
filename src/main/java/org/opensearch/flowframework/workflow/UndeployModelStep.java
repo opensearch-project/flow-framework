@@ -59,35 +59,6 @@ public class UndeployModelStep implements WorkflowStep {
     ) {
         PlainActionFuture<WorkflowData> undeployModelFuture = PlainActionFuture.newFuture();
 
-        ActionListener<MLUndeployModelsResponse> actionListener = new ActionListener<>() {
-
-            @Override
-            public void onResponse(MLUndeployModelsResponse mlUndeployModelsResponse) {
-                List<FailedNodeException> failures = mlUndeployModelsResponse.getResponse().failures();
-                if (failures.isEmpty()) {
-                    undeployModelFuture.onResponse(
-                        new WorkflowData(
-                            Map.ofEntries(Map.entry(SUCCESS, !mlUndeployModelsResponse.getResponse().hasFailures())),
-                            currentNodeInputs.getWorkflowId(),
-                            currentNodeInputs.getNodeId()
-                        )
-                    );
-                } else {
-                    List<String> failedNodes = failures.stream().map(FailedNodeException::nodeId).collect(Collectors.toList());
-                    String message = "Failed to undeploy model on nodes " + failedNodes;
-                    logger.error(message);
-                    undeployModelFuture.onFailure(new OpenSearchException(message));
-                }
-            }
-
-            @Override
-            public void onFailure(Exception e) {
-                String errorMessage = "Failed to undeploy model";
-                logger.error(errorMessage, e);
-                undeployModelFuture.onFailure(new FlowFrameworkException(errorMessage, ExceptionsHelper.status(e)));
-            }
-        };
-
         Set<String> requiredKeys = Set.of(MODEL_ID);
         Set<String> optionalKeys = Collections.emptySet();
 
@@ -103,7 +74,33 @@ public class UndeployModelStep implements WorkflowStep {
 
             String modelId = inputs.get(MODEL_ID).toString();
 
-            mlClient.undeploy(new String[] { modelId }, null, actionListener);
+            mlClient.undeploy(new String[] { modelId }, null, new ActionListener<>() {
+                @Override
+                public void onResponse(MLUndeployModelsResponse mlUndeployModelsResponse) {
+                    List<FailedNodeException> failures = mlUndeployModelsResponse.getResponse().failures();
+                    if (failures.isEmpty()) {
+                        undeployModelFuture.onResponse(
+                            new WorkflowData(
+                                Map.ofEntries(Map.entry(SUCCESS, !mlUndeployModelsResponse.getResponse().hasFailures())),
+                                currentNodeInputs.getWorkflowId(),
+                                currentNodeInputs.getNodeId()
+                            )
+                        );
+                    } else {
+                        List<String> failedNodes = failures.stream().map(FailedNodeException::nodeId).collect(Collectors.toList());
+                        String message = "Failed to undeploy model on nodes " + failedNodes;
+                        logger.error(message);
+                        undeployModelFuture.onFailure(new OpenSearchException(message));
+                    }
+                }
+
+                @Override
+                public void onFailure(Exception e) {
+                    String errorMessage = "Failed to undeploy model " + modelId;
+                    logger.error(errorMessage, e);
+                    undeployModelFuture.onFailure(new FlowFrameworkException(errorMessage, ExceptionsHelper.status(e)));
+                }
+            });
         } catch (FlowFrameworkException e) {
             undeployModelFuture.onFailure(e);
         }

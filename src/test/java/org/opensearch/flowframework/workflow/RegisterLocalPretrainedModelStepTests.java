@@ -198,7 +198,7 @@ public class RegisterLocalPretrainedModelStepTests extends OpenSearchTestCase {
 
         ExecutionException ex = expectThrows(ExecutionException.class, () -> future.get().getClass());
         assertTrue(ex.getCause() instanceof FlowFrameworkException);
-        assertEquals("Failed to register local model", ex.getCause().getMessage());
+        assertEquals("Failed to register local model in step test-node-id", ex.getCause().getMessage());
     }
 
     public void testRegisterLocalPretrainedModelTaskFailure() {
