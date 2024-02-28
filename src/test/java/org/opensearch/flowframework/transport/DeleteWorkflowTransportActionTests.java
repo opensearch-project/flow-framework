@@ -70,7 +70,7 @@ public class DeleteWorkflowTransportActionTests extends OpenSearchTestCase {
 
         ArgumentCaptor<Exception> exceptionCaptor = ArgumentCaptor.forClass(Exception.class);
         verify(listener, times(1)).onFailure(exceptionCaptor.capture());
-        assertTrue(exceptionCaptor.getValue().getMessage().contains("There are no templates in the global context."));
+        assertTrue(exceptionCaptor.getValue().getMessage().contains("There are no templates in the global context"));
     }
 
     public void testDeleteWorkflowSuccess() {

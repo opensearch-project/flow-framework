@@ -180,19 +180,20 @@ public class FlowFrameworkIndicesHandler {
                 @SuppressWarnings("deprecation")
                 ActionListener<CreateIndexResponse> actionListener = ActionListener.wrap(r -> {
                     if (r.isAcknowledged()) {
-                        logger.info("create index:{}", indexName);
+                        logger.info("create index: {}", indexName);
                         internalListener.onResponse(true);
                     } else {
                         internalListener.onResponse(false);
                     }
                 }, e -> {
-                    logger.error("Failed to create index {}", indexName, e);
-                    internalListener.onFailure(new FlowFrameworkException(e.getMessage(), ExceptionsHelper.status(e)));
+                    String errorMessage = "Failed to create index " + indexName;
+                    logger.error(errorMessage, e);
+                    internalListener.onFailure(new FlowFrameworkException(errorMessage, ExceptionsHelper.status(e)));
                 });
                 CreateIndexRequest request = new CreateIndexRequest(indexName).mapping(mapping).settings(indexSettings);
                 client.admin().indices().create(request, actionListener);
             } else {
-                logger.debug("index:{} is already created", indexName);
+                logger.debug("index: {} is already created", indexName);
                 if (indexMappingUpdated.containsKey(indexName) && !indexMappingUpdated.get(indexName).get()) {
                     shouldUpdateIndex(indexName, index.getVersion(), ActionListener.wrap(r -> {
                         if (r) {
@@ -223,10 +224,7 @@ public class FlowFrameworkIndicesHandler {
                                                     String errorMessage = "Failed to update index setting for: " + indexName;
                                                     logger.error(errorMessage, exception);
                                                     internalListener.onFailure(
-                                                        new FlowFrameworkException(
-                                                            errorMessage + " : " + exception.getMessage(),
-                                                            ExceptionsHelper.status(exception)
-                                                        )
+                                                        new FlowFrameworkException(errorMessage, ExceptionsHelper.status(exception))
                                                     );
                                                 }));
                                         } else {
@@ -238,10 +236,7 @@ public class FlowFrameworkIndicesHandler {
                                         String errorMessage = "Failed to update index " + indexName;
                                         logger.error(errorMessage, exception);
                                         internalListener.onFailure(
-                                            new FlowFrameworkException(
-                                                errorMessage + " : " + exception.getMessage(),
-                                                ExceptionsHelper.status(exception)
-                                            )
+                                            new FlowFrameworkException(errorMessage, ExceptionsHelper.status(exception))
                                         );
                                     })
                                 );
@@ -251,11 +246,9 @@ public class FlowFrameworkIndicesHandler {
                             internalListener.onResponse(true);
                         }
                     }, e -> {
-                        String errorMessage = "Failed to update index mapping";
+                        String errorMessage = "Failed to update index mapping for " + indexName;
                         logger.error(errorMessage, e);
-                        internalListener.onFailure(
-                            new FlowFrameworkException(errorMessage + " : " + e.getMessage(), ExceptionsHelper.status(e))
-                        );
+                        internalListener.onFailure(new FlowFrameworkException(errorMessage, ExceptionsHelper.status(e)));
                     }));
                 } else {
                     // No need to update index if it's already updated.
@@ -265,7 +258,7 @@ public class FlowFrameworkIndicesHandler {
         } catch (Exception e) {
             String errorMessage = "Failed to init index " + indexName;
             logger.error(errorMessage, e);
-            listener.onFailure(new FlowFrameworkException(errorMessage + " : " + e.getMessage(), ExceptionsHelper.status(e)));
+            listener.onFailure(new FlowFrameworkException(errorMessage, ExceptionsHelper.status(e)));
         }
     }
 
@@ -328,11 +321,11 @@ public class FlowFrameworkIndicesHandler {
                 client.index(request, ActionListener.runBefore(listener, context::restore));
             } catch (Exception e) {
                 String errorMessage = "Failed to index global_context index";
-                logger.error(errorMessage);
-                listener.onFailure(new FlowFrameworkException(errorMessage + " : " + e.getMessage(), ExceptionsHelper.status(e)));
+                logger.error(errorMessage, e);
+                listener.onFailure(new FlowFrameworkException(errorMessage, ExceptionsHelper.status(e)));
             }
         }, e -> {
-            logger.error("Failed to create global_context index", e);
+            logger.error("Failed to create global_context index");
             listener.onFailure(e);
         }));
     }
@@ -349,7 +342,7 @@ public class FlowFrameworkIndicesHandler {
             }
             encryptorUtils.initializeMasterKey(listener);
         }, createIndexException -> {
-            logger.error("Failed to create config index", createIndexException);
+            logger.error("Failed to create config index");
             listener.onFailure(createIndexException);
         }));
     }
@@ -385,13 +378,13 @@ public class FlowFrameworkIndicesHandler {
             } catch (Exception e) {
                 String errorMessage = "Failed to put state index document";
                 logger.error(errorMessage, e);
-                listener.onFailure(new FlowFrameworkException(errorMessage + " : " + e.getMessage(), ExceptionsHelper.status(e)));
+                listener.onFailure(new FlowFrameworkException(errorMessage, ExceptionsHelper.status(e)));
             }
 
         }, e -> {
             String errorMessage = "Failed to create workflow_state index";
             logger.error(errorMessage, e);
-            listener.onFailure(new FlowFrameworkException(errorMessage + " : " + e.getMessage(), ExceptionsHelper.status(e)));
+            listener.onFailure(new FlowFrameworkException(errorMessage, ExceptionsHelper.status(e)));
         }));
     }
 
@@ -403,11 +396,9 @@ public class FlowFrameworkIndicesHandler {
      */
     public void updateTemplateInGlobalContext(String documentId, Template template, ActionListener<IndexResponse> listener) {
         if (!doesIndexExist(GLOBAL_CONTEXT_INDEX)) {
-            String exceptionMessage = "Failed to update template for workflow_id : "
-                + documentId
-                + ", global_context index does not exist.";
-            logger.error(exceptionMessage);
-            listener.onFailure(new FlowFrameworkException(exceptionMessage, RestStatus.BAD_REQUEST));
+            String errorMessage = "Failed to update template for workflow_id : " + documentId + ", global_context index does not exist.";
+            logger.error(errorMessage);
+            listener.onFailure(new FlowFrameworkException(errorMessage, RestStatus.BAD_REQUEST));
             return;
         }
         doesTemplateExist(documentId, templateExists -> {
@@ -426,9 +417,7 @@ public class FlowFrameworkIndicesHandler {
                         } catch (Exception e) {
                             String errorMessage = "Failed to update global_context entry : " + documentId;
                             logger.error(errorMessage, e);
-                            listener.onFailure(
-                                new FlowFrameworkException(errorMessage + " : " + e.getMessage(), ExceptionsHelper.status(e))
-                            );
+                            listener.onFailure(new FlowFrameworkException(errorMessage, ExceptionsHelper.status(e)));
                         }
                     } else {
                         String errorMessage = "The template has already been provisioned so it can't be updated: " + documentId;
@@ -457,12 +446,14 @@ public class FlowFrameworkIndicesHandler {
         try (ThreadContext.StoredContext context = client.threadPool().getThreadContext().stashContext()) {
             client.get(getRequest, ActionListener.wrap(response -> { booleanResultConsumer.accept(response.isExists()); }, exception -> {
                 context.restore();
-                logger.error("Failed to get template " + documentId, exception);
-                listener.onFailure(new FlowFrameworkException(exception.getMessage(), ExceptionsHelper.status(exception)));
+                String errorMessage = "Failed to get template " + documentId;
+                logger.error(errorMessage);
+                listener.onFailure(new FlowFrameworkException(errorMessage, ExceptionsHelper.status(exception)));
             }));
         } catch (Exception e) {
-            logger.error("Failed to retrieve template from global context.", e);
-            listener.onFailure(new FlowFrameworkException(e.getMessage(), ExceptionsHelper.status(e)));
+            String errorMessage = "Failed to retrieve template from global context: " + documentId;
+            logger.error(errorMessage, e);
+            listener.onFailure(new FlowFrameworkException(errorMessage, ExceptionsHelper.status(e)));
         }
     }
 
@@ -490,17 +481,18 @@ public class FlowFrameworkIndicesHandler {
                     WorkflowState workflowState = WorkflowState.parse(parser);
                     booleanResultConsumer.accept(workflowState.getProvisioningProgress().equals(ProvisioningProgress.NOT_STARTED.name()));
                 } catch (Exception e) {
-                    String message = "Failed to parse workflow state " + documentId;
-                    logger.error(message, e);
-                    listener.onFailure(new FlowFrameworkException(message, RestStatus.INTERNAL_SERVER_ERROR));
+                    String errorMessage = "Failed to parse workflow state " + documentId;
+                    logger.error(errorMessage, e);
+                    listener.onFailure(new FlowFrameworkException(errorMessage, RestStatus.INTERNAL_SERVER_ERROR));
                 }
             }, exception -> {
-                logger.error("Failed to get workflow state " + documentId, exception);
+                logger.error("Failed to get workflow state for {} ", documentId);
                 booleanResultConsumer.accept(false);
             }));
         } catch (Exception e) {
-            logger.error("Failed to retrieve workflow state to check provisioning status", e);
-            listener.onFailure(new FlowFrameworkException(e.getMessage(), ExceptionsHelper.status(e)));
+            String errorMessage = "Failed to retrieve workflow state to check provisioning status";
+            logger.error(errorMessage, e);
+            listener.onFailure(new FlowFrameworkException(errorMessage, ExceptionsHelper.status(e)));
         }
     }
 
@@ -516,9 +508,9 @@ public class FlowFrameworkIndicesHandler {
         ActionListener<UpdateResponse> listener
     ) {
         if (!doesIndexExist(WORKFLOW_STATE_INDEX)) {
-            String exceptionMessage = "Failed to update document for given workflow due to missing " + WORKFLOW_STATE_INDEX + " index";
-            logger.error(exceptionMessage);
-            listener.onFailure(new FlowFrameworkException(exceptionMessage, RestStatus.BAD_REQUEST));
+            String errorMessage = "Failed to update document for given workflow due to missing " + WORKFLOW_STATE_INDEX + " index";
+            logger.error(errorMessage);
+            listener.onFailure(new FlowFrameworkException(errorMessage, RestStatus.BAD_REQUEST));
         } else {
             try (ThreadContext.StoredContext context = client.threadPool().getThreadContext().stashContext()) {
                 UpdateRequest updateRequest = new UpdateRequest(WORKFLOW_STATE_INDEX, documentId);
@@ -531,7 +523,7 @@ public class FlowFrameworkIndicesHandler {
             } catch (Exception e) {
                 String errorMessage = "Failed to update " + WORKFLOW_STATE_INDEX + " entry : " + documentId;
                 logger.error(errorMessage, e);
-                listener.onFailure(new FlowFrameworkException(errorMessage + " : " + e.getMessage(), ExceptionsHelper.status(e)));
+                listener.onFailure(new FlowFrameworkException(errorMessage, ExceptionsHelper.status(e)));
             }
         }
     }
@@ -550,9 +542,9 @@ public class FlowFrameworkIndicesHandler {
         ActionListener<UpdateResponse> listener
     ) {
         if (!doesIndexExist(indexName)) {
-            String exceptionMessage = "Failed to update document for given workflow due to missing " + indexName + " index";
-            logger.error(exceptionMessage);
-            listener.onFailure(new Exception(exceptionMessage));
+            String errorMessage = "Failed to update document for given workflow due to missing " + indexName + " index";
+            logger.error(errorMessage);
+            listener.onFailure(new Exception(errorMessage));
         } else {
             try (ThreadContext.StoredContext context = client.threadPool().getThreadContext().stashContext()) {
                 UpdateRequest updateRequest = new UpdateRequest(indexName, documentId);
@@ -563,10 +555,9 @@ public class FlowFrameworkIndicesHandler {
                 // TODO: Implement our own concurrency control to improve on retry mechanism
                 client.update(updateRequest, ActionListener.runBefore(listener, context::restore));
             } catch (Exception e) {
-                logger.error("Failed to update {} entry : {}. {}", indexName, documentId, e.getMessage());
-                listener.onFailure(
-                    new FlowFrameworkException("Failed to update " + indexName + "entry: " + documentId, ExceptionsHelper.status(e))
-                );
+                String errorMessage = "Failed to update " + indexName + " entry : " + documentId;
+                logger.error(errorMessage, e);
+                listener.onFailure(new FlowFrameworkException(errorMessage, ExceptionsHelper.status(e)));
             }
         }
     }

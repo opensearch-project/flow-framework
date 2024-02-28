@@ -83,9 +83,8 @@ public class CreateConnectorStep implements WorkflowStep {
 
             @Override
             public void onResponse(MLCreateConnectorResponse mlCreateConnectorResponse) {
-
+                String resourceName = getResourceByWorkflowStep(getName());
                 try {
-                    String resourceName = getResourceByWorkflowStep(getName());
                     logger.info("Created connector successfully");
                     flowFrameworkIndicesHandler.updateResourceInStateIndex(
                         currentNodeInputs.getWorkflowId(),
@@ -102,23 +101,29 @@ public class CreateConnectorStep implements WorkflowStep {
                                 )
                             );
                         }, exception -> {
-                            logger.error("Failed to update new created resource", exception);
-                            createConnectorFuture.onFailure(
-                                new FlowFrameworkException(exception.getMessage(), ExceptionsHelper.status(exception))
-                            );
+                            String errorMessage = "Failed to update new created "
+                                + currentNodeId
+                                + " resource "
+                                + getName()
+                                + " id "
+                                + mlCreateConnectorResponse.getConnectorId();
+                            logger.error(errorMessage, exception);
+                            createConnectorFuture.onFailure(new FlowFrameworkException(errorMessage, ExceptionsHelper.status(exception)));
                         })
                     );
 
                 } catch (Exception e) {
-                    logger.error("Failed to parse and update new created resource", e);
-                    createConnectorFuture.onFailure(new FlowFrameworkException(e.getMessage(), ExceptionsHelper.status(e)));
+                    String errorMessage = "Failed to parse and update new created resource";
+                    logger.error(errorMessage, e);
+                    createConnectorFuture.onFailure(new FlowFrameworkException(errorMessage, ExceptionsHelper.status(e)));
                 }
             }
 
             @Override
             public void onFailure(Exception e) {
-                logger.error("Failed to create connector");
-                createConnectorFuture.onFailure(new FlowFrameworkException(e.getMessage(), ExceptionsHelper.status(e)));
+                String errorMessage = "Failed to create connector";
+                logger.error(errorMessage, e);
+                createConnectorFuture.onFailure(new FlowFrameworkException(errorMessage, ExceptionsHelper.status(e)));
             }
         };
 
@@ -156,9 +161,9 @@ public class CreateConnectorStep implements WorkflowStep {
                 credentials = getStringToStringMap(inputs.get(CREDENTIAL_FIELD), CREDENTIAL_FIELD);
                 actions = getConnectorActionList(inputs.get(ACTIONS_FIELD));
             } catch (IllegalArgumentException iae) {
-                throw new FlowFrameworkException(iae.getMessage(), RestStatus.BAD_REQUEST);
+                throw new FlowFrameworkException("IllegalArgumentException in connector configuration", RestStatus.BAD_REQUEST);
             } catch (PrivilegedActionException pae) {
-                throw new FlowFrameworkException(pae.getMessage(), RestStatus.UNAUTHORIZED);
+                throw new FlowFrameworkException("PrivilegedActionException in connector configuration", RestStatus.UNAUTHORIZED);
             }
 
             MLCreateConnectorInput mlInput = MLCreateConnectorInput.builder()

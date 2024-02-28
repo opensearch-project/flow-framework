@@ -171,7 +171,7 @@ public class RegisterRemoteModelStepTests extends OpenSearchTestCase {
         assertTrue(future.isDone());
         ExecutionException ex = expectThrows(ExecutionException.class, () -> future.get().getClass());
         assertTrue(ex.getCause() instanceof FlowFrameworkException);
-        assertEquals("test", ex.getCause().getMessage());
+        assertEquals("Failed to register remote model", ex.getCause().getMessage());
 
     }
 

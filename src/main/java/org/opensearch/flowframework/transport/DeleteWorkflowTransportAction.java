@@ -8,6 +8,8 @@
  */
 package org.opensearch.flowframework.transport;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.opensearch.action.delete.DeleteRequest;
 import org.opensearch.action.delete.DeleteResponse;
 import org.opensearch.action.support.ActionFilters;
@@ -28,6 +30,8 @@ import static org.opensearch.flowframework.common.CommonValue.GLOBAL_CONTEXT_IND
  * Transport action to retrieve a use case template within the Global Context
  */
 public class DeleteWorkflowTransportAction extends HandledTransportAction<WorkflowRequest, DeleteResponse> {
+
+    private final Logger logger = LogManager.getLogger(DeleteWorkflowTransportAction.class);
 
     private final FlowFrameworkIndicesHandler flowFrameworkIndicesHandler;
     private final Client client;
@@ -58,9 +62,12 @@ public class DeleteWorkflowTransportAction extends HandledTransportAction<Workfl
             DeleteRequest deleteRequest = new DeleteRequest(GLOBAL_CONTEXT_INDEX, workflowId);
 
             ThreadContext.StoredContext context = client.threadPool().getThreadContext().stashContext();
+            logger.info("Deleting workflow doc: {}", workflowId);
             client.delete(deleteRequest, ActionListener.runBefore(listener, context::restore));
         } else {
-            listener.onFailure(new FlowFrameworkException("There are no templates in the global context.", RestStatus.NOT_FOUND));
+            String errorMessage = "There are no templates in the global context";
+            logger.error(errorMessage);
+            listener.onFailure(new FlowFrameworkException(errorMessage, RestStatus.NOT_FOUND));
         }
     }
 }

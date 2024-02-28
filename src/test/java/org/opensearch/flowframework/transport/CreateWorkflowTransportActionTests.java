@@ -217,7 +217,7 @@ public class CreateWorkflowTransportActionTests extends OpenSearchTestCase {
         createWorkflowTransportAction.doExecute(mock(Task.class), workflowRequest, listener);
         ArgumentCaptor<Exception> exceptionCaptor = ArgumentCaptor.forClass(Exception.class);
         verify(listener, times(1)).onFailure(exceptionCaptor.capture());
-        assertEquals(("Maximum workflows limit reached 2"), exceptionCaptor.getValue().getMessage());
+        assertEquals(("Maximum workflows limit reached: 2"), exceptionCaptor.getValue().getMessage());
     }
 
     public void testMaxWorkflowWithNoIndex() {
@@ -258,14 +258,14 @@ public class CreateWorkflowTransportActionTests extends OpenSearchTestCase {
 
         doAnswer(invocation -> {
             ActionListener<IndexResponse> responseListener = invocation.getArgument(1);
-            responseListener.onFailure(new Exception("Failed to create global_context index"));
+            responseListener.onFailure(new Exception("failed"));
             return null;
         }).when(flowFrameworkIndicesHandler).putTemplateToGlobalContext(any(Template.class), any());
 
         createWorkflowTransportAction.doExecute(mock(Task.class), workflowRequest, listener);
         ArgumentCaptor<Exception> exceptionCaptor = ArgumentCaptor.forClass(Exception.class);
         verify(listener, times(1)).onFailure(exceptionCaptor.capture());
-        assertEquals("Failed to create global_context index", exceptionCaptor.getValue().getMessage());
+        assertEquals("Failed to save use case template", exceptionCaptor.getValue().getMessage());
     }
 
     public void testCreateNewWorkflow() {
@@ -317,14 +317,14 @@ public class CreateWorkflowTransportActionTests extends OpenSearchTestCase {
 
         doAnswer(invocation -> {
             ActionListener<IndexResponse> responseListener = invocation.getArgument(2);
-            responseListener.onFailure(new Exception("Failed to update use case template"));
+            responseListener.onFailure(new Exception("failed"));
             return null;
         }).when(flowFrameworkIndicesHandler).updateTemplateInGlobalContext(any(), any(Template.class), any());
 
         createWorkflowTransportAction.doExecute(mock(Task.class), updateWorkflow, listener);
         ArgumentCaptor<Exception> exceptionCaptor = ArgumentCaptor.forClass(Exception.class);
         verify(listener, times(1)).onFailure(exceptionCaptor.capture());
-        assertEquals("Failed to update use case template", exceptionCaptor.getValue().getMessage());
+        assertEquals("Failed to update use case template 1", exceptionCaptor.getValue().getMessage());
     }
 
     public void testUpdateWorkflow() {
@@ -453,7 +453,7 @@ public class CreateWorkflowTransportActionTests extends OpenSearchTestCase {
         createWorkflowTransportAction.doExecute(mock(Task.class), workflowRequest, listener);
         ArgumentCaptor<Exception> exceptionCaptor = ArgumentCaptor.forClass(Exception.class);
         verify(listener, times(1)).onFailure(exceptionCaptor.capture());
-        assertEquals("failed", exceptionCaptor.getValue().getMessage());
+        assertEquals("Provisioning failed.", exceptionCaptor.getValue().getMessage());
     }
 
     private Template generateValidTemplate() {

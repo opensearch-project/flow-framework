@@ -54,26 +54,6 @@ public class DeleteModelStep implements WorkflowStep {
     ) {
         PlainActionFuture<WorkflowData> deleteModelFuture = PlainActionFuture.newFuture();
 
-        ActionListener<DeleteResponse> actionListener = new ActionListener<>() {
-
-            @Override
-            public void onResponse(DeleteResponse deleteResponse) {
-                deleteModelFuture.onResponse(
-                    new WorkflowData(
-                        Map.ofEntries(Map.entry(MODEL_ID, deleteResponse.getId())),
-                        currentNodeInputs.getWorkflowId(),
-                        currentNodeInputs.getNodeId()
-                    )
-                );
-            }
-
-            @Override
-            public void onFailure(Exception e) {
-                logger.error("Failed to delete model");
-                deleteModelFuture.onFailure(new FlowFrameworkException(e.getMessage(), ExceptionsHelper.status(e)));
-            }
-        };
-
         Set<String> requiredKeys = Set.of(MODEL_ID);
         Set<String> optionalKeys = Collections.emptySet();
 
@@ -89,7 +69,25 @@ public class DeleteModelStep implements WorkflowStep {
 
             String modelId = inputs.get(MODEL_ID).toString();
 
-            mlClient.deleteModel(modelId, actionListener);
+            mlClient.deleteModel(modelId, new ActionListener<>() {
+                @Override
+                public void onResponse(DeleteResponse deleteResponse) {
+                    deleteModelFuture.onResponse(
+                        new WorkflowData(
+                            Map.ofEntries(Map.entry(MODEL_ID, deleteResponse.getId())),
+                            currentNodeInputs.getWorkflowId(),
+                            currentNodeInputs.getNodeId()
+                        )
+                    );
+                }
+
+                @Override
+                public void onFailure(Exception e) {
+                    String errorMessage = "Failed to delete model " + modelId;
+                    logger.error(errorMessage, e);
+                    deleteModelFuture.onFailure(new FlowFrameworkException(errorMessage, ExceptionsHelper.status(e)));
+                }
+            });
         } catch (FlowFrameworkException e) {
             deleteModelFuture.onFailure(e);
         }

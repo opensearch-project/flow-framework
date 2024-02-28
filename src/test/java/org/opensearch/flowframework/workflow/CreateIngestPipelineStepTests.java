@@ -161,7 +161,7 @@ public class CreateIngestPipelineStepTests extends OpenSearchTestCase {
 
         ExecutionException exception = assertThrows(ExecutionException.class, () -> future.get());
         assertTrue(exception.getCause() instanceof Exception);
-        assertEquals("Failed to create ingest pipeline, required inputs not found", exception.getCause().getMessage());
+        assertEquals("Failed to create ingest pipeline for test-node-id, required inputs not found", exception.getCause().getMessage());
     }
 
 }

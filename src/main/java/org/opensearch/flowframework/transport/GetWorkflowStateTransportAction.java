@@ -46,7 +46,7 @@ public class GetWorkflowStateTransportAction extends HandledTransportAction<GetW
     private final NamedXContentRegistry xContentRegistry;
 
     /**
-     * Intantiates a new GetWorkflowStateTransportAction
+     * Instantiates a new GetWorkflowStateTransportAction
      * @param transportService The TransportService
      * @param actionFilters action filters
      * @param client The client used to make the request to OS
@@ -70,6 +70,7 @@ public class GetWorkflowStateTransportAction extends HandledTransportAction<GetW
         User user = ParseUtils.getUserContext(client);
         GetRequest getRequest = new GetRequest(WORKFLOW_STATE_INDEX).id(workflowId);
         try (ThreadContext.StoredContext context = client.threadPool().getThreadContext().stashContext()) {
+            logger.info("Querying state workflow doc: {}", workflowId);
             client.get(getRequest, ActionListener.runBefore(ActionListener.wrap(r -> {
                 if (r != null && r.isExists()) {
                     try (XContentParser parser = ParseUtils.createXContentParserFromRegistry(xContentRegistry, r.getSourceAsBytesRef())) {
@@ -77,25 +78,26 @@ public class GetWorkflowStateTransportAction extends HandledTransportAction<GetW
                         WorkflowState workflowState = WorkflowState.parse(parser);
                         listener.onResponse(new GetWorkflowStateResponse(workflowState, request.getAll()));
                     } catch (Exception e) {
-                        logger.error("Failed to parse workflowState: " + r.getId(), e);
-                        listener.onFailure(
-                            new FlowFrameworkException("Failed to parse workflowState: " + r.getId(), RestStatus.BAD_REQUEST)
-                        );
+                        String errorMessage = "Failed to parse workflowState: " + r.getId();
+                        logger.error(errorMessage, e);
+                        listener.onFailure(new FlowFrameworkException(errorMessage, RestStatus.BAD_REQUEST));
                     }
                 } else {
-                    listener.onFailure(new FlowFrameworkException("Fail to find workflow", RestStatus.NOT_FOUND));
+                    listener.onFailure(new FlowFrameworkException("Fail to find workflow " + workflowId, RestStatus.NOT_FOUND));
                 }
             }, e -> {
                 if (e instanceof IndexNotFoundException) {
-                    listener.onFailure(new FlowFrameworkException("Fail to find workflow", RestStatus.NOT_FOUND));
+                    listener.onFailure(new FlowFrameworkException("Fail to find workflow " + workflowId, RestStatus.NOT_FOUND));
                 } else {
-                    logger.error("Failed to get workflow status of: " + workflowId, e);
-                    listener.onFailure(new FlowFrameworkException("Failed to get workflow status of: " + workflowId, RestStatus.NOT_FOUND));
+                    String errorMessage = "Failed to get workflow status of: " + workflowId;
+                    logger.error(errorMessage, e);
+                    listener.onFailure(new FlowFrameworkException(errorMessage, RestStatus.NOT_FOUND));
                 }
             }), context::restore));
         } catch (Exception e) {
-            logger.error("Failed to get workflow: " + workflowId, e);
-            listener.onFailure(new FlowFrameworkException(e.getMessage(), ExceptionsHelper.status(e)));
+            String errorMessage = "Failed to get workflow: " + workflowId;
+            logger.error(errorMessage, e);
+            listener.onFailure(new FlowFrameworkException(errorMessage, ExceptionsHelper.status(e)));
         }
     }
 }
