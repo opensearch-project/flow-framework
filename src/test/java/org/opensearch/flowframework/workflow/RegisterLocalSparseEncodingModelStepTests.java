@@ -201,7 +201,7 @@ public class RegisterLocalSparseEncodingModelStepTests extends OpenSearchTestCas
 
         ExecutionException ex = expectThrows(ExecutionException.class, () -> future.get().getClass());
         assertTrue(ex.getCause() instanceof FlowFrameworkException);
-        assertEquals("test", ex.getCause().getMessage());
+        assertEquals("Failed to register local model in step test-node-id", ex.getCause().getMessage());
     }
 
     public void testRegisterLocalSparseEncodingModelTaskFailure() {

@@ -112,6 +112,6 @@ public class DeleteConnectorStepTests extends OpenSearchTestCase {
         assertTrue(future.isDone());
         ExecutionException ex = assertThrows(ExecutionException.class, () -> future.get().getContent());
         assertTrue(ex.getCause() instanceof FlowFrameworkException);
-        assertEquals("Failed to delete connector", ex.getCause().getMessage());
+        assertEquals("Failed to delete connector test", ex.getCause().getMessage());
     }
 }

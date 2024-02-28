@@ -34,6 +34,7 @@ import static org.opensearch.flowframework.common.CommonValue.WORKFLOW_STEP;
 public class GetWorkflowStepTransportAction extends HandledTransportAction<WorkflowRequest, GetWorkflowStepResponse> {
 
     private final Logger logger = LogManager.getLogger(GetWorkflowStepTransportAction.class);
+
     private final WorkflowStepFactory workflowStepFactory;
 
     /**
@@ -55,6 +56,7 @@ public class GetWorkflowStepTransportAction extends HandledTransportAction<Workf
     @Override
     protected void doExecute(Task task, WorkflowRequest request, ActionListener<GetWorkflowStepResponse> listener) {
         try {
+            logger.info("Getting workflow validator from the WorkflowStepFactory");
             List<String> steps = request.getParams().size() > 0
                 ? Arrays.asList(Strings.splitStringByCommaToArray(request.getParams().get(WORKFLOW_STEP)))
                 : Collections.emptyList();
@@ -66,12 +68,9 @@ public class GetWorkflowStepTransportAction extends HandledTransportAction<Workf
             }
             listener.onResponse(new GetWorkflowStepResponse(workflowValidator));
         } catch (Exception e) {
-            if (e instanceof FlowFrameworkException) {
-                logger.error(e.getMessage());
-                listener.onFailure(e);
-            }
-            logger.error("Failed to retrieve workflow step json.", e);
-            listener.onFailure(new FlowFrameworkException(e.getMessage(), ExceptionsHelper.status(e)));
+            String errorMessage = "Failed to retrieve workflow step json.";
+            logger.error(errorMessage, e);
+            listener.onFailure(new FlowFrameworkException(errorMessage, ExceptionsHelper.status(e)));
         }
     }
 }

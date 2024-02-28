@@ -36,22 +36,22 @@ public class FlowFrameworkSecureRestApiIT extends FlowFrameworkRestTestCase {
     public void testCreateWorkflowWithReadAccess() throws Exception {
         Template template = TestHelpers.createTemplateFromFile("register-deploylocalsparseencodingmodel.json");
         ResponseException exception = expectThrows(ResponseException.class, () -> createWorkflow(readAccessClient(), template));
-        assertTrue(exception.getMessage().contains("no permissions for [cluster:admin/opensearch/flow_framework/workflow/create]"));
+        assertEquals(RestStatus.FORBIDDEN.getStatus(), exception.getResponse().getStatusLine().getStatusCode());
     }
 
     public void testProvisionWorkflowWithReadAccess() throws Exception {
         ResponseException exception = expectThrows(ResponseException.class, () -> provisionWorkflow(readAccessClient(), "test"));
-        assertTrue(exception.getMessage().contains("no permissions for [cluster:admin/opensearch/flow_framework/workflow/provision]"));
+        assertEquals(RestStatus.FORBIDDEN.getStatus(), exception.getResponse().getStatusLine().getStatusCode());
     }
 
     public void testDeleteWorkflowWithReadAccess() throws Exception {
         ResponseException exception = expectThrows(ResponseException.class, () -> deleteWorkflow(readAccessClient(), "test"));
-        assertTrue(exception.getMessage().contains("no permissions for [cluster:admin/opensearch/flow_framework/workflow/delete]"));
+        assertEquals(RestStatus.FORBIDDEN.getStatus(), exception.getResponse().getStatusLine().getStatusCode());
     }
 
     public void testDeprovisionWorkflowWithReadAcess() throws Exception {
         ResponseException exception = expectThrows(ResponseException.class, () -> deprovisionWorkflow(readAccessClient(), "test"));
-        assertTrue(exception.getMessage().contains("no permissions for [cluster:admin/opensearch/flow_framework/workflow/deprovision]"));
+        assertEquals(RestStatus.FORBIDDEN.getStatus(), exception.getResponse().getStatusLine().getStatusCode());
     }
 
     public void testGetWorkflowStepsWithReadAccess() throws Exception {

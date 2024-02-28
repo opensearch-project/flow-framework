@@ -40,7 +40,7 @@ public class WorkflowValidator implements ToXContentObject {
             XContentBuilder builder = JsonXContent.contentBuilder();
             return this.toXContent(builder, EMPTY_PARAMS).toString();
         } catch (IOException e) {
-            return "{\"error\": \"couldn't create JSON: " + e.getMessage() + "\"}";
+            return "{\"error\": \"couldn't create JSON from XContent\"}";
         }
     }
 

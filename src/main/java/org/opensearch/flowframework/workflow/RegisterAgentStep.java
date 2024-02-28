@@ -111,23 +111,31 @@ public class RegisterAgentStep implements WorkflowStep {
                                 )
                             );
                         }, exception -> {
-                            logger.error("Failed to update new created resource", exception);
+                            String errorMessage = "Failed to update new created "
+                                + currentNodeId
+                                + " resource "
+                                + getName()
+                                + " id "
+                                + mlRegisterAgentResponse.getAgentId();
+                            logger.error(errorMessage, exception);
                             registerAgentModelFuture.onFailure(
-                                new FlowFrameworkException(exception.getMessage(), ExceptionsHelper.status(exception))
+                                new FlowFrameworkException(errorMessage, ExceptionsHelper.status(exception))
                             );
                         })
                     );
 
                 } catch (Exception e) {
-                    logger.error("Failed to parse and update new created resource", e);
-                    registerAgentModelFuture.onFailure(new FlowFrameworkException(e.getMessage(), ExceptionsHelper.status(e)));
+                    String errorMessage = "Failed to parse and update new created resource";
+                    logger.error(errorMessage, e);
+                    registerAgentModelFuture.onFailure(new FlowFrameworkException(errorMessage, ExceptionsHelper.status(e)));
                 }
             }
 
             @Override
             public void onFailure(Exception e) {
-                logger.error("Failed to register the agent");
-                registerAgentModelFuture.onFailure(new FlowFrameworkException(e.getMessage(), ExceptionsHelper.status(e)));
+                String errorMessage = "Failed to register the agent";
+                logger.error(errorMessage, e);
+                registerAgentModelFuture.onFailure(new FlowFrameworkException(errorMessage, ExceptionsHelper.status(e)));
             }
         };
 

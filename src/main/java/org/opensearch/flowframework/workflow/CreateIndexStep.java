@@ -89,22 +89,28 @@ public class CreateIndexStep implements WorkflowStep {
                                 )
                             );
                         }, exception -> {
-                            logger.error("Failed to update new created resource", exception);
-                            createIndexFuture.onFailure(
-                                new FlowFrameworkException(exception.getMessage(), ExceptionsHelper.status(exception))
-                            );
+                            String errorMessage = "Failed to update new created "
+                                + currentNodeId
+                                + " resource "
+                                + getName()
+                                + " id "
+                                + createIndexResponse.index();
+                            logger.error(errorMessage, exception);
+                            createIndexFuture.onFailure(new FlowFrameworkException(errorMessage, ExceptionsHelper.status(exception)));
                         })
                     );
                 } catch (Exception e) {
-                    logger.error("Failed to parse and update new created resource", e);
-                    createIndexFuture.onFailure(new FlowFrameworkException(e.getMessage(), ExceptionsHelper.status(e)));
+                    String errorMessage = "Failed to parse and update new created resource";
+                    logger.error(errorMessage, e);
+                    createIndexFuture.onFailure(new FlowFrameworkException(errorMessage, ExceptionsHelper.status(e)));
                 }
             }
 
             @Override
             public void onFailure(Exception e) {
-                logger.error("Failed to create an index", e);
-                createIndexFuture.onFailure(e);
+                String errorMessage = "Failed to create an index";
+                logger.error(errorMessage, e);
+                createIndexFuture.onFailure(new FlowFrameworkException(errorMessage, ExceptionsHelper.status(e)));
             }
         };
 
@@ -128,8 +134,9 @@ public class CreateIndexStep implements WorkflowStep {
                 }
             }
         } catch (Exception e) {
-            logger.error("Failed to find the correct resource for the workflow step", e);
-            createIndexFuture.onFailure(new FlowFrameworkException(e.getMessage(), ExceptionsHelper.status(e)));
+            String errorMessage = "Failed to find the correct resource for the workflow step " + NAME;
+            logger.error(errorMessage, e);
+            createIndexFuture.onFailure(new FlowFrameworkException(errorMessage, ExceptionsHelper.status(e)));
         }
 
         // TODO:

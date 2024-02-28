@@ -98,6 +98,7 @@ public class DeprovisionWorkflowTransportAction extends HandledTransportAction<W
 
         // Stash thread context to interact with system index
         try (ThreadContext.StoredContext context = client.threadPool().getThreadContext().stashContext()) {
+            logger.info("Querying state for workflow: {}", workflowId);
             client.execute(GetWorkflowStateAction.INSTANCE, getStateRequest, ActionListener.wrap(response -> {
                 context.restore();
 
@@ -105,14 +106,14 @@ public class DeprovisionWorkflowTransportAction extends HandledTransportAction<W
                 threadPool.executor(DEPROVISION_WORKFLOW_THREAD_POOL)
                     .execute(() -> executeDeprovisionSequence(workflowId, response.getWorkflowState().resourcesCreated(), listener));
             }, exception -> {
-                String message = "Failed to get workflow state for workflow " + workflowId;
-                logger.error(message, exception);
-                listener.onFailure(new FlowFrameworkException(message, ExceptionsHelper.status(exception)));
+                String errorMessage = "Failed to get workflow state for workflow " + workflowId;
+                logger.error(errorMessage, exception);
+                listener.onFailure(new FlowFrameworkException(errorMessage, ExceptionsHelper.status(exception)));
             }));
         } catch (Exception e) {
-            String message = "Failed to retrieve template from global context.";
-            logger.error(message, e);
-            listener.onFailure(new FlowFrameworkException(message, ExceptionsHelper.status(e)));
+            String errorMessage = "Failed to retrieve template from global context.";
+            logger.error(errorMessage, e);
+            listener.onFailure(new FlowFrameworkException(errorMessage, ExceptionsHelper.status(e)));
         }
     }
 
@@ -178,12 +179,7 @@ public class DeprovisionWorkflowTransportAction extends HandledTransportAction<W
                         // Remove from list so we don't try again
                         iter.remove();
                     } else {
-                        logger.info(
-                            "Failed {} for {}: {}",
-                            deprovisionNode.id(),
-                            resourceNameAndId,
-                            t.getCause() == null ? t.getMessage() : t.getCause().getMessage()
-                        );
+                        logger.info("Failed {} for {}", deprovisionNode.id(), resourceNameAndId);
                     }
                 }
             }
@@ -239,7 +235,7 @@ public class DeprovisionWorkflowTransportAction extends HandledTransportAction<W
                 ),
                 ActionListener.wrap(updateResponse -> {
                     logger.info("updated workflow {} state to NOT_STARTED", workflowId);
-                }, exception -> { logger.error("Failed to update workflow state : {}", exception.getMessage()); })
+                }, exception -> { logger.error("Failed to update workflow state", exception); })
             );
             // return workflow ID
             listener.onResponse(new WorkflowResponse(workflowId));
@@ -255,7 +251,7 @@ public class DeprovisionWorkflowTransportAction extends HandledTransportAction<W
                 ),
                 ActionListener.wrap(updateResponse -> {
                     logger.info("updated workflow {} state to COMPLETED", workflowId);
-                }, exception -> { logger.error("Failed to update workflow state : {}", exception.getMessage()); })
+                }, exception -> { logger.error("Failed to update workflow {} state", workflowId, exception); })
             );
             // give user list of remaining resources
             listener.onFailure(

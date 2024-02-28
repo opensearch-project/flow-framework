@@ -112,6 +112,6 @@ public class DeleteAgentStepTests extends OpenSearchTestCase {
         assertTrue(future.isDone());
         ExecutionException ex = assertThrows(ExecutionException.class, () -> future.get().getContent());
         assertTrue(ex.getCause() instanceof FlowFrameworkException);
-        assertEquals("Failed to delete agent", ex.getCause().getMessage());
+        assertEquals("Failed to delete agent test", ex.getCause().getMessage());
     }
 }

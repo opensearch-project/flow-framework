@@ -367,7 +367,7 @@ public class Template implements ToXContentObject {
             XContentBuilder builder = JsonXContent.contentBuilder();
             return this.toXContent(builder, EMPTY_PARAMS).toString();
         } catch (IOException e) {
-            return "{\"error\": \"couldn't create JSON: " + e.getMessage() + "\"}";
+            return "{\"error\": \"couldn't create JSON from XContent\"}";
         }
     }
 
@@ -381,7 +381,7 @@ public class Template implements ToXContentObject {
             XContentBuilder builder = YamlXContent.contentBuilder();
             return this.toXContent(builder, EMPTY_PARAMS).toString();
         } catch (IOException e) {
-            return "error: couldn't create YAML: " + e.getMessage();
+            return "error: couldn't create YAML from XContent";
         }
     }
 
