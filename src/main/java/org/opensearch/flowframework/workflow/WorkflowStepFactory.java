@@ -271,8 +271,8 @@ public class WorkflowStepFactory {
          * @return the WorkflowStepValidator
          */
         public WorkflowStepValidator getWorkflowStepValidator() {
-            return new WorkflowStepValidator(workflowStepName, inputs, outputs, requiredPlugins, timeout);
-        };
+            return new WorkflowStepValidator(inputs, outputs, requiredPlugins, timeout);
+        }
 
         /**
          * Gets the timeout based on the workflowStep.

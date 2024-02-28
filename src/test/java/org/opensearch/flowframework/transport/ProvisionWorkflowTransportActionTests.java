@@ -197,7 +197,7 @@ public class ProvisionWorkflowTransportActionTests extends OpenSearchTestCase {
         WorkflowRequest request = new WorkflowRequest("1", null);
         doAnswer(invocation -> {
             ActionListener<GetResponse> responseListener = invocation.getArgument(1);
-            responseListener.onFailure(new Exception("Failed to retrieve template from global context."));
+            responseListener.onFailure(new Exception("failed"));
             return null;
         }).when(client).get(any(GetRequest.class), any());
 
@@ -205,7 +205,7 @@ public class ProvisionWorkflowTransportActionTests extends OpenSearchTestCase {
         ArgumentCaptor<Exception> exceptionCaptor = ArgumentCaptor.forClass(Exception.class);
 
         verify(listener, times(1)).onFailure(exceptionCaptor.capture());
-        assertEquals("Failed to retrieve template from global context.", exceptionCaptor.getValue().getMessage());
+        assertEquals("Failed to retrieve template from global context for workflow 1", exceptionCaptor.getValue().getMessage());
     }
 
 }

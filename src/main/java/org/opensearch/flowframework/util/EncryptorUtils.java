@@ -320,9 +320,13 @@ public class EncryptorUtils {
                     if (response.isExists()) {
                         this.masterKey = (String) response.getSourceAsMap().get(MASTER_KEY);
                     } else {
-                        throw new FlowFrameworkException("Config has not been initialized", RestStatus.NOT_FOUND);
+                        throw new FlowFrameworkException("Master key has not been initialized in config index", RestStatus.NOT_FOUND);
                     }
-                }, exception -> { throw new FlowFrameworkException(exception.getMessage(), ExceptionsHelper.status(exception)); }));
+                },
+                    exception -> {
+                        throw new FlowFrameworkException("Failed to get master key from config index", ExceptionsHelper.status(exception));
+                    }
+                ));
             }
         }
     }

@@ -82,15 +82,15 @@ public class RestDeprovisionWorkflowAction extends BaseRestHandler {
                 try {
                     FlowFrameworkException ex = exception instanceof FlowFrameworkException
                         ? (FlowFrameworkException) exception
-                        : new FlowFrameworkException(exception.getMessage(), ExceptionsHelper.status(exception));
+                        : new FlowFrameworkException("Failed to deprovision workflow.", ExceptionsHelper.status(exception));
                     XContentBuilder exceptionBuilder = ex.toXContent(channel.newErrorBuilder(), ToXContent.EMPTY_PARAMS);
                     channel.sendResponse(new BytesRestResponse(ex.getRestStatus(), exceptionBuilder));
                 } catch (IOException e) {
-                    logger.error("Failed to send back provision workflow exception", e);
-                    channel.sendResponse(new BytesRestResponse(ExceptionsHelper.status(e), e.getMessage()));
+                    String errorMessage = "IOException: Failed to send back deprovision workflow exception";
+                    logger.error(errorMessage, e);
+                    channel.sendResponse(new BytesRestResponse(ExceptionsHelper.status(e), errorMessage));
                 }
             }));
-
         } catch (FlowFrameworkException ex) {
             return channel -> channel.sendResponse(
                 new BytesRestResponse(ex.getRestStatus(), ex.toXContent(channel.newErrorBuilder(), ToXContent.EMPTY_PARAMS))
