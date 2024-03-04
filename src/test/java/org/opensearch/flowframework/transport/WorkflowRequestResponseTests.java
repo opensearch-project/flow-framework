@@ -52,7 +52,10 @@ public class WorkflowRequestResponseTests extends OpenSearchTestCase {
             compatibilityVersions,
             Map.of("workflow", workflow),
             Collections.emptyMap(),
-            TestHelpers.randomUser()
+            TestHelpers.randomUser(),
+            -1L,
+            -1L,
+            -1L
         );
     }
 
@@ -71,7 +74,7 @@ public class WorkflowRequestResponseTests extends OpenSearchTestCase {
         WorkflowRequest streamInputRequest = new WorkflowRequest(in);
 
         assertEquals(nullIdRequest.getWorkflowId(), streamInputRequest.getWorkflowId());
-        assertEquals(nullIdRequest.getTemplate().toJson(), streamInputRequest.getTemplate().toJson());
+        assertEquals(nullIdRequest.getTemplate().toString(), streamInputRequest.getTemplate().toString());
         assertNull(nullIdRequest.validate());
         assertFalse(nullIdRequest.isProvision());
         assertTrue(nullIdRequest.getParams().isEmpty());
@@ -113,7 +116,7 @@ public class WorkflowRequestResponseTests extends OpenSearchTestCase {
         WorkflowRequest streamInputRequest = new WorkflowRequest(in);
 
         assertEquals(workflowRequest.getWorkflowId(), streamInputRequest.getWorkflowId());
-        assertEquals(workflowRequest.getTemplate().toJson(), streamInputRequest.getTemplate().toJson());
+        assertEquals(workflowRequest.getTemplate().toString(), streamInputRequest.getTemplate().toString());
         assertNull(workflowRequest.validate());
         assertFalse(workflowRequest.isProvision());
         assertTrue(workflowRequest.getParams().isEmpty());
@@ -134,7 +137,7 @@ public class WorkflowRequestResponseTests extends OpenSearchTestCase {
         WorkflowRequest streamInputRequest = new WorkflowRequest(in);
 
         assertEquals(workflowRequest.getWorkflowId(), streamInputRequest.getWorkflowId());
-        assertEquals(workflowRequest.getTemplate().toJson(), streamInputRequest.getTemplate().toJson());
+        assertEquals(workflowRequest.getTemplate().toString(), streamInputRequest.getTemplate().toString());
         assertNull(workflowRequest.validate());
         assertTrue(workflowRequest.isProvision());
         assertEquals("bar", workflowRequest.getParams().get("foo"));

@@ -123,7 +123,10 @@ public class CreateWorkflowTransportActionTests extends OpenSearchTestCase {
             compatibilityVersions,
             Map.of("workflow", workflow),
             Collections.emptyMap(),
-            TestHelpers.randomUser()
+            TestHelpers.randomUser(),
+            -1L,
+            -1L,
+            -1L
         );
     }
 
@@ -185,7 +188,10 @@ public class CreateWorkflowTransportActionTests extends OpenSearchTestCase {
             List.of(Version.fromString("2.0.0"), Version.fromString("3.0.0")),
             Map.of("workflow", workflow),
             Collections.emptyMap(),
-            TestHelpers.randomUser()
+            TestHelpers.randomUser(),
+            -1L,
+            -1L,
+            -1L
         );
 
         @SuppressWarnings("unchecked")
@@ -501,7 +507,10 @@ public class CreateWorkflowTransportActionTests extends OpenSearchTestCase {
             List.of(Version.fromString("2.0.0"), Version.fromString("3.0.0")),
             Map.of("workflow", workflow),
             Collections.emptyMap(),
-            TestHelpers.randomUser()
+            TestHelpers.randomUser(),
+            -1L,
+            -1L,
+            -1L
         );
 
         return validTemplate;

@@ -89,7 +89,10 @@ public class GetWorkflowTransportActionTests extends OpenSearchTestCase {
             compatibilityVersions,
             Map.of("provision", workflow),
             Collections.emptyMap(),
-            TestHelpers.randomUser()
+            TestHelpers.randomUser(),
+            -1L,
+            -1L,
+            -1L
         );
 
         ThreadPool clientThreadPool = mock(ThreadPool.class);

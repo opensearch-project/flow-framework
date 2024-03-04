@@ -93,7 +93,7 @@ public class CreateWorkflowTransportAction extends HandledTransportAction<Workfl
     protected void doExecute(Task task, WorkflowRequest request, ActionListener<WorkflowResponse> listener) {
 
         User user = getUserContext(client);
-        Template templateWithUser = new Template(
+        Template templateWithUserAndTimestamps = new Template(
             request.getTemplate().name(),
             request.getTemplate().description(),
             request.getTemplate().useCase(),
@@ -101,15 +101,18 @@ public class CreateWorkflowTransportAction extends HandledTransportAction<Workfl
             request.getTemplate().compatibilityVersion(),
             request.getTemplate().workflows(),
             request.getTemplate().getUiMetadata(),
-            user
+            user,
+            -1L,
+            -1L,
+            -1L
         );
 
         String[] validateAll = { "all" };
         if (Arrays.equals(request.getValidation(), validateAll)) {
             try {
-                validateWorkflows(templateWithUser);
+                validateWorkflows(templateWithUserAndTimestamps);
             } catch (Exception e) {
-                String errorMessage = "Workflow validation failed for template " + templateWithUser.name();
+                String errorMessage = "Workflow validation failed for template " + templateWithUserAndTimestamps.name();
                 logger.error(errorMessage, e);
                 listener.onFailure(
                     e instanceof FlowFrameworkException ? e : new FlowFrameworkException(errorMessage, ExceptionsHelper.status(e))
@@ -140,7 +143,7 @@ public class CreateWorkflowTransportAction extends HandledTransportAction<Workfl
                             } else {
                                 // Create new global context and state index entries
                                 flowFrameworkIndicesHandler.putTemplateToGlobalContext(
-                                    templateWithUser,
+                                    templateWithUserAndTimestamps,
                                     ActionListener.wrap(globalContextResponse -> {
                                         flowFrameworkIndicesHandler.putInitialStateToWorkflowState(
                                             globalContextResponse.getId(),

@@ -73,7 +73,10 @@ public class RestCreateWorkflowActionTests extends OpenSearchTestCase {
             compatibilityVersions,
             Map.of("workflow", workflow),
             Collections.emptyMap(),
-            TestHelpers.randomUser()
+            TestHelpers.randomUser(),
+            -1L,
+            -1L,
+            -1L
         );
 
         // Invalid template configuration, wrong field name

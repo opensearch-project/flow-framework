@@ -77,7 +77,10 @@ public class EncryptorUtilsTests extends OpenSearchTestCase {
             compatibilityVersions,
             Map.of("provision", workflow),
             Collections.emptyMap(),
-            TestHelpers.randomUser()
+            TestHelpers.randomUser(),
+            -1L,
+            -1L,
+            -1L
         );
 
         ClusterState clusterState = mock(ClusterState.class);

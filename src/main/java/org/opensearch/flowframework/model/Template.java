@@ -21,6 +21,7 @@ import org.opensearch.core.xcontent.XContentParser;
 import org.opensearch.flowframework.exception.FlowFrameworkException;
 
 import java.io.IOException;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -28,7 +29,10 @@ import java.util.Map;
 import java.util.Map.Entry;
 
 import static org.opensearch.core.xcontent.XContentParserUtils.ensureExpectedToken;
+import static org.opensearch.flowframework.common.CommonValue.CREATED_TIME;
 import static org.opensearch.flowframework.common.CommonValue.DESCRIPTION_FIELD;
+import static org.opensearch.flowframework.common.CommonValue.LAST_PROVISIONED_TIME_FIELD;
+import static org.opensearch.flowframework.common.CommonValue.LAST_UPDATED_TIME_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.NAME_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.UI_METADATA_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.USER_FIELD;
@@ -48,14 +52,17 @@ public class Template implements ToXContentObject {
     /** The template field name for template use case */
     public static final String USE_CASE_FIELD = "use_case";
 
-    private String name;
-    private String description;
-    private String useCase; // probably an ENUM actually
-    private Version templateVersion;
-    private List<Version> compatibilityVersion;
-    private Map<String, Workflow> workflows;
-    private Map<String, Object> uiMetadata;
-    private User user;
+    private final String name;
+    private final String description;
+    private final String useCase; // probably an ENUM actually
+    private final Version templateVersion;
+    private final List<Version> compatibilityVersion;
+    private final Map<String, Workflow> workflows;
+    private final Map<String, Object> uiMetadata;
+    private final User user;
+    private final long createdTime;
+    private final long lastUpdatedTime;
+    private final long lastProvisionedTime;
 
     /**
      * Instantiate the object representing a use case template
@@ -68,6 +75,9 @@ public class Template implements ToXContentObject {
      * @param workflows Workflow graph definitions corresponding to the defined operations.
      * @param uiMetadata The UI metadata related to the given workflow
      * @param user The user extracted from the thread context from the request
+     * @param createdTime Created time in milliseconds since the epoch
+     * @param lastUpdatedTime Last Updated time in milliseconds since the epoch
+     * @param lastProvisionedTime Last Provisioned time in milliseconds since the epoch
      */
     public Template(
         String name,
@@ -77,7 +87,10 @@ public class Template implements ToXContentObject {
         List<Version> compatibilityVersion,
         Map<String, Workflow> workflows,
         Map<String, Object> uiMetadata,
-        User user
+        User user,
+        long createdTime,
+        long lastUpdatedTime,
+        long lastProvisionedTime
     ) {
         this.name = name;
         this.description = description;
@@ -87,9 +100,10 @@ public class Template implements ToXContentObject {
         this.workflows = Map.copyOf(workflows);
         this.uiMetadata = uiMetadata;
         this.user = user;
+        this.createdTime = createdTime < 0 ? Instant.now().toEpochMilli() : createdTime;
+        this.lastUpdatedTime = lastUpdatedTime < this.createdTime ? this.createdTime : lastUpdatedTime;
+        this.lastProvisionedTime = lastProvisionedTime;
     }
-
-    private Template() {}
 
     /**
      * Class for constructing a Builder for Template
@@ -103,6 +117,9 @@ public class Template implements ToXContentObject {
         private Map<String, Workflow> workflows = new HashMap<>();
         private Map<String, Object> uiMetadata = null;
         private User user = null;
+        private long createdTime = -1L;
+        private long lastUpdatedTime = -1L;
+        private long lastProvisionedTime = -1L;
 
         /**
          * Empty Constructor for the Builder object
@@ -190,22 +207,54 @@ public class Template implements ToXContentObject {
         }
 
         /**
+         * Builder method for adding createdTime
+         * @param createdTime created time in milliseconds since the epoch
+         * @return the Builder object
+         */
+        public Builder createdTime(long createdTime) {
+            this.createdTime = createdTime;
+            return this;
+        }
+
+        /**
+         * Builder method for adding lastUpdatedTime
+         * @param lastUpdatedTime last updated time in milliseconds since the epoch
+         * @return the Builder object
+         */
+        public Builder lastUpdatedTime(long lastUpdatedTime) {
+            this.lastUpdatedTime = lastUpdatedTime;
+            return this;
+        }
+
+        /**
+         * Builder method for adding lastProvisionedTime
+         * @param lastProvisionedTime last provisioned time in milliseconds since the epoch
+         * @return the Builder object
+         */
+        public Builder lastProvisionedTime(long lastProvisionedTime) {
+            this.lastProvisionedTime = lastProvisionedTime;
+            return this;
+        }
+
+        /**
          * Allows building a template
          * @return Template Object containing all needed fields
          */
         public Template build() {
-            Template template = new Template();
-            template.name = this.name;
-            template.description = this.description;
-            template.useCase = this.useCase;
-            template.templateVersion = this.templateVersion;
-            template.compatibilityVersion = this.compatibilityVersion;
-            template.workflows = this.workflows;
-            template.uiMetadata = this.uiMetadata;
-            template.user = this.user;
-            return template;
+            return new Template(
+                this.name,
+                this.description,
+                this.useCase,
+                this.templateVersion,
+                this.compatibilityVersion,
+                this.workflows,
+                this.uiMetadata,
+                this.user,
+                this.createdTime,
+                this.lastUpdatedTime,
+                this.lastProvisionedTime
+            );
         }
-
     }
 
     @Override
@@ -244,6 +293,18 @@ public class Template implements ToXContentObject {
             xContentBuilder.field(USER_FIELD, user);
         }
 
+        if (createdTime > 0) {
+            xContentBuilder.field(CREATED_TIME, createdTime);
+        }
+
+        if (lastUpdatedTime > 0) {
+            xContentBuilder.field(LAST_UPDATED_TIME_FIELD, lastUpdatedTime);
+        }
+
+        if (lastProvisionedTime > 0) {
+            xContentBuilder.field(LAST_PROVISIONED_TIME_FIELD, lastProvisionedTime);
+        }
+
         return xContentBuilder.endObject();
     }
 
@@ -263,6 +324,9 @@ public class Template implements ToXContentObject {
         Map<String, Workflow> workflows = new HashMap<>();
         Map<String, Object> uiMetadata = null;
         User user = null;
+        long createdTime = -1;
+        long lastUpdatedTime = -1;
+        long lastProvisionedTime = -1;
 
         ensureExpectedToken(XContentParser.Token.START_OBJECT, parser.currentToken(), parser);
         while (parser.nextToken() != XContentParser.Token.END_OBJECT) {
@@ -315,6 +379,15 @@ public class Template implements ToXContentObject {
                 case USER_FIELD:
                     user = User.parse(parser);
                     break;
+                case CREATED_TIME:
+                    createdTime = parser.longValue();
+                    break;
+                case LAST_UPDATED_TIME_FIELD:
+                    lastUpdatedTime = parser.longValue();
+                    break;
+                case LAST_PROVISIONED_TIME_FIELD:
+                    lastProvisionedTime = parser.longValue();
+                    break;
                 default:
                     throw new FlowFrameworkException(
                         "Unable to parse field [" + fieldName + "] in a template object.",
@@ -334,6 +407,9 @@ public class Template implements ToXContentObject {
             .workflows(workflows)
             .uiMetadata(uiMetadata)
             .user(user)
+            .createdTime(createdTime)
+            .lastUpdatedTime(lastUpdatedTime)
+            .lastProvisionedTime(lastProvisionedTime)
             .build();
     }
 
@@ -449,6 +525,27 @@ public class Template implements ToXContentObject {
         return user;
     }
 
+    /**
+     * @return the createdTime
+     */
+    public long createdTime() {
+        return createdTime;
+    }
+
+    /**
+     * @return the lastUpdatedTime
+     */
+    public long lastUpdatedTime() {
+        return lastUpdatedTime;
+    }
+
+    /**
+     * @return the lastProvisionedTime
+     */
+    public long lastProvisionedTime() {
+        return lastProvisionedTime;
+    }
+
     @Override
     public String toString() {
         return "Template [name="
@@ -464,7 +561,7 @@ public class Template implements ToXContentObject {
             + ", workflows="
             + workflows
             + ", uiMedata="
-            + uiMetadata
+            + (uiMetadata == null ? "{}" : uiMetadata)
             + "]";
     }
 }

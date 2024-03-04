@@ -12,6 +12,7 @@ import org.opensearch.Version;
 import org.opensearch.core.rest.RestStatus;
 import org.opensearch.flowframework.exception.FlowFrameworkException;
 import org.opensearch.test.OpenSearchTestCase;
+import org.joda.time.Instant;
 
 import java.io.IOException;
 import java.util.Collections;
@@ -48,7 +49,10 @@ public class TemplateTests extends OpenSearchTestCase {
             compatibilityVersion,
             Map.of("workflow", workflow),
             uiMetadata,
-            null
+            null,
+            -1L,
+            -1L,
+            -1L
         );
 
         assertEquals("test", template.name());
@@ -59,6 +63,10 @@ public class TemplateTests extends OpenSearchTestCase {
         assertEquals(uiMetadata, template.getUiMetadata());
         Workflow wf = template.workflows().get("workflow");
         assertNotNull(wf);
+        assertTrue(template.createdTime() > Instant.now().minus(10_000).getMillis());
+        assertTrue(template.createdTime() < Instant.now().getMillis());
+        assertEquals(template.createdTime(), template.lastUpdatedTime());
+        assertEquals(-1, template.lastProvisionedTime());
         assertEquals("Workflow [userParams={key=value}, nodes=[A, B], edges=[A->B]]", wf.toString());
 
         String json = TemplateTestJsonUtil.parseToJson(template);
@@ -72,6 +80,10 @@ public class TemplateTests extends OpenSearchTestCase {
         assertEquals(uiMetadata, templateX.getUiMetadata());
         Workflow wfX = templateX.workflows().get("workflow");
         assertNotNull(wfX);
+        assertTrue(template.createdTime() > Instant.now().minus(10_000).getMillis());
+        assertTrue(template.createdTime() < Instant.now().getMillis());
+        assertEquals(template.lastUpdatedTime(), template.createdTime());
+        assertEquals(-1, template.lastProvisionedTime());
         assertEquals("Workflow [userParams={key=value}, nodes=[A, B], edges=[A->B]]", wfX.toString());
     }
 

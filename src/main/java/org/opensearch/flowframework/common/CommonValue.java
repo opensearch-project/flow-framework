@@ -48,6 +48,12 @@ public class CommonValue {
     public static final String CREATE_TIME = "create_time";
     /** The template field name for the user who created the workflow **/
     public static final String USER_FIELD = "user";
+    /** The created time field */
+    public static final String CREATED_TIME = "created_time";
+    /** The last updated time field */
+    public static final String LAST_UPDATED_TIME_FIELD = "last_updated_time";
+    /** The last updated time field */
+    public static final String LAST_PROVISIONED_TIME_FIELD = "last_provisioned_time";
 
     /*
      * Constants associated with Rest or Transport actions
@@ -156,10 +162,6 @@ public class CommonValue {
     public static final String APP_TYPE_FIELD = "app_type";
     /** To include field for an agent response */
     public static final String INCLUDE_OUTPUT_IN_AGENT_RESPONSE = "include_output_in_agent_response";
-    /** The created time field for an agent */
-    public static final String CREATED_TIME = "created_time";
-    /** The last updated time field for an agent */
-    public static final String LAST_UPDATED_TIME_FIELD = "last_updated_time";
     /** HttpHost */
     public static final String HTTP_HOST_FIELD = "http_host";
     /** Http scheme */
