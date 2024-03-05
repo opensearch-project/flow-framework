@@ -174,7 +174,9 @@ public class ProvisionWorkflowTransportAction extends HandledTransportAction<Wor
                                                 new FlowFrameworkException(errorMessage, ExceptionsHelper.status(exception))
                                             );
                                         }
-                                    })
+                                    }),
+                                    // We've already checked workflow is not started, ignore second check
+                                    true
                                 );
                             }, exception -> {
                                 String errorMessage = "Failed to update workflow state: " + workflowId;

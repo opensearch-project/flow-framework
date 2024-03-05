@@ -395,6 +395,17 @@ public class FlowFrameworkIndicesHandler {
      * @param listener action listener
      */
     public void updateTemplateInGlobalContext(String documentId, Template template, ActionListener<IndexResponse> listener) {
+        updateTemplateInGlobalContext(documentId, template, listener, false);
+    }
+
+    /**
+     * Replaces a document in the global context index
+     * @param documentId the document Id
+     * @param template the use-case template
+     * @param listener action listener
+     * @param force if set true, ignores the requirement that the provisioning is not started
+     */
+    public void updateTemplateInGlobalContext(String documentId, Template template, ActionListener<IndexResponse> listener, boolean force) {
         if (!doesIndexExist(GLOBAL_CONTEXT_INDEX)) {
             String errorMessage = "Failed to update template for workflow_id : " + documentId + ", global_context index does not exist.";
             logger.error(errorMessage);
@@ -404,7 +415,7 @@ public class FlowFrameworkIndicesHandler {
         doesTemplateExist(documentId, templateExists -> {
             if (templateExists) {
                 isWorkflowNotStarted(documentId, workflowIsNotStarted -> {
-                    if (workflowIsNotStarted) {
+                    if (workflowIsNotStarted || force) {
                         IndexRequest request = new IndexRequest(GLOBAL_CONTEXT_INDEX).id(documentId);
                         try (
                             XContentBuilder builder = XContentFactory.jsonBuilder();

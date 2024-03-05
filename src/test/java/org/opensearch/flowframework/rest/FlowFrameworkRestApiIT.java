@@ -80,7 +80,7 @@ public class FlowFrameworkRestApiIT extends FlowFrameworkRestTestCase {
         Template template = TestHelpers.createTemplateFromFile("createconnector-registerremotemodel-deploymodel.json");
 
         ResponseException exception = expectThrows(ResponseException.class, () -> updateWorkflow(client(), "123", template));
-        assertTrue(exception.getMessage().contains("Failed to get template: 123"));
+        assertTrue(exception.getMessage().contains("Failed to retrieve template (123) from global context."));
 
         Response response = createWorkflow(client(), template);
         assertEquals(RestStatus.CREATED, TestHelpers.restStatus(response));
