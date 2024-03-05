@@ -96,7 +96,7 @@ public class CreateWorkflowTransportAction extends HandledTransportAction<Workfl
     protected void doExecute(Task task, WorkflowRequest request, ActionListener<WorkflowResponse> listener) {
 
         User user = getUserContext(client);
-        Template templateWithUserAndTimestamps = new Template(
+        Template templateWithUser = new Template(
             request.getTemplate().name(),
             request.getTemplate().description(),
             request.getTemplate().useCase(),
@@ -105,17 +105,17 @@ public class CreateWorkflowTransportAction extends HandledTransportAction<Workfl
             request.getTemplate().workflows(),
             request.getTemplate().getUiMetadata(),
             user,
-            null,
-            null,
-            null
+            request.getTemplate().createdTime(),
+            request.getTemplate().lastUpdatedTime(),
+            request.getTemplate().lastProvisionedTime()
         );
 
         String[] validateAll = { "all" };
         if (Arrays.equals(request.getValidation(), validateAll)) {
             try {
-                validateWorkflows(templateWithUserAndTimestamps);
+                validateWorkflows(templateWithUser);
             } catch (Exception e) {
-                String errorMessage = "Workflow validation failed for template " + templateWithUserAndTimestamps.name();
+                String errorMessage = "Workflow validation failed for template " + templateWithUser.name();
                 logger.error(errorMessage, e);
                 listener.onFailure(
                     e instanceof FlowFrameworkException ? e : new FlowFrameworkException(errorMessage, ExceptionsHelper.status(e))
@@ -147,7 +147,7 @@ public class CreateWorkflowTransportAction extends HandledTransportAction<Workfl
                             } else {
                                 // Create new global context and state index entries
                                 flowFrameworkIndicesHandler.putTemplateToGlobalContext(
-                                    templateWithUserAndTimestamps,
+                                    templateWithUser,
                                     ActionListener.wrap(globalContextResponse -> {
                                         flowFrameworkIndicesHandler.putInitialStateToWorkflowState(
                                             globalContextResponse.getId(),
@@ -238,16 +238,15 @@ public class CreateWorkflowTransportAction extends HandledTransportAction<Workfl
                     context.restore();
                     if (getResponse.isExists()) {
                         Template existingTemplate = Template.parse(getResponse.getSourceAsString());
-                        Template newTemplate = request.getTemplate();
                         // Update existing entry, full document replacement
-                        Template template = new Template.Builder().name(newTemplate.name())
-                            .description(newTemplate.description())
-                            .useCase(newTemplate.useCase())
-                            .templateVersion(newTemplate.templateVersion())
-                            .compatibilityVersion(newTemplate.compatibilityVersion())
-                            .workflows(newTemplate.workflows())
-                            .uiMetadata(newTemplate.getUiMetadata())
-                            .user(newTemplate.getUser()) // Should we care about old user here?
+                        Template template = new Template.Builder().name(templateWithUser.name())
+                            .description(templateWithUser.description())
+                            .useCase(templateWithUser.useCase())
+                            .templateVersion(templateWithUser.templateVersion())
+                            .compatibilityVersion(templateWithUser.compatibilityVersion())
+                            .workflows(templateWithUser.workflows())
+                            .uiMetadata(templateWithUser.getUiMetadata())
+                            .user(templateWithUser.getUser()) // Should we care about old user here?
                             .createdTime(existingTemplate.createdTime())
                             .lastUpdatedTime(Instant.now())
                             .lastProvisionedTime(existingTemplate.lastProvisionedTime())
