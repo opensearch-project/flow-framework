@@ -10,6 +10,8 @@ package org.opensearch.flowframework.transport;
 
 import org.apache.lucene.search.TotalHits;
 import org.opensearch.Version;
+import org.opensearch.action.get.GetRequest;
+import org.opensearch.action.get.GetResponse;
 import org.opensearch.action.index.IndexResponse;
 import org.opensearch.action.search.SearchRequest;
 import org.opensearch.action.search.SearchResponse;
@@ -322,6 +324,15 @@ public class CreateWorkflowTransportActionTests extends OpenSearchTestCase {
         WorkflowRequest updateWorkflow = new WorkflowRequest("1", template);
 
         doAnswer(invocation -> {
+            ActionListener<GetResponse> getListener = invocation.getArgument(1);
+            GetResponse getResponse = mock(GetResponse.class);
+            when(getResponse.isExists()).thenReturn(true);
+            when(getResponse.getSourceAsString()).thenReturn(template.toJson());
+            getListener.onResponse(getResponse);
+            return null;
+        }).when(client).get(any(GetRequest.class), any());
+
+        doAnswer(invocation -> {
             ActionListener<IndexResponse> responseListener = invocation.getArgument(2);
             responseListener.onFailure(new Exception("failed"));
             return null;
@@ -333,10 +344,44 @@ public class CreateWorkflowTransportActionTests extends OpenSearchTestCase {
         assertEquals("Failed to update use case template 1", exceptionCaptor.getValue().getMessage());
     }
 
+    public void testFailedToUpdateNonExistingWorkflow() {
+        @SuppressWarnings("unchecked")
+        ActionListener<WorkflowResponse> listener = mock(ActionListener.class);
+        WorkflowRequest updateWorkflow = new WorkflowRequest("2", template);
+
+        doAnswer(invocation -> {
+            ActionListener<GetResponse> getListener = invocation.getArgument(1);
+            GetResponse getResponse = mock(GetResponse.class);
+            when(getResponse.isExists()).thenReturn(false);
+            getListener.onResponse(getResponse);
+            return null;
+        }).when(client).get(any(GetRequest.class), any());
+
+        doAnswer(invocation -> {
+            ActionListener<IndexResponse> responseListener = invocation.getArgument(2);
+            responseListener.onFailure(new Exception("failed"));
+            return null;
+        }).when(flowFrameworkIndicesHandler).updateTemplateInGlobalContext(any(), any(Template.class), any());
+
+        createWorkflowTransportAction.doExecute(mock(Task.class), updateWorkflow, listener);
+        ArgumentCaptor<Exception> exceptionCaptor = ArgumentCaptor.forClass(Exception.class);
+        verify(listener, times(1)).onFailure(exceptionCaptor.capture());
+        assertEquals("Failed to retrieve template (2) from global context.", exceptionCaptor.getValue().getMessage());
+    }
+
     public void testUpdateWorkflow() {
         @SuppressWarnings("unchecked")
         ActionListener<WorkflowResponse> listener = mock(ActionListener.class);
         WorkflowRequest updateWorkflow = new WorkflowRequest("1", template);
+
+        doAnswer(invocation -> {
+            ActionListener<GetResponse> getListener = invocation.getArgument(1);
+            GetResponse getResponse = mock(GetResponse.class);
+            when(getResponse.isExists()).thenReturn(true);
+            when(getResponse.getSourceAsString()).thenReturn(new Template.Builder().name("test").build().toJson());
+            getListener.onResponse(getResponse);
+            return null;
+        }).when(client).get(any(GetRequest.class), any());
 
         doAnswer(invocation -> {
             ActionListener<IndexResponse> responseListener = invocation.getArgument(2);
