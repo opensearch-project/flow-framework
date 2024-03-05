@@ -157,7 +157,7 @@ public class ProvisionWorkflowTransportAction extends HandledTransportAction<Wor
                                     .user(template.getUser()) // Should we care about old user here?
                                     .createdTime(template.createdTime())
                                     .lastUpdatedTime(template.lastUpdatedTime())
-                                    .lastProvisionedTime(Instant.now().toEpochMilli())
+                                    .lastProvisionedTime(Instant.now())
                                     .build();
                                 flowFrameworkIndicesHandler.updateTemplateInGlobalContext(
                                     request.getWorkflowId(),

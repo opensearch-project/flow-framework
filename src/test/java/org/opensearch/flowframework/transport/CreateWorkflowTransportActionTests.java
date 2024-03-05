@@ -126,9 +126,9 @@ public class CreateWorkflowTransportActionTests extends OpenSearchTestCase {
             Map.of("workflow", workflow),
             Collections.emptyMap(),
             TestHelpers.randomUser(),
-            -1L,
-            -1L,
-            -1L
+            null,
+            null,
+            null
         );
     }
 
@@ -191,9 +191,9 @@ public class CreateWorkflowTransportActionTests extends OpenSearchTestCase {
             Map.of("workflow", workflow),
             Collections.emptyMap(),
             TestHelpers.randomUser(),
-            -1L,
-            -1L,
-            -1L
+            null,
+            null,
+            null
         );
 
         @SuppressWarnings("unchecked")
@@ -553,9 +553,9 @@ public class CreateWorkflowTransportActionTests extends OpenSearchTestCase {
             Map.of("workflow", workflow),
             Collections.emptyMap(),
             TestHelpers.randomUser(),
-            -1L,
-            -1L,
-            -1L
+            null,
+            null,
+            null
         );
 
         return validTemplate;

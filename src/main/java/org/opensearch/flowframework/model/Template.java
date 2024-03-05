@@ -19,6 +19,7 @@ import org.opensearch.core.xcontent.ToXContentObject;
 import org.opensearch.core.xcontent.XContentBuilder;
 import org.opensearch.core.xcontent.XContentParser;
 import org.opensearch.flowframework.exception.FlowFrameworkException;
+import org.opensearch.flowframework.util.ParseUtils;
 
 import java.io.IOException;
 import java.time.Instant;
@@ -60,9 +61,9 @@ public class Template implements ToXContentObject {
     private final Map<String, Workflow> workflows;
     private final Map<String, Object> uiMetadata;
     private final User user;
-    private final long createdTime;
-    private final long lastUpdatedTime;
-    private final long lastProvisionedTime;
+    private final Instant createdTime;
+    private final Instant lastUpdatedTime;
+    private final Instant lastProvisionedTime;
 
     /**
      * Instantiate the object representing a use case template
@@ -88,9 +89,9 @@ public class Template implements ToXContentObject {
         Map<String, Workflow> workflows,
         Map<String, Object> uiMetadata,
         User user,
-        long createdTime,
-        long lastUpdatedTime,
-        long lastProvisionedTime
+        Instant createdTime,
+        Instant lastUpdatedTime,
+        Instant lastProvisionedTime
     ) {
         this.name = name;
         this.description = description;
@@ -100,8 +101,8 @@ public class Template implements ToXContentObject {
         this.workflows = Map.copyOf(workflows);
         this.uiMetadata = uiMetadata;
         this.user = user;
-        this.createdTime = createdTime < 0 ? Instant.now().toEpochMilli() : createdTime;
-        this.lastUpdatedTime = lastUpdatedTime < this.createdTime ? this.createdTime : lastUpdatedTime;
+        this.createdTime = createdTime == null ? Instant.now() : createdTime;
+        this.lastUpdatedTime = (lastUpdatedTime == null || lastUpdatedTime.isBefore(this.createdTime)) ? this.createdTime : lastUpdatedTime;
         this.lastProvisionedTime = lastProvisionedTime;
     }
 
@@ -117,9 +118,9 @@ public class Template implements ToXContentObject {
         private Map<String, Workflow> workflows = new HashMap<>();
         private Map<String, Object> uiMetadata = null;
         private User user = null;
-        private long createdTime = -1L;
-        private long lastUpdatedTime = -1L;
-        private long lastProvisionedTime = -1L;
+        private Instant createdTime = null;
+        private Instant lastUpdatedTime = null;
+        private Instant lastProvisionedTime = null;
 
         /**
          * Empty Constructor for the Builder object
@@ -211,7 +212,7 @@ public class Template implements ToXContentObject {
          * @param createdTime created time in milliseconds since the epoch
          * @return the Builder object
          */
-        public Builder createdTime(long createdTime) {
+        public Builder createdTime(Instant createdTime) {
             this.createdTime = createdTime;
             return this;
         }
@@ -221,7 +222,7 @@ public class Template implements ToXContentObject {
          * @param lastUpdatedTime last updated time in milliseconds since the epoch
          * @return the Builder object
          */
-        public Builder lastUpdatedTime(long lastUpdatedTime) {
+        public Builder lastUpdatedTime(Instant lastUpdatedTime) {
             this.lastUpdatedTime = lastUpdatedTime;
             return this;
         }
@@ -231,7 +232,7 @@ public class Template implements ToXContentObject {
          * @param lastProvisionedTime last provisioned time in milliseconds since the epoch
          * @return the Builder object
          */
-        public Builder lastProvisionedTime(long lastProvisionedTime) {
+        public Builder lastProvisionedTime(Instant lastProvisionedTime) {
             this.lastProvisionedTime = lastProvisionedTime;
             return this;
         }
@@ -293,16 +294,16 @@ public class Template implements ToXContentObject {
             xContentBuilder.field(USER_FIELD, user);
         }
 
-        if (createdTime > 0) {
-            xContentBuilder.field(CREATED_TIME, createdTime);
+        if (createdTime != null) {
+            xContentBuilder.field(CREATED_TIME, createdTime.toEpochMilli());
         }
 
-        if (lastUpdatedTime > 0) {
-            xContentBuilder.field(LAST_UPDATED_TIME_FIELD, lastUpdatedTime);
+        if (lastUpdatedTime != null) {
+            xContentBuilder.field(LAST_UPDATED_TIME_FIELD, lastUpdatedTime.toEpochMilli());
         }
 
-        if (lastProvisionedTime > 0) {
-            xContentBuilder.field(LAST_PROVISIONED_TIME_FIELD, lastProvisionedTime);
+        if (lastProvisionedTime != null) {
+            xContentBuilder.field(LAST_PROVISIONED_TIME_FIELD, lastProvisionedTime.toEpochMilli());
         }
 
         return xContentBuilder.endObject();
@@ -324,9 +325,9 @@ public class Template implements ToXContentObject {
         Map<String, Workflow> workflows = new HashMap<>();
         Map<String, Object> uiMetadata = null;
         User user = null;
-        long createdTime = -1;
-        long lastUpdatedTime = -1;
-        long lastProvisionedTime = -1;
+        Instant createdTime = null;
+        Instant lastUpdatedTime = null;
+        Instant lastProvisionedTime = null;
 
         ensureExpectedToken(XContentParser.Token.START_OBJECT, parser.currentToken(), parser);
         while (parser.nextToken() != XContentParser.Token.END_OBJECT) {
@@ -380,13 +381,13 @@ public class Template implements ToXContentObject {
                     user = User.parse(parser);
                     break;
                 case CREATED_TIME:
-                    createdTime = parser.longValue();
+                    createdTime = ParseUtils.parseInstant(parser);
                     break;
                 case LAST_UPDATED_TIME_FIELD:
-                    lastUpdatedTime = parser.longValue();
+                    lastUpdatedTime = ParseUtils.parseInstant(parser);
                     break;
                 case LAST_PROVISIONED_TIME_FIELD:
-                    lastProvisionedTime = parser.longValue();
+                    lastProvisionedTime = ParseUtils.parseInstant(parser);
                     break;
                 default:
                     throw new FlowFrameworkException(
@@ -526,23 +527,26 @@ public class Template implements ToXContentObject {
     }
 
     /**
+     * Time the template was created
      * @return the createdTime
      */
-    public long createdTime() {
+    public Instant createdTime() {
         return createdTime;
     }
 
     /**
+     * Time the template was last updated
      * @return the lastUpdatedTime
      */
-    public long lastUpdatedTime() {
+    public Instant lastUpdatedTime() {
         return lastUpdatedTime;
     }
 
     /**
+     * Time the template was last provisioned
      * @return the lastProvisionedTime
      */
-    public long lastProvisionedTime() {
+    public Instant lastProvisionedTime() {
         return lastProvisionedTime;
     }
 

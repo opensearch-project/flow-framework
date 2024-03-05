@@ -121,9 +121,9 @@ public class FlowFrameworkIndicesHandlerTests extends OpenSearchTestCase {
             Map.of("workflow", workflow),
             Collections.emptyMap(),
             TestHelpers.randomUser(),
-            -1L,
-            -1L,
-            -1L
+            null,
+            null,
+            null
         );
     }
 

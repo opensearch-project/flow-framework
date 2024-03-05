@@ -105,9 +105,9 @@ public class CreateWorkflowTransportAction extends HandledTransportAction<Workfl
             request.getTemplate().workflows(),
             request.getTemplate().getUiMetadata(),
             user,
-            -1L,
-            -1L,
-            -1L
+            null,
+            null,
+            null
         );
 
         String[] validateAll = { "all" };
@@ -249,7 +249,7 @@ public class CreateWorkflowTransportAction extends HandledTransportAction<Workfl
                             .uiMetadata(newTemplate.getUiMetadata())
                             .user(newTemplate.getUser()) // Should we care about old user here?
                             .createdTime(existingTemplate.createdTime())
-                            .lastUpdatedTime(Instant.now().toEpochMilli())
+                            .lastUpdatedTime(Instant.now())
                             .lastProvisionedTime(existingTemplate.lastProvisionedTime())
                             .build();
                         flowFrameworkIndicesHandler.updateTemplateInGlobalContext(

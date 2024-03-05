@@ -50,9 +50,9 @@ public class TemplateTests extends OpenSearchTestCase {
             Map.of("workflow", workflow),
             uiMetadata,
             null,
-            -1L,
-            -1L,
-            -1L
+            null,
+            null,
+            null
         );
 
         assertEquals("test", template.name());
@@ -63,10 +63,10 @@ public class TemplateTests extends OpenSearchTestCase {
         assertEquals(uiMetadata, template.getUiMetadata());
         Workflow wf = template.workflows().get("workflow");
         assertNotNull(wf);
-        assertTrue(template.createdTime() > Instant.now().minusSeconds(10).toEpochMilli());
-        assertTrue(template.createdTime() <= Instant.now().toEpochMilli());
+        assertTrue(template.createdTime().isAfter(Instant.now().minusSeconds(10)));
+        assertFalse(template.createdTime().isAfter(Instant.now()));
         assertEquals(template.createdTime(), template.lastUpdatedTime());
-        assertEquals(-1, template.lastProvisionedTime());
+        assertNull(template.lastProvisionedTime());
         assertEquals("Workflow [userParams={key=value}, nodes=[A, B], edges=[A->B]]", wf.toString());
 
         String json = TemplateTestJsonUtil.parseToJson(template);
@@ -80,10 +80,10 @@ public class TemplateTests extends OpenSearchTestCase {
         assertEquals(uiMetadata, templateX.getUiMetadata());
         Workflow wfX = templateX.workflows().get("workflow");
         assertNotNull(wfX);
-        assertTrue(template.createdTime() > Instant.now().minusSeconds(10).toEpochMilli());
-        assertTrue(template.createdTime() <= Instant.now().toEpochMilli());
-        assertEquals(template.lastUpdatedTime(), template.createdTime());
-        assertEquals(-1, template.lastProvisionedTime());
+        assertTrue(template.createdTime().isAfter(Instant.now().minusSeconds(10)));
+        assertFalse(template.createdTime().isAfter(Instant.now()));
+        assertEquals(template.createdTime(), template.lastUpdatedTime());
+        assertNull(template.lastProvisionedTime());
         assertEquals("Workflow [userParams={key=value}, nodes=[A, B], edges=[A->B]]", wfX.toString());
     }
 
