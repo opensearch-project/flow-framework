@@ -41,6 +41,7 @@ public class TemplateTests extends OpenSearchTestCase {
         Workflow workflow = new Workflow(Map.of("key", "value"), nodes, edges);
         Map<String, Object> uiMetadata = null;
 
+        Instant now = Instant.now();
         Template template = new Template(
             "test",
             "a test template",
@@ -50,8 +51,8 @@ public class TemplateTests extends OpenSearchTestCase {
             Map.of("workflow", workflow),
             uiMetadata,
             null,
-            null,
-            null,
+            now,
+            now,
             null
         );
 
@@ -63,9 +64,8 @@ public class TemplateTests extends OpenSearchTestCase {
         assertEquals(uiMetadata, template.getUiMetadata());
         Workflow wf = template.workflows().get("workflow");
         assertNotNull(wf);
-        assertTrue(template.createdTime().isAfter(Instant.now().minusSeconds(10)));
-        assertFalse(template.createdTime().isAfter(Instant.now()));
-        assertEquals(template.createdTime(), template.lastUpdatedTime());
+        assertEquals(now, template.createdTime());
+        assertEquals(now, template.lastUpdatedTime());
         assertNull(template.lastProvisionedTime());
         assertEquals("Workflow [userParams={key=value}, nodes=[A, B], edges=[A->B]]", wf.toString());
 
@@ -80,9 +80,8 @@ public class TemplateTests extends OpenSearchTestCase {
         assertEquals(uiMetadata, templateX.getUiMetadata());
         Workflow wfX = templateX.workflows().get("workflow");
         assertNotNull(wfX);
-        assertTrue(template.createdTime().isAfter(Instant.now().minusSeconds(10)));
-        assertFalse(template.createdTime().isAfter(Instant.now()));
-        assertEquals(template.createdTime(), template.lastUpdatedTime());
+        assertEquals(now, template.createdTime());
+        assertEquals(now, template.lastUpdatedTime());
         assertNull(template.lastProvisionedTime());
         assertEquals("Workflow [userParams={key=value}, nodes=[A, B], edges=[A->B]]", wfX.toString());
     }

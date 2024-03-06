@@ -96,6 +96,7 @@ public class CreateWorkflowTransportAction extends HandledTransportAction<Workfl
     protected void doExecute(Task task, WorkflowRequest request, ActionListener<WorkflowResponse> listener) {
 
         User user = getUserContext(client);
+        Instant creationTime = Instant.now();
         Template templateWithUser = new Template(
             request.getTemplate().name(),
             request.getTemplate().description(),
@@ -105,9 +106,9 @@ public class CreateWorkflowTransportAction extends HandledTransportAction<Workfl
             request.getTemplate().workflows(),
             request.getTemplate().getUiMetadata(),
             user,
-            request.getTemplate().createdTime(),
-            request.getTemplate().lastUpdatedTime(),
-            request.getTemplate().lastProvisionedTime()
+            creationTime,
+            creationTime,
+            null
         );
 
         String[] validateAll = { "all" };

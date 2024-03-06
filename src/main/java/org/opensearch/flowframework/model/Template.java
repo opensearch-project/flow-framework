@@ -101,8 +101,8 @@ public class Template implements ToXContentObject {
         this.workflows = Map.copyOf(workflows);
         this.uiMetadata = uiMetadata;
         this.user = user;
-        this.createdTime = createdTime == null ? Instant.now() : createdTime;
-        this.lastUpdatedTime = (lastUpdatedTime == null || lastUpdatedTime.isBefore(this.createdTime)) ? this.createdTime : lastUpdatedTime;
+        this.createdTime = createdTime;
+        this.lastUpdatedTime = lastUpdatedTime;
         this.lastProvisionedTime = lastProvisionedTime;
     }
 

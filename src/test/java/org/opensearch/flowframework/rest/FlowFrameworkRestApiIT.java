@@ -8,6 +8,7 @@
  */
 package org.opensearch.flowframework.rest;
 
+import org.apache.hc.core5.http.io.entity.EntityUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.opensearch.action.search.SearchResponse;
@@ -27,6 +28,8 @@ import org.opensearch.flowframework.model.WorkflowState;
 import org.junit.Before;
 import org.junit.ComparisonFailure;
 
+import java.nio.charset.StandardCharsets;
+import java.time.Instant;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
@@ -313,4 +316,48 @@ public class FlowFrameworkRestApiIT extends FlowFrameworkRestTestCase {
         assertEquals(RestStatus.OK, TestHelpers.restStatus(deleteResponse));
     }
 
+    public void testTimestamps() throws Exception {
+        Template noopTemplate = TestHelpers.createTemplateFromFile("noop.json");
+        // Create the template, should have created and updated matching
+        Response response = createWorkflow(client(), noopTemplate);
+        Map<String, Object> responseMap = entityAsMap(response);
+        String workflowId = (String) responseMap.get(WORKFLOW_ID);
+        assertNotNull(workflowId);
+
+        response = getWorkflow(client(), workflowId);
+        assertEquals(RestStatus.OK.getStatus(), response.getStatusLine().getStatusCode());
+        Template t = Template.parse(EntityUtils.toString(response.getEntity(), StandardCharsets.UTF_8));
+        Instant createdTime = t.createdTime();
+        Instant lastUpdatedTime = t.lastUpdatedTime();
+        assertNotNull(createdTime);
+        assertEquals(createdTime, lastUpdatedTime);
+        assertNull(t.lastProvisionedTime());
+
+        // Update the template, should have created same as before and updated newer
+        response = updateWorkflow(client(), workflowId, noopTemplate);
+        assertEquals(RestStatus.CREATED.getStatus(), response.getStatusLine().getStatusCode());
+
+        response = getWorkflow(client(), workflowId);
+        assertEquals(RestStatus.OK.getStatus(), response.getStatusLine().getStatusCode());
+        t = Template.parse(EntityUtils.toString(response.getEntity(), StandardCharsets.UTF_8));
+        assertEquals(createdTime, t.createdTime());
+        assertTrue(t.lastUpdatedTime().isAfter(lastUpdatedTime));
+        lastUpdatedTime = t.lastUpdatedTime();
+        assertNull(t.lastProvisionedTime());
+
+        // Provision the template, should have created and updated same as before and provisioned newer
+        response = provisionWorkflow(client(), workflowId);
+        assertEquals(RestStatus.OK.getStatus(), response.getStatusLine().getStatusCode());
+
+        response = getWorkflow(client(), workflowId);
+        assertEquals(RestStatus.OK.getStatus(), response.getStatusLine().getStatusCode());
+        t = Template.parse(EntityUtils.toString(response.getEntity(), StandardCharsets.UTF_8));
+        assertEquals(createdTime, t.createdTime());
+        assertEquals(lastUpdatedTime, t.lastUpdatedTime());
+        assertTrue(t.lastProvisionedTime().isAfter(lastUpdatedTime));
+
+        // Clean up
+        response = deleteWorkflow(client(), workflowId);
+        assertEquals(RestStatus.OK.getStatus(), response.getStatusLine().getStatusCode());
+    }
 }
