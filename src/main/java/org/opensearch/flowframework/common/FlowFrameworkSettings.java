@@ -62,7 +62,7 @@ public class FlowFrameworkSettings {
     /** This setting enables/disables the Flow Framework REST API */
     public static final Setting<Boolean> FLOW_FRAMEWORK_ENABLED = Setting.boolSetting(
         "plugins.flow_framework.enabled",
-        false,
+        true,
         Setting.Property.NodeScope,
         Setting.Property.Dynamic
     );
