@@ -102,29 +102,29 @@ public class FlowFrameworkBackwardsCompatibilityIT extends OpenSearchRestTestCas
 
     @SuppressWarnings("unchecked")
     public void testBackwardsCompatibility() throws Exception {
+        // This iteration of nodes is only to get plugins installed on each node. We don't currently use its functionality but in case we
+        // ever need version-based dependencies in future BWC tests it will be needed. It's directly copied from similar implementations
+        // in other plugins.
         String uri = getUri();
         Map<String, Map<String, Object>> responseMap = (Map<String, Map<String, Object>>) getAsMap(uri).get("nodes");
         for (Map<String, Object> response : responseMap.values()) {
             List<Map<String, Object>> plugins = (List<Map<String, Object>>) response.get("plugins");
             Set<Object> pluginNames = plugins.stream().map(map -> map.get("name")).collect(Collectors.toSet());
+            assertTrue(pluginNames.contains("opensearch-flow-framework"));
             String workflowId = createNoopTemplate();
             Template t = getTemplate(workflowId);
             switch (CLUSTER_TYPE) {
                 case OLD:
-                    assertTrue(pluginNames.contains("opensearch-flow-framework"));
                     // mapping for 2.12 does not include time stamps
                     assertNull(t.createdTime());
                     assertNull(t.lastUpdatedTime());
                     assertNull(t.lastProvisionedTime());
                     break;
                 case MIXED:
-                    assertTrue(pluginNames.contains("opensearch-flow-framework"));
                     // Time stamps may or may not be null depending on whether index has been accessed by new version node
-                    // So just test that the template parses
                     assertNull(t.lastProvisionedTime());
                     break;
                 case UPGRADED:
-                    assertTrue(pluginNames.contains("opensearch-flow-framework"));
                     // mapping for 2.13+ includes time stamps
                     assertNotNull(t.createdTime());
                     assertEquals(t.createdTime(), t.lastUpdatedTime());
