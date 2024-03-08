@@ -52,7 +52,7 @@ public class CommonValue {
     public static final String CREATED_TIME = "created_time";
     /** The last updated time field */
     public static final String LAST_UPDATED_TIME_FIELD = "last_updated_time";
-    /** The last updated time field */
+    /** The last provisioned time field */
     public static final String LAST_PROVISIONED_TIME_FIELD = "last_provisioned_time";
 
     /*

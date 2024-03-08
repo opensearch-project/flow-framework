@@ -131,15 +131,7 @@ public class FlowFrameworkRestApiIT extends FlowFrameworkRestTestCase {
             )
             .collect(Collectors.toList());
         Workflow missingInputs = new Workflow(originalWorkflow.userParams(), modifiednodes, originalWorkflow.edges());
-        Template templateWithMissingInputs = new Template.Builder().name(template.name())
-            .description(template.description())
-            .useCase(template.useCase())
-            .templateVersion(template.templateVersion())
-            .compatibilityVersion(template.compatibilityVersion())
-            .workflows(Map.of(PROVISION_WORKFLOW, missingInputs))
-            .uiMetadata(template.getUiMetadata())
-            .user(template.getUser())
-            .build();
+        Template templateWithMissingInputs = new Template.Builder(template).workflows(Map.of(PROVISION_WORKFLOW, missingInputs)).build();
 
         // Hit Create Workflow API with invalid template
         Response response = createWorkflow(client(), templateWithMissingInputs);
@@ -191,15 +183,7 @@ public class FlowFrameworkRestApiIT extends FlowFrameworkRestTestCase {
             List.of(new WorkflowEdge("workflow_step_2", "workflow_step_3"), new WorkflowEdge("workflow_step_3", "workflow_step_2"))
         );
 
-        Template cyclicalTemplate = new Template.Builder().name(template.name())
-            .description(template.description())
-            .useCase(template.useCase())
-            .templateVersion(template.templateVersion())
-            .compatibilityVersion(template.compatibilityVersion())
-            .workflows(Map.of(PROVISION_WORKFLOW, cyclicalWorkflow))
-            .uiMetadata(template.getUiMetadata())
-            .user(template.getUser())
-            .build();
+        Template cyclicalTemplate = new Template.Builder(template).workflows(Map.of(PROVISION_WORKFLOW, cyclicalWorkflow)).build();
 
         // Hit dry run
         ResponseException exception = expectThrows(ResponseException.class, () -> createWorkflowValidation(client(), cyclicalTemplate));

@@ -240,15 +240,7 @@ public class CreateWorkflowTransportAction extends HandledTransportAction<Workfl
                     if (getResponse.isExists()) {
                         Template existingTemplate = Template.parse(getResponse.getSourceAsString());
                         // Update existing entry, full document replacement
-                        Template template = new Template.Builder().name(templateWithUser.name())
-                            .description(templateWithUser.description())
-                            .useCase(templateWithUser.useCase())
-                            .templateVersion(templateWithUser.templateVersion())
-                            .compatibilityVersion(templateWithUser.compatibilityVersion())
-                            .workflows(templateWithUser.workflows())
-                            .uiMetadata(templateWithUser.getUiMetadata())
-                            .user(templateWithUser.getUser()) // Should we care about old user here?
-                            .createdTime(existingTemplate.createdTime())
+                        Template template = new Template.Builder(templateWithUser).createdTime(existingTemplate.createdTime())
                             .lastUpdatedTime(Instant.now())
                             .lastProvisionedTime(existingTemplate.lastProvisionedTime())
                             .build();

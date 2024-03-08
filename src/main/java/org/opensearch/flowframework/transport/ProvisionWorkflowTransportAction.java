@@ -147,18 +147,7 @@ public class ProvisionWorkflowTransportAction extends HandledTransportAction<Wor
                                 logger.info("updated workflow {} state to {}", request.getWorkflowId(), State.PROVISIONING);
                                 executeWorkflowAsync(workflowId, provisionProcessSequence, listener);
                                 // update last provisioned field in template
-                                Template newTemplate = new Template.Builder().name(template.name())
-                                    .description(template.description())
-                                    .useCase(template.useCase())
-                                    .templateVersion(template.templateVersion())
-                                    .compatibilityVersion(template.compatibilityVersion())
-                                    .workflows(template.workflows())
-                                    .uiMetadata(template.getUiMetadata())
-                                    .user(template.getUser()) // Should we care about old user here?
-                                    .createdTime(template.createdTime())
-                                    .lastUpdatedTime(template.lastUpdatedTime())
-                                    .lastProvisionedTime(Instant.now())
-                                    .build();
+                                Template newTemplate = new Template.Builder(template).lastProvisionedTime(Instant.now()).build();
                                 flowFrameworkIndicesHandler.updateTemplateInGlobalContext(
                                     request.getWorkflowId(),
                                     newTemplate,

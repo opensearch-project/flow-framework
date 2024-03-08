@@ -159,18 +159,7 @@ public class EncryptorUtils {
             processedWorkflows.put(entry.getKey(), new Workflow(entry.getValue().userParams(), processedNodes, entry.getValue().edges()));
         }
 
-        return new Template.Builder().name(template.name())
-            .description(template.description())
-            .useCase(template.useCase())
-            .templateVersion(template.templateVersion())
-            .compatibilityVersion(template.compatibilityVersion())
-            .workflows(processedWorkflows)
-            .uiMetadata(template.getUiMetadata())
-            .user(template.getUser())
-            .createdTime(template.createdTime())
-            .lastUpdatedTime(template.lastUpdatedTime())
-            .lastProvisionedTime(template.lastProvisionedTime())
-            .build();
+        return new Template.Builder(template).workflows(processedWorkflows).build();
     }
 
     /**
@@ -238,18 +227,7 @@ public class EncryptorUtils {
             processedWorkflows.put(entry.getKey(), new Workflow(entry.getValue().userParams(), processedNodes, entry.getValue().edges()));
         }
 
-        return new Template.Builder().name(template.name())
-            .description(template.description())
-            .useCase(template.useCase())
-            .templateVersion(template.templateVersion())
-            .compatibilityVersion(template.compatibilityVersion())
-            .workflows(processedWorkflows)
-            .uiMetadata(template.getUiMetadata())
-            .user(template.getUser())
-            .createdTime(template.createdTime())
-            .lastUpdatedTime(template.lastUpdatedTime())
-            .lastProvisionedTime(template.lastProvisionedTime())
-            .build();
+        return new Template.Builder(template).workflows(processedWorkflows).build();
     }
 
     /**

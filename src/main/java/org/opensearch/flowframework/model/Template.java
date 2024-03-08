@@ -24,6 +24,7 @@ import org.opensearch.flowframework.util.ParseUtils;
 import java.io.IOException;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -114,8 +115,8 @@ public class Template implements ToXContentObject {
         private String description = "";
         private String useCase = "";
         private Version templateVersion = null;
-        private List<Version> compatibilityVersion = new ArrayList<>();
-        private Map<String, Workflow> workflows = new HashMap<>();
+        private List<Version> compatibilityVersion = Collections.emptyList();
+        private Map<String, Workflow> workflows = Collections.emptyMap();
         private Map<String, Object> uiMetadata = null;
         private User user = null;
         private Instant createdTime = null;
@@ -126,6 +127,30 @@ public class Template implements ToXContentObject {
          * Empty Constructor for the Builder object
          */
         public Builder() {}
+
+        /**
+         * Construct a Builder from an existing template
+         * @param t The existing template to copy
+         */
+        public Builder(Template t) {
+            this.name = t.name();
+            this.description = t.description();
+            this.useCase = t.useCase();
+            this.templateVersion = t.templateVersion;
+            if (t.compatibilityVersion() != null) {
+                this.compatibilityVersion = List.copyOf(t.compatibilityVersion());
+            }
+            if (t.workflows() != null) {
+                this.workflows = Map.copyOf(t.workflows());
+            }
+            if (t.getUiMetadata() != null) {
+                this.uiMetadata = Map.copyOf(t.getUiMetadata());
+            }
+            this.user = t.getUser();
+            this.createdTime = t.createdTime();
+            this.lastUpdatedTime = t.lastUpdatedTime();
+            this.lastProvisionedTime = t.lastProvisionedTime();
+        }
 
         /**
          * Builder method for adding template name
