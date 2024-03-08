@@ -58,7 +58,7 @@ public class FlowFrameworkSettingsTests extends OpenSearchTestCase {
     }
 
     public void testSettings() throws IOException {
-        assertFalse(flowFrameworkSettings.isFlowFrameworkEnabled());
+        assertTrue(flowFrameworkSettings.isFlowFrameworkEnabled());
         assertEquals(Optional.of(TimeValue.timeValueSeconds(5)), Optional.ofNullable(flowFrameworkSettings.getRetryDuration()));
         assertEquals(Optional.of(50), Optional.ofNullable(flowFrameworkSettings.getMaxWorkflowSteps()));
         assertEquals(Optional.of(1000), Optional.ofNullable(flowFrameworkSettings.getMaxWorkflows()));
