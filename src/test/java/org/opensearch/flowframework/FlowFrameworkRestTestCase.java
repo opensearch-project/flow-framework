@@ -76,19 +76,8 @@ public abstract class FlowFrameworkRestTestCase extends OpenSearchRestTestCase {
     @Before
     protected void setUpSettings() throws Exception {
 
-        // Enable Flow Framework Plugin Rest APIs
-        Response response = TestHelpers.makeRequest(
-            client(),
-            "PUT",
-            "_cluster/settings",
-            null,
-            "{\"transient\":{\"plugins.flow_framework.enabled\":true}}",
-            List.of(new BasicHeader(HttpHeaders.USER_AGENT, ""))
-        );
-        assertEquals(200, response.getStatusLine().getStatusCode());
-
         // Enable ML Commons to run on non-ml nodes
-        response = TestHelpers.makeRequest(
+        Response response = TestHelpers.makeRequest(
             client(),
             "PUT",
             "_cluster/settings",
