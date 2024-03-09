@@ -118,10 +118,10 @@ public class ProvisionWorkflowTransportAction extends HandledTransportAction<Wor
                 }
 
                 // Parse template from document source
-                Template template = Template.parse(response.getSourceAsString());
+                Template parsedTemplate = Template.parse(response.getSourceAsString());
 
                 // Decrypt template
-                template = encryptorUtils.decryptTemplateCredentials(template);
+                final Template template = encryptorUtils.decryptTemplateCredentials(parsedTemplate);
 
                 // Sort and validate graph
                 Workflow provisionWorkflow = template.workflows().get(PROVISION_WORKFLOW);
@@ -134,6 +134,7 @@ public class ProvisionWorkflowTransportAction extends HandledTransportAction<Wor
 
                 flowFrameworkIndicesHandler.isWorkflowNotStarted(workflowId, workflowIsNotStarted -> {
                     if (TRUE.equals(workflowIsNotStarted)) {
+                        // update state index
                         flowFrameworkIndicesHandler.updateFlowFrameworkSystemIndexDoc(
                             workflowId,
                             Map.ofEntries(
@@ -145,7 +146,27 @@ public class ProvisionWorkflowTransportAction extends HandledTransportAction<Wor
                             ActionListener.wrap(updateResponse -> {
                                 logger.info("updated workflow {} state to {}", request.getWorkflowId(), State.PROVISIONING);
                                 executeWorkflowAsync(workflowId, provisionProcessSequence, listener);
-                                listener.onResponse(new WorkflowResponse(workflowId));
+                                // update last provisioned field in template
+                                Template newTemplate = new Template.Builder(template).lastProvisionedTime(Instant.now()).build();
+                                flowFrameworkIndicesHandler.updateTemplateInGlobalContext(
+                                    request.getWorkflowId(),
+                                    newTemplate,
+                                    ActionListener.wrap(templateResponse -> {
+                                        listener.onResponse(new WorkflowResponse(request.getWorkflowId()));
+                                    }, exception -> {
+                                        String errorMessage = "Failed to update use case template " + request.getWorkflowId();
+                                        logger.error(errorMessage, exception);
+                                        if (exception instanceof FlowFrameworkException) {
+                                            listener.onFailure(exception);
+                                        } else {
+                                            listener.onFailure(
+                                                new FlowFrameworkException(errorMessage, ExceptionsHelper.status(exception))
+                                            );
+                                        }
+                                    }),
+                                    // We've already checked workflow is not started, ignore second check
+                                    true
+                                );
                             }, exception -> {
                                 String errorMessage = "Failed to update workflow state: " + workflowId;
                                 logger.error(errorMessage, exception);
