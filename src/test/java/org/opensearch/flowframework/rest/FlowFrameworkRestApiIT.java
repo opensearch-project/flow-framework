@@ -8,6 +8,7 @@
  */
 package org.opensearch.flowframework.rest;
 
+import org.apache.hc.core5.http.io.entity.EntityUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.opensearch.action.search.SearchResponse;
@@ -27,6 +28,8 @@ import org.opensearch.flowframework.model.WorkflowState;
 import org.junit.Before;
 import org.junit.ComparisonFailure;
 
+import java.nio.charset.StandardCharsets;
+import java.time.Instant;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
@@ -80,7 +83,7 @@ public class FlowFrameworkRestApiIT extends FlowFrameworkRestTestCase {
         Template template = TestHelpers.createTemplateFromFile("createconnector-registerremotemodel-deploymodel.json");
 
         ResponseException exception = expectThrows(ResponseException.class, () -> updateWorkflow(client(), "123", template));
-        assertTrue(exception.getMessage().contains("Failed to get template: 123"));
+        assertTrue(exception.getMessage().contains("Failed to retrieve template (123) from global context."));
 
         Response response = createWorkflow(client(), template);
         assertEquals(RestStatus.CREATED, TestHelpers.restStatus(response));
@@ -128,15 +131,7 @@ public class FlowFrameworkRestApiIT extends FlowFrameworkRestTestCase {
             )
             .collect(Collectors.toList());
         Workflow missingInputs = new Workflow(originalWorkflow.userParams(), modifiednodes, originalWorkflow.edges());
-        Template templateWithMissingInputs = new Template.Builder().name(template.name())
-            .description(template.description())
-            .useCase(template.useCase())
-            .templateVersion(template.templateVersion())
-            .compatibilityVersion(template.compatibilityVersion())
-            .workflows(Map.of(PROVISION_WORKFLOW, missingInputs))
-            .uiMetadata(template.getUiMetadata())
-            .user(template.getUser())
-            .build();
+        Template templateWithMissingInputs = new Template.Builder(template).workflows(Map.of(PROVISION_WORKFLOW, missingInputs)).build();
 
         // Hit Create Workflow API with invalid template
         Response response = createWorkflow(client(), templateWithMissingInputs);
@@ -188,15 +183,7 @@ public class FlowFrameworkRestApiIT extends FlowFrameworkRestTestCase {
             List.of(new WorkflowEdge("workflow_step_2", "workflow_step_3"), new WorkflowEdge("workflow_step_3", "workflow_step_2"))
         );
 
-        Template cyclicalTemplate = new Template.Builder().name(template.name())
-            .description(template.description())
-            .useCase(template.useCase())
-            .templateVersion(template.templateVersion())
-            .compatibilityVersion(template.compatibilityVersion())
-            .workflows(Map.of(PROVISION_WORKFLOW, cyclicalWorkflow))
-            .uiMetadata(template.getUiMetadata())
-            .user(template.getUser())
-            .build();
+        Template cyclicalTemplate = new Template.Builder(template).workflows(Map.of(PROVISION_WORKFLOW, cyclicalWorkflow)).build();
 
         // Hit dry run
         ResponseException exception = expectThrows(ResponseException.class, () -> createWorkflowValidation(client(), cyclicalTemplate));
@@ -313,4 +300,48 @@ public class FlowFrameworkRestApiIT extends FlowFrameworkRestTestCase {
         assertEquals(RestStatus.OK, TestHelpers.restStatus(deleteResponse));
     }
 
+    public void testTimestamps() throws Exception {
+        Template noopTemplate = TestHelpers.createTemplateFromFile("noop.json");
+        // Create the template, should have created and updated matching
+        Response response = createWorkflow(client(), noopTemplate);
+        Map<String, Object> responseMap = entityAsMap(response);
+        String workflowId = (String) responseMap.get(WORKFLOW_ID);
+        assertNotNull(workflowId);
+
+        response = getWorkflow(client(), workflowId);
+        assertEquals(RestStatus.OK.getStatus(), response.getStatusLine().getStatusCode());
+        Template t = Template.parse(EntityUtils.toString(response.getEntity(), StandardCharsets.UTF_8));
+        Instant createdTime = t.createdTime();
+        Instant lastUpdatedTime = t.lastUpdatedTime();
+        assertNotNull(createdTime);
+        assertEquals(createdTime, lastUpdatedTime);
+        assertNull(t.lastProvisionedTime());
+
+        // Update the template, should have created same as before and updated newer
+        response = updateWorkflow(client(), workflowId, noopTemplate);
+        assertEquals(RestStatus.CREATED.getStatus(), response.getStatusLine().getStatusCode());
+
+        response = getWorkflow(client(), workflowId);
+        assertEquals(RestStatus.OK.getStatus(), response.getStatusLine().getStatusCode());
+        t = Template.parse(EntityUtils.toString(response.getEntity(), StandardCharsets.UTF_8));
+        assertEquals(createdTime, t.createdTime());
+        assertTrue(t.lastUpdatedTime().isAfter(lastUpdatedTime));
+        lastUpdatedTime = t.lastUpdatedTime();
+        assertNull(t.lastProvisionedTime());
+
+        // Provision the template, should have created and updated same as before and provisioned newer
+        response = provisionWorkflow(client(), workflowId);
+        assertEquals(RestStatus.OK.getStatus(), response.getStatusLine().getStatusCode());
+
+        response = getWorkflow(client(), workflowId);
+        assertEquals(RestStatus.OK.getStatus(), response.getStatusLine().getStatusCode());
+        t = Template.parse(EntityUtils.toString(response.getEntity(), StandardCharsets.UTF_8));
+        assertEquals(createdTime, t.createdTime());
+        assertEquals(lastUpdatedTime, t.lastUpdatedTime());
+        assertTrue(t.lastProvisionedTime().isAfter(lastUpdatedTime));
+
+        // Clean up
+        response = deleteWorkflow(client(), workflowId);
+        assertEquals(RestStatus.OK.getStatus(), response.getStatusLine().getStatusCode());
+    }
 }

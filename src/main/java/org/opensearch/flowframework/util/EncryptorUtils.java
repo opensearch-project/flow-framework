@@ -126,8 +126,6 @@ public class EncryptorUtils {
      * @return template with encrypted credentials
      */
     private Template processTemplateCredentials(Template template, Function<String, String> cipherFunction) {
-        Template.Builder processedTemplateBuilder = new Template.Builder();
-
         Map<String, Workflow> processedWorkflows = new HashMap<>();
         for (Map.Entry<String, Workflow> entry : template.workflows().entrySet()) {
 
@@ -161,17 +159,7 @@ public class EncryptorUtils {
             processedWorkflows.put(entry.getKey(), new Workflow(entry.getValue().userParams(), processedNodes, entry.getValue().edges()));
         }
 
-        Template processedTemplate = processedTemplateBuilder.name(template.name())
-            .description(template.description())
-            .useCase(template.useCase())
-            .templateVersion(template.templateVersion())
-            .compatibilityVersion(template.compatibilityVersion())
-            .workflows(processedWorkflows)
-            .uiMetadata(template.getUiMetadata())
-            .user(template.getUser())
-            .build();
-
-        return processedTemplate;
+        return new Template.Builder(template).workflows(processedWorkflows).build();
     }
 
     /**
@@ -217,8 +205,6 @@ public class EncryptorUtils {
      * @return the redacted template
      */
     public Template redactTemplateCredentials(Template template) {
-        Template.Builder redactedTemplateBuilder = new Template.Builder();
-
         Map<String, Workflow> processedWorkflows = new HashMap<>();
         for (Map.Entry<String, Workflow> entry : template.workflows().entrySet()) {
 
@@ -241,17 +227,7 @@ public class EncryptorUtils {
             processedWorkflows.put(entry.getKey(), new Workflow(entry.getValue().userParams(), processedNodes, entry.getValue().edges()));
         }
 
-        Template processedTemplate = redactedTemplateBuilder.name(template.name())
-            .description(template.description())
-            .useCase(template.useCase())
-            .templateVersion(template.templateVersion())
-            .compatibilityVersion(template.compatibilityVersion())
-            .workflows(processedWorkflows)
-            .uiMetadata(template.getUiMetadata())
-            .user(template.getUser())
-            .build();
-
-        return processedTemplate;
+        return new Template.Builder(template).workflows(processedWorkflows).build();
     }
 
     /**

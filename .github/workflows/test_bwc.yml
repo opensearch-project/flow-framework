@@ -1,0 +1,45 @@
+name: BWC
+on:
+  push:
+    branches:
+      - "**"
+  pull_request:
+    branches:
+      - "**"
+
+jobs:
+  Build-ff-linux:
+    strategy:
+      matrix:
+        java: [11,17,21]
+      fail-fast: false
+
+    name: Test Flow Framework BWC
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Setup Java ${{ matrix.java }}
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: ${{ matrix.java }}
+
+      - name: Checkout Flow Framework
+        uses: actions/checkout@v4
+
+      - name: Assemble Flow Framework
+        run: |
+          plugin_version=`./gradlew properties -q | grep "opensearch_build:" | awk '{print $2}'`
+          echo plugin_version $plugin_version
+          ./gradlew assemble
+          echo "Creating ./src/test/resources/org/opensearch/flowframework/bwc/flow-framework/$plugin_version ..."
+          mkdir -p ./src/test/resources/org/opensearch/flowframework/bwc/flow-framework/$plugin_version
+          echo "Copying ./build/distributions/*.zip to ./src/test/resources/org/opensearch/flowframework/bwc/flow-framework/$plugin_version ..."
+          ls ./build/distributions/
+          cp ./build/distributions/*.zip ./src/test/resources/org/opensearch/flowframework/bwc/flow-framework/$plugin_version
+          echo "Copied ./build/distributions/*.zip to ./src/test/resources/org/opensearch/flowframework/bwc/flow-framework/$plugin_version ..."
+          ls ./src/test/resources/org/opensearch/flowframework/bwc/flow-framework/$plugin_version
+      - name: Run Flow Framework Backwards Compatibility Tests
+        run: |
+          echo "Running backwards compatibility tests ..."
+          ./gradlew bwcTestSuite -Dtests.security.manager=false
