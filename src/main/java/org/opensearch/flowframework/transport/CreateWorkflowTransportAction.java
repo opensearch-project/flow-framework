@@ -158,7 +158,8 @@ public class CreateWorkflowTransportAction extends HandledTransportAction<Workfl
                                                 if (request.isProvision()) {
                                                     WorkflowRequest workflowRequest = new WorkflowRequest(
                                                         globalContextResponse.getId(),
-                                                        null
+                                                        null,
+                                                        request.getParams()
                                                     );
                                                     logger.info(
                                                         "Provisioning parameter is set, continuing to provision workflow {}",

@@ -123,8 +123,8 @@ public class WorkflowProcessSorter {
             ProcessNode processNode = new ProcessNode(
                 node.id(),
                 step,
-                params,
                 node.previousNodeInputs(),
+                params,
                 data,
                 predecessorNodes,
                 threadPool,
