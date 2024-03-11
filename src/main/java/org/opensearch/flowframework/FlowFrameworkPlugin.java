@@ -123,7 +123,8 @@ public class FlowFrameworkPlugin extends Plugin implements ActionPlugin {
             threadPool,
             mlClient,
             flowFrameworkIndicesHandler,
-            flowFrameworkSettings
+            flowFrameworkSettings,
+            client
         );
         WorkflowProcessSorter workflowProcessSorter = new WorkflowProcessSorter(
             workflowStepFactory,
