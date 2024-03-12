@@ -11,6 +11,7 @@ package org.opensearch.flowframework.rest;
 import org.apache.hc.core5.http.io.entity.EntityUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.opensearch.action.ingest.GetPipelineResponse;
 import org.opensearch.action.search.SearchResponse;
 import org.opensearch.client.Response;
 import org.opensearch.client.ResponseException;
@@ -344,4 +345,50 @@ public class FlowFrameworkRestApiIT extends FlowFrameworkRestTestCase {
         response = deleteWorkflow(client(), workflowId);
         assertEquals(RestStatus.OK.getStatus(), response.getStatusLine().getStatusCode());
     }
+
+    public void testCreateAndProvisionIngestPipeline() throws Exception {
+
+        // Using a 3 step template to create a connector, register remote model and deploy model
+        Template template = TestHelpers.createTemplateFromFile("ingest-pipeline-template.json");
+
+        // Hit Create Workflow API with original template
+        Response response = createWorkflow(client(), template);
+        assertEquals(RestStatus.CREATED, TestHelpers.restStatus(response));
+
+        Map<String, Object> responseMap = entityAsMap(response);
+        String workflowId = (String) responseMap.get(WORKFLOW_ID);
+        getAndAssertWorkflowStatus(client(), workflowId, State.NOT_STARTED, ProvisioningProgress.NOT_STARTED);
+
+        // Ensure Ml config index is initialized as creating a connector requires this, then hit Provision API and assert status
+        if (!indexExistsWithAdminClient(".plugins-ml-config")) {
+            assertBusy(() -> assertTrue(indexExistsWithAdminClient(".plugins-ml-config")), 40, TimeUnit.SECONDS);
+            response = provisionWorkflow(client(), workflowId);
+        } else {
+            response = provisionWorkflow(client(), workflowId);
+        }
+
+        assertEquals(RestStatus.OK, TestHelpers.restStatus(response));
+        getAndAssertWorkflowStatus(client(), workflowId, State.PROVISIONING, ProvisioningProgress.IN_PROGRESS);
+
+        // Wait until provisioning has completed successfully before attempting to retrieve created resources
+        List<ResourceCreated> resourcesCreated = getResourcesCreated(client(), workflowId, 30);
+
+        // This template should create 4 resources, connector_id, registered model_id, deployed model_id and pipelineId
+        assertEquals(4, resourcesCreated.size());
+        assertEquals("create_connector", resourcesCreated.get(0).workflowStepName());
+        assertNotNull(resourcesCreated.get(0).resourceId());
+        assertEquals("register_remote_model", resourcesCreated.get(1).workflowStepName());
+        assertNotNull(resourcesCreated.get(1).resourceId());
+        assertEquals("deploy_model", resourcesCreated.get(2).workflowStepName());
+        assertNotNull(resourcesCreated.get(2).resourceId());
+        assertEquals("create_ingest_pipeline", resourcesCreated.get(3).workflowStepName());
+        assertNotNull(resourcesCreated.get(3).resourceId());
+        String modelId = resourcesCreated.get(2).resourceId();
+
+        GetPipelineResponse getPipelinesResponse = getPipelines();
+
+        assertTrue(getPipelinesResponse.pipelines().get(0).toString().contains(modelId));
+
+    }
+
 }

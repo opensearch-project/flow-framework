@@ -24,6 +24,7 @@ import org.apache.hc.core5.http.nio.ssl.TlsStrategy;
 import org.apache.hc.core5.reactor.ssl.TlsDetails;
 import org.apache.hc.core5.ssl.SSLContextBuilder;
 import org.apache.hc.core5.util.Timeout;
+import org.opensearch.action.ingest.GetPipelineResponse;
 import org.opensearch.action.search.SearchResponse;
 import org.opensearch.client.Request;
 import org.opensearch.client.Response;
@@ -44,6 +45,7 @@ import org.opensearch.flowframework.model.ResourceCreated;
 import org.opensearch.flowframework.model.State;
 import org.opensearch.flowframework.model.Template;
 import org.opensearch.flowframework.model.WorkflowState;
+import org.opensearch.ml.repackage.com.google.common.collect.ImmutableList;
 import org.opensearch.test.rest.OpenSearchRestTestCase;
 import org.junit.After;
 import org.junit.Before;
@@ -647,5 +649,29 @@ public abstract class FlowFrameworkRestTestCase extends OpenSearchRestTestCase {
             "",
             List.of(new BasicHeader(HttpHeaders.USER_AGENT, "Kibana"))
         );
+    }
+
+    protected GetPipelineResponse getPipelines() throws IOException {
+        Response getPipelinesResponse = TestHelpers.makeRequest(
+            client(),
+            "GET",
+            "_ingest/pipeline",
+            null,
+            "",
+            ImmutableList.of(new BasicHeader(HttpHeaders.USER_AGENT, ""))
+        );
+
+        // Parse entity content into SearchResponse
+        MediaType mediaType = MediaType.fromMediaType(getPipelinesResponse.getEntity().getContentType());
+        try (
+            XContentParser parser = mediaType.xContent()
+                .createParser(
+                    NamedXContentRegistry.EMPTY,
+                    DeprecationHandler.THROW_UNSUPPORTED_OPERATION,
+                    getPipelinesResponse.getEntity().getContent()
+                )
+        ) {
+            return GetPipelineResponse.fromXContent(parser);
+        }
     }
 }

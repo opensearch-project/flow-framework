@@ -20,7 +20,6 @@ import org.opensearch.common.xcontent.XContentType;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.core.common.bytes.BytesArray;
 import org.opensearch.core.common.bytes.BytesReference;
-import org.opensearch.core.rest.RestStatus;
 import org.opensearch.flowframework.exception.FlowFrameworkException;
 import org.opensearch.flowframework.indices.FlowFrameworkIndicesHandler;
 import org.opensearch.flowframework.util.ParseUtils;
@@ -28,8 +27,6 @@ import org.opensearch.flowframework.util.ParseUtils;
 import java.nio.charset.StandardCharsets;
 import java.util.Map;
 import java.util.Set;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 import static org.opensearch.flowframework.common.CommonValue.CONFIGURATIONS;
 import static org.opensearch.flowframework.common.WorkflowResources.MODEL_ID;
@@ -51,7 +48,7 @@ public class CreateIngestPipelineStep implements WorkflowStep {
     private final FlowFrameworkIndicesHandler flowFrameworkIndicesHandler;
 
     /**
-     * Instantiates a new CreateIngestPipelineStepDraft
+     * Instantiates a new CreateIngestPipelineStep
      * @param client The client to create a pipeline and store workflow data into the global context index
      * @param flowFrameworkIndicesHandler FlowFrameworkIndicesHandler class to update system indices
      */
@@ -71,58 +68,6 @@ public class CreateIngestPipelineStep implements WorkflowStep {
 
         PlainActionFuture<WorkflowData> createIngestPipelineFuture = PlainActionFuture.newFuture();
 
-        ActionListener<AcknowledgedResponse> actionListener = new ActionListener<>() {
-
-            @Override
-            public void onResponse(AcknowledgedResponse acknowledgedResponse) {
-                String resourceName = getResourceByWorkflowStep(getName());
-                try {
-                    flowFrameworkIndicesHandler.updateResourceInStateIndex(
-                        currentNodeInputs.getWorkflowId(),
-                        currentNodeId,
-                        getName(),
-                        currentNodeInputs.getContent().get(PIPELINE_ID).toString(),
-                        ActionListener.wrap(updateResponse -> {
-                            logger.info("successfully updated resources created in state index: {}", updateResponse.getIndex());
-                            // PutPipelineRequest returns only an AcknowledgeResponse, returning pipelineId instead
-                            // TODO: revisit this concept of pipeline_id to be consistent with what makes most sense to end user here
-                            createIngestPipelineFuture.onResponse(
-                                new WorkflowData(
-                                    Map.of(resourceName, currentNodeInputs.getContent().get(PIPELINE_ID).toString()),
-                                    currentNodeInputs.getWorkflowId(),
-                                    currentNodeInputs.getNodeId()
-                                )
-                            );
-                        }, exception -> {
-                            String errorMessage = "Failed to update new created "
-                                + currentNodeId
-                                + " resource "
-                                + getName()
-                                + " id "
-                                + currentNodeInputs.getContent().get(PIPELINE_ID).toString();
-                            logger.error(errorMessage, exception);
-                            createIngestPipelineFuture.onFailure(
-                                new FlowFrameworkException(errorMessage, ExceptionsHelper.status(exception))
-                            );
-                        })
-                    );
-
-                } catch (Exception e) {
-                    String errorMessage = "Failed to parse and update new created resource";
-                    logger.error(errorMessage, e);
-                    createIngestPipelineFuture.onFailure(new FlowFrameworkException(errorMessage, ExceptionsHelper.status(e)));
-                }
-            }
-
-            @Override
-            public void onFailure(Exception e) {
-                String errorMessage = "Failed to create ingest pipeline";
-                logger.error(errorMessage, e);
-                createIngestPipelineFuture.onFailure(new FlowFrameworkException(errorMessage, ExceptionsHelper.status(e)));
-            }
-
-        };
-
         Set<String> requiredKeys = Set.of(PIPELINE_ID, CONFIGURATIONS);
 
         // currently, we are supporting an optional param of model ID into the various processors
@@ -141,39 +86,60 @@ public class CreateIngestPipelineStep implements WorkflowStep {
             String pipelineId = (String) inputs.get(PIPELINE_ID);
             String configurations = (String) inputs.get(CONFIGURATIONS);
 
-            // Regex to find patterns like ${{deploy_openai_model.model_id}}
-            // We currently support one previous node input that fits the pattern of (step.input_to_look_for)
-            Pattern pattern = Pattern.compile("\\$\\{\\{([\\w_]+)\\.([\\w_]+)\\}\\}");
-            Matcher matcher = pattern.matcher(configurations);
+            byte[] byteArr = configurations.getBytes(StandardCharsets.UTF_8);
+            BytesReference configurationsBytes = new BytesArray(byteArr);
 
-            StringBuffer result = new StringBuffer();
-            while (matcher.find()) {
-                // Params map contains params for previous node input (e.g: deploy_openai_model:model_id)
-                // Check first if the substitution is looking for the same key, value pair and if yes
-                // then replace it with the key value pair in the inputs map
-                if (params.containsKey(matcher.group(1)) && params.get(matcher.group(1)).equals(matcher.group(2))) {
-                    // Extract the key for the inputs (e.g., "model_id" from ${{deploy_openai_model.model_id}})
-                    String key = matcher.group(2);
-                    if (inputs.containsKey(key)) {
-                        // Replace the whole sequence with the value from the map
-                        matcher.appendReplacement(result, (String) inputs.get(key));
+            ActionListener<AcknowledgedResponse> actionListener = new ActionListener<>() {
+
+                @Override
+                public void onResponse(AcknowledgedResponse acknowledgedResponse) {
+                    String resourceName = getResourceByWorkflowStep(getName());
+                    try {
+                        flowFrameworkIndicesHandler.updateResourceInStateIndex(
+                            currentNodeInputs.getWorkflowId(),
+                            currentNodeId,
+                            getName(),
+                            pipelineId,
+                            ActionListener.wrap(updateResponse -> {
+                                logger.info("successfully updated resources created in state index: {}", updateResponse.getIndex());
+                                // PutPipelineRequest returns only an AcknowledgeResponse, saving pipelineId instead
+                                // TODO: revisit this concept of pipeline_id to be consistent with what makes most sense to end user here
+                                createIngestPipelineFuture.onResponse(
+                                    new WorkflowData(
+                                        Map.of(resourceName, pipelineId),
+                                        currentNodeInputs.getWorkflowId(),
+                                        currentNodeInputs.getNodeId()
+                                    )
+                                );
+                            }, exception -> {
+                                String errorMessage = "Failed to update new created "
+                                    + currentNodeId
+                                    + " resource "
+                                    + getName()
+                                    + " id "
+                                    + pipelineId;
+                                logger.error(errorMessage, exception);
+                                createIngestPipelineFuture.onFailure(
+                                    new FlowFrameworkException(errorMessage, ExceptionsHelper.status(exception))
+                                );
+                            })
+                        );
+
+                    } catch (Exception e) {
+                        String errorMessage = "Failed to parse and update new created resource";
+                        logger.error(errorMessage, e);
+                        createIngestPipelineFuture.onFailure(new FlowFrameworkException(errorMessage, ExceptionsHelper.status(e)));
                     }
                 }
-            }
-            matcher.appendTail(result);
 
-            if (result == null || pipelineId == null) {
-                // Required workflow data not found
-                createIngestPipelineFuture.onFailure(
-                    new FlowFrameworkException(
-                        "Failed to create ingest pipeline for " + currentNodeId + ", required inputs not found",
-                        RestStatus.BAD_REQUEST
-                    )
-                );
-            }
+                @Override
+                public void onFailure(Exception e) {
+                    String errorMessage = "Failed to create ingest pipeline";
+                    logger.error(errorMessage, e);
+                    createIngestPipelineFuture.onFailure(new FlowFrameworkException(errorMessage, ExceptionsHelper.status(e)));
+                }
 
-            byte[] byteArr = result.toString().getBytes(StandardCharsets.UTF_8);
-            BytesReference configurationsBytes = new BytesArray(byteArr);
+            };
 
             // Create PutPipelineRequest and execute
             PutPipelineRequest putPipelineRequest = new PutPipelineRequest(pipelineId, configurationsBytes, XContentType.JSON);
