@@ -10,6 +10,7 @@ package org.opensearch.flowframework.workflow;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.opensearch.client.Client;
 import org.opensearch.common.unit.TimeValue;
 import org.opensearch.core.common.Strings;
 import org.opensearch.core.rest.RestStatus;
@@ -30,6 +31,7 @@ import java.util.Set;
 import java.util.function.Supplier;
 
 import static org.opensearch.flowframework.common.CommonValue.ACTIONS_FIELD;
+import static org.opensearch.flowframework.common.CommonValue.CONFIGURATIONS;
 import static org.opensearch.flowframework.common.CommonValue.CREDENTIAL_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.DESCRIPTION_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.EMBEDDING_DIMENSION;
@@ -42,6 +44,7 @@ import static org.opensearch.flowframework.common.CommonValue.MODEL_TYPE;
 import static org.opensearch.flowframework.common.CommonValue.NAME_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.OPENSEARCH_ML;
 import static org.opensearch.flowframework.common.CommonValue.PARAMETERS_FIELD;
+import static org.opensearch.flowframework.common.CommonValue.PIPELINE_ID;
 import static org.opensearch.flowframework.common.CommonValue.PROTOCOL_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.REGISTER_MODEL_STATUS;
 import static org.opensearch.flowframework.common.CommonValue.SUCCESS;
@@ -69,12 +72,14 @@ public class WorkflowStepFactory {
      * @param mlClient Machine Learning client to perform ml operations
      * @param flowFrameworkIndicesHandler FlowFrameworkIndicesHandler class to update system indices
      * @param flowFrameworkSettings common settings of the plugin
+     * @param client The OpenSearch Client
      */
     public WorkflowStepFactory(
         ThreadPool threadPool,
         MachineLearningNodeClient mlClient,
         FlowFrameworkIndicesHandler flowFrameworkIndicesHandler,
-        FlowFrameworkSettings flowFrameworkSettings
+        FlowFrameworkSettings flowFrameworkSettings,
+        Client client
     ) {
         stepMap.put(NoOpStep.NAME, NoOpStep::new);
         stepMap.put(
@@ -102,6 +107,7 @@ public class WorkflowStepFactory {
         stepMap.put(ToolStep.NAME, ToolStep::new);
         stepMap.put(RegisterAgentStep.NAME, () -> new RegisterAgentStep(mlClient, flowFrameworkIndicesHandler));
         stepMap.put(DeleteAgentStep.NAME, () -> new DeleteAgentStep(mlClient));
+        stepMap.put(CreateIngestPipelineStep.NAME, () -> new CreateIngestPipelineStep(client, flowFrameworkIndicesHandler));
     }
 
     /**
@@ -196,7 +202,16 @@ public class WorkflowStepFactory {
         DELETE_AGENT(DeleteAgentStep.NAME, List.of(AGENT_ID), List.of(AGENT_ID), List.of(OPENSEARCH_ML), null),
 
         /** Create Tool Step */
-        CREATE_TOOL(ToolStep.NAME, List.of(TYPE), List.of(TOOLS_FIELD), List.of(OPENSEARCH_ML), null);
+        CREATE_TOOL(ToolStep.NAME, List.of(TYPE), List.of(TOOLS_FIELD), List.of(OPENSEARCH_ML), null),
+
+        /** Create Ingest Pipeline Step */
+        CREATE_INGEST_PIPELINE(
+            CreateIngestPipelineStep.NAME,
+            List.of(PIPELINE_ID, CONFIGURATIONS),
+            List.of(PIPELINE_ID),
+            Collections.emptyList(),
+            null
+        );
 
         private final String workflowStepName;
         private final List<String> inputs;

@@ -15,37 +15,27 @@ import org.opensearch.action.ingest.PutPipelineRequest;
 import org.opensearch.action.support.PlainActionFuture;
 import org.opensearch.client.Client;
 import org.opensearch.client.ClusterAdminClient;
-import org.opensearch.common.xcontent.XContentFactory;
 import org.opensearch.common.xcontent.XContentType;
 import org.opensearch.core.action.ActionListener;
+import org.opensearch.core.common.bytes.BytesArray;
 import org.opensearch.core.common.bytes.BytesReference;
-import org.opensearch.core.rest.RestStatus;
-import org.opensearch.core.xcontent.XContentBuilder;
 import org.opensearch.flowframework.exception.FlowFrameworkException;
 import org.opensearch.flowframework.indices.FlowFrameworkIndicesHandler;
+import org.opensearch.flowframework.util.ParseUtils;
 
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
+import java.nio.charset.StandardCharsets;
 import java.util.Map;
-import java.util.Map.Entry;
-import java.util.stream.Stream;
+import java.util.Set;
 
-import static org.opensearch.flowframework.common.CommonValue.DESCRIPTION_FIELD;
-import static org.opensearch.flowframework.common.CommonValue.FIELD_MAP;
-import static org.opensearch.flowframework.common.CommonValue.ID;
-import static org.opensearch.flowframework.common.CommonValue.INPUT_FIELD_NAME;
-import static org.opensearch.flowframework.common.CommonValue.OUTPUT_FIELD_NAME;
-import static org.opensearch.flowframework.common.CommonValue.PROCESSORS;
-import static org.opensearch.flowframework.common.CommonValue.TYPE;
+import static org.opensearch.flowframework.common.CommonValue.CONFIGURATIONS;
 import static org.opensearch.flowframework.common.WorkflowResources.MODEL_ID;
+import static org.opensearch.flowframework.common.WorkflowResources.PIPELINE_ID;
 import static org.opensearch.flowframework.common.WorkflowResources.getResourceByWorkflowStep;
 
 /**
- * Workflow step to create an ingest pipeline
+ * Step to create an ingest pipeline
  */
 public class CreateIngestPipelineStep implements WorkflowStep {
-
     private static final Logger logger = LogManager.getLogger(CreateIngestPipelineStep.class);
 
     /** The name of this step, used as a key in the template and the {@link WorkflowStepFactory} */
@@ -77,93 +67,44 @@ public class CreateIngestPipelineStep implements WorkflowStep {
 
         PlainActionFuture<WorkflowData> createIngestPipelineFuture = PlainActionFuture.newFuture();
 
-        String pipelineId = null;
-        String description = null;
-        String type = null;
-        String modelId = null;
-        String inputFieldName = null;
-        String outputFieldName = null;
-        BytesReference configuration = null;
+        Set<String> requiredKeys = Set.of(PIPELINE_ID, CONFIGURATIONS);
 
-        // TODO: Recreating the list to get this compiling
-        // Need to refactor the below iteration to pull directly from the maps
-        List<WorkflowData> data = new ArrayList<>();
-        data.add(currentNodeInputs);
-        data.addAll(outputs.values());
+        // currently, we are supporting an optional param of model ID into the various processors
+        Set<String> optionalKeys = Set.of(MODEL_ID);
 
-        // Extract required content from workflow data and generate the ingest pipeline configuration
-        for (WorkflowData workflowData : data) {
-
-            Map<String, Object> content = workflowData.getContent();
-
-            for (Entry<String, Object> entry : content.entrySet()) {
-                switch (entry.getKey()) {
-                    case ID:
-                        pipelineId = (String) content.get(ID);
-                        break;
-                    case DESCRIPTION_FIELD:
-                        description = (String) content.get(DESCRIPTION_FIELD);
-                        break;
-                    case TYPE:
-                        type = (String) content.get(TYPE);
-                        break;
-                    case MODEL_ID:
-                        modelId = (String) content.get(MODEL_ID);
-                        break;
-                    case INPUT_FIELD_NAME:
-                        inputFieldName = (String) content.get(INPUT_FIELD_NAME);
-                        break;
-                    case OUTPUT_FIELD_NAME:
-                        outputFieldName = (String) content.get(OUTPUT_FIELD_NAME);
-                        break;
-                    default:
-                        break;
-                }
-            }
-
-            // Determine if fields have been populated, else iterate over remaining workflow data
-            if (Stream.of(pipelineId, description, modelId, type, inputFieldName, outputFieldName).allMatch(x -> x != null)) {
-                try {
-                    configuration = BytesReference.bytes(
-                        buildIngestPipelineRequestContent(description, modelId, type, inputFieldName, outputFieldName)
-                    );
-                } catch (IOException e) {
-                    String errorMessage = "Failed to create ingest pipeline configuration for " + currentNodeId;
-                    logger.error(errorMessage, e);
-                    createIngestPipelineFuture.onFailure(new FlowFrameworkException(errorMessage, ExceptionsHelper.status(e)));
-                }
-                break;
-            }
-        }
-
-        if (configuration == null) {
-            // Required workflow data not found
-            createIngestPipelineFuture.onFailure(
-                new FlowFrameworkException(
-                    "Failed to create ingest pipeline for " + currentNodeId + ", required inputs not found",
-                    RestStatus.BAD_REQUEST
-                )
+        try {
+            Map<String, Object> inputs = ParseUtils.getInputsFromPreviousSteps(
+                requiredKeys,
+                optionalKeys,
+                currentNodeInputs,
+                outputs,
+                previousNodeInputs,
+                params
             );
-        } else {
-            // Create PutPipelineRequest and execute
-            PutPipelineRequest putPipelineRequest = new PutPipelineRequest(pipelineId, configuration, XContentType.JSON);
-            clusterAdminClient.putPipeline(putPipelineRequest, ActionListener.wrap(response -> {
-                logger.info("Created ingest pipeline : " + putPipelineRequest.getId());
 
+            String pipelineId = (String) inputs.get(PIPELINE_ID);
+            String configurations = (String) inputs.get(CONFIGURATIONS);
+
+            byte[] byteArr = configurations.getBytes(StandardCharsets.UTF_8);
+            BytesReference configurationsBytes = new BytesArray(byteArr);
+
+            // Create PutPipelineRequest and execute
+            PutPipelineRequest putPipelineRequest = new PutPipelineRequest(pipelineId, configurationsBytes, XContentType.JSON);
+            clusterAdminClient.putPipeline(putPipelineRequest, ActionListener.wrap(acknowledgedResponse -> {
+                String resourceName = getResourceByWorkflowStep(getName());
                 try {
-                    String resourceName = getResourceByWorkflowStep(getName());
                     flowFrameworkIndicesHandler.updateResourceInStateIndex(
                         currentNodeInputs.getWorkflowId(),
                         currentNodeId,
                         getName(),
-                        putPipelineRequest.getId(),
+                        pipelineId,
                         ActionListener.wrap(updateResponse -> {
                             logger.info("successfully updated resources created in state index: {}", updateResponse.getIndex());
-                            // PutPipelineRequest returns only an AcknowledgeResponse, returning pipelineId instead
+                            // PutPipelineRequest returns only an AcknowledgeResponse, saving pipelineId instead
                             // TODO: revisit this concept of pipeline_id to be consistent with what makes most sense to end user here
                             createIngestPipelineFuture.onResponse(
                                 new WorkflowData(
-                                    Map.of(resourceName, putPipelineRequest.getId()),
+                                    Map.of(resourceName, pipelineId),
                                     currentNodeInputs.getWorkflowId(),
                                     currentNodeInputs.getNodeId()
                                 )
@@ -174,7 +115,7 @@ public class CreateIngestPipelineStep implements WorkflowStep {
                                 + " resource "
                                 + getName()
                                 + " id "
-                                + putPipelineRequest.getId();
+                                + pipelineId;
                             logger.error(errorMessage, exception);
                             createIngestPipelineFuture.onFailure(
                                 new FlowFrameworkException(errorMessage, ExceptionsHelper.status(exception))
@@ -187,12 +128,14 @@ public class CreateIngestPipelineStep implements WorkflowStep {
                     logger.error(errorMessage, e);
                     createIngestPipelineFuture.onFailure(new FlowFrameworkException(errorMessage, ExceptionsHelper.status(e)));
                 }
-
-            }, exception -> {
+            }, e -> {
                 String errorMessage = "Failed to create ingest pipeline";
-                logger.error(errorMessage, exception);
-                createIngestPipelineFuture.onFailure(new FlowFrameworkException(errorMessage, ExceptionsHelper.status(exception)));
+                logger.error(errorMessage, e);
+                createIngestPipelineFuture.onFailure(new FlowFrameworkException(errorMessage, ExceptionsHelper.status(e)));
             }));
+
+        } catch (FlowFrameworkException e) {
+            createIngestPipelineFuture.onFailure(e);
         }
 
         return createIngestPipelineFuture;
@@ -201,51 +144,5 @@ public class CreateIngestPipelineStep implements WorkflowStep {
     @Override
     public String getName() {
         return NAME;
-    }
-
-    /**
-     * Temporary, generates the ingest pipeline request content for text_embedding processor from workflow data
-     * {
-     *  "description" : "<description>",
-     *  "processors" : [
-     *      {
-     *          "<type>" : {
-     *              "model_id" : "<model_id>",
-     *              "field_map" : {
-     *                  "<input_field_name>" : "<output_field_name>"
-     *          }
-     *      }
-     *  ]
-     * }
-     *
-     * @param description The description of the ingest pipeline configuration
-     * @param modelId The ID of the model that will be used in the embedding interface
-     * @param type The processor type
-     * @param inputFieldName The field name used to cache text for text embeddings
-     * @param outputFieldName The field name in which output text is stored
-     * @throws IOException if the request content fails to be generated
-     * @return the xcontent builder with the formatted ingest pipeline configuration
-     */
-    private XContentBuilder buildIngestPipelineRequestContent(
-        String description,
-        String modelId,
-        String type,
-        String inputFieldName,
-        String outputFieldName
-    ) throws IOException {
-        return XContentFactory.jsonBuilder()
-            .startObject()
-            .field(DESCRIPTION_FIELD, description)
-            .startArray(PROCESSORS)
-            .startObject()
-            .startObject(type)
-            .field(MODEL_ID, modelId)
-            .startObject(FIELD_MAP)
-            .field(inputFieldName, outputFieldName)
-            .endObject()
-            .endObject()
-            .endObject()
-            .endArray()
-            .endObject();
     }
 }
