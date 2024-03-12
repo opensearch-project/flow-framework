@@ -214,7 +214,7 @@ public class WorkflowStepFactory {
             null
         ),
 
-        /** Create Ingest Pipeline Step */
+        /** Create Search Pipeline Step */
         CREATE_SEARCH_PIPELINE(
             CreateSearchPipelineStep.NAME,
             List.of(PIPELINE_ID, CONFIGURATIONS),

@@ -40,7 +40,6 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-@SuppressWarnings("deprecation")
 public class CreateSearchPipelineStepTests extends OpenSearchTestCase {
 
     private WorkflowData inputData;
