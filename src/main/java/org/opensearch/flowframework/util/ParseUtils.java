@@ -374,7 +374,7 @@ public class ParseUtils {
     }
 
     /**
-     * Generates a string based on an arbitrary String to object map sing Jackson
+     * Generates a string based on an arbitrary String to object map using Jackson
      * @param map content map
      * @return instance of the string
      * @throws JsonProcessingException JsonProcessingException from Jackson for issues processing map

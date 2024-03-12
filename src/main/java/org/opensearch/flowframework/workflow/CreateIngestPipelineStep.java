@@ -13,7 +13,6 @@ import org.apache.logging.log4j.Logger;
 import org.opensearch.ExceptionsHelper;
 import org.opensearch.action.ingest.PutPipelineRequest;
 import org.opensearch.action.support.PlainActionFuture;
-import org.opensearch.action.support.master.AcknowledgedResponse;
 import org.opensearch.client.Client;
 import org.opensearch.client.ClusterAdminClient;
 import org.opensearch.common.xcontent.XContentType;
@@ -89,61 +88,51 @@ public class CreateIngestPipelineStep implements WorkflowStep {
             byte[] byteArr = configurations.getBytes(StandardCharsets.UTF_8);
             BytesReference configurationsBytes = new BytesArray(byteArr);
 
-            ActionListener<AcknowledgedResponse> actionListener = new ActionListener<>() {
+            // Create PutPipelineRequest and execute
+            PutPipelineRequest putPipelineRequest = new PutPipelineRequest(pipelineId, configurationsBytes, XContentType.JSON);
+            clusterAdminClient.putPipeline(putPipelineRequest, ActionListener.wrap(acknowledgedResponse -> {
+                String resourceName = getResourceByWorkflowStep(getName());
+                try {
+                    flowFrameworkIndicesHandler.updateResourceInStateIndex(
+                        currentNodeInputs.getWorkflowId(),
+                        currentNodeId,
+                        getName(),
+                        pipelineId,
+                        ActionListener.wrap(updateResponse -> {
+                            logger.info("successfully updated resources created in state index: {}", updateResponse.getIndex());
+                            // PutPipelineRequest returns only an AcknowledgeResponse, saving pipelineId instead
+                            // TODO: revisit this concept of pipeline_id to be consistent with what makes most sense to end user here
+                            createIngestPipelineFuture.onResponse(
+                                new WorkflowData(
+                                    Map.of(resourceName, pipelineId),
+                                    currentNodeInputs.getWorkflowId(),
+                                    currentNodeInputs.getNodeId()
+                                )
+                            );
+                        }, exception -> {
+                            String errorMessage = "Failed to update new created "
+                                + currentNodeId
+                                + " resource "
+                                + getName()
+                                + " id "
+                                + pipelineId;
+                            logger.error(errorMessage, exception);
+                            createIngestPipelineFuture.onFailure(
+                                new FlowFrameworkException(errorMessage, ExceptionsHelper.status(exception))
+                            );
+                        })
+                    );
 
-                @Override
-                public void onResponse(AcknowledgedResponse acknowledgedResponse) {
-                    String resourceName = getResourceByWorkflowStep(getName());
-                    try {
-                        flowFrameworkIndicesHandler.updateResourceInStateIndex(
-                            currentNodeInputs.getWorkflowId(),
-                            currentNodeId,
-                            getName(),
-                            pipelineId,
-                            ActionListener.wrap(updateResponse -> {
-                                logger.info("successfully updated resources created in state index: {}", updateResponse.getIndex());
-                                // PutPipelineRequest returns only an AcknowledgeResponse, saving pipelineId instead
-                                // TODO: revisit this concept of pipeline_id to be consistent with what makes most sense to end user here
-                                createIngestPipelineFuture.onResponse(
-                                    new WorkflowData(
-                                        Map.of(resourceName, pipelineId),
-                                        currentNodeInputs.getWorkflowId(),
-                                        currentNodeInputs.getNodeId()
-                                    )
-                                );
-                            }, exception -> {
-                                String errorMessage = "Failed to update new created "
-                                    + currentNodeId
-                                    + " resource "
-                                    + getName()
-                                    + " id "
-                                    + pipelineId;
-                                logger.error(errorMessage, exception);
-                                createIngestPipelineFuture.onFailure(
-                                    new FlowFrameworkException(errorMessage, ExceptionsHelper.status(exception))
-                                );
-                            })
-                        );
-
-                    } catch (Exception e) {
-                        String errorMessage = "Failed to parse and update new created resource";
-                        logger.error(errorMessage, e);
-                        createIngestPipelineFuture.onFailure(new FlowFrameworkException(errorMessage, ExceptionsHelper.status(e)));
-                    }
-                }
-
-                @Override
-                public void onFailure(Exception e) {
-                    String errorMessage = "Failed to create ingest pipeline";
+                } catch (Exception e) {
+                    String errorMessage = "Failed to parse and update new created resource";
                     logger.error(errorMessage, e);
                     createIngestPipelineFuture.onFailure(new FlowFrameworkException(errorMessage, ExceptionsHelper.status(e)));
                 }
-
-            };
-
-            // Create PutPipelineRequest and execute
-            PutPipelineRequest putPipelineRequest = new PutPipelineRequest(pipelineId, configurationsBytes, XContentType.JSON);
-            clusterAdminClient.putPipeline(putPipelineRequest, actionListener);
+            }, e -> {
+                String errorMessage = "Failed to create ingest pipeline";
+                logger.error(errorMessage, e);
+                createIngestPipelineFuture.onFailure(new FlowFrameworkException(errorMessage, ExceptionsHelper.status(e)));
+            }));
 
         } catch (FlowFrameworkException e) {
             createIngestPipelineFuture.onFailure(e);
