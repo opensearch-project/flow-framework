@@ -44,7 +44,7 @@ public class WorkflowValidatorTests extends OpenSearchTestCase {
 
         WorkflowValidator validator = new WorkflowValidator(workflowStepValidators);
 
-        assertEquals(15, validator.getWorkflowStepValidators().size());
+        assertEquals(14, validator.getWorkflowStepValidators().size());
 
         assertTrue(validator.getWorkflowStepValidators().keySet().contains("create_connector"));
         assertEquals(7, validator.getWorkflowStepValidators().get("create_connector").getInputs().size());
@@ -101,10 +101,6 @@ public class WorkflowValidatorTests extends OpenSearchTestCase {
         assertTrue(validator.getWorkflowStepValidators().keySet().contains("noop"));
         assertEquals(0, validator.getWorkflowStepValidators().get("noop").getInputs().size());
         assertEquals(0, validator.getWorkflowStepValidators().get("noop").getOutputs().size());
-
-        assertTrue(validator.getWorkflowStepValidators().keySet().contains("http_host"));
-        assertEquals(3, validator.getWorkflowStepValidators().get("http_host").getInputs().size());
-        assertEquals(1, validator.getWorkflowStepValidators().get("http_host").getOutputs().size());
     }
 
     public void testWorkflowStepFactoryHasValidators() throws IOException {
