@@ -162,14 +162,6 @@ public class CommonValue {
     public static final String APP_TYPE_FIELD = "app_type";
     /** To include field for an agent response */
     public static final String INCLUDE_OUTPUT_IN_AGENT_RESPONSE = "include_output_in_agent_response";
-    /** HttpHost */
-    public static final String HTTP_HOST_FIELD = "http_host";
-    /** Http scheme */
-    public static final String SCHEME_FIELD = "scheme";
-    /** Http hostname */
-    public static final String HOSTNAME_FIELD = "hostname";
-    /** Http port */
-    public static final String PORT_FIELD = "port";
 
     /*
      * Constants associated with resource provisioning / state
