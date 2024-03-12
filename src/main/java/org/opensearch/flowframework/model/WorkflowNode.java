@@ -8,12 +8,15 @@
  */
 package org.opensearch.flowframework.model;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.opensearch.common.unit.TimeValue;
 import org.opensearch.core.rest.RestStatus;
 import org.opensearch.core.xcontent.ToXContentObject;
 import org.opensearch.core.xcontent.XContentBuilder;
 import org.opensearch.core.xcontent.XContentParser;
 import org.opensearch.flowframework.exception.FlowFrameworkException;
+import org.opensearch.flowframework.util.ParseUtils;
 import org.opensearch.flowframework.workflow.ProcessNode;
 import org.opensearch.flowframework.workflow.WorkflowData;
 import org.opensearch.flowframework.workflow.WorkflowStep;
@@ -28,6 +31,7 @@ import java.util.Objects;
 
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.opensearch.core.xcontent.XContentParserUtils.ensureExpectedToken;
+import static org.opensearch.flowframework.common.CommonValue.CONFIGURATIONS;
 import static org.opensearch.flowframework.common.CommonValue.TOOLS_ORDER_FIELD;
 import static org.opensearch.flowframework.util.ParseUtils.buildStringToObjectMap;
 import static org.opensearch.flowframework.util.ParseUtils.buildStringToStringMap;
@@ -60,6 +64,7 @@ public class WorkflowNode implements ToXContentObject {
     private final String type; // maps to a WorkflowStep
     private final Map<String, String> previousNodeInputs;
     private final Map<String, Object> userInputs; // maps to WorkflowData
+    private static final Logger logger = LogManager.getLogger(WorkflowNode.class);
 
     /**
      * Create this node with the id and type, and any user input.
@@ -151,7 +156,20 @@ public class WorkflowNode implements ToXContentObject {
                                 userInputs.put(inputFieldName, parser.text());
                                 break;
                             case START_OBJECT:
-                                userInputs.put(inputFieldName, parseStringToStringMap(parser));
+                                if (CONFIGURATIONS.equals(inputFieldName)) {
+                                    Map<String, Object> configurationsMap = parser.map();
+                                    try {
+                                        String configurationsString = ParseUtils.parseArbitraryStringToObjectMapToString(configurationsMap);
+                                        userInputs.put(inputFieldName, configurationsString);
+                                    } catch (Exception ex) {
+                                        String errorMessage = "Failed to parse configuration map";
+                                        logger.error(errorMessage, ex);
+                                        throw new FlowFrameworkException(errorMessage, RestStatus.BAD_REQUEST);
+                                    }
+                                    break;
+                                } else {
+                                    userInputs.put(inputFieldName, parseStringToStringMap(parser));
+                                }
                                 break;
                             case START_ARRAY:
                                 if (PROCESSORS_FIELD.equals(inputFieldName)) {

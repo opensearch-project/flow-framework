@@ -8,6 +8,9 @@
  */
 package org.opensearch.flowframework.util;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.opensearch.client.Client;
@@ -53,7 +56,8 @@ public class ParseUtils {
     private static final Logger logger = LogManager.getLogger(ParseUtils.class);
 
     // Matches ${{ foo.bar }} (whitespace optional) with capturing groups 1=foo, 2=bar
-    private static final Pattern SUBSTITUTION_PATTERN = Pattern.compile("\\$\\{\\{\\s*(.+)\\.(.+?)\\s*\\}\\}");
+    // private static final Pattern SUBSTITUTION_PATTERN = Pattern.compile("\\$\\{\\{\\s*(.+)\\.(.+?)\\s*\\}\\}");
+    private static final Pattern SUBSTITUTION_PATTERN = Pattern.compile("\\$\\{\\{\\s*([\\w_]+)\\.([\\w_]+)\\s*\\}\\}");
 
     private ParseUtils() {}
 
@@ -341,13 +345,25 @@ public class ParseUtils {
     private static Object conditionallySubstitute(Object value, Map<String, WorkflowData> outputs, Map<String, String> params) {
         if (value instanceof String) {
             Matcher m = SUBSTITUTION_PATTERN.matcher((String) value);
-            if (m.matches()) {
-                // Try matching a previous step+value pair
-                WorkflowData data = outputs.get(m.group(1));
-                if (data != null && data.getContent().containsKey(m.group(2))) {
-                    return data.getContent().get(m.group(2));
+            StringBuilder result = new StringBuilder();
+            while (m.find()) {
+                // outputs content map contains values for previous node input (e.g: deploy_openai_model.model_id)
+                // Check first if the substitution is looking for the same key, value pair and if yes
+                // then replace it with the key value pair in the inputs map
+                String replacement = m.group(0);
+                if (outputs.containsKey(m.group(1)) && outputs.get(m.group(1)).getContent().containsKey(m.group(2))) {
+                    // Extract the key for the inputs (e.g., "model_id" from ${{deploy_openai_model.model_id}})
+                    String key = m.group(2);
+                    if (outputs.get(m.group(1)).getContent().get(key) instanceof String) {
+                        replacement = (String) outputs.get(m.group(1)).getContent().get(key);
+                        // Replace the whole sequence with the value from the map
+                        m.appendReplacement(result, Matcher.quoteReplacement(replacement));
+                    }
                 }
             }
+            m.appendTail(result);
+            value = result.toString();
+
             // Replace all params if present
             for (Entry<String, String> e : params.entrySet()) {
                 String regex = "\\$\\{\\{\\s*" + Pattern.quote(e.getKey()) + "\\s*\\}\\}";
@@ -355,5 +371,18 @@ public class ParseUtils {
             }
         }
         return value;
+    }
+
+    /**
+     * Generates a string based on an arbitrary String to object map using Jackson
+     * @param map content map
+     * @return instance of the string
+     * @throws JsonProcessingException JsonProcessingException from Jackson for issues processing map
+     */
+    public static String parseArbitraryStringToObjectMapToString(Map<String, Object> map) throws JsonProcessingException {
+        ObjectMapper mapper = new ObjectMapper();
+        // Convert the map to a JSON string
+        String mappedString = mapper.writeValueAsString(map);
+        return mappedString;
     }
 }

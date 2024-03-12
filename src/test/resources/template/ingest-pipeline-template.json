@@ -1,0 +1,88 @@
+{
+  "name": "Deploy OpenAI Model",
+  "description": "Deploy a model using a connector to OpenAI",
+  "use_case": "PROVISION",
+  "version": {
+    "template": "1.0.0",
+    "compatibility": [
+      "2.12.0",
+      "3.0.0"
+    ]
+  },
+  "workflows": {
+    "provision": {
+      "nodes": [
+        {
+          "id": "create_openai_connector",
+          "type": "create_connector",
+          "user_inputs": {
+            "name": "OpenAI Chat Connector",
+            "description": "The connector to public OpenAI model service for text embedding model",
+            "version": "1",
+            "protocol": "http",
+            "parameters": {
+              "endpoint": "api.openai.com",
+              "model": "gpt-3.5-turbo",
+              "response_filter": "$.choices[0].message.content"
+            },
+            "credential": {
+              "openAI_key": "PUT_YOUR_API_KEY_HERE"
+            },
+            "actions": [
+              {
+                "action_type": "predict",
+                "method": "POST",
+                "url": "https://${parameters.endpoint}/v1/chat/completions"
+              }
+            ]
+          }
+        },
+        {
+          "id": "register_openai_model",
+          "type": "register_remote_model",
+          "previous_node_inputs": {
+            "create_openai_connector": "connector_id"
+          },
+          "user_inputs": {
+            "name": "openAI-gpt-3.5-turbo"
+          }
+        },
+        {
+          "id": "deploy_openai_model",
+          "type": "deploy_model",
+          "previous_node_inputs": {
+            "register_openai_model": "model_id"
+          }
+        },
+        {
+          "id": "create_ingest_pipeline",
+          "type": "create_ingest_pipeline",
+          "previous_node_inputs": {
+            "deploy_openai_model": "model_id"
+          },
+          "user_inputs": {
+            "pipeline_id": "append-1",
+            "configurations": {
+              "description": "Pipeline that appends event type",
+              "processors": [
+                {
+                  "append": {
+                    "field": "event_types",
+                    "value": [
+                      "${{deploy_openai_model.model_id}}"
+                    ]
+                  }
+                },
+                {
+                  "drop": {
+                    "if": "ctx.user_info.contains('password') || ctx.user_info.contains('credit card')"
+                  }
+                }
+              ]
+            }
+          }
+        }
+      ]
+    }
+  }
+}

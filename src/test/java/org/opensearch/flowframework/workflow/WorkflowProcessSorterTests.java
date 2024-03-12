@@ -118,7 +118,13 @@ public class WorkflowProcessSorterTests extends OpenSearchTestCase {
                 FLOW_FRAMEWORK_THREAD_POOL_PREFIX + DEPROVISION_WORKFLOW_THREAD_POOL
             )
         );
-        WorkflowStepFactory factory = new WorkflowStepFactory(testThreadPool, mlClient, flowFrameworkIndicesHandler, flowFrameworkSettings);
+        WorkflowStepFactory factory = new WorkflowStepFactory(
+            testThreadPool,
+            mlClient,
+            flowFrameworkIndicesHandler,
+            flowFrameworkSettings,
+            client
+        );
         workflowProcessSorter = new WorkflowProcessSorter(factory, testThreadPool, clusterService, client, flowFrameworkSettings);
     }
 

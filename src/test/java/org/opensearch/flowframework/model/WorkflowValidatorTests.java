@@ -8,6 +8,7 @@
  */
 package org.opensearch.flowframework.model;
 
+import org.opensearch.client.Client;
 import org.opensearch.flowframework.common.FlowFrameworkSettings;
 import org.opensearch.flowframework.indices.FlowFrameworkIndicesHandler;
 import org.opensearch.flowframework.workflow.WorkflowStepFactory;
@@ -29,6 +30,7 @@ import static org.mockito.Mockito.when;
 public class WorkflowValidatorTests extends OpenSearchTestCase {
 
     private FlowFrameworkSettings flowFrameworkSettings;
+    private static Client client = mock(Client.class);
 
     @Override
     public void setUp() throws Exception {
@@ -44,7 +46,7 @@ public class WorkflowValidatorTests extends OpenSearchTestCase {
 
         WorkflowValidator validator = new WorkflowValidator(workflowStepValidators);
 
-        assertEquals(14, validator.getWorkflowStepValidators().size());
+        assertEquals(15, validator.getWorkflowStepValidators().size());
 
         assertTrue(validator.getWorkflowStepValidators().keySet().contains("create_connector"));
         assertEquals(7, validator.getWorkflowStepValidators().get("create_connector").getInputs().size());
@@ -113,7 +115,8 @@ public class WorkflowValidatorTests extends OpenSearchTestCase {
             threadPool,
             mlClient,
             flowFrameworkIndicesHandler,
-            flowFrameworkSettings
+            flowFrameworkSettings,
+            client
         );
 
         WorkflowValidator workflowValidator = workflowStepFactory.getWorkflowValidator();

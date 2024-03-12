@@ -8,6 +8,7 @@
  */
 package org.opensearch.flowframework.rest;
 
+import org.opensearch.client.Client;
 import org.opensearch.client.node.NodeClient;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.core.common.bytes.BytesArray;
@@ -57,8 +58,15 @@ public class RestGetWorkflowStepActionTests extends OpenSearchTestCase {
         ThreadPool threadPool = mock(ThreadPool.class);
         MachineLearningNodeClient mlClient = mock(MachineLearningNodeClient.class);
         FlowFrameworkIndicesHandler flowFrameworkIndicesHandler = mock(FlowFrameworkIndicesHandler.class);
+        Client client = mock(Client.class);
 
-        this.workflowStepFactory = new WorkflowStepFactory(threadPool, mlClient, flowFrameworkIndicesHandler, flowFrameworkSettings);
+        this.workflowStepFactory = new WorkflowStepFactory(
+            threadPool,
+            mlClient,
+            flowFrameworkIndicesHandler,
+            flowFrameworkSettings,
+            client
+        );
         flowFrameworkFeatureEnabledSetting = mock(FlowFrameworkSettings.class);
         when(flowFrameworkFeatureEnabledSetting.isFlowFrameworkEnabled()).thenReturn(true);
         this.restGetWorkflowStepAction = new RestGetWorkflowStepAction(flowFrameworkFeatureEnabledSetting);

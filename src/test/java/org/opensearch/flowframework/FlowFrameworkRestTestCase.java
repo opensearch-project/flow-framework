@@ -19,6 +19,7 @@ import org.apache.http.conn.ssl.NoopHostnameVerifier;
 import org.apache.http.impl.client.BasicCredentialsProvider;
 import org.apache.http.message.BasicHeader;
 import org.apache.http.ssl.SSLContextBuilder;
+import org.opensearch.action.ingest.GetPipelineResponse;
 import org.opensearch.action.search.SearchResponse;
 import org.opensearch.client.Request;
 import org.opensearch.client.Response;
@@ -625,18 +626,28 @@ public abstract class FlowFrameworkRestTestCase extends OpenSearchRestTestCase {
             "/_opendistro/_security/api/internalusers/" + name,
             null,
             TestHelpers.toHttpEntity(json),
-            List.of(new BasicHeader(HttpHeaders.USER_AGENT, "Kibana"))
+            null
         );
     }
 
     protected Response deleteUser(String user) throws IOException {
-        return TestHelpers.makeRequest(
-            client(),
-            "DELETE",
-            "/_opendistro/_security/api/internalusers/" + user,
-            null,
-            "",
-            List.of(new BasicHeader(HttpHeaders.USER_AGENT, "Kibana"))
-        );
+        return TestHelpers.makeRequest(client(), "DELETE", "/_opendistro/_security/api/internalusers/" + user, null, "", null);
+    }
+
+    protected GetPipelineResponse getPipelines() throws IOException {
+        Response getPipelinesResponse = TestHelpers.makeRequest(client(), "GET", "_ingest/pipeline", null, "", null);
+
+        // Parse entity content into SearchResponse
+        MediaType mediaType = MediaType.fromMediaType(getPipelinesResponse.getEntity().getContentType().getValue());
+        try (
+            XContentParser parser = mediaType.xContent()
+                .createParser(
+                    NamedXContentRegistry.EMPTY,
+                    DeprecationHandler.THROW_UNSUPPORTED_OPERATION,
+                    getPipelinesResponse.getEntity().getContent()
+                )
+        ) {
+            return GetPipelineResponse.fromXContent(parser);
+        }
     }
 }
