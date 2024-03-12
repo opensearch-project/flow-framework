@@ -14,20 +14,20 @@ import org.opensearch.client.Client;
 import org.opensearch.flowframework.indices.FlowFrameworkIndicesHandler;
 
 /**
- * Step to create an ingest pipeline
+ * Step to create a search pipeline
  */
-public class CreateIngestPipelineStep extends AbstractCreatePipelineStep {
-    private static final Logger logger = LogManager.getLogger(CreateIngestPipelineStep.class);
+public class CreateSearchPipelineStep extends AbstractCreatePipelineStep {
+    private static final Logger logger = LogManager.getLogger(CreateSearchPipelineStep.class);
 
     /** The name of this step, used as a key in the template and the {@link WorkflowStepFactory} */
-    public static final String NAME = "create_ingest_pipeline";
+    public static final String NAME = "create_search_pipeline";
 
     /**
-     * Instantiates a new CreateIngestPipelineStep
+     * Instantiates a new CreateSearchPipelineStep
      * @param client The client to create a pipeline and store workflow data into the global context index
      * @param flowFrameworkIndicesHandler FlowFrameworkIndicesHandler class to update system indices
      */
-    public CreateIngestPipelineStep(Client client, FlowFrameworkIndicesHandler flowFrameworkIndicesHandler) {
+    public CreateSearchPipelineStep(Client client, FlowFrameworkIndicesHandler flowFrameworkIndicesHandler) {
         super(client, flowFrameworkIndicesHandler);
     }
 

@@ -8,7 +8,7 @@
  */
 package org.opensearch.flowframework.workflow;
 
-import org.opensearch.action.ingest.PutPipelineRequest;
+import org.opensearch.action.search.PutSearchPipelineRequest;
 import org.opensearch.action.support.PlainActionFuture;
 import org.opensearch.action.support.master.AcknowledgedResponse;
 import org.opensearch.action.update.UpdateResponse;
@@ -41,7 +41,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @SuppressWarnings("deprecation")
-public class CreateIngestPipelineStepTests extends OpenSearchTestCase {
+public class CreateSearchPipelineStepTests extends OpenSearchTestCase {
 
     private WorkflowData inputData;
     private WorkflowData outpuData;
@@ -56,7 +56,7 @@ public class CreateIngestPipelineStepTests extends OpenSearchTestCase {
         this.flowFrameworkIndicesHandler = mock(FlowFrameworkIndicesHandler.class);
 
         String configurations =
-            "{“description”:“An neural ingest pipeline”,“processors”:[{“text_embedding”:{“field_map”:{“text”:“analyzed_text”},“model_id”:“sdsadsadasd”}}]}";
+            "{\"response_processors\":[{\"retrieval_augmented_generation\":{\"context_field_list\":[\"text\"],\"user_instructions\":\"Generate a concise and informative answer in less than 100 words for the given question\",\"description\":\"Demo pipeline Using OpenAI Connector\",\"tag\":\"openai_pipeline_demo\",\"model_id\":\"tbFoNI4BW58L8XKV4RF3\",\"system_prompt\":\"You are a helpful assistant\"}}]}";
         inputData = new WorkflowData(
             Map.ofEntries(Map.entry(CONFIGURATIONS, configurations), Map.entry(PIPELINE_ID, "pipelineId")),
             "test-id",
@@ -74,9 +74,9 @@ public class CreateIngestPipelineStepTests extends OpenSearchTestCase {
         when(adminClient.cluster()).thenReturn(clusterAdminClient);
     }
 
-    public void testCreateIngestPipelineStep() throws InterruptedException, ExecutionException, IOException {
+    public void testCreateSearchPipelineStep() throws InterruptedException, ExecutionException, IOException {
 
-        CreateIngestPipelineStep createIngestPipelineStep = new CreateIngestPipelineStep(client, flowFrameworkIndicesHandler);
+        CreateSearchPipelineStep createSearchPipelineStep = new CreateSearchPipelineStep(client, flowFrameworkIndicesHandler);
 
         doAnswer(invocation -> {
             ActionListener<UpdateResponse> updateResponseListener = invocation.getArgument(4);
@@ -86,7 +86,7 @@ public class CreateIngestPipelineStepTests extends OpenSearchTestCase {
 
         @SuppressWarnings("unchecked")
         ArgumentCaptor<ActionListener<AcknowledgedResponse>> actionListenerCaptor = ArgumentCaptor.forClass(ActionListener.class);
-        PlainActionFuture<WorkflowData> future = createIngestPipelineStep.execute(
+        PlainActionFuture<WorkflowData> future = createSearchPipelineStep.execute(
             inputData.getNodeId(),
             inputData,
             Collections.emptyMap(),
@@ -97,20 +97,20 @@ public class CreateIngestPipelineStepTests extends OpenSearchTestCase {
         assertFalse(future.isDone());
 
         // Mock put pipeline request execution and return true
-        verify(clusterAdminClient, times(1)).putPipeline(any(PutPipelineRequest.class), actionListenerCaptor.capture());
+        verify(clusterAdminClient, times(1)).putSearchPipeline(any(PutSearchPipelineRequest.class), actionListenerCaptor.capture());
         actionListenerCaptor.getValue().onResponse(new AcknowledgedResponse(true));
 
         assertTrue(future.isDone());
         assertEquals(outpuData.getContent(), future.get().getContent());
     }
 
-    public void testCreateIngestPipelineStepFailure() throws InterruptedException {
+    public void testCreateSearchPipelineStepFailure() throws InterruptedException {
 
-        CreateIngestPipelineStep createIngestPipelineStep = new CreateIngestPipelineStep(client, flowFrameworkIndicesHandler);
+        CreateSearchPipelineStep createSearchPipelineStep = new CreateSearchPipelineStep(client, flowFrameworkIndicesHandler);
 
         @SuppressWarnings("unchecked")
         ArgumentCaptor<ActionListener<AcknowledgedResponse>> actionListenerCaptor = ArgumentCaptor.forClass(ActionListener.class);
-        PlainActionFuture<WorkflowData> future = createIngestPipelineStep.execute(
+        PlainActionFuture<WorkflowData> future = createSearchPipelineStep.execute(
             inputData.getNodeId(),
             inputData,
             Collections.emptyMap(),
@@ -121,18 +121,18 @@ public class CreateIngestPipelineStepTests extends OpenSearchTestCase {
         assertFalse(future.isDone());
 
         // Mock put pipeline request execution and return false
-        verify(clusterAdminClient, times(1)).putPipeline(any(PutPipelineRequest.class), actionListenerCaptor.capture());
-        actionListenerCaptor.getValue().onFailure(new Exception("Failed step create_ingest_pipeline"));
+        verify(clusterAdminClient, times(1)).putSearchPipeline(any(PutSearchPipelineRequest.class), actionListenerCaptor.capture());
+        actionListenerCaptor.getValue().onFailure(new Exception("Failed step create_search_pipeline"));
 
         assertTrue(future.isDone());
 
         ExecutionException exception = assertThrows(ExecutionException.class, () -> future.get());
         assertTrue(exception.getCause() instanceof Exception);
-        assertEquals("Failed step create_ingest_pipeline", exception.getCause().getMessage());
+        assertEquals("Failed step create_search_pipeline", exception.getCause().getMessage());
     }
 
     public void testMissingData() throws InterruptedException {
-        CreateIngestPipelineStep CreateIngestPipelineStep = new CreateIngestPipelineStep(client, flowFrameworkIndicesHandler);
+        CreateSearchPipelineStep createSearchPipelineStep = new CreateSearchPipelineStep(client, flowFrameworkIndicesHandler);
 
         // Data with missing input and output fields
         WorkflowData incorrectData = new WorkflowData(
@@ -146,7 +146,7 @@ public class CreateIngestPipelineStepTests extends OpenSearchTestCase {
             "test-node-id"
         );
 
-        PlainActionFuture<WorkflowData> future = CreateIngestPipelineStep.execute(
+        PlainActionFuture<WorkflowData> future = createSearchPipelineStep.execute(
             incorrectData.getNodeId(),
             incorrectData,
             Collections.emptyMap(),

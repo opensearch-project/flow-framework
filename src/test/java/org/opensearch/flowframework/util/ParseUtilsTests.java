@@ -82,6 +82,12 @@ public class ParseUtilsTests extends OpenSearchTestCase {
         assertEquals(stringMap.get("one"), parsedMap.get("one"));
     }
 
+    public void testParseArbitraryStringToObjectMapToString() throws IOException {
+        Map<String, Object> map = Map.ofEntries(Map.entry("test-1", Map.of("test-1", "test-1")));
+        String parsedMap = ParseUtils.parseArbitraryStringToObjectMapToString(map);
+        assertEquals("{\"test-1\":{\"test-1\":\"test-1\"}}", parsedMap);
+    }
+
     public void testGetInputsFromPreviousSteps() {
         WorkflowData currentNodeInputs = new WorkflowData(
             Map.ofEntries(
