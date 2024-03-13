@@ -346,10 +346,10 @@ public class FlowFrameworkRestApiIT extends FlowFrameworkRestTestCase {
         assertEquals(RestStatus.OK.getStatus(), response.getStatusLine().getStatusCode());
     }
 
-    public void testCreateAndProvisionIngestPipeline() throws Exception {
+    public void testCreateAndProvisionIngestAndSearchPipeline() throws Exception {
 
         // Using a 3 step template to create a connector, register remote model and deploy model
-        Template template = TestHelpers.createTemplateFromFile("ingest-pipeline-template.json");
+        Template template = TestHelpers.createTemplateFromFile("ingest-search-pipeline-template.json");
 
         // Hit Create Workflow API with original template
         Response response = createWorkflow(client(), template);
@@ -373,16 +373,24 @@ public class FlowFrameworkRestApiIT extends FlowFrameworkRestTestCase {
         // Wait until provisioning has completed successfully before attempting to retrieve created resources
         List<ResourceCreated> resourcesCreated = getResourcesCreated(client(), workflowId, 30);
 
-        // This template should create 4 resources, connector_id, registered model_id, deployed model_id and pipelineId
-        assertEquals(4, resourcesCreated.size());
-        assertEquals("create_connector", resourcesCreated.get(0).workflowStepName());
-        assertNotNull(resourcesCreated.get(0).resourceId());
-        assertEquals("register_remote_model", resourcesCreated.get(1).workflowStepName());
-        assertNotNull(resourcesCreated.get(1).resourceId());
-        assertEquals("deploy_model", resourcesCreated.get(2).workflowStepName());
-        assertNotNull(resourcesCreated.get(2).resourceId());
-        assertEquals("create_ingest_pipeline", resourcesCreated.get(3).workflowStepName());
-        assertNotNull(resourcesCreated.get(3).resourceId());
+        List<String> expectedStepNames = List.of(
+            "create_connector",
+            "register_remote_model",
+            "deploy_model",
+            "create_search_pipeline",
+            "create_ingest_pipeline"
+        );
+
+        List workflowStepNames = resourcesCreated.stream()
+            .peek(resourceCreated -> assertNotNull(resourceCreated.resourceId()))
+            .map(ResourceCreated::workflowStepName)
+            .collect(Collectors.toList());
+        for (String expectedName : expectedStepNames) {
+            assertTrue(workflowStepNames.contains(expectedName));
+        }
+
+        // This template should create 5 resources, connector_id, registered model_id, deployed model_id and pipelineId
+        assertEquals(5, resourcesCreated.size());
         String modelId = resourcesCreated.get(2).resourceId();
 
         GetPipelineResponse getPipelinesResponse = getPipelines();

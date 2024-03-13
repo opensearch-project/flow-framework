@@ -15,6 +15,7 @@ import org.opensearch.flowframework.exception.FlowFrameworkException;
 import org.opensearch.flowframework.workflow.CreateConnectorStep;
 import org.opensearch.flowframework.workflow.CreateIndexStep;
 import org.opensearch.flowframework.workflow.CreateIngestPipelineStep;
+import org.opensearch.flowframework.workflow.CreateSearchPipelineStep;
 import org.opensearch.flowframework.workflow.DeleteAgentStep;
 import org.opensearch.flowframework.workflow.DeleteConnectorStep;
 import org.opensearch.flowframework.workflow.DeleteModelStep;
@@ -53,6 +54,8 @@ public enum WorkflowResources {
     DEPLOY_MODEL(DeployModelStep.NAME, WorkflowResources.MODEL_ID, UndeployModelStep.NAME),
     /** Workflow steps for creating an ingest-pipeline and associated created resource */
     CREATE_INGEST_PIPELINE(CreateIngestPipelineStep.NAME, WorkflowResources.PIPELINE_ID, null), // TODO delete step
+    /** Workflow steps for creating an ingest-pipeline and associated created resource */
+    CREATE_SEARCH_PIPELINE(CreateSearchPipelineStep.NAME, WorkflowResources.PIPELINE_ID, null), // TODO delete step
     /** Workflow steps for creating an index and associated created resource */
     CREATE_INDEX(CreateIndexStep.NAME, WorkflowResources.INDEX_NAME, null), // TODO delete step
     /** Workflow steps for registering/deleting an agent and the associated created resource */
