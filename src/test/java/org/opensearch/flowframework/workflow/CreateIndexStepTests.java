@@ -30,10 +30,8 @@ import org.opensearch.threadpool.ThreadPool;
 
 import java.io.IOException;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
@@ -59,7 +57,6 @@ public class CreateIndexStepTests extends OpenSearchTestCase {
     private CreateIndexStep createIndexStep;
     private ThreadContext threadContext;
     private Metadata metadata;
-    private Map<String, AtomicBoolean> indexMappingUpdated = new HashMap<>();
 
     @Mock
     private ClusterService clusterService;
@@ -95,8 +92,7 @@ public class CreateIndexStepTests extends OpenSearchTestCase {
         when(clusterService.state()).thenReturn(ClusterState.builder(new ClusterName("test cluster")).build());
         when(metadata.indices()).thenReturn(Map.of(GLOBAL_CONTEXT_INDEX, indexMetadata));
 
-        createIndexStep = new CreateIndexStep(clusterService, client, flowFrameworkIndicesHandler);
-        CreateIndexStep.indexMappingUpdated = indexMappingUpdated;
+        createIndexStep = new CreateIndexStep(client, flowFrameworkIndicesHandler);
     }
 
     public void testCreateIndexStep() throws ExecutionException, InterruptedException, IOException {

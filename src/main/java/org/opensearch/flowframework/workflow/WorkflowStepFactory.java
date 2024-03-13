@@ -52,10 +52,7 @@ import static org.opensearch.flowframework.common.CommonValue.TOOLS_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.TYPE;
 import static org.opensearch.flowframework.common.CommonValue.URL;
 import static org.opensearch.flowframework.common.CommonValue.VERSION_FIELD;
-import static org.opensearch.flowframework.common.WorkflowResources.AGENT_ID;
-import static org.opensearch.flowframework.common.WorkflowResources.CONNECTOR_ID;
-import static org.opensearch.flowframework.common.WorkflowResources.MODEL_GROUP_ID;
-import static org.opensearch.flowframework.common.WorkflowResources.MODEL_ID;
+import static org.opensearch.flowframework.common.WorkflowResources.*;
 
 /**
  * Generates instances implementing {@link WorkflowStep}.
@@ -82,6 +79,7 @@ public class WorkflowStepFactory {
         Client client
     ) {
         stepMap.put(NoOpStep.NAME, NoOpStep::new);
+        stepMap.put(CreateIndexStep.NAME, () -> new CreateIndexStep(client, flowFrameworkIndicesHandler));
         stepMap.put(
             RegisterLocalCustomModelStep.NAME,
             () -> new RegisterLocalCustomModelStep(threadPool, mlClient, flowFrameworkIndicesHandler, flowFrameworkSettings)
@@ -119,6 +117,9 @@ public class WorkflowStepFactory {
 
         /** Noop Step */
         NOOP("noop", Collections.emptyList(), Collections.emptyList(), Collections.emptyList(), null),
+
+        /** Create Index Step */
+        CREATE_INDEX(CreateIndexStep.NAME, List.of(INDEX_NAME, CONFIGURATIONS), List.of(INDEX_NAME), Collections.emptyList(), null),
 
         /** Create Connector Step */
         CREATE_CONNECTOR(
