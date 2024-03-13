@@ -24,9 +24,9 @@ import org.opensearch.flowframework.util.ParseUtils;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.util.Collections;
 import java.util.Map;
 import java.util.Set;
-import java.util.Collections;
 
 import static org.opensearch.flowframework.common.CommonValue.CONFIGURATIONS;
 import static org.opensearch.flowframework.common.WorkflowResources.INDEX_NAME;
@@ -86,7 +86,7 @@ public class CreateIndexStep implements WorkflowStep {
             byte[] byteArr = configurations.getBytes(StandardCharsets.UTF_8);
             BytesReference configurationsBytes = new BytesArray(byteArr);
 
-            CreateIndexRequest createIndexRequest = new CreateIndexRequest(indexName).mapping(configurationsBytes, XContentType.JSON);
+            CreateIndexRequest createIndexRequest = new CreateIndexRequest(indexName).source(configurationsBytes, XContentType.JSON);
             client.admin().indices().create(createIndexRequest, ActionListener.wrap(acknowledgedResponse -> {
                 String resourceName = getResourceByWorkflowStep(getName());
                 logger.info("Created index: {}", indexName);
@@ -118,7 +118,7 @@ public class CreateIndexStep implements WorkflowStep {
                     createIndexFuture.onFailure(new FlowFrameworkException(errorMessage, ExceptionsHelper.status(ex)));
                 }
             }, e -> {
-                String errorMessage = "Failed to create index";
+                String errorMessage = "Failed to create the index " + indexName;
                 logger.error(errorMessage, e);
                 createIndexFuture.onFailure(new FlowFrameworkException(errorMessage, ExceptionsHelper.status(e)));
             }));

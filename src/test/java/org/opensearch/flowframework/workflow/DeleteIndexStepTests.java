@@ -8,10 +8,9 @@
  */
 package org.opensearch.flowframework.workflow;
 
-import org.opensearch.action.admin.indices.create.CreateIndexRequest;
-import org.opensearch.action.admin.indices.create.CreateIndexResponse;
+import org.opensearch.action.admin.indices.delete.DeleteIndexRequest;
 import org.opensearch.action.support.PlainActionFuture;
-import org.opensearch.action.update.UpdateResponse;
+import org.opensearch.action.support.master.AcknowledgedResponse;
 import org.opensearch.client.AdminClient;
 import org.opensearch.client.Client;
 import org.opensearch.client.IndicesAdminClient;
@@ -20,8 +19,6 @@ import org.opensearch.cluster.metadata.Metadata;
 import org.opensearch.common.settings.Settings;
 import org.opensearch.common.util.concurrent.ThreadContext;
 import org.opensearch.core.action.ActionListener;
-import org.opensearch.core.index.shard.ShardId;
-import org.opensearch.flowframework.indices.FlowFrameworkIndicesHandler;
 import org.opensearch.test.OpenSearchTestCase;
 import org.opensearch.threadpool.ThreadPool;
 
@@ -34,25 +31,20 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
-import static org.opensearch.action.DocWriteResponse.Result.UPDATED;
-import static org.opensearch.flowframework.common.CommonValue.CONFIGURATIONS;
 import static org.opensearch.flowframework.common.CommonValue.GLOBAL_CONTEXT_INDEX;
-import static org.opensearch.flowframework.common.CommonValue.WORKFLOW_STATE_INDEX;
 import static org.opensearch.flowframework.common.WorkflowResources.INDEX_NAME;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-public class CreateIndexStepTests extends OpenSearchTestCase {
+public class DeleteIndexStepTests extends OpenSearchTestCase {
 
     private WorkflowData inputData = WorkflowData.EMPTY;
     private Client client;
     private AdminClient adminClient;
-    private CreateIndexStep createIndexStep;
+    private DeleteIndexStep deleteIndexStep;
     private ThreadContext threadContext;
     private Metadata metadata;
 
@@ -62,21 +54,12 @@ public class CreateIndexStepTests extends OpenSearchTestCase {
     private ThreadPool threadPool;
     @Mock
     IndexMetadata indexMetadata;
-    private FlowFrameworkIndicesHandler flowFrameworkIndicesHandler;
 
     @Override
     public void setUp() throws Exception {
         super.setUp();
-        this.flowFrameworkIndicesHandler = mock(FlowFrameworkIndicesHandler.class);
         MockitoAnnotations.openMocks(this);
-        String configurations =
-            "{\"settings\":{\"index\":{\"number_of_shards\":2,\"number_of_replicas\":1}},\"mappings\":{\"_doc\":{\"properties\":{\"age\":{\"type\":\"integer\"}}}},\"aliases\":{\"sample-alias1\":{}}}";
-
-        inputData = new WorkflowData(
-            Map.ofEntries(Map.entry(INDEX_NAME, "demo"), Map.entry(CONFIGURATIONS, configurations)),
-            "test-id",
-            "test-node-id"
-        );
+        inputData = new WorkflowData(Map.ofEntries(Map.entry(INDEX_NAME, "demo")), "test-id", "test-node-id");
         client = mock(Client.class);
         adminClient = mock(AdminClient.class);
         metadata = mock(Metadata.class);
@@ -89,20 +72,14 @@ public class CreateIndexStepTests extends OpenSearchTestCase {
         when(adminClient.indices()).thenReturn(indicesAdminClient);
         when(metadata.indices()).thenReturn(Map.of(GLOBAL_CONTEXT_INDEX, indexMetadata));
 
-        createIndexStep = new CreateIndexStep(client, flowFrameworkIndicesHandler);
+        deleteIndexStep = new DeleteIndexStep(client);
     }
 
-    public void testCreateIndexStep() throws ExecutionException, InterruptedException, IOException {
-
-        doAnswer(invocation -> {
-            ActionListener<UpdateResponse> updateResponseListener = invocation.getArgument(4);
-            updateResponseListener.onResponse(new UpdateResponse(new ShardId(WORKFLOW_STATE_INDEX, "", 1), "id", -2, 0, 0, UPDATED));
-            return null;
-        }).when(flowFrameworkIndicesHandler).updateResourceInStateIndex(anyString(), anyString(), anyString(), anyString(), any());
+    public void testDeleteIndex() throws IOException, ExecutionException, InterruptedException {
 
         @SuppressWarnings({ "unchecked" })
-        ArgumentCaptor<ActionListener<CreateIndexResponse>> actionListenerCaptor = ArgumentCaptor.forClass(ActionListener.class);
-        PlainActionFuture<WorkflowData> future = createIndexStep.execute(
+        ArgumentCaptor<ActionListener<AcknowledgedResponse>> actionListenerCaptor = ArgumentCaptor.forClass(ActionListener.class);
+        PlainActionFuture<WorkflowData> future = deleteIndexStep.execute(
             inputData.getNodeId(),
             inputData,
             Collections.emptyMap(),
@@ -110,20 +87,19 @@ public class CreateIndexStepTests extends OpenSearchTestCase {
             Collections.emptyMap()
         );
         assertFalse(future.isDone());
-        verify(indicesAdminClient, times(1)).create(any(CreateIndexRequest.class), actionListenerCaptor.capture());
-        actionListenerCaptor.getValue().onResponse(new CreateIndexResponse(true, true, "demo"));
+        verify(indicesAdminClient, times(1)).delete(any(DeleteIndexRequest.class), actionListenerCaptor.capture());
+        actionListenerCaptor.getValue().onResponse(new AcknowledgedResponse(true));
 
         assertTrue(future.isDone());
 
         Map<String, Object> outputData = Map.of(INDEX_NAME, "demo");
         assertEquals(outputData, future.get().getContent());
-
     }
 
-    public void testCreateIndexStepFailure() throws ExecutionException, InterruptedException {
+    public void testDeleteIndexStepFailure() throws ExecutionException, InterruptedException {
         @SuppressWarnings({ "unchecked" })
-        ArgumentCaptor<ActionListener<CreateIndexResponse>> actionListenerCaptor = ArgumentCaptor.forClass(ActionListener.class);
-        PlainActionFuture<WorkflowData> future = createIndexStep.execute(
+        ArgumentCaptor<ActionListener<AcknowledgedResponse>> actionListenerCaptor = ArgumentCaptor.forClass(ActionListener.class);
+        PlainActionFuture<WorkflowData> future = deleteIndexStep.execute(
             inputData.getNodeId(),
             inputData,
             Collections.emptyMap(),
@@ -131,13 +107,12 @@ public class CreateIndexStepTests extends OpenSearchTestCase {
             Collections.emptyMap()
         );
         assertFalse(future.isDone());
-        verify(indicesAdminClient, times(1)).create(any(CreateIndexRequest.class), actionListenerCaptor.capture());
-
-        actionListenerCaptor.getValue().onFailure(new Exception("Failed to create an index"));
+        verify(indicesAdminClient, times(1)).delete(any(DeleteIndexRequest.class), actionListenerCaptor.capture());
+        actionListenerCaptor.getValue().onFailure(new Exception("Failed to delete the index"));
 
         assertTrue(future.isDone());
         ExecutionException ex = assertThrows(ExecutionException.class, () -> future.get().getContent());
         assertTrue(ex.getCause() instanceof Exception);
-        assertEquals("Failed to create the index demo", ex.getCause().getMessage());
+        assertEquals("Failed to delete the index demo", ex.getCause().getMessage());
     }
 }

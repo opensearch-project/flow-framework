@@ -52,7 +52,11 @@ import static org.opensearch.flowframework.common.CommonValue.TOOLS_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.TYPE;
 import static org.opensearch.flowframework.common.CommonValue.URL;
 import static org.opensearch.flowframework.common.CommonValue.VERSION_FIELD;
-import static org.opensearch.flowframework.common.WorkflowResources.*;
+import static org.opensearch.flowframework.common.WorkflowResources.AGENT_ID;
+import static org.opensearch.flowframework.common.WorkflowResources.CONNECTOR_ID;
+import static org.opensearch.flowframework.common.WorkflowResources.INDEX_NAME;
+import static org.opensearch.flowframework.common.WorkflowResources.MODEL_GROUP_ID;
+import static org.opensearch.flowframework.common.WorkflowResources.MODEL_ID;
 
 /**
  * Generates instances implementing {@link WorkflowStep}.
@@ -80,6 +84,7 @@ public class WorkflowStepFactory {
     ) {
         stepMap.put(NoOpStep.NAME, NoOpStep::new);
         stepMap.put(CreateIndexStep.NAME, () -> new CreateIndexStep(client, flowFrameworkIndicesHandler));
+        stepMap.put(DeleteIndexStep.NAME, () -> new DeleteIndexStep(client));
         stepMap.put(
             RegisterLocalCustomModelStep.NAME,
             () -> new RegisterLocalCustomModelStep(threadPool, mlClient, flowFrameworkIndicesHandler, flowFrameworkSettings)
@@ -184,6 +189,9 @@ public class WorkflowStepFactory {
             List.of(OPENSEARCH_ML),
             null
         ),
+
+        /** Delete Index Step */
+        DELETE_INDEX(DeleteIndexStep.NAME, List.of(INDEX_NAME), List.of(INDEX_NAME), Collections.emptyList(), null),
 
         /** Deploy Model Step */
         DEPLOY_MODEL(DeployModelStep.NAME, List.of(MODEL_ID), List.of(MODEL_ID), List.of(OPENSEARCH_ML), TimeValue.timeValueSeconds(15)),
