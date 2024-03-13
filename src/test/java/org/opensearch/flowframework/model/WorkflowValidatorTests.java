@@ -46,7 +46,7 @@ public class WorkflowValidatorTests extends OpenSearchTestCase {
 
         WorkflowValidator validator = new WorkflowValidator(workflowStepValidators);
 
-        assertEquals(15, validator.getWorkflowStepValidators().size());
+        assertEquals(16, validator.getWorkflowStepValidators().size());
 
         assertTrue(validator.getWorkflowStepValidators().keySet().contains("create_connector"));
         assertEquals(7, validator.getWorkflowStepValidators().get("create_connector").getInputs().size());
