@@ -81,6 +81,31 @@
               ]
             }
           }
+        },
+        {
+          "id": "create_search_pipeline",
+          "type": "create_search_pipeline",
+          "previous_node_inputs": {
+            "deploy_openai_model": "model_id"
+          },
+          "user_inputs": {
+            "pipeline_id": "rag_pipeline",
+            "configurations": {
+              "request_processors": [
+                {
+                  "filter_query" : {
+                    "tag" : "tag1",
+                    "description" : "This processor is going to restrict to publicly visible documents",
+                    "query" : {
+                      "term": {
+                        "visibility": "public"
+                      }
+                    }
+                  }
+                }
+              ]
+            }
+          }
         }
       ]
     }
