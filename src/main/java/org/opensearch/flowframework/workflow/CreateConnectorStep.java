@@ -161,8 +161,10 @@ public class CreateConnectorStep implements WorkflowStep {
                 credentials = getStringToStringMap(inputs.get(CREDENTIAL_FIELD), CREDENTIAL_FIELD);
                 actions = getConnectorActionList(inputs.get(ACTIONS_FIELD));
             } catch (IllegalArgumentException iae) {
+                logger.error("IllegalArgumentException in connector configuration", iae);
                 throw new FlowFrameworkException("IllegalArgumentException in connector configuration", RestStatus.BAD_REQUEST);
             } catch (PrivilegedActionException pae) {
+                logger.error("PrivilegedActionException in connector configuration", pae);
                 throw new FlowFrameworkException("PrivilegedActionException in connector configuration", RestStatus.UNAUTHORIZED);
             }
 

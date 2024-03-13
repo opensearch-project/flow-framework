@@ -28,6 +28,7 @@ import java.util.concurrent.ExecutionException;
 import org.mockito.ArgumentCaptor;
 
 import static org.opensearch.action.DocWriteResponse.Result.UPDATED;
+import static org.opensearch.flowframework.common.CommonValue.CONFIGURATIONS;
 import static org.opensearch.flowframework.common.CommonValue.WORKFLOW_STATE_INDEX;
 import static org.opensearch.flowframework.common.WorkflowResources.MODEL_ID;
 import static org.opensearch.flowframework.common.WorkflowResources.PIPELINE_ID;
@@ -54,15 +55,10 @@ public class CreateIngestPipelineStepTests extends OpenSearchTestCase {
         super.setUp();
         this.flowFrameworkIndicesHandler = mock(FlowFrameworkIndicesHandler.class);
 
+        String configurations =
+            "{“description”:“An neural ingest pipeline”,“processors”:[{“text_embedding”:{“field_map”:{“text”:“analyzed_text”},“model_id”:“sdsadsadasd”}}]}";
         inputData = new WorkflowData(
-            Map.ofEntries(
-                Map.entry("id", "pipelineId"),
-                Map.entry("description", "some description"),
-                Map.entry("type", "text_embedding"),
-                Map.entry(MODEL_ID, MODEL_ID),
-                Map.entry("input_field_name", "inputField"),
-                Map.entry("output_field_name", "outputField")
-            ),
+            Map.ofEntries(Map.entry(CONFIGURATIONS, configurations), Map.entry(PIPELINE_ID, "pipelineId")),
             "test-id",
             "test-node-id"
         );
@@ -136,7 +132,7 @@ public class CreateIngestPipelineStepTests extends OpenSearchTestCase {
     }
 
     public void testMissingData() throws InterruptedException {
-        CreateIngestPipelineStep createIngestPipelineStep = new CreateIngestPipelineStep(client, flowFrameworkIndicesHandler);
+        CreateIngestPipelineStep CreateIngestPipelineStep = new CreateIngestPipelineStep(client, flowFrameworkIndicesHandler);
 
         // Data with missing input and output fields
         WorkflowData incorrectData = new WorkflowData(
@@ -150,7 +146,7 @@ public class CreateIngestPipelineStepTests extends OpenSearchTestCase {
             "test-node-id"
         );
 
-        PlainActionFuture<WorkflowData> future = createIngestPipelineStep.execute(
+        PlainActionFuture<WorkflowData> future = CreateIngestPipelineStep.execute(
             incorrectData.getNodeId(),
             incorrectData,
             Collections.emptyMap(),
@@ -161,7 +157,10 @@ public class CreateIngestPipelineStepTests extends OpenSearchTestCase {
 
         ExecutionException exception = assertThrows(ExecutionException.class, () -> future.get());
         assertTrue(exception.getCause() instanceof Exception);
-        assertEquals("Failed to create ingest pipeline for test-node-id, required inputs not found", exception.getCause().getMessage());
+        assertEquals(
+            "Missing required inputs [configurations, pipeline_id] in workflow [test-id] node [test-node-id]",
+            exception.getCause().getMessage()
+        );
     }
 
 }
