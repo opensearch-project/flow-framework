@@ -84,7 +84,6 @@ public class WorkflowStepFactory {
     ) {
         stepMap.put(NoOpStep.NAME, NoOpStep::new);
         stepMap.put(CreateIndexStep.NAME, () -> new CreateIndexStep(client, flowFrameworkIndicesHandler));
-        stepMap.put(DeleteIndexStep.NAME, () -> new DeleteIndexStep(client));
         stepMap.put(
             RegisterLocalCustomModelStep.NAME,
             () -> new RegisterLocalCustomModelStep(threadPool, mlClient, flowFrameworkIndicesHandler, flowFrameworkSettings)
@@ -189,9 +188,6 @@ public class WorkflowStepFactory {
             List.of(OPENSEARCH_ML),
             null
         ),
-
-        /** Delete Index Step */
-        DELETE_INDEX(DeleteIndexStep.NAME, List.of(INDEX_NAME), List.of(INDEX_NAME), Collections.emptyList(), null),
 
         /** Deploy Model Step */
         DEPLOY_MODEL(DeployModelStep.NAME, List.of(MODEL_ID), List.of(MODEL_ID), List.of(OPENSEARCH_ML), TimeValue.timeValueSeconds(15)),
