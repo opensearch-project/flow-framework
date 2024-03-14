@@ -22,6 +22,7 @@ import org.opensearch.core.action.ActionListener;
 import org.opensearch.core.common.bytes.BytesArray;
 import org.opensearch.core.common.bytes.BytesReference;
 import org.opensearch.flowframework.exception.FlowFrameworkException;
+import org.opensearch.flowframework.exception.WorkflowStepException;
 import org.opensearch.flowframework.indices.FlowFrameworkIndicesHandler;
 import org.opensearch.flowframework.util.ParseUtils;
 
@@ -140,7 +141,7 @@ public abstract class AbstractCreatePipelineStep implements WorkflowStep {
                 public void onFailure(Exception e) {
                     String errorMessage = "Failed step " + pipelineToBeCreated;
                     logger.error(errorMessage, e);
-                    createPipelineFuture.onFailure(new FlowFrameworkException(errorMessage, ExceptionsHelper.status(e)));
+                    createPipelineFuture.onFailure(new WorkflowStepException(errorMessage, ExceptionsHelper.status(e)));
                 }
 
             };

@@ -18,6 +18,7 @@ import org.opensearch.core.action.ActionListener;
 import org.opensearch.core.rest.RestStatus;
 import org.opensearch.flowframework.common.FlowFrameworkSettings;
 import org.opensearch.flowframework.exception.FlowFrameworkException;
+import org.opensearch.flowframework.exception.WorkflowStepException;
 import org.opensearch.flowframework.indices.FlowFrameworkIndicesHandler;
 import org.opensearch.ml.client.MachineLearningNodeClient;
 import org.opensearch.ml.common.MLTask;
@@ -127,7 +128,7 @@ public abstract class AbstractRetryableWorkflowStep implements WorkflowStep {
                 }, exception -> {
                     String errorMessage = workflowStep + " failed";
                     logger.error(errorMessage, exception);
-                    mlTaskListener.onFailure(new FlowFrameworkException(errorMessage, RestStatus.BAD_REQUEST));
+                    mlTaskListener.onFailure(new WorkflowStepException(errorMessage, RestStatus.BAD_REQUEST));
                 }));
                 try {
                     Thread.sleep(this.retryDuration.getMillis());

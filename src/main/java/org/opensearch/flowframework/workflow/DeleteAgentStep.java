@@ -15,6 +15,7 @@ import org.opensearch.action.delete.DeleteResponse;
 import org.opensearch.action.support.PlainActionFuture;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.flowframework.exception.FlowFrameworkException;
+import org.opensearch.flowframework.exception.WorkflowStepException;
 import org.opensearch.flowframework.util.ParseUtils;
 import org.opensearch.ml.client.MachineLearningNodeClient;
 
@@ -84,7 +85,7 @@ public class DeleteAgentStep implements WorkflowStep {
                 public void onFailure(Exception e) {
                     String errorMessage = "Failed to delete agent " + agentId;
                     logger.error(errorMessage, e);
-                    deleteAgentFuture.onFailure(new FlowFrameworkException(errorMessage, ExceptionsHelper.status(e)));
+                    deleteAgentFuture.onFailure(new WorkflowStepException(errorMessage, ExceptionsHelper.status(e)));
                 }
             });
         } catch (FlowFrameworkException e) {
