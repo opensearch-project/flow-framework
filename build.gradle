@@ -183,7 +183,7 @@ dependencies {
 
     configurations.all {
         resolutionStrategy {
-            force("com.google.guava:guava:33.0.0-jre") // CVE for 31.1, keep to force transitive dependencies
+            force("com.google.guava:guava:33.1.0-jre") // CVE for 31.1, keep to force transitive dependencies
             force("org.eclipse.platform:org.eclipse.core.runtime:3.31.0") // CVE for < 3.29.0
             force("com.fasterxml.jackson.core:jackson-core:2.17.0") // Dependency Jar Hell
         }
