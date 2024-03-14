@@ -57,7 +57,7 @@ public enum WorkflowResources {
     /** Workflow steps for creating an ingest-pipeline and associated created resource */
     CREATE_SEARCH_PIPELINE(CreateSearchPipelineStep.NAME, WorkflowResources.PIPELINE_ID, null), // TODO delete step
     /** Workflow steps for creating an index and associated created resource */
-    CREATE_INDEX(CreateIndexStep.NAME, WorkflowResources.INDEX_NAME, null), // TODO delete step
+    CREATE_INDEX(CreateIndexStep.NAME, WorkflowResources.INDEX_NAME, NoOpStep.NAME),
     /** Workflow steps for registering/deleting an agent and the associated created resource */
     REGISTER_AGENT(RegisterAgentStep.NAME, WorkflowResources.AGENT_ID, DeleteAgentStep.NAME);
 
