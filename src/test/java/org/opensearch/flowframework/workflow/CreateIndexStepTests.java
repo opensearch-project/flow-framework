@@ -15,11 +15,8 @@ import org.opensearch.action.update.UpdateResponse;
 import org.opensearch.client.AdminClient;
 import org.opensearch.client.Client;
 import org.opensearch.client.IndicesAdminClient;
-import org.opensearch.cluster.ClusterName;
-import org.opensearch.cluster.ClusterState;
 import org.opensearch.cluster.metadata.IndexMetadata;
 import org.opensearch.cluster.metadata.Metadata;
-import org.opensearch.cluster.service.ClusterService;
 import org.opensearch.common.settings.Settings;
 import org.opensearch.common.util.concurrent.ThreadContext;
 import org.opensearch.core.action.ActionListener;
@@ -30,16 +27,15 @@ import org.opensearch.threadpool.ThreadPool;
 
 import java.io.IOException;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
 import static org.opensearch.action.DocWriteResponse.Result.UPDATED;
+import static org.opensearch.flowframework.common.CommonValue.CONFIGURATIONS;
 import static org.opensearch.flowframework.common.CommonValue.GLOBAL_CONTEXT_INDEX;
 import static org.opensearch.flowframework.common.CommonValue.WORKFLOW_STATE_INDEX;
 import static org.opensearch.flowframework.common.WorkflowResources.INDEX_NAME;
@@ -59,10 +55,7 @@ public class CreateIndexStepTests extends OpenSearchTestCase {
     private CreateIndexStep createIndexStep;
     private ThreadContext threadContext;
     private Metadata metadata;
-    private Map<String, AtomicBoolean> indexMappingUpdated = new HashMap<>();
 
-    @Mock
-    private ClusterService clusterService;
     @Mock
     private IndicesAdminClient indicesAdminClient;
     @Mock
@@ -76,12 +69,14 @@ public class CreateIndexStepTests extends OpenSearchTestCase {
         super.setUp();
         this.flowFrameworkIndicesHandler = mock(FlowFrameworkIndicesHandler.class);
         MockitoAnnotations.openMocks(this);
+        String configurations =
+            "{\"settings\":{\"index\":{\"number_of_shards\":2,\"number_of_replicas\":1}},\"mappings\":{\"_doc\":{\"properties\":{\"age\":{\"type\":\"integer\"}}}},\"aliases\":{\"sample-alias1\":{}}}";
+
         inputData = new WorkflowData(
-            Map.ofEntries(Map.entry(INDEX_NAME, "demo"), Map.entry("default_mapping_option", "knn")),
+            Map.ofEntries(Map.entry(INDEX_NAME, "demo"), Map.entry(CONFIGURATIONS, configurations)),
             "test-id",
             "test-node-id"
         );
-        clusterService = mock(ClusterService.class);
         client = mock(Client.class);
         adminClient = mock(AdminClient.class);
         metadata = mock(Metadata.class);
@@ -92,11 +87,9 @@ public class CreateIndexStepTests extends OpenSearchTestCase {
         when(threadPool.getThreadContext()).thenReturn(threadContext);
         when(client.admin()).thenReturn(adminClient);
         when(adminClient.indices()).thenReturn(indicesAdminClient);
-        when(clusterService.state()).thenReturn(ClusterState.builder(new ClusterName("test cluster")).build());
         when(metadata.indices()).thenReturn(Map.of(GLOBAL_CONTEXT_INDEX, indexMetadata));
 
-        createIndexStep = new CreateIndexStep(clusterService, client, flowFrameworkIndicesHandler);
-        CreateIndexStep.indexMappingUpdated = indexMappingUpdated;
+        createIndexStep = new CreateIndexStep(client, flowFrameworkIndicesHandler);
     }
 
     public void testCreateIndexStep() throws ExecutionException, InterruptedException, IOException {
@@ -145,6 +138,6 @@ public class CreateIndexStepTests extends OpenSearchTestCase {
         assertTrue(future.isDone());
         ExecutionException ex = assertThrows(ExecutionException.class, () -> future.get().getContent());
         assertTrue(ex.getCause() instanceof Exception);
-        assertEquals("Failed to create an index", ex.getCause().getMessage());
+        assertEquals("Failed to create the index demo", ex.getCause().getMessage());
     }
 }
