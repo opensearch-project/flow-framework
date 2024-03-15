@@ -97,7 +97,7 @@ public class ParseUtilsTests extends OpenSearchTestCase {
 
         Object result = ParseUtils.conditionallySubstitute(input, outputs, params);
 
-        assertEquals("This string has no placeholders", result, "String should remain unchanged");
+        assertEquals("This string has no placeholders", result);
     }
 
     public void testConditionallySubstituteWithUnmatchedPlaceholders() {
@@ -107,7 +107,7 @@ public class ParseUtilsTests extends OpenSearchTestCase {
 
         Object result = ParseUtils.conditionallySubstitute(input, outputs, params);
 
-        assertEquals("This string has unmatched ${{placeholder}}", result, "String should remain unchanged due to unmatched placeholders");
+        assertEquals("This string has unmatched ${{placeholder}}", result);
     }
 
     public void testConditionallySubstituteWithOutputsSubstitution() {

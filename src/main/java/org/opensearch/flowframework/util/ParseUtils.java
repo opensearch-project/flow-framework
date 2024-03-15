@@ -109,8 +109,6 @@ public class ParseUtils {
     public static void buildStringToStringMap(XContentBuilder xContentBuilder, Map<?, ?> map) throws IOException {
         xContentBuilder.startObject();
         for (Entry<?, ?> e : map.entrySet()) {
-            String key = (String) e.getKey();
-            String value = (String) e.getValue();
             xContentBuilder.field((String) e.getKey(), (String) e.getValue());
         }
         xContentBuilder.endObject();
