@@ -107,6 +107,8 @@ public class ParseUtils {
     public static void buildStringToStringMap(XContentBuilder xContentBuilder, Map<?, ?> map) throws IOException {
         xContentBuilder.startObject();
         for (Entry<?, ?> e : map.entrySet()) {
+            String key = (String) e.getKey();
+            String value = (String) e.getValue();
             xContentBuilder.field((String) e.getKey(), (String) e.getValue());
         }
         xContentBuilder.endObject();
@@ -342,11 +344,18 @@ public class ParseUtils {
         return inputs;
     }
 
-    private static Object conditionallySubstitute(Object value, Map<String, WorkflowData> outputs, Map<String, String> params) {
+    /**
+     * Executes substitution on the given value by looking at any matching values in either the ouputs or params map
+     * @param value the Object that will have the substitution done on
+     * @param outputs potential location of values to be substituted in
+     * @param params potential location of values to be subsituted in
+     * @return the substituted object back
+     */
+    public static Object conditionallySubstitute(Object value, Map<String, WorkflowData> outputs, Map<String, String> params) {
         if (value instanceof String) {
             Matcher m = SUBSTITUTION_PATTERN.matcher((String) value);
             StringBuilder result = new StringBuilder();
-            while (m.find()) {
+            while (m.find() && outputs != null) {
                 // outputs content map contains values for previous node input (e.g: deploy_openai_model.model_id)
                 // Check first if the substitution is looking for the same key, value pair and if yes
                 // then replace it with the key value pair in the inputs map
@@ -364,10 +373,17 @@ public class ParseUtils {
             m.appendTail(result);
             value = result.toString();
 
-            // Replace all params if present
-            for (Entry<String, String> e : params.entrySet()) {
+            for (Map.Entry<String, String> e : params.entrySet()) {
                 String regex = "\\$\\{\\{\\s*" + Pattern.quote(e.getKey()) + "\\s*\\}\\}";
-                value = ((String) value).replaceAll(regex, e.getValue());
+                String replacement = e.getValue();
+
+                // Special handling for JSON strings that contain placeholders (connectors action)
+                replacement = Matcher.quoteReplacement(replacement.replace("\"", "\\\""));
+
+                // Use Pattern.compile().matcher() to avoid issues with replaceAll's direct pattern compilation
+                Pattern pattern = Pattern.compile(regex);
+                Matcher matcher = pattern.matcher((String) value);
+                value = matcher.replaceAll(replacement);
             }
         }
         return value;
@@ -384,5 +400,18 @@ public class ParseUtils {
         // Convert the map to a JSON string
         String mappedString = mapper.writeValueAsString(map);
         return mappedString;
+    }
+
+    /**
+     * Generates a String to String map based on a Json File
+     * @param path file path
+     * @return instance of the string
+     * @throws JsonProcessingException JsonProcessingException from Jackson for issues processing map
+     */
+    public static Map<String, String> parseJsonFileToStringToStringMap(String path) throws IOException {
+        ObjectMapper mapper = new ObjectMapper();
+        String jsonContent = resourceToString(path);
+        Map<String, String> mappedJsonFile = mapper.readValue(jsonContent, Map.class);
+        return mappedJsonFile;
     }
 }

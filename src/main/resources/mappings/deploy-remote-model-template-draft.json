@@ -1,0 +1,77 @@
+{
+  "name": "{template.name}",
+  "description": "{template.description}",
+  "use_case": "DEPLOY_MODEL",
+  "version": {
+    "template": "1.0.0",
+    "compatibility": [
+      "2.12.0",
+      "3.0.0"
+    ]
+  },
+  "workflows": {
+    "provision": {
+      "nodes": [
+        {
+          "id": "create_connector",
+          "type": "create_connector",
+          "user_inputs": {
+            "name": "${{create_connector_1}}",
+            "description": "${{create_connector_1.description}}",
+            "version": "1",
+            "protocol": "${{create_connector_1.protocol}}",
+            "parameters": {
+              "endpoint": "${{create_connector_1.endpoint}}",
+              "model": "${{create_connector_1.model}}"
+            },
+            "credential": {
+              "key": "${{create_connector_1.credential.key}}",
+            },
+            "actions": [
+              {
+                "action_type": "predict",
+                "method": "POST",
+                "url": "https://api.openai.com/v1/embeddings",
+                "headers": {
+                  "Authorization": "Bearer ${credential.openAI_key}"
+                },
+                "request_body": "{ \"input\": ${parameters.input}, \"model\": \"${parameters.model}\" }",
+                "pre_process_function": "connector.pre_process.openai.embedding",
+                "post_process_function": "connector.post_process.openai.embedding"
+              }
+            ]
+          }
+        },
+        {
+          "id": "register_model",
+          "type": "register_remote_model",
+          "previous_node_inputs": {
+            "create_connector_step_1": "parameters"
+          },
+          "user_inputs": {
+            "name": "${register_remote_model.name}",
+            "function_name": "remote",
+            "description": "${register_remote_model.description}"
+          }
+        },
+        {
+          "id": "deploy_model",
+          "type": "deploy_model",
+          "previous_node_inputs": {
+            "register_model_1": "model_id"
+          }
+        }
+      ],
+      "edges": [
+        {
+          "source": "create_connector",
+          "dest": "register_model"
+        },
+        {
+          "source": "register_model",
+          "dest": "deploy_model"
+        }
+      ]
+    }
+  }
+}

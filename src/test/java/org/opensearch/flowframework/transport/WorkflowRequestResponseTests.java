@@ -146,7 +146,7 @@ public class WorkflowRequestResponseTests extends OpenSearchTestCase {
     public void testWorkflowRequestWithParamsNoProvision() throws IOException {
         IllegalArgumentException ex = assertThrows(
             IllegalArgumentException.class,
-            () -> new WorkflowRequest("123", template, new String[] { "all" }, false, Map.of("foo", "bar"))
+            () -> new WorkflowRequest("123", template, new String[] { "all" }, false, Map.of("foo", "bar"), null, Collections.emptyMap())
         );
         assertEquals("Params may only be included when provisioning.", ex.getMessage());
     }
