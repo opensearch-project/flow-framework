@@ -19,6 +19,8 @@ import org.opensearch.test.OpenSearchTestCase;
 
 import java.io.IOException;
 import java.time.Instant;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -86,6 +88,50 @@ public class ParseUtilsTests extends OpenSearchTestCase {
         Map<String, Object> map = Map.ofEntries(Map.entry("test-1", Map.of("test-1", "test-1")));
         String parsedMap = ParseUtils.parseArbitraryStringToObjectMapToString(map);
         assertEquals("{\"test-1\":{\"test-1\":\"test-1\"}}", parsedMap);
+    }
+
+    public void testConditionallySubstituteWithNoPlaceholders() {
+        String input = "This string has no placeholders";
+        Map<String, WorkflowData> outputs = new HashMap<>();
+        Map<String, String> params = new HashMap<>();
+
+        Object result = ParseUtils.conditionallySubstitute(input, outputs, params);
+
+        assertEquals("This string has no placeholders", result, "String should remain unchanged");
+    }
+
+    public void testConditionallySubstituteWithUnmatchedPlaceholders() {
+        String input = "This string has unmatched ${{placeholder}}";
+        Map<String, WorkflowData> outputs = new HashMap<>();
+        Map<String, String> params = new HashMap<>();
+
+        Object result = ParseUtils.conditionallySubstitute(input, outputs, params);
+
+        assertEquals("This string has unmatched ${{placeholder}}", result, "String should remain unchanged due to unmatched placeholders");
+    }
+
+    public void testConditionallySubstituteWithOutputsSubstitution() {
+        String input = "This string contains ${{node.step}}";
+        Map<String, WorkflowData> outputs = new HashMap<>();
+        Map<String, String> params = new HashMap<>();
+        Map<String, Object> contents = new HashMap<>(Collections.emptyMap());
+        contents.put("step", "model_id");
+        WorkflowData data = new WorkflowData(contents, params, "test", "test");
+        outputs.put("node", data);
+        Object result = ParseUtils.conditionallySubstitute(input, outputs, params);
+        assertEquals("This string contains model_id", result);
+    }
+
+    public void testConditionallySubstituteWithParamsSubstitution() {
+        String input = "This string contains ${{node}}";
+        Map<String, WorkflowData> outputs = new HashMap<>();
+        Map<String, String> params = new HashMap<>();
+        params.put("node", "step");
+        Map<String, Object> contents = new HashMap<>(Collections.emptyMap());
+        WorkflowData data = new WorkflowData(contents, params, "test", "test");
+        outputs.put("node", data);
+        Object result = ParseUtils.conditionallySubstitute(input, outputs, params);
+        assertEquals("This string contains step", result);
     }
 
     public void testGetInputsFromPreviousSteps() {

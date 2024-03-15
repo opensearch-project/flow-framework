@@ -61,6 +61,8 @@ public class ParseUtils {
 
     private ParseUtils() {}
 
+    private static final ObjectMapper mapper = new ObjectMapper();
+
     /**
      * Converts a JSON string into an XContentParser
      *
@@ -373,17 +375,19 @@ public class ParseUtils {
             m.appendTail(result);
             value = result.toString();
 
-            for (Map.Entry<String, String> e : params.entrySet()) {
-                String regex = "\\$\\{\\{\\s*" + Pattern.quote(e.getKey()) + "\\s*\\}\\}";
-                String replacement = e.getValue();
+            if (params != null) {
+                for (Map.Entry<String, String> e : params.entrySet()) {
+                    String regex = "\\$\\{\\{\\s*" + Pattern.quote(e.getKey()) + "\\s*\\}\\}";
+                    String replacement = e.getValue();
 
-                // Special handling for JSON strings that contain placeholders (connectors action)
-                replacement = Matcher.quoteReplacement(replacement.replace("\"", "\\\""));
+                    // Special handling for JSON strings that contain placeholders (connectors action)
+                    replacement = Matcher.quoteReplacement(replacement.replace("\"", "\\\""));
 
-                // Use Pattern.compile().matcher() to avoid issues with replaceAll's direct pattern compilation
-                Pattern pattern = Pattern.compile(regex);
-                Matcher matcher = pattern.matcher((String) value);
-                value = matcher.replaceAll(replacement);
+                    // Use Pattern.compile().matcher() to avoid issues with replaceAll's direct pattern compilation
+                    Pattern pattern = Pattern.compile(regex);
+                    Matcher matcher = pattern.matcher((String) value);
+                    value = matcher.replaceAll(replacement);
+                }
             }
         }
         return value;
@@ -396,7 +400,6 @@ public class ParseUtils {
      * @throws JsonProcessingException JsonProcessingException from Jackson for issues processing map
      */
     public static String parseArbitraryStringToObjectMapToString(Map<String, Object> map) throws JsonProcessingException {
-        ObjectMapper mapper = new ObjectMapper();
         // Convert the map to a JSON string
         String mappedString = mapper.writeValueAsString(map);
         return mappedString;
@@ -409,7 +412,6 @@ public class ParseUtils {
      * @throws JsonProcessingException JsonProcessingException from Jackson for issues processing map
      */
     public static Map<String, String> parseJsonFileToStringToStringMap(String path) throws IOException {
-        ObjectMapper mapper = new ObjectMapper();
         String jsonContent = resourceToString(path);
         Map<String, String> mappedJsonFile = mapper.readValue(jsonContent, Map.class);
         return mappedJsonFile;

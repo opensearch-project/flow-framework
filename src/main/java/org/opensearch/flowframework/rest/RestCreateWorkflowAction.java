@@ -120,6 +120,8 @@ public class RestCreateWorkflowAction extends BaseRestHandler {
 
             Template template;
             Map<String, String> useCaseDefaultsMap = Collections.emptyMap();
+            XContentParser parser = request.contentParser();
+            ensureExpectedToken(XContentParser.Token.START_OBJECT, parser.nextToken(), parser);
             if (useCase != null) {
                 String json = ParseUtils.resourceToString("/" + DefaultUseCases.getSubstitutionReadyFileByUseCaseName(useCase));
                 String defaultsFilePath = DefaultUseCases.getDefaultsFileByUseCaseName(useCase);
@@ -127,8 +129,6 @@ public class RestCreateWorkflowAction extends BaseRestHandler {
 
                 if (request.hasContent()) {
                     try {
-                        XContentParser parser = request.contentParser();
-                        ensureExpectedToken(XContentParser.Token.START_OBJECT, parser.nextToken(), parser);
                         Map<String, String> userDefaults = ParseUtils.parseStringToStringMap(parser);
                         // updates the default params with anything user has given that matches
                         for (Map.Entry<String, String> userDefaultsEntry : userDefaults.entrySet()) {
@@ -151,8 +151,7 @@ public class RestCreateWorkflowAction extends BaseRestHandler {
                 template = Template.parse(parserTestJson);
 
             } else {
-                XContentParser parser = request.contentParser();
-                ensureExpectedToken(XContentParser.Token.START_OBJECT, parser.nextToken(), parser);
+
                 template = Template.parse(parser);
             }
 

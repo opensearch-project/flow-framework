@@ -34,6 +34,7 @@ public enum DefaultUseCases {
         "defaults/cohere-embedding-defaults.json",
         "substitutionTemplates/deploy-remote-model-template-extra-params.json"
     ),
+    /** defaults file and substitution ready template for local neural sparse model and ingest pipeline*/
     LOCAL_NEURAL_SPARSE_SEARCH(
         "local_neural_sparse_search",
         "defaults/local-sparse-search-defaults.json",
@@ -79,7 +80,7 @@ public enum DefaultUseCases {
     /**
      * Gets the defaultsFile based on the given use case.
      * @param useCaseName name of the given use case
-     * @return the deafultsFile for that usecase
+     * @return the defaultsFile for that usecase
      * @throws FlowFrameworkException if the use case doesn't exist in enum
      */
     public static String getDefaultsFileByUseCaseName(String useCaseName) throws FlowFrameworkException {
