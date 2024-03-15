@@ -17,6 +17,7 @@ Inspired from [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 - Added create ingest pipeline step ([#558](https://github.com/opensearch-project/flow-framework/pull/558))
 - Added create search pipeline step ([#569](https://github.com/opensearch-project/flow-framework/pull/569))
 - Added create index step ([#574](https://github.com/opensearch-project/flow-framework/pull/574))
+- Added default use cases ([#583](https://github.com/opensearch-project/flow-framework/pull/583))
 
 ### Enhancements
 - Substitute REST path or body parameters in Workflow Steps ([#525](https://github.com/opensearch-project/flow-framework/pull/525))

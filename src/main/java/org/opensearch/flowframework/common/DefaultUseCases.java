@@ -13,10 +13,6 @@ import org.apache.logging.log4j.Logger;
 import org.opensearch.core.rest.RestStatus;
 import org.opensearch.flowframework.exception.FlowFrameworkException;
 
-import java.util.Set;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
-
 /**
  * Enum encapsulating the different default use cases and templates we have stored
  */
@@ -45,7 +41,6 @@ public enum DefaultUseCases {
     private final String defaultsFile;
     private final String substitutionReadyFile;
     private static final Logger logger = LogManager.getLogger(DefaultUseCases.class);
-    private static final Set<String> allResources = Stream.of(values()).map(DefaultUseCases::getDefaultsFile).collect(Collectors.toSet());
 
     DefaultUseCases(String useCaseName, String defaultsFile, String substitutionReadyFile) {
         this.useCaseName = useCaseName;
@@ -85,9 +80,9 @@ public enum DefaultUseCases {
      */
     public static String getDefaultsFileByUseCaseName(String useCaseName) throws FlowFrameworkException {
         if (useCaseName != null && !useCaseName.isEmpty()) {
-            for (DefaultUseCases mapping : values()) {
-                if (useCaseName.equals(mapping.getUseCaseName())) {
-                    return mapping.getDefaultsFile();
+            for (DefaultUseCases usecase : values()) {
+                if (useCaseName.equals(usecase.getUseCaseName())) {
+                    return usecase.getDefaultsFile();
                 }
             }
         }
@@ -103,9 +98,9 @@ public enum DefaultUseCases {
      */
     public static String getSubstitutionReadyFileByUseCaseName(String useCaseName) throws FlowFrameworkException {
         if (useCaseName != null && !useCaseName.isEmpty()) {
-            for (DefaultUseCases mapping : values()) {
-                if (mapping.getUseCaseName().equals(useCaseName)) {
-                    return mapping.getSubstitutionReadyFile();
+            for (DefaultUseCases useCase : values()) {
+                if (useCase.getUseCaseName().equals(useCaseName)) {
+                    return useCase.getSubstitutionReadyFile();
                 }
             }
         }

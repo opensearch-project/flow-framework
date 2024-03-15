@@ -120,20 +120,24 @@ public class RestCreateWorkflowAction extends BaseRestHandler {
 
             Template template;
             Map<String, String> useCaseDefaultsMap = Collections.emptyMap();
-            XContentParser parser = request.contentParser();
-            ensureExpectedToken(XContentParser.Token.START_OBJECT, parser.nextToken(), parser);
             if (useCase != null) {
-                String json = ParseUtils.resourceToString("/" + DefaultUseCases.getSubstitutionReadyFileByUseCaseName(useCase));
+                String useCaseTemplateFileInStringFormat = ParseUtils.resourceToString(
+                    "/" + DefaultUseCases.getSubstitutionReadyFileByUseCaseName(useCase)
+                );
                 String defaultsFilePath = DefaultUseCases.getDefaultsFileByUseCaseName(useCase);
                 useCaseDefaultsMap = ParseUtils.parseJsonFileToStringToStringMap("/" + defaultsFilePath);
 
                 if (request.hasContent()) {
                     try {
+                        XContentParser parser = request.contentParser();
+                        ensureExpectedToken(XContentParser.Token.START_OBJECT, parser.nextToken(), parser);
                         Map<String, String> userDefaults = ParseUtils.parseStringToStringMap(parser);
                         // updates the default params with anything user has given that matches
                         for (Map.Entry<String, String> userDefaultsEntry : userDefaults.entrySet()) {
-                            if (useCaseDefaultsMap.containsKey(userDefaultsEntry.getKey())) {
-                                useCaseDefaultsMap.put(userDefaultsEntry.getKey(), userDefaultsEntry.getValue());
+                            String key = userDefaultsEntry.getKey();
+                            String value = userDefaultsEntry.getValue();
+                            if (useCaseDefaultsMap.containsKey(key)) {
+                                useCaseDefaultsMap.put(key, value);
                             }
                         }
                     } catch (Exception ex) {
@@ -145,14 +149,19 @@ public class RestCreateWorkflowAction extends BaseRestHandler {
 
                 }
 
-                json = (String) ParseUtils.conditionallySubstitute(json, null, useCaseDefaultsMap);
+                useCaseTemplateFileInStringFormat = (String) ParseUtils.conditionallySubstitute(
+                    useCaseTemplateFileInStringFormat,
+                    null,
+                    useCaseDefaultsMap
+                );
 
-                XContentParser parserTestJson = ParseUtils.jsonToParser(json);
+                XContentParser parserTestJson = ParseUtils.jsonToParser(useCaseTemplateFileInStringFormat);
                 ensureExpectedToken(XContentParser.Token.START_OBJECT, parserTestJson.currentToken(), parserTestJson);
                 template = Template.parse(parserTestJson);
 
             } else {
-
+                XContentParser parser = request.contentParser();
+                ensureExpectedToken(XContentParser.Token.START_OBJECT, parser.nextToken(), parser);
                 template = Template.parse(parser);
             }
 

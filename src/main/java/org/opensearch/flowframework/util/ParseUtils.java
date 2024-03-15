@@ -380,11 +380,7 @@ public class ParseUtils {
 
                     // Special handling for JSON strings that contain placeholders (connectors action)
                     replacement = Matcher.quoteReplacement(replacement.replace("\"", "\\\""));
-
-                    // Use Pattern.compile().matcher() to avoid issues with replaceAll's direct pattern compilation
-                    Pattern pattern = Pattern.compile(regex);
-                    Matcher matcher = pattern.matcher((String) value);
-                    value = matcher.replaceAll(replacement);
+                    value = ((String) value).replaceAll(regex, replacement);
                 }
             }
         }

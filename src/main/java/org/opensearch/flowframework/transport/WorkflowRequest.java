@@ -79,6 +79,17 @@ public class WorkflowRequest extends ActionRequest {
     }
 
     /**
+     * Instantiates a new WorkflowRequest with params map, set validation to all, provisioning to true
+     * @param workflowId the documentId of the workflow
+     * @param template the use case template which describes the workflow
+     * @param useCase the default use case give by user
+     * @param defaultParams The parameters from the REST body when a use case is given
+     */
+    public WorkflowRequest(@Nullable String workflowId, @Nullable Template template, String useCase, Map<String, String> defaultParams) {
+        this(workflowId, template, new String[] { "all" }, false, Collections.emptyMap(), useCase, defaultParams);
+    }
+
+    /**
      * Instantiates a new WorkflowRequest
      * @param workflowId the documentId of the workflow
      * @param template the use case template which describes the workflow
@@ -167,8 +178,8 @@ public class WorkflowRequest extends ActionRequest {
     }
 
     /**
-     * Gets the params map
-     * @return the params map
+     * Gets the use case
+     * @return the use case
      */
     public String getUseCase() {
         return this.useCase;
