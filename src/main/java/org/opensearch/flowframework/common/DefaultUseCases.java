@@ -38,12 +38,6 @@ public enum DefaultUseCases {
         "local_neural_sparse_search",
         "defaults/local-sparse-search-defaults.json",
         "substitutionTemplates/neural-sparse-local-template.json"
-    ),
-    /** defaults file and substitution ready template for cohere embedding model */ // TODO: not finalized
-    COHERE_EMBEDDING_MODEL_DEPLOY_SEMANTIC_SEARCH(
-        "cohere-embedding_model_deploy_semantic_search",
-        "defaults/cohere-embedding-defaults.json",
-        "substitutionTemplates/deploy-remote-model-template-v1.json"
     );
 
     private final String useCaseName;
