@@ -175,8 +175,10 @@ dependencies {
     implementation 'com.amazonaws:aws-encryption-sdk-java:2.4.1'
     implementation 'org.bouncycastle:bcprov-jdk18on:1.77'
     api "org.apache.httpcomponents.core5:httpcore5:5.2.2"
-    implementation("com.fasterxml.jackson.core:jackson-annotations:${versions.jackson}")
-    implementation("com.fasterxml.jackson.core:jackson-databind:${versions.jackson_databind}")
+    implementation "jakarta.json:jakarta.json-api:2.0.1"
+    implementation "jakarta.json.bind:jakarta.json.bind-api:2.0.0"
+    implementation ("org.eclipse:yasson:2.0.2")
+
 
     // ZipArchive dependencies used for integration tests
     zipArchive group: 'org.opensearch.plugin', name:'opensearch-ml-plugin', version: "${opensearch_build}"
