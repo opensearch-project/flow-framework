@@ -9,7 +9,9 @@
 package org.opensearch.flowframework.util;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
+
+import jakarta.json.bind.Jsonb;
+import jakarta.json.bind.JsonbBuilder;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -379,10 +381,15 @@ public class ParseUtils {
      * @return instance of the string
      * @throws JsonProcessingException JsonProcessingException from Jackson for issues processing map
      */
-    public static String parseArbitraryStringToObjectMapToString(Map<String, Object> map) throws JsonProcessingException {
-        ObjectMapper mapper = new ObjectMapper();
-        // Convert the map to a JSON string
-        String mappedString = mapper.writeValueAsString(map);
-        return mappedString;
+    public static String parseArbitraryStringToObjectMapToString(Map<String, Object> map) throws Exception {
+        Jsonb jsonb = JsonbBuilder.create();
+        try {
+            // Convert the map to a JSON string
+            String jsonString = jsonb.toJson(map);
+            return jsonString;
+        } finally {
+            // Close the Jsonb instance
+            jsonb.close();
+        }
     }
 }
