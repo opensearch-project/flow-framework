@@ -143,10 +143,55 @@ public class WorkflowRequestResponseTests extends OpenSearchTestCase {
         assertEquals("bar", workflowRequest.getParams().get("foo"));
     }
 
+    public void testWorkflowRequestWithUseCase() throws IOException {
+        WorkflowRequest workflowRequest = new WorkflowRequest("123", template, "cohere-embedding_model_deploy", Collections.emptyMap());
+        assertNotNull(workflowRequest.getWorkflowId());
+        assertEquals(template, workflowRequest.getTemplate());
+        assertNull(workflowRequest.validate());
+        assertFalse(workflowRequest.isProvision());
+        assertTrue(workflowRequest.getDefaultParams().isEmpty());
+        assertEquals(workflowRequest.getUseCase(), "cohere-embedding_model_deploy");
+
+        BytesStreamOutput out = new BytesStreamOutput();
+        workflowRequest.writeTo(out);
+        BytesStreamInput in = new BytesStreamInput(BytesReference.toBytes(out.bytes()));
+
+        WorkflowRequest streamInputRequest = new WorkflowRequest(in);
+
+        assertEquals(workflowRequest.getWorkflowId(), streamInputRequest.getWorkflowId());
+        assertEquals(workflowRequest.getTemplate().toString(), streamInputRequest.getTemplate().toString());
+        assertNull(workflowRequest.validate());
+        assertFalse(workflowRequest.isProvision());
+        assertTrue(workflowRequest.getDefaultParams().isEmpty());
+        assertEquals(workflowRequest.getUseCase(), "cohere-embedding_model_deploy");
+    }
+
+    public void testWorkflowRequestWithUseCaseAndParamsInBody() throws IOException {
+        WorkflowRequest workflowRequest = new WorkflowRequest("123", template, "cohere-embedding_model_deploy", Map.of("step", "model"));
+        assertNotNull(workflowRequest.getWorkflowId());
+        assertEquals(template, workflowRequest.getTemplate());
+        assertNull(workflowRequest.validate());
+        assertFalse(workflowRequest.isProvision());
+        assertEquals(workflowRequest.getDefaultParams().get("step"), "model");
+
+        BytesStreamOutput out = new BytesStreamOutput();
+        workflowRequest.writeTo(out);
+        BytesStreamInput in = new BytesStreamInput(BytesReference.toBytes(out.bytes()));
+
+        WorkflowRequest streamInputRequest = new WorkflowRequest(in);
+
+        assertEquals(workflowRequest.getWorkflowId(), streamInputRequest.getWorkflowId());
+        assertEquals(workflowRequest.getTemplate().toString(), streamInputRequest.getTemplate().toString());
+        assertNull(workflowRequest.validate());
+        assertFalse(workflowRequest.isProvision());
+        assertEquals(workflowRequest.getDefaultParams().get("step"), "model");
+
+    }
+
     public void testWorkflowRequestWithParamsNoProvision() throws IOException {
         IllegalArgumentException ex = assertThrows(
             IllegalArgumentException.class,
-            () -> new WorkflowRequest("123", template, new String[] { "all" }, false, Map.of("foo", "bar"))
+            () -> new WorkflowRequest("123", template, new String[] { "all" }, false, Map.of("foo", "bar"), null, Collections.emptyMap())
         );
         assertEquals("Params may only be included when provisioning.", ex.getMessage());
     }

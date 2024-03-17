@@ -1,0 +1,124 @@
+{
+  "name": "${{template.name}}",
+  "description": "${{template.description}}",
+  "use_case": "DEPLOY_MODEL",
+  "version": {
+    "template": "1.0.0",
+    "compatibility": [
+      "2.12.0",
+      "3.0.0"
+    ]
+  },
+  "workflows": {
+    "provision": {
+      "nodes": [
+        {
+          "id": "create_connector",
+          "type": "create_connector",
+          "user_inputs": {
+            "name": "${{create_connector_1}}",
+            "description": "${{create_connector_1.description}}",
+            "version": "1",
+            "protocol": "${{create_connector_1.protocol}}",
+            "parameters": {
+              "endpoint": "${{create_connector_1.endpoint}}",
+              "model": "${{create_connector_1.model}}",
+              "input_type": "search_document",
+              "truncate": "END"
+            },
+            "credential": {
+              "key": "${{create_connector_1.credential.key}}"
+            },
+            "actions": [
+              {
+                "action_type": "predict",
+                "method": "POST",
+                "url": "${{create_connector.actions.url}}",
+                "headers": {
+                  "Authorization": "Bearer ${credential.key}",
+                  "Request-Source": "unspecified:opensearch"
+                },
+                "request_body": "${{create_connector.actions.request_body}}",
+                "pre_process_function": "${{create_connector.actions.pre_process_function}}",
+                "post_process_function": "${{create_connector.actions.post_process_function}}"
+              }
+            ]
+          }
+        },
+        {
+          "id": "register_model",
+          "type": "register_remote_model",
+          "previous_node_inputs": {
+            "create_connector_step_1": "parameters"
+          },
+          "user_inputs": {
+            "name": "${register_remote_model.name}",
+            "function_name": "remote",
+            "description": "${register_remote_model.description}"
+          }
+        },
+        {
+          "id": "deploy_model",
+          "type": "deploy_model",
+          "previous_node_inputs": {
+            "register_model_1": "model_id"
+          }
+        },
+        {
+          "id": "create_ingest_pipeline",
+          "type": "create_ingest_pipeline",
+          "previous_node_inputs": {
+            "deploy_openai_model": "model_id"
+          },
+          "user_inputs": {
+            "pipeline_id": "${{create_ingest_pipeline.pipeline_id}}",
+            "configurations": {
+              "description": "${{create_ingest_pipeline.description}}",
+              "processors": [
+                {
+                  "text_embedding": {
+                    "model_id": "${{deploy_openai_model.model_id}}",
+                    "field_map": {
+                      "${{text_embedding.field_map.input}}": "${{text_embedding.field_map.input}}"
+                    }
+                  }
+                }
+              ]
+            }
+          }
+        },
+        {
+          "id": "create_index",
+          "type": "create_index",
+          "previous_node_inputs": {
+            "create_ingest_pipeline": "pipeline_id"
+          },
+          "user_inputs": {
+            "index_name": "${{create_index.name}}",
+            "configurations": {
+              "settings": {
+                "index": {
+                  "number_of_shards": 2,
+                  "number_of_replicas": 1,
+                  "search.default_pipeline" : "${{create_ingest_pipeline.pipeline_id}}"
+                }
+              },
+              "mappings": {
+                "_doc": {
+                  "properties": {
+                    "age": {
+                      "type": "integer"
+                    }
+                  }
+                }
+              },
+              "aliases": {
+                "sample-alias1": {}
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,18 @@
+{
+    "open_ai_embedding_deploy": {
+      "template.name": "deploy-openai-model",
+      "template.description": "deploying openAI embedding model",
+      "create_connector.name": "OpenAI-embedding-connector",
+      "create_connector.description": "Connector to public OpenAI model",
+      "create_connector.protocol": "http",
+      "create_connector.model": "text-embedding-ada-002",
+      "create_connector.endpoint": "api.openai.com",
+      "create_connector.credential.key": "123",
+      "create_connector.actions.url": "https://api.openai.com/v1/embeddings",
+      "create_connector.actions.request_body": "{ \"input\": ${parameters.input}, \"model\": \"${parameters.model}\" }",
+      "create_connector.actions.pre_process_function": "connector.pre_process.openai.embedding",
+      "create_connector.actions.post_process_function": "connector.post_process.openai.embedding",
+      "register_remote_model_1.name": "OpenAI embedding model",
+      "register_remote_model_1.description": "openai-embedding-model"
+    }
+}

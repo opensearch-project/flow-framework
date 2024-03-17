@@ -50,12 +50,22 @@ public class WorkflowRequest extends ActionRequest {
     private Map<String, String> params;
 
     /**
+     * use case flag
+     */
+    private String useCase;
+
+    /**
+     * Deafult params map from use case
+     */
+    private Map<String, String> defaultParams;
+
+    /**
      * Instantiates a new WorkflowRequest, set validation to all, no provisioning
      * @param workflowId the documentId of the workflow
      * @param template the use case template which describes the workflow
      */
     public WorkflowRequest(@Nullable String workflowId, @Nullable Template template) {
-        this(workflowId, template, new String[] { "all" }, false, Collections.emptyMap());
+        this(workflowId, template, new String[] { "all" }, false, Collections.emptyMap(), null, Collections.emptyMap());
     }
 
     /**
@@ -65,7 +75,18 @@ public class WorkflowRequest extends ActionRequest {
      * @param params The parameters from the REST path
      */
     public WorkflowRequest(@Nullable String workflowId, @Nullable Template template, Map<String, String> params) {
-        this(workflowId, template, new String[] { "all" }, true, params);
+        this(workflowId, template, new String[] { "all" }, true, params, null, Collections.emptyMap());
+    }
+
+    /**
+     * Instantiates a new WorkflowRequest with params map, set validation to all, provisioning to true
+     * @param workflowId the documentId of the workflow
+     * @param template the use case template which describes the workflow
+     * @param useCase the default use case give by user
+     * @param defaultParams The parameters from the REST body when a use case is given
+     */
+    public WorkflowRequest(@Nullable String workflowId, @Nullable Template template, String useCase, Map<String, String> defaultParams) {
+        this(workflowId, template, new String[] { "all" }, false, Collections.emptyMap(), useCase, defaultParams);
     }
 
     /**
@@ -75,13 +96,17 @@ public class WorkflowRequest extends ActionRequest {
      * @param validation flag to indicate if validation is necessary
      * @param provision flag to indicate if provision is necessary
      * @param params map of REST path params. If provision is false, must be an empty map.
+     * @param useCase default use case given
+     * @param defaultParams the params to be used in the substitution based on the default use case.
      */
     public WorkflowRequest(
         @Nullable String workflowId,
         @Nullable Template template,
         String[] validation,
         boolean provision,
-        Map<String, String> params
+        Map<String, String> params,
+        String useCase,
+        Map<String, String> defaultParams
     ) {
         this.workflowId = workflowId;
         this.template = template;
@@ -91,6 +116,8 @@ public class WorkflowRequest extends ActionRequest {
             throw new IllegalArgumentException("Params may only be included when provisioning.");
         }
         this.params = params;
+        this.useCase = useCase;
+        this.defaultParams = defaultParams;
     }
 
     /**
@@ -148,6 +175,22 @@ public class WorkflowRequest extends ActionRequest {
      */
     public Map<String, String> getParams() {
         return Map.copyOf(this.params);
+    }
+
+    /**
+     * Gets the use case
+     * @return the use case
+     */
+    public String getUseCase() {
+        return this.useCase;
+    }
+
+    /**
+     * Gets the params map
+     * @return the params map
+     */
+    public Map<String, String> getDefaultParams() {
+        return Map.copyOf(this.defaultParams);
     }
 
     @Override

@@ -1,0 +1,86 @@
+{
+  "name": "${{template.name}}",
+  "description": "${{template.description}}",
+  "use_case": "",
+  "version": {
+    "template": "1.0.0",
+    "compatibility": [
+      "2.12.0",
+      "3.0.0"
+    ]
+  },
+  "workflows": {
+    "provision": {
+      "nodes": [
+        {
+          "id": "register_local_sparse_encoding_model",
+          "type": "register_local_sparse_encoding_model",
+          "user_inputs": {
+            "node_timeout": "60s",
+            "name": "neural-sparse/opensearch-neural-sparse-tokenizer-v1-v2",
+            "version": "1.0.0",
+            "description": "This is a neural sparse tokenizer model: It tokenize input sentence into tokens and assign pre-defined weight from IDF to each. It serves only in query.",
+            "model_format": "TORCH_SCRIPT",
+            "function_name": "SPARSE_TOKENIZE",
+            "model_content_hash_value": "b3487da9c58ac90541b720f3b367084f271d280c7f3bdc3e6d9c9a269fb31950",
+            "url": "https://artifacts.opensearch.org/models/ml-models/amazon/neural-sparse/opensearch-neural-sparse-tokenizer-v1/1.0.0/torch_script/opensearch-neural-sparse-tokenizer-v1-1.0.0.zip",
+            "deploy": true
+          }
+        },
+        {
+          "id": "create_ingest_pipeline",
+          "type": "create_ingest_pipeline",
+          "previous_node_inputs": {
+            "register_local_sparse_encoding_model": "model_id"
+          },
+          "user_inputs": {
+            "pipeline_id": "${{create_ingest_pipeline.pipeline_id}}",
+            "configurations": {
+              "description": "${{create_ingest_pipeline.description}}",
+              "processors": [
+                {
+                  "sparse_encoding": {
+                    "model_id": "${{register_local_sparse_encoding_model.model_id}}",
+                    "field_map": {
+                      "${{create_ingest_pipeline.text_embedding.field_map.input}}": "${{create_ingest_pipeline.text_embedding.field_map.output}}"
+                    }
+                  }
+                }
+              ]
+            }
+          }
+        },
+        {
+          "id": "create_index",
+          "type": "create_index",
+          "previous_node_inputs": {
+            "create_ingest_pipeline": "pipeline_id"
+          },
+          "user_inputs": {
+            "index_name": "${{create_index.name}}",
+            "configurations": {
+              "settings": {
+                "default_pipeline": "${{create_ingest_pipeline.pipeline_id}}"
+              },
+              "mappings": {
+                "_doc": {
+                  "properties": {
+                    "id": {
+                      "type": "text"
+                    },
+                    "${{create_ingest_pipeline.text_embedding.field_map.output}}": {
+                      "type": "rank_features"
+                    },
+                    "${{create_ingest_pipeline.text_embedding.field_map.input}}": {
+                      "type": "text"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}
