@@ -17,16 +17,19 @@ import org.opensearch.core.rest.RestStatus;
 import org.opensearch.core.xcontent.ToXContent;
 import org.opensearch.core.xcontent.XContentBuilder;
 import org.opensearch.core.xcontent.XContentParser;
+import org.opensearch.flowframework.common.DefaultUseCases;
 import org.opensearch.flowframework.common.FlowFrameworkSettings;
 import org.opensearch.flowframework.exception.FlowFrameworkException;
 import org.opensearch.flowframework.model.Template;
 import org.opensearch.flowframework.transport.CreateWorkflowAction;
 import org.opensearch.flowframework.transport.WorkflowRequest;
+import org.opensearch.flowframework.util.ParseUtils;
 import org.opensearch.rest.BaseRestHandler;
 import org.opensearch.rest.BytesRestResponse;
 import org.opensearch.rest.RestRequest;
 
 import java.io.IOException;
+import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -35,6 +38,7 @@ import java.util.stream.Collectors;
 
 import static org.opensearch.core.xcontent.XContentParserUtils.ensureExpectedToken;
 import static org.opensearch.flowframework.common.CommonValue.PROVISION_WORKFLOW;
+import static org.opensearch.flowframework.common.CommonValue.USE_CASE;
 import static org.opensearch.flowframework.common.CommonValue.VALIDATION;
 import static org.opensearch.flowframework.common.CommonValue.WORKFLOW_ID;
 import static org.opensearch.flowframework.common.CommonValue.WORKFLOW_URI;
@@ -78,6 +82,7 @@ public class RestCreateWorkflowAction extends BaseRestHandler {
         String workflowId = request.param(WORKFLOW_ID);
         String[] validation = request.paramAsStringArray(VALIDATION, new String[] { "all" });
         boolean provision = request.paramAsBoolean(PROVISION_WORKFLOW, false);
+        String useCase = request.param(USE_CASE);
         // If provisioning, consume all other params and pass to provision transport action
         Map<String, String> params = provision
             ? request.params()
@@ -112,11 +117,63 @@ public class RestCreateWorkflowAction extends BaseRestHandler {
             );
         }
         try {
-            XContentParser parser = request.contentParser();
-            ensureExpectedToken(XContentParser.Token.START_OBJECT, parser.nextToken(), parser);
-            Template template = Template.parse(parser);
 
-            WorkflowRequest workflowRequest = new WorkflowRequest(workflowId, template, validation, provision, params);
+            Template template;
+            Map<String, String> useCaseDefaultsMap = Collections.emptyMap();
+            if (useCase != null) {
+                String useCaseTemplateFileInStringFormat = ParseUtils.resourceToString(
+                    "/" + DefaultUseCases.getSubstitutionReadyFileByUseCaseName(useCase)
+                );
+                String defaultsFilePath = DefaultUseCases.getDefaultsFileByUseCaseName(useCase);
+                useCaseDefaultsMap = ParseUtils.parseJsonFileToStringToStringMap("/" + defaultsFilePath);
+
+                if (request.hasContent()) {
+                    try {
+                        XContentParser parser = request.contentParser();
+                        ensureExpectedToken(XContentParser.Token.START_OBJECT, parser.nextToken(), parser);
+                        Map<String, String> userDefaults = ParseUtils.parseStringToStringMap(parser);
+                        // updates the default params with anything user has given that matches
+                        for (Map.Entry<String, String> userDefaultsEntry : userDefaults.entrySet()) {
+                            String key = userDefaultsEntry.getKey();
+                            String value = userDefaultsEntry.getValue();
+                            if (useCaseDefaultsMap.containsKey(key)) {
+                                useCaseDefaultsMap.put(key, value);
+                            }
+                        }
+                    } catch (Exception ex) {
+                        RestStatus status = ex instanceof IOException ? RestStatus.BAD_REQUEST : ExceptionsHelper.status(ex);
+                        String errorMessage = "failure parsing request body when a use case is given";
+                        logger.error(errorMessage, ex);
+                        throw new FlowFrameworkException(errorMessage, status);
+                    }
+
+                }
+
+                useCaseTemplateFileInStringFormat = (String) ParseUtils.conditionallySubstitute(
+                    useCaseTemplateFileInStringFormat,
+                    null,
+                    useCaseDefaultsMap
+                );
+
+                XContentParser parserTestJson = ParseUtils.jsonToParser(useCaseTemplateFileInStringFormat);
+                ensureExpectedToken(XContentParser.Token.START_OBJECT, parserTestJson.currentToken(), parserTestJson);
+                template = Template.parse(parserTestJson);
+
+            } else {
+                XContentParser parser = request.contentParser();
+                ensureExpectedToken(XContentParser.Token.START_OBJECT, parser.nextToken(), parser);
+                template = Template.parse(parser);
+            }
+
+            WorkflowRequest workflowRequest = new WorkflowRequest(
+                workflowId,
+                template,
+                validation,
+                provision,
+                params,
+                useCase,
+                useCaseDefaultsMap
+            );
 
             return channel -> client.execute(CreateWorkflowAction.INSTANCE, workflowRequest, ActionListener.wrap(response -> {
                 XContentBuilder builder = response.toXContent(channel.newBuilder(), ToXContent.EMPTY_PARAMS);
@@ -134,11 +191,14 @@ public class RestCreateWorkflowAction extends BaseRestHandler {
                     channel.sendResponse(new BytesRestResponse(ExceptionsHelper.status(e), errorMessage));
                 }
             }));
+
         } catch (FlowFrameworkException e) {
+            logger.error("failed to prepare rest request", e);
             return channel -> channel.sendResponse(
                 new BytesRestResponse(e.getRestStatus(), e.toXContent(channel.newErrorBuilder(), ToXContent.EMPTY_PARAMS))
             );
-        } catch (IOException e) {
+        } catch (Exception e) {
+            logger.error("failed to prepare rest request", e);
             FlowFrameworkException ex = new FlowFrameworkException(
                 "IOException: template content invalid for specified Content-Type.",
                 RestStatus.BAD_REQUEST

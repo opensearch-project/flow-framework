@@ -15,6 +15,7 @@ import org.opensearch.core.common.bytes.BytesArray;
 import org.opensearch.core.rest.RestStatus;
 import org.opensearch.core.xcontent.MediaTypeRegistry;
 import org.opensearch.flowframework.TestHelpers;
+import org.opensearch.flowframework.common.DefaultUseCases;
 import org.opensearch.flowframework.common.FlowFrameworkSettings;
 import org.opensearch.flowframework.model.Template;
 import org.opensearch.flowframework.model.Workflow;
@@ -34,6 +35,7 @@ import java.util.Locale;
 import java.util.Map;
 
 import static org.opensearch.flowframework.common.CommonValue.PROVISION_WORKFLOW;
+import static org.opensearch.flowframework.common.CommonValue.USE_CASE;
 import static org.opensearch.flowframework.common.CommonValue.WORKFLOW_URI;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doAnswer;
@@ -132,6 +134,40 @@ public class RestCreateWorkflowActionTests extends OpenSearchTestCase {
         assertTrue(
             channel.capturedResponse().content().utf8ToString().contains("are permitted unless the provision parameter is set to true.")
         );
+    }
+
+    public void testCreateWorkflowRequestWithUseCaseButNoProvision() throws Exception {
+        RestRequest request = new FakeRestRequest.Builder(xContentRegistry()).withMethod(RestRequest.Method.POST)
+            .withPath(this.createWorkflowPath)
+            .withParams(Map.of(USE_CASE, DefaultUseCases.COHERE_EMBEDDING_MODEL_DEPLOY.getUseCaseName()))
+            .withContent(new BytesArray(""), MediaTypeRegistry.JSON)
+            .build();
+        FakeRestChannel channel = new FakeRestChannel(request, false, 1);
+        doAnswer(invocation -> {
+            ActionListener<WorkflowResponse> actionListener = invocation.getArgument(2);
+            actionListener.onResponse(new WorkflowResponse("id-123"));
+            return null;
+        }).when(nodeClient).execute(any(), any(WorkflowRequest.class), any());
+        createWorkflowRestAction.handleRequest(request, channel, nodeClient);
+        assertEquals(RestStatus.CREATED, channel.capturedResponse().status());
+        assertTrue(channel.capturedResponse().content().utf8ToString().contains("id-123"));
+    }
+
+    public void testCreateWorkflowRequestWithUseCaseAndContent() throws Exception {
+        RestRequest request = new FakeRestRequest.Builder(xContentRegistry()).withMethod(RestRequest.Method.POST)
+            .withPath(this.createWorkflowPath)
+            .withParams(Map.of(USE_CASE, DefaultUseCases.COHERE_EMBEDDING_MODEL_DEPLOY.getUseCaseName()))
+            .withContent(new BytesArray("{\"key\":\"step\"}"), MediaTypeRegistry.JSON)
+            .build();
+        FakeRestChannel channel = new FakeRestChannel(request, false, 1);
+        doAnswer(invocation -> {
+            ActionListener<WorkflowResponse> actionListener = invocation.getArgument(2);
+            actionListener.onResponse(new WorkflowResponse("id-123"));
+            return null;
+        }).when(nodeClient).execute(any(), any(WorkflowRequest.class), any());
+        createWorkflowRestAction.handleRequest(request, channel, nodeClient);
+        assertEquals(RestStatus.CREATED, channel.capturedResponse().status());
+        assertTrue(channel.capturedResponse().content().utf8ToString().contains("id-123"));
     }
 
     public void testInvalidCreateWorkflowRequest() throws Exception {

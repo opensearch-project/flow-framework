@@ -1,0 +1,18 @@
+{
+    "template.name": "deploy-cohere-model",
+    "template.description": "deploying cohere embedding model",
+    "create_connector.name": "cohere-embedding-connector",
+    "create_connector.description": "The connector to Cohere's public embed API",
+    "create_connector.protocol": "http",
+    "create_connector.model": "embed-english-v3.0",
+    "create_connector.input_type": "search_document",
+    "create_connector.truncate": "end",
+    "create_connector.endpoint": "api.openai.com",
+    "create_connector.credential.key": "123",
+    "create_connector.actions.url": "https://api.cohere.ai/v1/embed",
+    "create_connector.actions.request_body": "{ \"texts\": ${parameters.texts}, \"truncate\": \"${parameters.truncate}\", \"model\": \"${parameters.model}\", \"input_type\": \"${parameters.input_type}\" }",
+    "create_connector.actions.pre_process_function": "connector.pre_process.cohere.embedding",
+    "create_connector.actions.post_process_function": "connector.post_process.cohere.embedding",
+    "register_remote_model.name": "Cohere english embed model",
+    "register_remote_model.description": "cohere-embedding-model"
+}
