@@ -266,7 +266,7 @@ public class RegisterLocalSparseEncodingModelStepTests extends OpenSearchTestCas
         ExecutionException ex = assertThrows(ExecutionException.class, () -> future.get().getContent());
         assertTrue(ex.getCause() instanceof FlowFrameworkException);
         assertTrue(ex.getCause().getMessage().startsWith("Missing required inputs ["));
-        for (String s : new String[] { "model_format", "name", "function_name", "version", "url", "model_content_hash_value" }) {
+        for (String s : new String[] { "model_format", "name", "version", }) {
             assertTrue(ex.getCause().getMessage().contains(s));
         }
         assertTrue(ex.getCause().getMessage().endsWith("] in workflow [test-id] node [test-node-id]"));

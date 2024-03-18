@@ -1,0 +1,79 @@
+{
+  "name": "${{template.name}}",
+  "description": "${{template.description}}",
+  "use_case": "MULTIMODAL_SEARCH",
+  "version": {
+    "template": "1.0.0",
+    "compatibility": [
+      "2.12.0",
+      "3.0.0"
+    ]
+  },
+  "workflows": {
+    "provision": {
+      "nodes": [
+        {
+          "id": "create_ingest_pipeline",
+          "type": "create_ingest_pipeline",
+          "user_inputs": {
+            "pipeline_id": "${{create_ingest_pipeline.pipeline_id}}",
+            "configurations": {
+              "description": "${{create_ingest_pipeline.description}}",
+              "processors": [
+                {
+                  "text_image_embedding": {
+                    "model_id": "${{create_ingest_pipeline.model_id}}",
+                    "embedding": "${{create_ingest_pipeline.embedding}}",
+                    "field_map": {
+                      "text": "${{text_image_embedding.field_map.text}}",
+                      "image": "${{text_image_embedding.field_map.image}}"
+                    }
+                  }
+                }
+              ]
+            }
+          }
+        },
+        {
+          "id": "create_index",
+          "type": "create_index",
+          "previous_node_inputs": {
+            "create_ingest_pipeline": "pipeline_id"
+          },
+          "user_inputs": {
+            "index_name": "${{create_index.name}}",
+            "configurations": {
+              "settings": {
+                "index.knn": true,
+                "default_pipeline": "${{create_ingest_pipeline.pipeline_id}}",
+                "number_of_shards": "${{create_index.settings.number_of_shards}}"
+              },
+              "mappings": {
+                  "properties": {
+                    "id": {
+                      "type": "text"
+                    },
+                    "${{text_embedding.field_map.output}}": {
+                      "type": "knn_vector",
+                      "dimension": "${{text_image_embedding.field_map.output.dimension}}",
+                      "method": {
+                        "engine": "${{create_index.mappings.method.engine}}",
+                        "name": "${{create_index.mappings.method.name}}",
+                        "parameters": {}
+                      }
+                    },
+                    "${{text_image_embedding.field_map.text}}": {
+                      "type": "text"
+                    },
+                    "${{text_image_embedding.field_map.image}}": {
+                      "type": "binary"
+                    }
+                  }
+                }
+            }
+          }
+        }
+      ]
+    }
+  }
+}

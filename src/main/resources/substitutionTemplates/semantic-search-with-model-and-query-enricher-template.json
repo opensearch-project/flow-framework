@@ -1,0 +1,145 @@
+{
+  "name": "${{template.name}}",
+  "description": "${{template.description}}",
+  "use_case": "SEMANTIC_SEARCH",
+  "version": {
+    "template": "1.0.0",
+    "compatibility": [
+      "2.12.0",
+      "3.0.0"
+    ]
+  },
+  "workflows": {
+    "provision": {
+      "nodes": [
+        {
+          "id": "create_connector",
+          "type": "create_connector",
+          "user_inputs": {
+            "name": "${{create_connector.name}}",
+            "description": "${{create_connector.description}}",
+            "version": "1",
+            "protocol": "${{create_connector.protocol}}",
+            "parameters": {
+              "endpoint": "${{create_connector.endpoint}}",
+              "model": "${{create_connector.model}}",
+              "input_type": "search_document",
+              "truncate": "END"
+            },
+            "credential": {
+              "key": "${{create_connector.credential.key}}"
+            },
+            "actions": [
+              {
+                "action_type": "predict",
+                "method": "POST",
+                "url": "${{create_connector.actions.url}}",
+                "headers": {
+                  "Authorization": "Bearer ${credential.key}",
+                  "Request-Source": "unspecified:opensearch"
+                },
+                "request_body": "${{create_connector.actions.request_body}}",
+                "pre_process_function": "${{create_connector.actions.pre_process_function}}",
+                "post_process_function": "${{create_connector.actions.post_process_function}}"
+              }
+            ]
+          }
+        },
+        {
+          "id": "register_model",
+          "type": "register_remote_model",
+          "previous_node_inputs": {
+            "create_connector": "parameters"
+          },
+          "user_inputs": {
+            "name": "${{register_remote_model.name}}",
+            "function_name": "remote",
+            "description": "${{register_remote_model.description}}",
+            "deploy": true
+          }
+        },
+        {
+          "id": "create_ingest_pipeline",
+          "type": "create_ingest_pipeline",
+          "previous_node_inputs": {
+            "register_model": "model_id"
+          },
+          "user_inputs": {
+            "pipeline_id": "${{create_ingest_pipeline.pipeline_id}}",
+            "configurations": {
+              "description": "${{create_ingest_pipeline.description}}",
+              "processors": [
+                {
+                  "text_embedding": {
+                    "model_id": "${{register_model.model_id}}",
+                    "field_map": {
+                      "${{text_embedding.field_map.input}}": "${{text_embedding.field_map.output}}"
+                    }
+                  }
+                }
+              ]
+            }
+          }
+        },
+        {
+          "id": "create_index",
+          "type": "create_index",
+          "previous_node_inputs": {
+            "create_ingest_pipeline": "pipeline_id"
+          },
+          "user_inputs": {
+            "index_name": "${{create_index.name}}",
+            "configurations": {
+              "settings": {
+                "index.knn": true,
+                "default_pipeline": "${{create_ingest_pipeline.pipeline_id}}",
+                "number_of_shards": "${{create_index.settings.number_of_shards}}",
+                "index.search.default_pipeline": "${{create_search_pipeline.pipeline_id}}"
+              },
+              "mappings": {
+                  "properties": {
+                    "id": {
+                      "type": "text"
+                    },
+                    "${{text_embedding.field_map.output}}": {
+                      "type": "knn_vector",
+                      "dimension": "${{text_embedding.field_map.output.dimension}}",
+                      "method": {
+                        "engine": "${{create_index.mappings.method.engine}}",
+                        "space_type": "${{create_index.mappings.method.space_type}}",
+                        "name": "${{create_index.mappings.method.name}}",
+                        "parameters": {}
+                      }
+                    },
+                    "${{text_embedding.field_map.input}}": {
+                      "type": "text"
+                    }
+                  }
+              }
+            }
+          }
+        },
+        {
+          "id": "create_search_pipeline",
+          "type": "create_search_pipeline",
+          "previous_node_inputs": {
+            "register_model": "model_id"
+          },
+          "user_inputs": {
+            "pipeline_id": "${{create_search_pipeline.pipeline_id}}",
+            "configurations": {
+              "request_processors": [
+                {
+                  "neural_query_enricher" : {
+                    "description": "Sets the default model ID at index and field levels",
+                    "default_model_id": "${{register_model.model_id}}"
+                  }
+                }
+              ]
+            }
+          }
+        }
+      ]
+    }
+  }
+}
