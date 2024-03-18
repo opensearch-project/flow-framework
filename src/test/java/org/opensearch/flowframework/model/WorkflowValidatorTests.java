@@ -73,8 +73,8 @@ public class WorkflowValidatorTests extends OpenSearchTestCase {
         assertEquals(2, validator.getWorkflowStepValidators().get("register_local_custom_model").getOutputs().size());
 
         assertTrue(validator.getWorkflowStepValidators().keySet().contains("register_local_sparse_encoding_model"));
-        assertEquals(6, validator.getWorkflowStepValidators().get("register_local_sparse_encoding_model").getInputs().size());
-        assertEquals(2, validator.getWorkflowStepValidators().get("register_local_sparse_encoding_model").getOutputs().size());
+        assertEquals(3, validator.getWorkflowStepValidators().get("register_local_sparse_encoding_model").getInputs().size());
+        assertEquals(5, validator.getWorkflowStepValidators().get("register_local_sparse_encoding_model").getOutputs().size());
 
         assertTrue(validator.getWorkflowStepValidators().keySet().contains("register_local_pretrained_model"));
         assertEquals(3, validator.getWorkflowStepValidators().get("register_local_pretrained_model").getInputs().size());

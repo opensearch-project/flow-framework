@@ -16,14 +16,10 @@
           "id": "register_local_sparse_encoding_model",
           "type": "register_local_sparse_encoding_model",
           "user_inputs": {
-            "node_timeout": "60s",
-            "name": "neural-sparse/opensearch-neural-sparse-tokenizer-v1-v2",
-            "version": "1.0.0",
-            "description": "This is a neural sparse tokenizer model: It tokenize input sentence into tokens and assign pre-defined weight from IDF to each. It serves only in query.",
-            "model_format": "TORCH_SCRIPT",
-            "function_name": "SPARSE_TOKENIZE",
-            "model_content_hash_value": "b3487da9c58ac90541b720f3b367084f271d280c7f3bdc3e6d9c9a269fb31950",
-            "url": "https://artifacts.opensearch.org/models/ml-models/amazon/neural-sparse/opensearch-neural-sparse-tokenizer-v1/1.0.0/torch_script/opensearch-neural-sparse-tokenizer-v1-1.0.0.zip",
+            "name": "${{register_local_sparse_encoding_model.name}}",
+            "version": "${{register_local_sparse_encoding_model.version}}",
+            "description": "${{register_local_sparse_encoding_model.description}}",
+            "model_format": "${{register_local_sparse_encoding_model.model_format}}",
             "deploy": true
           }
         },
