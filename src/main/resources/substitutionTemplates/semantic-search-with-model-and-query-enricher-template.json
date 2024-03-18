@@ -97,7 +97,6 @@
                 "index.search.default_pipeline": "${{create_search_pipeline.pipeline_id}}"
               },
               "mappings": {
-                "_doc": {
                   "properties": {
                     "id": {
                       "type": "text"
@@ -116,7 +115,6 @@
                       "type": "text"
                     }
                   }
-                }
               }
             }
           }

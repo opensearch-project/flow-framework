@@ -96,7 +96,6 @@
                 "number_of_shards": "${{create_index.settings.number_of_shards}}"
               },
               "mappings": {
-                "_doc": {
                   "properties": {
                     "id": {
                       "type": "text"
@@ -114,7 +113,6 @@
                     "${{text_embedding.field_map.input}}": {
                       "type": "text"
                     }
-                  }
                 }
               }
             }
