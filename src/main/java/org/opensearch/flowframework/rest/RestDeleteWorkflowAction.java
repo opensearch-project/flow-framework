@@ -18,7 +18,6 @@ import org.opensearch.core.xcontent.ToXContent;
 import org.opensearch.core.xcontent.XContentBuilder;
 import org.opensearch.flowframework.common.FlowFrameworkSettings;
 import org.opensearch.flowframework.exception.FlowFrameworkException;
-import org.opensearch.flowframework.exception.WorkflowStepException;
 import org.opensearch.flowframework.transport.DeleteWorkflowAction;
 import org.opensearch.flowframework.transport.WorkflowRequest;
 import org.opensearch.rest.BaseRestHandler;
@@ -85,14 +84,9 @@ public class RestDeleteWorkflowAction extends BaseRestHandler {
                 channel.sendResponse(new BytesRestResponse(RestStatus.OK, builder));
             }, exception -> {
                 try {
-                    FlowFrameworkException ex;
-                    if (exception instanceof WorkflowStepException) {
-                        ex = (WorkflowStepException) exception;
-                    } else if (exception instanceof FlowFrameworkException) {
-                        ex = (FlowFrameworkException) exception;
-                    } else {
-                        ex = new FlowFrameworkException("Failed to delete workflow.", ExceptionsHelper.status(exception));
-                    }
+                    FlowFrameworkException ex = exception instanceof FlowFrameworkException
+                        ? (FlowFrameworkException) exception
+                        : new FlowFrameworkException("Failed to get workflow.", ExceptionsHelper.status(exception));
                     XContentBuilder exceptionBuilder = ex.toXContent(channel.newErrorBuilder(), ToXContent.EMPTY_PARAMS);
                     channel.sendResponse(new BytesRestResponse(ex.getRestStatus(), exceptionBuilder));
                 } catch (IOException e) {

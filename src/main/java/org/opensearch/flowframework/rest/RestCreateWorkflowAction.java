@@ -20,7 +20,6 @@ import org.opensearch.core.xcontent.XContentParser;
 import org.opensearch.flowframework.common.DefaultUseCases;
 import org.opensearch.flowframework.common.FlowFrameworkSettings;
 import org.opensearch.flowframework.exception.FlowFrameworkException;
-import org.opensearch.flowframework.exception.WorkflowStepException;
 import org.opensearch.flowframework.model.Template;
 import org.opensearch.flowframework.transport.CreateWorkflowAction;
 import org.opensearch.flowframework.transport.WorkflowRequest;
@@ -181,14 +180,9 @@ public class RestCreateWorkflowAction extends BaseRestHandler {
                 channel.sendResponse(new BytesRestResponse(RestStatus.CREATED, builder));
             }, exception -> {
                 try {
-                    FlowFrameworkException ex;
-                    if (exception instanceof WorkflowStepException) {
-                        ex = (WorkflowStepException) exception;
-                    } else if (exception instanceof FlowFrameworkException) {
-                        ex = (FlowFrameworkException) exception;
-                    } else {
-                        ex = new FlowFrameworkException("Failed to create workflow.", ExceptionsHelper.status(exception));
-                    }
+                    FlowFrameworkException ex = exception instanceof FlowFrameworkException
+                        ? (FlowFrameworkException) exception
+                        : new FlowFrameworkException("Failed to get workflow.", ExceptionsHelper.status(exception));
                     XContentBuilder exceptionBuilder = ex.toXContent(channel.newErrorBuilder(), ToXContent.EMPTY_PARAMS);
                     channel.sendResponse(new BytesRestResponse(ex.getRestStatus(), exceptionBuilder));
                 } catch (IOException e) {
