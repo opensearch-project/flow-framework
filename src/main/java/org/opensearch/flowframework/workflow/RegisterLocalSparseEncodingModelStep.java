@@ -52,12 +52,12 @@ public class RegisterLocalSparseEncodingModelStep extends AbstractRegisterLocalM
 
     @Override
     protected Set<String> getRequiredKeys() {
-        return Set.of(NAME_FIELD, VERSION_FIELD, MODEL_FORMAT, FUNCTION_NAME, MODEL_CONTENT_HASH_VALUE, URL);
+        return Set.of(NAME_FIELD, VERSION_FIELD, MODEL_FORMAT);
     }
 
     @Override
     protected Set<String> getOptionalKeys() {
-        return Set.of(DESCRIPTION_FIELD, MODEL_GROUP_ID, DEPLOY_FIELD);
+        return Set.of(DESCRIPTION_FIELD, MODEL_GROUP_ID, DEPLOY_FIELD, MODEL_CONTENT_HASH_VALUE, URL, FUNCTION_NAME);
     }
 
     @Override

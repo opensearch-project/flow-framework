@@ -160,6 +160,7 @@ public class CreateConnectorStep implements WorkflowStep {
                 parameters = getParameterMap(inputs.get(PARAMETERS_FIELD));
                 credentials = getStringToStringMap(inputs.get(CREDENTIAL_FIELD), CREDENTIAL_FIELD);
                 actions = getConnectorActionList(inputs.get(ACTIONS_FIELD));
+                // TODO: check for un-needed substitution? ${{create_connector. and remove field so we don't need almost duplicate templates
             } catch (IllegalArgumentException iae) {
                 logger.error("IllegalArgumentException in connector configuration", iae);
                 throw new FlowFrameworkException("IllegalArgumentException in connector configuration", RestStatus.BAD_REQUEST);

@@ -1,0 +1,14 @@
+{
+      "template.name": "deploy-openai-chat-model",
+      "template.description": "deploying openAI chat model",
+      "create_connector.name": "OpenAI Chat Connector",
+      "create_connector.description": "Connector to public OpenAI model",
+      "create_connector.protocol": "http",
+      "create_connector.model": "gpt-3.5-turbo",
+      "create_connector.endpoint": "api.openai.com",
+      "create_connector.credential.key": "123",
+      "create_connector.actions.url": "https://${parameters.endpoint}/v1/chat/completions",
+      "create_connector.actions.request_body": "{ \"model\": \"${parameters.model}\", \"messages\": ${parameters.messages} }",
+      "register_remote_model_1.name": "OpenAI chat model",
+      "register_remote_model_1.description": "openai-chat-model"
+}

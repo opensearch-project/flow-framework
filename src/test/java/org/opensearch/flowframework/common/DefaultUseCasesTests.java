@@ -20,7 +20,7 @@ public class DefaultUseCasesTests extends OpenSearchTestCase {
 
     public void testGetDefaultsFileByValidUseCaseName() throws FlowFrameworkException {
         String defaultsFile = DefaultUseCases.getDefaultsFileByUseCaseName("open_ai_embedding_model_deploy");
-        assertEquals("defaults/open-ai-embedding-defaults.json", defaultsFile);
+        assertEquals("defaults/openai-embedding-defaults.json", defaultsFile);
     }
 
     public void testGetDefaultsFileByInvalidUseCaseName() throws FlowFrameworkException {

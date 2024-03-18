@@ -21,21 +21,79 @@ public enum DefaultUseCases {
     /** defaults file and substitution ready template for OpenAI embedding model */
     OPEN_AI_EMBEDDING_MODEL_DEPLOY(
         "open_ai_embedding_model_deploy",
-        "defaults/open-ai-embedding-defaults.json",
+        "defaults/openai-embedding-defaults.json",
         "substitutionTemplates/deploy-remote-model-template.json"
     ),
-    /** defaults file and substitution ready template for cohere embedding model */
+    /** defaults file and substitution ready template for Cohere embedding model */
     COHERE_EMBEDDING_MODEL_DEPLOY(
         "cohere-embedding_model_deploy",
         "defaults/cohere-embedding-defaults.json",
         "substitutionTemplates/deploy-remote-model-template-extra-params.json"
     ),
+    /** defaults file and substitution ready template for Bedrock Titan embedding model */
+    BEDROCK_TITAN_EMBEDDING_MODEL_DEPLOY(
+        "bedrock-titan-embedding_model_deploy",
+        "defaults/bedrock-titan-embedding-defaults.json",
+        "substitutionTemplates/deploy-remote-bedrock-model-template.json"
+    ),
+    /** defaults file and substitution ready template for Bedrock Titan multimodal embedding model */
+    BEDROCK_TITAN_MULTIMODAL_MODEL_DEPLOY(
+        "bedrock-titan-multimodal_model_deploy",
+        "defaults/bedrock-titan-multimodal-defaults.json",
+        "substitutionTemplates/deploy-remote-bedrock-model-template.json"
+    ),
+    /** defaults file and substitution ready template for Cohere chat model */
+    COHERE_CHAT_MODEL_DEPLOY(
+        "cohere-chat_model_deploy",
+        "defaults/cohere-chat-defaults.json",
+        "substitutionTemplates/deploy-remote-model-chat-template.json"
+    ),
+    /** defaults file and substitution ready template for OpenAI chat model */
+    OPENAI_CHAT_MODEL_DEPLOY(
+        "openai-chat_model_deploy",
+        "defaults/openai-chat-defaults.json",
+        "substitutionTemplates/deploy-remote-model-chat-template.json"
+    ),
     /** defaults file and substitution ready template for local neural sparse model and ingest pipeline*/
-    LOCAL_NEURAL_SPARSE_SEARCH(
-        "local_neural_sparse_search",
-        "defaults/local-sparse-search-defaults.json",
-        "substitutionTemplates/neural-sparse-local-template.json"
-    );
+    LOCAL_NEURAL_SPARSE_SEARCH_BI_ENCODER(
+        "local_neural_sparse_search_bi_encoder",
+        "defaults/local-sparse-search-biencoder-defaults.json",
+        "substitutionTemplates/neural-sparse-local-biencoder-template.json"
+    ),
+    /** defaults file and substitution ready template for semantic search, no model creation*/
+    SEMANTIC_SEARCH("semantic_search", "defaults/semantic-search-defaults.json", "substitutionTemplates/semantic-search-template.json"),
+    /** defaults file and substitution ready template for multimodal search, no model creation*/
+    MULTI_MODAL_SEARCH(
+        "multi_modal_search",
+        "defaults/multi-modal-search-defaults.json",
+        "substitutionTemplates/multi-modal-search-template.json"
+    ),
+    /** defaults file and substitution ready template for multimodal search, no model creation*/
+    MULTI_MODAL_SEARCH_WITH_BEDROCK_TITAN(
+        "multi_modal_search_with_bedrock_titan_multi_modal",
+        "defaults/multimodal-search-bedrock-titan-defaults.json",
+        "substitutionTemplates/multi-modal-search-with-bedrock-titan-template.json"
+    ),
+    /** defaults file and substitution ready template for semantic search with query enricher processor attached, no model creation*/
+    SEMANTIC_SEARCH_WITH_QUERY_ENRICHER(
+        "semantic_search_with_query_enricher",
+        "defaults/semantic-search-defaults.json",
+        "substitutionTemplates/semantic-search-with-query-enricher-template.json"
+    ),
+    /** defaults file and substitution ready template for semantic search with cohere embedding model*/
+    SEMANTIC_SEARCH_WITH_COHERE_EMBEDDING(
+        "semantic_search_with_cohere_embedding",
+        "defaults/cohere-embedding-semantic-search-defaults.json",
+        "substitutionTemplates/semantic-search-with-model-template.json"
+    ),
+    /** defaults file and substitution ready template for semantic search with query enricher processor attached and cohere embedding model*/
+    SEMANTIC_SEARCH_WITH_COHERE_EMBEDDING_AND_QUERY_ENRICHER(
+        "semantic_search_with_cohere_embedding_query_enricher",
+        "defaults/cohere-embedding-semantic-search-defaults.json",
+        "substitutionTemplates/semantic-search-with-model-and-query-enricher-template.json"
+    ),
+    /** defaults file and substitution ready template for hybrid search, no model creation*/
+    HYBRID_SEARCH("hybrid_search", "defaults/hybrid-search-defaults.json", "substitutionTemplates/hybrid-search-template.json");
 
     private final String useCaseName;
     private final String defaultsFile;

@@ -1,0 +1,14 @@
+{
+    "template.name": "local-model-neural-sparse-search",
+    "template.description": "setting up neural sparse search with local model",
+    "register_local_sparse_encoding_model.name": "amazon/neural-sparse/opensearch-neural-sparse-encoding-v1",
+    "register_local_sparse_encoding_model.description": "This is a neural sparse encoding model",
+    "register_local_sparse_encoding_model.model_format": "TORCH_SCRIPT",
+    "register_local_sparse_encoding_model.deploy": "true",
+    "register_local_sparse_encoding_model.version": "1.0.1",
+    "create_ingest_pipeline.pipeline_id": "nlp-ingest-pipeline-sparse",
+    "create_ingest_pipeline.description": "A sparse encoding ingest pipeline",
+    "create_ingest_pipeline.text_embedding.field_map.input": "passage_text",
+    "create_ingest_pipeline.text_embedding.field_map.output": "passage_embedding",
+    "create_index.name": "my-nlp-index"
+}
