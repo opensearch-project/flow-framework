@@ -378,8 +378,11 @@ public class ParseUtils {
                     String regex = "\\$\\{\\{\\s*" + Pattern.quote(e.getKey()) + "\\s*\\}\\}";
                     String replacement = e.getValue();
 
-                    // Special handling for JSON strings that contain placeholders (connectors action)
-                    replacement = Matcher.quoteReplacement(replacement.replace("\"", "\\\""));
+                    // Correctly escape backslashes, newlines, and quotes for JSON compatibility
+                    replacement = replacement.replace("\\", "\\\\").replace("\"", "\\\"").replace("\n", "\\n");
+
+                    // Use Matcher.quoteReplacement to handle special replacement characters like $ and \ that weren't previously handled
+                    replacement = Matcher.quoteReplacement(replacement);
                     value = ((String) value).replaceAll(regex, replacement);
                 }
             }

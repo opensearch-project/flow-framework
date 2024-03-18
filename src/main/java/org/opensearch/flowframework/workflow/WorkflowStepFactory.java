@@ -156,8 +156,8 @@ public class WorkflowStepFactory {
         /** Register Local Sparse Encoding Model Step */
         REGISTER_LOCAL_SPARSE_ENCODING_MODEL(
             RegisterLocalSparseEncodingModelStep.NAME,
-            List.of(NAME_FIELD, VERSION_FIELD, MODEL_FORMAT, FUNCTION_NAME, MODEL_CONTENT_HASH_VALUE, URL),
-            List.of(MODEL_ID, REGISTER_MODEL_STATUS),
+            List.of(NAME_FIELD, VERSION_FIELD, MODEL_FORMAT),
+            List.of(MODEL_ID, REGISTER_MODEL_STATUS, FUNCTION_NAME, MODEL_CONTENT_HASH_VALUE, URL),
             List.of(OPENSEARCH_ML),
             TimeValue.timeValueSeconds(60)
         ),

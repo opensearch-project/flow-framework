@@ -1,0 +1,103 @@
+{
+  "name": "${{template.name}}",
+  "description": "${{template.description}}",
+  "use_case": "HYBRID_SEARCH",
+  "version": {
+    "template": "1.0.0",
+    "compatibility": [
+      "2.12.0",
+      "3.0.0"
+    ]
+  },
+  "workflows": {
+    "provision": {
+      "nodes": [
+        {
+          "id": "create_ingest_pipeline",
+          "type": "create_ingest_pipeline",
+          "user_inputs": {
+            "pipeline_id": "${{create_ingest_pipeline.pipeline_id}}",
+            "configurations": {
+              "description": "${{create_ingest_pipeline.description}}",
+              "processors": [
+                {
+                  "text_embedding": {
+                    "model_id": "${{create_ingest_pipeline.model_id}}",
+                    "field_map": {
+                      "${{text_embedding.field_map.input}}": "${{text_embedding.field_map.output}}"
+                    }
+                  }
+                }
+              ]
+            }
+          }
+        },
+        {
+          "id": "create_index",
+          "type": "create_index",
+          "previous_node_inputs": {
+            "create_ingest_pipeline": "pipeline_id"
+          },
+          "user_inputs": {
+            "index_name": "${{create_index.name}}",
+            "configurations": {
+              "settings": {
+                "index.knn": true,
+                "default_pipeline": "${{create_ingest_pipeline.pipeline_id}}",
+                "number_of_shards": "${{create_index.settings.number_of_shards}}",
+                "index.search.default_pipeline": "${{create_search_pipeline.pipeline_id}}"
+              },
+              "mappings": {
+                "_doc": {
+                  "properties": {
+                    "id": {
+                      "type": "text"
+                    },
+                    "${{text_embedding.field_map.output}}": {
+                      "type": "knn_vector",
+                      "dimension": "${{text_embedding.field_map.output.dimension}}",
+                      "method": {
+                        "engine": "${{create_index.mappings.method.engine}}",
+                        "space_type": "${{create_index.mappings.method.space_type}}",
+                        "name": "${{create_index.mappings.method.name}}",
+                        "parameters": {}
+                      }
+                    },
+                    "${{text_embedding.field_map.input}}": {
+                      "type": "text"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        {
+          "id": "create_search_pipeline",
+          "type": "create_search_pipeline",
+          "user_inputs": {
+            "pipeline_id": "${{create_search_pipeline.pipeline_id}}",
+            "configurations": {
+              "description": "Post processor for hybrid search",
+              "phase_results_processors": [
+                {
+                  "normalization-processor": {
+                    "normalization": {
+                      "technique": "${{normalization-processor.normalization.technique}}"
+                    },
+                    "combination": {
+                      "technique": "${{normalization-processor.combination.technique}}",
+                      "parameters": {
+                        "weights": "${{normalization-processor.combination.parameters.weights}}"
+                      }
+                    }
+                  }
+                }
+              ]
+            }
+          }
+        }
+      ]
+    }
+  }
+}

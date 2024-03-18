@@ -1,7 +1,7 @@
 {
-  "name": "{template.name}",
-  "description": "{template.description}",
-  "use_case": "DEPLOY_MODEL",
+  "name": "${{template.name}}",
+  "description": "${{template.description}}",
+  "use_case": "",
   "version": {
     "template": "1.0.0",
     "compatibility": [
@@ -16,28 +16,26 @@
           "id": "create_connector",
           "type": "create_connector",
           "user_inputs": {
-            "name": "${{create_connector_1}}",
-            "description": "${{create_connector_1.description}}",
+            "name": "${{create_connector}}",
+            "description": "${{create_connector.description}}",
             "version": "1",
-            "protocol": "${{create_connector_1.protocol}}",
+            "protocol": "${{create_connector.protocol}}",
             "parameters": {
-              "endpoint": "${{create_connector_1.endpoint}}",
-              "model": "${{create_connector_1.model}}"
+              "endpoint": "${{create_connector.endpoint}}",
+              "model": "${{create_connector.model}}"
             },
             "credential": {
-              "key": "${{create_connector_1.credential.key}}",
+              "key": "${{create_connector.credential.key}}"
             },
             "actions": [
               {
                 "action_type": "predict",
                 "method": "POST",
-                "url": "https://api.openai.com/v1/embeddings",
+                "url": "${{create_connector.actions.url}}",
                 "headers": {
-                  "Authorization": "Bearer ${credential.openAI_key}"
+                  "Authorization": "Bearer ${credential.key}"
                 },
-                "request_body": "{ \"input\": ${parameters.input}, \"model\": \"${parameters.model}\" }",
-                "pre_process_function": "connector.pre_process.openai.embedding",
-                "post_process_function": "connector.post_process.openai.embedding"
+                "request_body": "${{create_connector.actions.request_body}}"
               }
             ]
           }
@@ -49,9 +47,9 @@
             "create_connector_step_1": "parameters"
           },
           "user_inputs": {
-            "name": "${register_remote_model.name}",
+            "name": "${{register_remote_model.name}}",
             "function_name": "remote",
-            "description": "${register_remote_model.description}"
+            "description": "${{register_remote_model.description}}"
           }
         },
         {
