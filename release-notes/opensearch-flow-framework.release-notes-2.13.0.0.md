@@ -13,6 +13,7 @@ Compatible with OpenSearch 2.13.0
 * Added an optional workflow_step param to the get workflow steps API ([#538](https://github.com/opensearch-project/flow-framework/pull/538))
 * Add created, updated, and provisioned timestamps to saved template ([#551](https://github.com/opensearch-project/flow-framework/pull/551))
 * Enable Flow Framework by default ([#553](https://github.com/opensearch-project/flow-framework/pull/553))
+* Adding new exception type for workflow step failures ([#577](https://github.com/opensearch-project/flow-framework/pull/577))
 
 ### Refactoring
 * Moved workflow-steps.json to Enum ([#523](https://github.com/opensearch-project/flow-framework/pull/523))
