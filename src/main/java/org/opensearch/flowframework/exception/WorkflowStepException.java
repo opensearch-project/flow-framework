@@ -15,14 +15,12 @@ import org.opensearch.core.xcontent.XContentBuilder;
 import java.io.IOException;
 
 /**
- * Representation of Flow Framework Exceptions
+ * Representation of an exception that is caused by a workflow step failing outside of our plugin
+ * This is caught by an external client (e.g. ml-client) returning the failure
  */
-public class FlowFrameworkException extends RuntimeException implements ToXContentObject {
+public class WorkflowStepException extends FlowFrameworkException implements ToXContentObject {
 
     private static final long serialVersionUID = 1L;
-
-    /** The rest status code of this exception */
-    protected final RestStatus restStatus;
 
     /**
      * Constructor with error message.
@@ -30,9 +28,8 @@ public class FlowFrameworkException extends RuntimeException implements ToXConte
      * @param message message of the exception
      * @param restStatus HTTP status code of the response
      */
-    public FlowFrameworkException(String message, RestStatus restStatus) {
-        super(message);
-        this.restStatus = restStatus;
+    public WorkflowStepException(String message, RestStatus restStatus) {
+        super(message, restStatus);
     }
 
     /**
@@ -40,9 +37,8 @@ public class FlowFrameworkException extends RuntimeException implements ToXConte
      * @param cause exception cause
      * @param restStatus HTTP status code of the response
      */
-    public FlowFrameworkException(Throwable cause, RestStatus restStatus) {
-        super(cause);
-        this.restStatus = restStatus;
+    public WorkflowStepException(Throwable cause, RestStatus restStatus) {
+        super(cause, restStatus);
     }
 
     /**
@@ -51,9 +47,8 @@ public class FlowFrameworkException extends RuntimeException implements ToXConte
      * @param cause exception cause
      * @param restStatus HTTP status code of the response
      */
-    public FlowFrameworkException(String message, Throwable cause, RestStatus restStatus) {
-        super(message, cause);
-        this.restStatus = restStatus;
+    public WorkflowStepException(String message, Throwable cause, RestStatus restStatus) {
+        super(message, cause, restStatus);
     }
 
     /**

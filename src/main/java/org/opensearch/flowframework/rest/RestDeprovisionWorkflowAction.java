@@ -66,8 +66,7 @@ public class RestDeprovisionWorkflowAction extends BaseRestHandler {
             }
             // Validate content
             if (request.hasContent()) {
-                // BaseRestHandler will give appropriate error message
-                return channel -> channel.sendResponse(null);
+                throw new FlowFrameworkException("deprovision request should have no payload", RestStatus.BAD_REQUEST);
             }
             // Validate params
             if (workflowId == null) {
@@ -82,7 +81,7 @@ public class RestDeprovisionWorkflowAction extends BaseRestHandler {
                 try {
                     FlowFrameworkException ex = exception instanceof FlowFrameworkException
                         ? (FlowFrameworkException) exception
-                        : new FlowFrameworkException("Failed to deprovision workflow.", ExceptionsHelper.status(exception));
+                        : new FlowFrameworkException("Failed to get workflow.", ExceptionsHelper.status(exception));
                     XContentBuilder exceptionBuilder = ex.toXContent(channel.newErrorBuilder(), ToXContent.EMPTY_PARAMS);
                     channel.sendResponse(new BytesRestResponse(ex.getRestStatus(), exceptionBuilder));
                 } catch (IOException e) {

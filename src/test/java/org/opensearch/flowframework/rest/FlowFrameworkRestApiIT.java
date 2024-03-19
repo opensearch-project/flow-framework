@@ -401,9 +401,6 @@ public class FlowFrameworkRestApiIT extends FlowFrameworkRestTestCase {
 
     public void testDefaultCohereUseCase() throws Exception {
 
-        // Using a 3 step template to create a connector, register remote model and deploy model
-        Template template = TestHelpers.createTemplateFromFile("ingest-search-pipeline-template.json");
-
         // Hit Create Workflow API with original template
         Response response = createWorkflowWithUseCase(client(), "cohere-embedding_model_deploy");
         assertEquals(RestStatus.CREATED, TestHelpers.restStatus(response));
@@ -438,6 +435,37 @@ public class FlowFrameworkRestApiIT extends FlowFrameworkRestTestCase {
 
         // This template should create 5 resources, connector_id, registered model_id, deployed model_id and pipelineId
         assertEquals(3, resourcesCreated.size());
+    }
+
+    public void testDefaultSemanticSearchUseCaseWithFailureExpected() throws Exception {
+
+        // Hit Create Workflow API with original template
+        Response response = createWorkflowWithUseCase(client(), "semantic_search");
+        assertEquals(RestStatus.CREATED, TestHelpers.restStatus(response));
+
+        Map<String, Object> responseMap = entityAsMap(response);
+        String workflowId = (String) responseMap.get(WORKFLOW_ID);
+        getAndAssertWorkflowStatus(client(), workflowId, State.NOT_STARTED, ProvisioningProgress.NOT_STARTED);
+
+        // Ensure Ml config index is initialized as creating a connector requires this, then hit Provision API and assert status
+        if (!indexExistsWithAdminClient(".plugins-ml-config")) {
+            assertBusy(() -> assertTrue(indexExistsWithAdminClient(".plugins-ml-config")), 40, TimeUnit.SECONDS);
+            response = provisionWorkflow(client(), workflowId);
+        } else {
+            response = provisionWorkflow(client(), workflowId);
+        }
+
+        // expecting a failure since there is no neural-search plugin in cluster to provide text-embedding processor
+        assertEquals(RestStatus.OK, TestHelpers.restStatus(response));
+        getAndAssertWorkflowStatus(client(), workflowId, State.FAILED, ProvisioningProgress.FAILED);
+
+        String error = getAndWorkflowStatusError(client(), workflowId);
+        assertTrue(
+            error.contains(
+                "org.opensearch.flowframework.exception.WorkflowStepException during step create_ingest_pipeline, restStatus: BAD_REQUEST"
+            )
+        );
+
     }
 
 }
