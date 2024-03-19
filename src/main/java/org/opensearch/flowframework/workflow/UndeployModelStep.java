@@ -16,6 +16,7 @@ import org.opensearch.action.FailedNodeException;
 import org.opensearch.action.support.PlainActionFuture;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.flowframework.exception.FlowFrameworkException;
+import org.opensearch.flowframework.exception.WorkflowStepException;
 import org.opensearch.flowframework.util.ParseUtils;
 import org.opensearch.ml.client.MachineLearningNodeClient;
 import org.opensearch.ml.common.transport.undeploy.MLUndeployModelsResponse;
@@ -98,7 +99,7 @@ public class UndeployModelStep implements WorkflowStep {
                 public void onFailure(Exception e) {
                     String errorMessage = "Failed to undeploy model " + modelId;
                     logger.error(errorMessage, e);
-                    undeployModelFuture.onFailure(new FlowFrameworkException(errorMessage, ExceptionsHelper.status(e)));
+                    undeployModelFuture.onFailure(new WorkflowStepException(errorMessage, ExceptionsHelper.status(e)));
                 }
             });
         } catch (FlowFrameworkException e) {

@@ -15,6 +15,7 @@ import org.opensearch.action.support.PlainActionFuture;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.flowframework.common.FlowFrameworkSettings;
 import org.opensearch.flowframework.exception.FlowFrameworkException;
+import org.opensearch.flowframework.exception.WorkflowStepException;
 import org.opensearch.flowframework.indices.FlowFrameworkIndicesHandler;
 import org.opensearch.flowframework.util.ParseUtils;
 import org.opensearch.ml.client.MachineLearningNodeClient;
@@ -214,7 +215,7 @@ public abstract class AbstractRegisterLocalModelStep extends AbstractRetryableWo
             }, exception -> {
                 String errorMessage = "Failed to register local model in step " + currentNodeId;
                 logger.error(errorMessage, exception);
-                registerLocalModelFuture.onFailure(new FlowFrameworkException(errorMessage, ExceptionsHelper.status(exception)));
+                registerLocalModelFuture.onFailure(new WorkflowStepException(errorMessage, ExceptionsHelper.status(exception)));
             }));
         } catch (FlowFrameworkException e) {
             registerLocalModelFuture.onFailure(e);

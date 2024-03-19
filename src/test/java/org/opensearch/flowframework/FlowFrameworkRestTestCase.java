@@ -593,7 +593,21 @@ public abstract class FlowFrameworkRestTestCase extends OpenSearchRestTestCase {
         Map<String, Object> responseMap = entityAsMap(response);
         assertEquals(stateStatus.name(), (String) responseMap.get(CommonValue.STATE_FIELD));
         assertEquals(provisioningStatus.name(), (String) responseMap.get(CommonValue.PROVISIONING_PROGRESS_FIELD));
+    }
 
+    /**
+     * Helper method to invoke the Get Workflow status Rest Action and get the error field
+     * @param client the rest client
+     * @param workflowId the workflow ID to get the status
+     * @return the error string
+     * @throws Exception if the request fails
+     */
+    protected String getAndWorkflowStatusError(RestClient client, String workflowId) throws Exception {
+        Response response = getWorkflowStatus(client, workflowId, true);
+        assertEquals(RestStatus.OK, TestHelpers.restStatus(response));
+
+        Map<String, Object> responseMap = entityAsMap(response);
+        return (String) responseMap.get(CommonValue.ERROR_FIELD);
     }
 
     /**

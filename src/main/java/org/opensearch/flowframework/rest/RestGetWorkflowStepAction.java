@@ -83,7 +83,7 @@ public class RestGetWorkflowStepAction extends BaseRestHandler {
                 try {
                     FlowFrameworkException ex = exception instanceof FlowFrameworkException
                         ? (FlowFrameworkException) exception
-                        : new FlowFrameworkException("Failed to get workflow step.", ExceptionsHelper.status(exception));
+                        : new FlowFrameworkException("Failed to get workflow.", ExceptionsHelper.status(exception));
                     XContentBuilder exceptionBuilder = ex.toXContent(channel.newErrorBuilder(), ToXContent.EMPTY_PARAMS);
                     channel.sendResponse(new BytesRestResponse(ex.getRestStatus(), exceptionBuilder));
                 } catch (IOException e) {
