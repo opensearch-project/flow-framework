@@ -24,6 +24,7 @@ Inspired from [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 - Added an optional workflow_step param to the get workflow steps API ([#538](https://github.com/opensearch-project/flow-framework/pull/538))
 - Add created, updated, and provisioned timestamps to saved template ([#551](https://github.com/opensearch-project/flow-framework/pull/551))
 - Enable Flow Framework by default ([#553](https://github.com/opensearch-project/flow-framework/pull/553))
+- Adding new exception type for workflow step failures ([#577](https://github.com/opensearch-project/flow-framework/pull/577))
 
 ### Bug Fixes
 ### Infrastructure

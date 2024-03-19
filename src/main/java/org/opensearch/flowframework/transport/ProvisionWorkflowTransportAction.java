@@ -256,10 +256,18 @@ public class ProvisionWorkflowTransportAction extends HandledTransportAction<Wor
                 }, exception -> { logger.error("Failed to update workflow state for workflow {}", workflowId, exception); })
             );
         } catch (Exception ex) {
+            RestStatus status;
+            if (ex instanceof FlowFrameworkException) {
+                status = ((FlowFrameworkException) ex).getRestStatus();
+            } else {
+                status = ExceptionsHelper.status(ex);
+            }
             logger.error("Provisioning failed for workflow {} during step {}.", workflowId, currentStepId, ex);
             String errorMessage = (ex.getCause() == null ? ex.getClass().getName() : ex.getCause().getClass().getName())
                 + " during step "
-                + currentStepId;
+                + currentStepId
+                + ", restStatus: "
+                + status.toString();
             flowFrameworkIndicesHandler.updateFlowFrameworkSystemIndexDoc(
                 workflowId,
                 Map.ofEntries(
