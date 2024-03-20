@@ -429,7 +429,7 @@ public class ParseUtils {
      * Takes an input string, then checks if there is an array in the string with backslashes around strings
      * (e.g.  "[\"text\", \"hello\"]" to "["text", "hello"]"), this is needed for processors that take in string arrays,
      * This also removes the quotations around the array making the array valid to consume
-     * (e.g. "weights": "[0.7, 0.3]" -> "weights": [0.7, 0.3])
+     * (e.g. "weights": "[0.7, 0.3]" to "weights": [0.7, 0.3])
      * @param input The inputString given to be transformed
      * @return the transformed string
      */

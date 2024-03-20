@@ -142,7 +142,8 @@ public class RestCreateWorkflowAction extends BaseRestHandler {
                         }
                     } catch (Exception ex) {
                         RestStatus status = ex instanceof IOException ? RestStatus.BAD_REQUEST : ExceptionsHelper.status(ex);
-                        String errorMessage = "failure parsing request body when a use case is given";
+                        String errorMessage =
+                            "failure parsing request body when a use case is given, make sure to provide a map with values that are either strings, arrays, or map of strings to strings";
                         logger.error(errorMessage, ex);
                         throw new FlowFrameworkException(errorMessage, status);
                     }

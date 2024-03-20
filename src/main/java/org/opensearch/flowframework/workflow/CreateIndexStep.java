@@ -93,10 +93,19 @@ public class CreateIndexStep implements WorkflowStep {
             byte[] byteArr = configurations.getBytes(StandardCharsets.UTF_8);
             BytesReference configurationsBytes = new BytesArray(byteArr);
             CreateIndexRequest createIndexRequest = new CreateIndexRequest(indexName);
-            if (!configurations.isEmpty()) {
-                Map<String, Object> sourceAsMap = XContentHelper.convertToMap(configurationsBytes, false, MediaTypeRegistry.JSON).v2();
-                sourceAsMap = prepareMappings(sourceAsMap);
-                createIndexRequest.source(sourceAsMap, LoggingDeprecationHandler.INSTANCE);
+
+            try {
+                if (!configurations.isEmpty()) {
+                    Map<String, Object> sourceAsMap = XContentHelper.convertToMap(configurationsBytes, false, MediaTypeRegistry.JSON).v2();
+                    sourceAsMap = prepareMappings(sourceAsMap);
+                    createIndexRequest.source(sourceAsMap, LoggingDeprecationHandler.INSTANCE);
+                }
+            } catch (Exception ex) {
+                String errorMessage = "Failed to create the index"
+                    + indexName
+                    + " due to incorrect mapping, make sure you aren't providing _doc in mapping";
+                logger.error(errorMessage, ex);
+                createIndexFuture.onFailure(new WorkflowStepException(errorMessage, RestStatus.BAD_REQUEST));
             }
 
             client.admin().indices().create(createIndexRequest, ActionListener.wrap(acknowledgedResponse -> {
