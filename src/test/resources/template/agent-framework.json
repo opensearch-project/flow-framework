@@ -96,7 +96,7 @@
           },
           "user_inputs": {
             "name": "Sub Agent",
-            "type": "cot",
+            "type": "CONVERSATIONAL",
             "description": "this is a test agent",
             "parameters": {
               "hello": "world"
@@ -139,7 +139,7 @@
           },
           "user_inputs": {
             "name": "DEMO-Test_Agent_For_CoT",
-            "type": "cot",
+            "type": "CONVERSATIONAL",
             "description": "this is a test agent",
             "parameters": {
               "hello": "world"
