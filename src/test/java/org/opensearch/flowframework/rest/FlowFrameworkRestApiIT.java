@@ -18,6 +18,7 @@ import org.opensearch.client.ResponseException;
 import org.opensearch.core.rest.RestStatus;
 import org.opensearch.flowframework.FlowFrameworkRestTestCase;
 import org.opensearch.flowframework.TestHelpers;
+import org.opensearch.flowframework.common.DefaultUseCases;
 import org.opensearch.flowframework.model.ProvisioningProgress;
 import org.opensearch.flowframework.model.ResourceCreated;
 import org.opensearch.flowframework.model.State;
@@ -32,6 +33,7 @@ import org.junit.ComparisonFailure;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.Collections;
+import java.util.EnumSet;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -472,4 +474,19 @@ public class FlowFrameworkRestApiIT extends FlowFrameworkRestTestCase {
         }
     }
 
+    public void testAllDefaultUseCasesCreation() throws Exception {
+        Set<String> allUseCaseNames = EnumSet.allOf(DefaultUseCases.class)
+            .stream()
+            .map(DefaultUseCases::getUseCaseName)
+            .collect(Collectors.toSet());
+
+        for (String useCaseName : allUseCaseNames) {
+            Response response = createWorkflowWithUseCase(client(), useCaseName);
+            assertEquals(RestStatus.CREATED, TestHelpers.restStatus(response));
+
+            Map<String, Object> responseMap = entityAsMap(response);
+            String workflowId = (String) responseMap.get(WORKFLOW_ID);
+            getAndAssertWorkflowStatus(client(), workflowId, State.NOT_STARTED, ProvisioningProgress.NOT_STARTED);
+        }
+    }
 }
