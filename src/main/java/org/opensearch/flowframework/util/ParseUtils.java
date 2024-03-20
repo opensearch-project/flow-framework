@@ -34,6 +34,7 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -58,6 +59,7 @@ public class ParseUtils {
     // Matches ${{ foo.bar }} (whitespace optional) with capturing groups 1=foo, 2=bar
     // private static final Pattern SUBSTITUTION_PATTERN = Pattern.compile("\\$\\{\\{\\s*(.+)\\.(.+?)\\s*\\}\\}");
     private static final Pattern SUBSTITUTION_PATTERN = Pattern.compile("\\$\\{\\{\\s*([\\w_]+)\\.([\\w_]+)\\s*\\}\\}");
+    private static final Pattern JSON_ARRAY_DOUBLE_QUOTES_PATTERN = Pattern.compile("\"\\[(.*?)]\"");
 
     private ParseUtils() {}
 
@@ -69,7 +71,7 @@ public class ParseUtils {
      * @param json the json string
      * @return The XContent parser for the json string
      * @throws IOException on failure to create the parser
-    */
+     */
     public static XContentParser jsonToParser(String json) throws IOException {
         XContentParser parser = JsonXContent.jsonXContent.createParser(
             NamedXContentRegistry.EMPTY,
@@ -103,7 +105,7 @@ public class ParseUtils {
      * Builds an XContent object representing a map of String keys to String values.
      *
      * @param xContentBuilder An XContent builder whose position is at the start of the map object to build
-     * @param map A map as key-value String pairs.
+     * @param map             A map as key-value String pairs.
      * @throws IOException on a build failure
      */
     public static void buildStringToStringMap(XContentBuilder xContentBuilder, Map<?, ?> map) throws IOException {
@@ -118,7 +120,7 @@ public class ParseUtils {
      * Builds an XContent object representing a map of String keys to Object values.
      *
      * @param xContentBuilder An XContent builder whose position is at the start of the map object to build
-     * @param map A map as key-value String to Object.
+     * @param map             A map as key-value String to Object.
      * @throws IOException on a build failure
      */
     public static void buildStringToObjectMap(XContentBuilder xContentBuilder, Map<?, ?> map) throws IOException {
@@ -137,7 +139,7 @@ public class ParseUtils {
      * Builds an XContent object representing a LLMSpec.
      *
      * @param xContentBuilder An XContent builder whose position is at the start of the map object to build
-     * @param llm LLMSpec
+     * @param llm             LLMSpec
      * @throws IOException on a build failure
      */
     public static void buildLLMMap(XContentBuilder xContentBuilder, LLMSpec llm) throws IOException {
@@ -169,6 +171,8 @@ public class ParseUtils {
     /**
      * Parses an XContent object representing a map of String keys to Object values.
      * The Object value here can either be a string or a map
+     * If an array is found in the given parser we conver the array to a string representation of the array
+     *
      * @param parser An XContent parser whose position is at the start of the map object to parse
      * @return A map as identified by the key-value pairs in the XContent
      * @throws IOException on a parse failure
@@ -182,6 +186,18 @@ public class ParseUtils {
             if (parser.currentToken() == XContentParser.Token.START_OBJECT) {
                 // If the current token is a START_OBJECT, parse it as Map<String, String>
                 map.put(fieldName, parseStringToStringMap(parser));
+            } else if (parser.currentToken() == XContentParser.Token.START_ARRAY) {
+                // If an array, parse it to a string
+                // Handle array: convert it to a string representation
+                List<String> elements = new ArrayList<>();
+                while (parser.nextToken() != XContentParser.Token.END_ARRAY) {
+                    if (parser.currentToken().equals(XContentParser.Token.VALUE_NUMBER)) {
+                        elements.add(String.valueOf(parser.numberValue()));  // If number value don't add escaping quotes
+                    } else {
+                        elements.add("\"" + parser.text() + "\"");  // Adding escaped quotes around each element
+                    }
+                }
+                map.put(fieldName, elements.toString());
             } else {
                 // Otherwise, parse it as a string
                 map.put(fieldName, parser.text());
@@ -209,6 +225,7 @@ public class ParseUtils {
      * (e.g., john||own_index,testrole|__user__, no backend role so you see two verticle line after john.).
      * This is the user string format used internally in the OPENSEARCH_SECURITY_USER_INFO_THREAD_CONTEXT and may be
      * parsed using User.parse(string).
+     *
      * @param client Client containing user info. A public API request will fill in the user info in the thread context.
      * @return parsed user object
      */
@@ -222,7 +239,7 @@ public class ParseUtils {
      * Creates a XContentParser from a given Registry
      *
      * @param xContentRegistry main registry for serializable content
-     * @param bytesReference given bytes to be parsed
+     * @param bytesReference   given bytes to be parsed
      * @return bytesReference of {@link java.time.Instant}
      * @throws IOException IOException if content can't be parsed correctly
      */
@@ -233,7 +250,8 @@ public class ParseUtils {
 
     /**
      * Generates a string to string Map
-     * @param map content map
+     *
+     * @param map       content map
      * @param fieldName fieldName
      * @return instance of the map
      */
@@ -249,15 +267,15 @@ public class ParseUtils {
      * Creates a map containing the specified input keys, with values derived from template data or previous node
      * output.
      *
-     * @param requiredInputKeys A set of keys that must be present, or will cause an exception to be thrown
-     * @param optionalInputKeys A set of keys that may be present, or will be absent in the returned map
-     * @param currentNodeInputs Input params and content for this node, from workflow parsing
-     * @param outputs WorkflowData content of previous steps
+     * @param requiredInputKeys  A set of keys that must be present, or will cause an exception to be thrown
+     * @param optionalInputKeys  A set of keys that may be present, or will be absent in the returned map
+     * @param currentNodeInputs  Input params and content for this node, from workflow parsing
+     * @param outputs            WorkflowData content of previous steps
      * @param previousNodeInputs Input params for this node that come from previous steps
-     * @param params Params that came from REST path
+     * @param params             Params that came from REST path
      * @return A map containing the requiredInputKeys with their corresponding values,
-     *         and optionalInputKeys with their corresponding values if present.
-     *         Throws a {@link FlowFrameworkException} if a required key is not present.
+     * and optionalInputKeys with their corresponding values if present.
+     * Throws a {@link FlowFrameworkException} if a required key is not present.
      */
     public static Map<String, Object> getInputsFromPreviousSteps(
         Set<String> requiredInputKeys,
@@ -346,9 +364,10 @@ public class ParseUtils {
 
     /**
      * Executes substitution on the given value by looking at any matching values in either the ouputs or params map
-     * @param value the Object that will have the substitution done on
+     *
+     * @param value   the Object that will have the substitution done on
      * @param outputs potential location of values to be substituted in
-     * @param params potential location of values to be subsituted in
+     * @param params  potential location of values to be subsituted in
      * @return the substituted object back
      */
     public static Object conditionallySubstitute(Object value, Map<String, WorkflowData> outputs, Map<String, String> params) {
@@ -392,6 +411,7 @@ public class ParseUtils {
 
     /**
      * Generates a string based on an arbitrary String to object map using Jackson
+     *
      * @param map content map
      * @return instance of the string
      * @throws JsonProcessingException JsonProcessingException from Jackson for issues processing map
@@ -404,6 +424,7 @@ public class ParseUtils {
 
     /**
      * Generates a String to String map based on a Json File
+     *
      * @param path file path
      * @return instance of the string
      * @throws JsonProcessingException JsonProcessingException from Jackson for issues processing map
@@ -412,5 +433,28 @@ public class ParseUtils {
         String jsonContent = resourceToString(path);
         Map<String, String> mappedJsonFile = mapper.readValue(jsonContent, Map.class);
         return mappedJsonFile;
+    }
+
+    /**
+     * Takes an input string, then checks if there is an array in the string with backslashes around strings
+     * (e.g.  "[\"text\", \"hello\"]" to "["text", "hello"]"), this is needed for processors that take in string arrays,
+     * This also removes the quotations around the array making the array valid to consume
+     * (e.g. "weights": "[0.7, 0.3]" to "weights": [0.7, 0.3])
+     *
+     * @param input The inputString given to be transformed
+     * @return the transformed string
+     */
+    public static String removingBackslashesAndQuotesInArrayInJsonString(String input) {
+        Matcher matcher = JSON_ARRAY_DOUBLE_QUOTES_PATTERN.matcher(input);
+        StringBuffer result = new StringBuffer();
+        while (matcher.find()) {
+            // Extract matched content and remove backslashes before quotes
+            String withoutEscapes = matcher.group(1).replaceAll("\\\\\"", "\"");
+            // Return the transformed string with the brackets but without the outer quotes
+            matcher.appendReplacement(result, "[" + withoutEscapes + "]");
+        }
+        // Append remaining input after the last match
+        matcher.appendTail(result);
+        return result.toString();
     }
 }

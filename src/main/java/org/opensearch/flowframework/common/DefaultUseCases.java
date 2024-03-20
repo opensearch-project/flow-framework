@@ -28,7 +28,7 @@ public enum DefaultUseCases {
     COHERE_EMBEDDING_MODEL_DEPLOY(
         "cohere-embedding_model_deploy",
         "defaults/cohere-embedding-defaults.json",
-        "substitutionTemplates/deploy-remote-model-template-extra-params.json"
+        "substitutionTemplates/deploy-remote-model-extra-params-template.json"
     ),
     /** defaults file and substitution ready template for Bedrock Titan embedding model */
     BEDROCK_TITAN_EMBEDDING_MODEL_DEPLOY(
@@ -93,7 +93,13 @@ public enum DefaultUseCases {
         "substitutionTemplates/semantic-search-with-model-and-query-enricher-template.json"
     ),
     /** defaults file and substitution ready template for hybrid search, no model creation*/
-    HYBRID_SEARCH("hybrid_search", "defaults/hybrid-search-defaults.json", "substitutionTemplates/hybrid-search-template.json");
+    HYBRID_SEARCH("hybrid_search", "defaults/hybrid-search-defaults.json", "substitutionTemplates/hybrid-search-template.json"),
+    /** defaults file and substitution ready template for conversational search with cohere chat model*/
+    CONVERSATIONAL_SEARCH_WITH_COHERE_DEPLOY(
+        "conversational_search_with_llm_deploy",
+        "defaults/conversational-search-defaults.json",
+        "substitutionTemplates/conversational-search-with-cohere-model-template.json"
+    );
 
     private final String useCaseName;
     private final String defaultsFile;

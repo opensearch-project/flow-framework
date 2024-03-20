@@ -26,7 +26,7 @@
               "input_docs_processed_step_size": "${{create_connector.input_docs_processed_step_size}}"
             },
             "credential": {
-              "access_ key": "${{create_connector.credential.access_key}}",
+              "access_key": "${{create_connector.credential.access_key}}",
               "secret_key": "${{create_connector.credential.secret_key}}",
               "session_token": "${{create_connector.credential.session_token}}"
             },

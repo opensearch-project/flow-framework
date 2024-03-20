@@ -1,7 +1,7 @@
 {
   "name": "${{template.name}}",
   "description": "${{template.description}}",
-  "use_case": "",
+  "use_case": "SEMANTIC_SEARCH",
   "version": {
     "template": "1.0.0",
     "compatibility": [
@@ -35,9 +35,7 @@
                 "headers": {
                   "Authorization": "Bearer ${credential.key}"
                 },
-                "request_body": "${{create_connector.actions.request_body}}",
-                "pre_process_function": "${{create_connector.actions.pre_process_function}}",
-                "post_process_function": "${{create_connector.actions.post_process_function}}"
+                "request_body": "${{create_connector.actions.request_body}}"
               }
             ]
           }
@@ -51,25 +49,33 @@
           "user_inputs": {
             "name": "${{register_remote_model.name}}",
             "function_name": "remote",
-            "description": "${{register_remote_model.description}}"
+            "description": "${{register_remote_model.description}}",
+            "deploy": true
           }
         },
         {
-          "id": "deploy_model",
-          "type": "deploy_model",
+          "id": "create_search_pipeline",
+          "type": "create_search_pipeline",
           "previous_node_inputs": {
             "register_model": "model_id"
+          },
+          "user_inputs": {
+            "pipeline_id": "${{create_search_pipeline.pipeline_id}}",
+            "configurations": {
+              "response_processors": [
+                {
+                  "retrieval_augmented_generation": {
+                    "tag": "${{create_search_pipeline.retrieval_augmented_generation.tag}}",
+                    "description": "${{create_search_pipeline.retrieval_augmented_generation.description}}",
+                    "model_id": "${{register_model.model_id}}",
+                    "context_field_list": "${{create_search_pipeline.retrieval_augmented_generation.context_field_list}}",
+                    "system_prompt": "${{create_search_pipeline.retrieval_augmented_generation.system_prompt}}",
+                    "user_instructions": "${{create_search_pipeline.retrieval_augmented_generation.user_instructions}}"
+                  }
+                }
+              ]
+            }
           }
-        }
-      ],
-      "edges": [
-        {
-          "source": "create_connector",
-          "dest": "register_model"
-        },
-        {
-          "source": "register_model",
-          "dest": "deploy_model"
         }
       ]
     }
