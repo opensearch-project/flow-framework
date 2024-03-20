@@ -1,0 +1,83 @@
+{
+  "name": "${{template.name}}",
+  "description": "${{template.description}}",
+  "use_case": "SEMANTIC_SEARCH",
+  "version": {
+    "template": "1.0.0",
+    "compatibility": [
+      "2.12.0",
+      "3.0.0"
+    ]
+  },
+  "workflows": {
+    "provision": {
+      "nodes": [
+        {
+          "id": "create_connector",
+          "type": "create_connector",
+          "user_inputs": {
+            "name": "${{create_connector}}",
+            "description": "${{create_connector.description}}",
+            "version": "1",
+            "protocol": "${{create_connector.protocol}}",
+            "parameters": {
+              "endpoint": "${{create_connector.endpoint}}",
+              "model": "${{create_connector.model}}"
+            },
+            "credential": {
+              "key": "${{create_connector.credential.key}}"
+            },
+            "actions": [
+              {
+                "action_type": "predict",
+                "method": "POST",
+                "url": "${{create_connector.actions.url}}",
+                "headers": {
+                  "Authorization": "Bearer ${credential.key}"
+                },
+                "request_body": "${{create_connector.actions.request_body}}"
+              }
+            ]
+          }
+        },
+        {
+          "id": "register_model",
+          "type": "register_remote_model",
+          "previous_node_inputs": {
+            "create_connector": "parameters"
+          },
+          "user_inputs": {
+            "name": "${{register_remote_model.name}}",
+            "function_name": "remote",
+            "description": "${{register_remote_model.description}}",
+            "deploy": true
+          }
+        },
+        {
+          "id": "create_search_pipeline",
+          "type": "create_search_pipeline",
+          "previous_node_inputs": {
+            "register_model": "model_id"
+          },
+          "user_inputs": {
+            "pipeline_id": "${{create_search_pipeline.pipeline_id}}",
+            "configurations": {
+              "response_processors": [
+                {
+                  "retrieval_augmented_generation": {
+                    "tag": "${{create_search_pipeline.retrieval_augmented_generation.tag}}",
+                    "description": "${{create_search_pipeline.retrieval_augmented_generation.description}}",
+                    "model_id": "${{register_model.model_id}}",
+                    "context_field_list": "${{create_search_pipeline.retrieval_augmented_generation.context_field_list}}",
+                    "system_prompt": "${{create_search_pipeline.retrieval_augmented_generation.system_prompt}}",
+                    "user_instructions": "${{create_search_pipeline.retrieval_augmented_generation.user_instructions}}"
+                  }
+                }
+              ]
+            }
+          }
+        }
+      ]
+    }
+  }
+}

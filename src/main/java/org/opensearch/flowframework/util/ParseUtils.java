@@ -34,6 +34,7 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -169,6 +170,7 @@ public class ParseUtils {
     /**
      * Parses an XContent object representing a map of String keys to Object values.
      * The Object value here can either be a string or a map
+     * If an array is found in the given parser we conver the array to a string representation of the array
      * @param parser An XContent parser whose position is at the start of the map object to parse
      * @return A map as identified by the key-value pairs in the XContent
      * @throws IOException on a parse failure
@@ -182,6 +184,15 @@ public class ParseUtils {
             if (parser.currentToken() == XContentParser.Token.START_OBJECT) {
                 // If the current token is a START_OBJECT, parse it as Map<String, String>
                 map.put(fieldName, parseStringToStringMap(parser));
+            } else if (parser.currentToken() == XContentParser.Token.START_ARRAY) {
+                // If an array, parse it to a string
+                // Handle array: convert it to a string representation
+                List<String> elements = new ArrayList<>();
+                while (parser.nextToken() != XContentParser.Token.END_ARRAY) {
+                    elements.add("\"" + parser.text() + "\"");  // Adding escaped quotes around each element
+                }
+                String arrayString = "[" + String.join(", ", elements) + "]";
+                map.put(fieldName, arrayString);
             } else {
                 // Otherwise, parse it as a string
                 map.put(fieldName, parser.text());
@@ -412,5 +423,22 @@ public class ParseUtils {
         String jsonContent = resourceToString(path);
         Map<String, String> mappedJsonFile = mapper.readValue(jsonContent, Map.class);
         return mappedJsonFile;
+    }
+
+    /**
+     * Takes an input string, then checks if there is an array in the string with backslashes around strings
+     * (e.g.  "[\"text\", \"hello\"]" to "["text", "hello"]"), this is needed for processors that take in string arrays,
+     * This also removes the quotations around the array making the array valid to consume
+     * (e.g. "weights": "[0.7, 0.3]" -> "weights": [0.7, 0.3])
+     * @param input The inputString given to be transformed
+     * @return the transformed string
+     */
+    public static String removingBackslashesAndQuotesInArrayInJsonString(String input) {
+        return Pattern.compile("\"\\[(.*?)]\"").matcher(input).replaceAll(matchResult -> {
+            // Extract matched content and remove backslashes before quotes
+            String withoutEscapes = matchResult.group(1).replaceAll("\\\\\"", "\"");
+            // Return the transformed string with the brackets but without the outer quotes
+            return "[" + withoutEscapes + "]";
+        });
     }
 }

@@ -131,11 +131,11 @@ public class RestCreateWorkflowAction extends BaseRestHandler {
                     try {
                         XContentParser parser = request.contentParser();
                         ensureExpectedToken(XContentParser.Token.START_OBJECT, parser.nextToken(), parser);
-                        Map<String, String> userDefaults = ParseUtils.parseStringToStringMap(parser);
+                        Map<String, Object> userDefaults = ParseUtils.parseStringToObjectMap(parser);
                         // updates the default params with anything user has given that matches
-                        for (Map.Entry<String, String> userDefaultsEntry : userDefaults.entrySet()) {
+                        for (Map.Entry<String, Object> userDefaultsEntry : userDefaults.entrySet()) {
                             String key = userDefaultsEntry.getKey();
-                            String value = userDefaultsEntry.getValue();
+                            String value = userDefaultsEntry.getValue().toString();
                             if (useCaseDefaultsMap.containsKey(key)) {
                                 useCaseDefaultsMap.put(key, value);
                             }
@@ -154,7 +154,6 @@ public class RestCreateWorkflowAction extends BaseRestHandler {
                     null,
                     useCaseDefaultsMap
                 );
-
                 XContentParser parserTestJson = ParseUtils.jsonToParser(useCaseTemplateFileInStringFormat);
                 ensureExpectedToken(XContentParser.Token.START_OBJECT, parserTestJson.currentToken(), parserTestJson);
                 template = Template.parse(parserTestJson);

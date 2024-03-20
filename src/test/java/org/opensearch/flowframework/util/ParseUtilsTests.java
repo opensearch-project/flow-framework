@@ -110,6 +110,16 @@ public class ParseUtilsTests extends OpenSearchTestCase {
         assertEquals("This string has unmatched ${{placeholder}}", result);
     }
 
+    public void testRemovingBackslashesAndQuotesInArrayInJsonString() {
+        String inputNumArray = "normalization-processor.combination.parameters.weights: \"[0.3, 0.7]\"";
+        String outputNumArray = ParseUtils.removingBackslashesAndQuotesInArrayInJsonString(inputNumArray);
+        assertEquals("normalization-processor.combination.parameters.weights: [0.3, 0.7]", outputNumArray);
+        String inputStringArray =
+            "create_search_pipeline.retrieval_augmented_generation.context_field_list: \"[\\\"text\\\", \\\"hello\\\"]\"";
+        String outputStringArray = ParseUtils.removingBackslashesAndQuotesInArrayInJsonString(inputStringArray);
+        assertEquals("create_search_pipeline.retrieval_augmented_generation.context_field_list: [\"text\", \"hello\"]", outputStringArray);
+    }
+
     public void testConditionallySubstituteWithOutputsSubstitution() {
         String input = "This string contains ${{node.step}}";
         Map<String, WorkflowData> outputs = new HashMap<>();
