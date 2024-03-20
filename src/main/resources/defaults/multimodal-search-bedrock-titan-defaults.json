@@ -17,7 +17,7 @@
     "register_remote_model.description": "bedrock-multi-modal-embedding-model",
     "create_ingest_pipeline.pipeline_id": "nlp-multimodal-ingest-pipeline",
     "create_ingest_pipeline.description": "A text/image embedding pipeline",
-    "text_image_embedding.create_ingest_pipeline.embedding": "vector_embedding",
+    "text_image_embedding.embedding": "vector_embedding",
     "text_image_embedding.field_map.text": "image_description",
     "text_image_embedding.field_map.image": "image_binary",
     "create_index.name": "my-multimodal-nlp-index",

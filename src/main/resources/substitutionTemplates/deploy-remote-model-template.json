@@ -46,7 +46,7 @@
           "id": "register_model",
           "type": "register_remote_model",
           "previous_node_inputs": {
-            "create_connector_step_1": "parameters"
+            "create_connector": "parameters"
           },
           "user_inputs": {
             "name": "${{register_remote_model.name}}",
@@ -58,7 +58,7 @@
           "id": "deploy_model",
           "type": "deploy_model",
           "previous_node_inputs": {
-            "register_model_1": "model_id"
+            "register_model": "model_id"
           }
         }
       ],

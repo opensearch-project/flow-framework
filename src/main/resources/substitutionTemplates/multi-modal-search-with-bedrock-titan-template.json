@@ -73,7 +73,7 @@
                 {
                   "text_image_embedding": {
                     "model_id": "${{register_model.model_id}}",
-                    "embedding": "${{text_image_embedding.create_ingest_pipeline.embedding}}",
+                    "embedding": "${{text_image_embedding.embedding}}",
                     "field_map": {
                       "text": "${{text_image_embedding.field_map.text}}",
                       "image": "${{text_image_embedding.field_map.image}}"
@@ -103,7 +103,7 @@
                     "id": {
                       "type": "text"
                     },
-                    "${{text_image_embedding.create_ingest_pipeline.embedding}}": {
+                    "${{text_image_embedding.embedding}}": {
                       "type": "knn_vector",
                       "dimension": "${{text_image_embedding.field_map.output.dimension}}",
                       "method": {

@@ -28,7 +28,7 @@ public enum DefaultUseCases {
     COHERE_EMBEDDING_MODEL_DEPLOY(
         "cohere-embedding_model_deploy",
         "defaults/cohere-embedding-defaults.json",
-        "substitutionTemplates/deploy-remote-model-template-extra-params.json"
+        "substitutionTemplates/deploy-remote-model-extra-params-template.json"
     ),
     /** defaults file and substitution ready template for Bedrock Titan embedding model */
     BEDROCK_TITAN_EMBEDDING_MODEL_DEPLOY(
