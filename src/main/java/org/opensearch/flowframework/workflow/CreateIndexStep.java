@@ -14,20 +14,27 @@ import org.opensearch.ExceptionsHelper;
 import org.opensearch.action.admin.indices.create.CreateIndexRequest;
 import org.opensearch.action.support.PlainActionFuture;
 import org.opensearch.client.Client;
-import org.opensearch.common.xcontent.XContentType;
+import org.opensearch.common.xcontent.LoggingDeprecationHandler;
+import org.opensearch.common.xcontent.XContentHelper;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.core.common.bytes.BytesArray;
 import org.opensearch.core.common.bytes.BytesReference;
+import org.opensearch.core.rest.RestStatus;
+import org.opensearch.core.xcontent.MediaTypeRegistry;
 import org.opensearch.flowframework.exception.FlowFrameworkException;
+import org.opensearch.flowframework.exception.WorkflowStepException;
 import org.opensearch.flowframework.indices.FlowFrameworkIndicesHandler;
 import org.opensearch.flowframework.util.ParseUtils;
+import org.opensearch.index.mapper.MapperService;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 
+import static java.util.Collections.singletonMap;
 import static org.opensearch.flowframework.common.CommonValue.CONFIGURATIONS;
 import static org.opensearch.flowframework.common.WorkflowResources.INDEX_NAME;
 import static org.opensearch.flowframework.common.WorkflowResources.getResourceByWorkflowStep;
@@ -85,8 +92,20 @@ public class CreateIndexStep implements WorkflowStep {
 
             byte[] byteArr = configurations.getBytes(StandardCharsets.UTF_8);
             BytesReference configurationsBytes = new BytesArray(byteArr);
+            CreateIndexRequest createIndexRequest = new CreateIndexRequest(indexName);
 
-            CreateIndexRequest createIndexRequest = new CreateIndexRequest(indexName).source(configurationsBytes, XContentType.JSON);
+            try {
+                if (!configurations.isEmpty()) {
+                    Map<String, Object> sourceAsMap = XContentHelper.convertToMap(configurationsBytes, false, MediaTypeRegistry.JSON).v2();
+                    sourceAsMap = prepareMappings(sourceAsMap);
+                    createIndexRequest.source(sourceAsMap, LoggingDeprecationHandler.INSTANCE);
+                }
+            } catch (Exception ex) {
+                String errorMessage = "Failed to create the index" + indexName + ", _doc is not permitted in mapping";
+                logger.error(errorMessage, ex);
+                createIndexFuture.onFailure(new WorkflowStepException(errorMessage, RestStatus.BAD_REQUEST));
+            }
+
             client.admin().indices().create(createIndexRequest, ActionListener.wrap(acknowledgedResponse -> {
                 String resourceName = getResourceByWorkflowStep(getName());
                 logger.info("Created index: {}", indexName);
@@ -127,6 +146,27 @@ public class CreateIndexStep implements WorkflowStep {
         }
 
         return createIndexFuture;
+    }
+
+    // This method to check if the mapping contains a type `_doc` and if yes we fail the request
+    // is to duplicate the behavior we have today through create index rest API, we want users
+    // to encounter the same behavior and not suddenly have to add `_doc` while using our create_index step
+    // related bug: https://github.com/opensearch-project/OpenSearch/issues/12775
+    private static Map<String, Object> prepareMappings(Map<String, Object> source) {
+        if (source.containsKey("mappings") == false || (source.get("mappings") instanceof Map) == false) {
+            return source;
+        }
+
+        Map<String, Object> newSource = new HashMap<>(source);
+
+        @SuppressWarnings("unchecked")
+        Map<String, Object> mappings = (Map<String, Object>) source.get("mappings");
+        if (MapperService.isMappingSourceTyped(MapperService.SINGLE_MAPPING_NAME, mappings)) {
+            throw new WorkflowStepException("The mapping definition cannot be nested under a type", RestStatus.BAD_REQUEST);
+        }
+
+        newSource.put("mappings", singletonMap(MapperService.SINGLE_MAPPING_NAME, mappings));
+        return newSource;
     }
 
     @Override
