@@ -1,6 +1,6 @@
 {
     "template.name": "deploy-cohere-model",
-    "template.description": "deploying cohere embedding model",
+    "template.description": "Deploying a Cohere embedding model",
     "create_connector.name": "cohere-embedding-connector",
     "create_connector.description": "The connector to Cohere's public embed API",
     "create_connector.protocol": "http",

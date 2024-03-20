@@ -1,6 +1,6 @@
 {
     "template.name": "semantic search with cohere embedding",
-    "template.description": "Setting up semantic search, with cohere embedding model",
+    "template.description": "Setting up semantic search, with a Cohere embedding model",
     "create_connector.name": "cohere-embedding-connector",
     "create_connector.description": "The connector to Cohere's public embed API",
     "create_connector.protocol": "http",
