@@ -14,7 +14,7 @@
     "create_search_pipeline.pipeline_id": "rag-pipeline",
     "create_search_pipeline.retrieval_augmented_generation.tag": "openai_pipeline_demo",
     "create_search_pipeline.retrieval_augmented_generation.description": "Demo pipeline Using cohere Connector",
-    "create_search_pipeline.retrieval_augmented_generation.context_field_list": "[\"text\", \"hello\"]",
+    "create_search_pipeline.retrieval_augmented_generation.context_field_list": "[\"text\"]",
     "create_search_pipeline.retrieval_augmented_generation.system_prompt": "You are a helpful assistant",
     "create_search_pipeline.retrieval_augmented_generation.user_instructions": "Generate a concise and informative answer in less than 100 words for the given question"
 }

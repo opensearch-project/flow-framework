@@ -101,9 +101,7 @@ public class CreateIndexStep implements WorkflowStep {
                     createIndexRequest.source(sourceAsMap, LoggingDeprecationHandler.INSTANCE);
                 }
             } catch (Exception ex) {
-                String errorMessage = "Failed to create the index"
-                    + indexName
-                    + " due to incorrect mapping, make sure you aren't providing _doc in mapping";
+                String errorMessage = "Failed to create the index" + indexName + ", _doc is not permitted in mapping";
                 logger.error(errorMessage, ex);
                 createIndexFuture.onFailure(new WorkflowStepException(errorMessage, RestStatus.BAD_REQUEST));
             }
@@ -153,6 +151,7 @@ public class CreateIndexStep implements WorkflowStep {
     // This method to check if the mapping contains a type `_doc` and if yes we fail the request
     // is to duplicate the behavior we have today through create index rest API, we want users
     // to encounter the same behavior and not suddenly have to add `_doc` while using our create_index step
+    // related bug: https://github.com/opensearch-project/OpenSearch/issues/12775
     private static Map<String, Object> prepareMappings(Map<String, Object> source) {
         if (source.containsKey("mappings") == false || (source.get("mappings") instanceof Map) == false) {
             return source;

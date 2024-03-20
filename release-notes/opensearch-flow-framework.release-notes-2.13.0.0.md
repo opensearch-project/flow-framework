@@ -18,3 +18,6 @@ Compatible with OpenSearch 2.13.0
 ### Refactoring
 * Moved workflow-steps.json to Enum ([#523](https://github.com/opensearch-project/flow-framework/pull/523))
 * Refactored logging for consistency ([#524](https://github.com/opensearch-project/flow-framework/pull/524))
+
+### Bug Fixes
+* Fixing create index and use case input parsing bugs ([#600](https://github.com/opensearch-project/flow-framework/pull/600))
