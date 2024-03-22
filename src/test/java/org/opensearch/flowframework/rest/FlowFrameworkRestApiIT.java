@@ -440,7 +440,6 @@ public class FlowFrameworkRestApiIT extends FlowFrameworkRestTestCase {
     }
 
     public void testDefaultSemanticSearchUseCaseWithFailureExpected() throws Exception {
-
         // Hit Create Workflow API with original template
         Response response = createWorkflowWithUseCase(client(), "semantic_search");
         assertEquals(RestStatus.CREATED, TestHelpers.restStatus(response));
@@ -457,16 +456,22 @@ public class FlowFrameworkRestApiIT extends FlowFrameworkRestTestCase {
             response = provisionWorkflow(client(), workflowId);
         }
 
-        // expecting a failure since there is no neural-search plugin in cluster to provide text-embedding processor
         assertEquals(RestStatus.OK, TestHelpers.restStatus(response));
-        getAndAssertWorkflowStatus(client(), workflowId, State.FAILED, ProvisioningProgress.FAILED);
 
-        String error = getAndWorkflowStatusError(client(), workflowId);
-        assertTrue(
-            error.contains(
-                "org.opensearch.flowframework.exception.WorkflowStepException during step create_ingest_pipeline, restStatus: BAD_REQUEST"
-            )
-        );
+        // Distribution build contains all plugins, checking if plugins are part of the integration test cluster
+        List<String> plugins = catPlugins();
+        if (plugins.contains("opensearch-knn") && plugins.contains("neural-search")) {
+            getAndAssertWorkflowStatus(client(), workflowId, State.PROVISIONING, ProvisioningProgress.IN_PROGRESS);
+        } else {
+            // expecting a failure since there is no neural-search plugin in cluster to provide text-embedding processor
+            getAndAssertWorkflowStatus(client(), workflowId, State.FAILED, ProvisioningProgress.FAILED);
+            String error = getAndWorkflowStatusError(client(), workflowId);
+            assertTrue(
+                error.contains(
+                    "org.opensearch.flowframework.exception.WorkflowStepException during step create_ingest_pipeline, restStatus: BAD_REQUEST"
+                )
+            );
+        }
     }
 
     public void testAllDefaultUseCasesCreation() throws Exception {
