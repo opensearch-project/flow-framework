@@ -692,7 +692,7 @@ public abstract class FlowFrameworkRestTestCase extends OpenSearchRestTestCase {
             "_cat/plugins?s=component&h=name,component,version,description&format=json",
             null,
             "",
-            ImmutableList.of(new BasicHeader(HttpHeaders.USER_AGENT, ""))
+            List.of(new BasicHeader(HttpHeaders.USER_AGENT, ""))
         );
         List<Object> pluginsList = JsonXContent.jsonXContent.createParser(
             NamedXContentRegistry.EMPTY,
