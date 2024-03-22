@@ -28,6 +28,8 @@ import org.opensearch.client.RestClientBuilder;
 import org.opensearch.common.settings.Settings;
 import org.opensearch.common.unit.TimeValue;
 import org.opensearch.common.util.concurrent.ThreadContext;
+import org.opensearch.common.xcontent.LoggingDeprecationHandler;
+import org.opensearch.common.xcontent.json.JsonXContent;
 import org.opensearch.commons.rest.SecureRestClientBuilder;
 import org.opensearch.core.rest.RestStatus;
 import org.opensearch.core.xcontent.DeprecationHandler;
@@ -680,5 +682,23 @@ public abstract class FlowFrameworkRestTestCase extends OpenSearchRestTestCase {
         ) {
             return GetPipelineResponse.fromXContent(parser);
         }
+    }
+
+    @SuppressWarnings("unchecked")
+    protected List<String> catPlugins() throws IOException {
+        Response response = TestHelpers.makeRequest(
+            client(),
+            "GET",
+            "_cat/plugins?s=component&h=name,component,version,description&format=json",
+            null,
+            "",
+            ImmutableList.of(new BasicHeader(HttpHeaders.USER_AGENT, ""))
+        );
+        List<Object> pluginsList = JsonXContent.jsonXContent.createParser(
+            NamedXContentRegistry.EMPTY,
+            LoggingDeprecationHandler.INSTANCE,
+            response.getEntity().getContent()
+        ).list();
+        return pluginsList.stream().map(o -> ((Map<String, Object>) o).get("component").toString()).collect(Collectors.toList());
     }
 }
