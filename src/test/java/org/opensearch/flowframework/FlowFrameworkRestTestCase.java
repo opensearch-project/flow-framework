@@ -667,8 +667,8 @@ public abstract class FlowFrameworkRestTestCase extends OpenSearchRestTestCase {
         return TestHelpers.makeRequest(client(), "DELETE", "/_opendistro/_security/api/internalusers/" + user, null, "", null);
     }
 
-    protected GetPipelineResponse getPipelines() throws IOException {
-        Response getPipelinesResponse = TestHelpers.makeRequest(client(), "GET", "_ingest/pipeline", null, "", null);
+    protected GetPipelineResponse getPipelines(String pipelineId) throws IOException {
+        Response getPipelinesResponse = TestHelpers.makeRequest(client(), "GET", "_ingest/pipeline/" + pipelineId, null, "", null);
 
         // Parse entity content into SearchResponse
         MediaType mediaType = MediaType.fromMediaType(getPipelinesResponse.getEntity().getContentType().getValue());
