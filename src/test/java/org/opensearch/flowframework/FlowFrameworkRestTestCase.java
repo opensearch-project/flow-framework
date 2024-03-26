@@ -685,11 +685,11 @@ public abstract class FlowFrameworkRestTestCase extends OpenSearchRestTestCase {
         );
     }
 
-    protected GetPipelineResponse getPipelines() throws IOException {
+    protected GetPipelineResponse getPipelines(String pipelineId) throws IOException {
         Response getPipelinesResponse = TestHelpers.makeRequest(
             client(),
             "GET",
-            "_ingest/pipeline",
+            "_ingest/pipeline/" + pipelineId,
             null,
             "",
             ImmutableList.of(new BasicHeader(HttpHeaders.USER_AGENT, ""))
