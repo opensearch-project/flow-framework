@@ -118,6 +118,10 @@ public class WorkflowStepFactory {
         stepMap.put(CreateSearchPipelineStep.NAME, () -> new CreateSearchPipelineStep(client, flowFrameworkIndicesHandler));
     }
 
+    /**
+     * Updates the step map with search response processors
+     * @param searchPipelineService the search pipeline service
+     */
     public void updateWorkflowStepFactory(SearchPipelineService searchPipelineService) {
         if (!this.stepMap.containsKey(SearchResponseProcessorStep.NAME)) {
             this.stepMap.put(SearchResponseProcessorStep.NAME, () -> new SearchResponseProcessorStep(searchPipelineService));

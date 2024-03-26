@@ -54,6 +54,16 @@ public class OrchestrateTransportAction extends HandledTransportAction<Orchestra
     private final PluginsService pluginsService;
     private final SearchPipelineService searchPipelineService;
 
+    /**
+     * Creates a new Orchestrate Transport Action instance
+     * @param transportService the transport service
+     * @param actionFilters action filters
+     * @param threadPool the thread pool
+     * @param client the opensearch client
+     * @param workflowProcessSorter the workflow process sorter
+     * @param pluginsService the plugins service
+     * @param searchPipelineService the search pipeline service
+     */
     @Inject
     public OrchestrateTransportAction(
         TransportService transportService,
