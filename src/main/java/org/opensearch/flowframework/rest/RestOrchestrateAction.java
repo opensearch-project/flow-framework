@@ -43,6 +43,9 @@ public class RestOrchestrateAction extends BaseRestHandler {
 
     private static final String ORCHESTRATE_ACTION = "orchestrate_action";
 
+    /*
+     * Creates a new RestOrchestrateAction
+     */
     public RestOrchestrateAction() {}
 
     @Override

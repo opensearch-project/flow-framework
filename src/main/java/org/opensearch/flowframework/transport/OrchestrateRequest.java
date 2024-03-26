@@ -31,11 +31,21 @@ public class OrchestrateRequest extends ActionRequest {
      */
     private Map<String, String> userInputs;
 
+    /**
+     * Creates a new orchestrate request
+     * @param workflowId the workflow ID
+     * @param userInputs the user inputs to substitute values for in the template
+     */
     public OrchestrateRequest(String workflowId, Map<String, String> userInputs) {
         this.workflowId = workflowId;
         this.userInputs = userInputs;
     }
 
+    /**
+     * Creates a new orchestrate request from stream input
+     * @param in the stream input
+     * @throws IOException on error reading from the stream input
+     */
     public OrchestrateRequest(StreamInput in) throws IOException {
         super(in);
         this.workflowId = in.readString();

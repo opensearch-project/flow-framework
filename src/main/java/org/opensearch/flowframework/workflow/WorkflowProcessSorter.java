@@ -84,6 +84,10 @@ public class WorkflowProcessSorter {
         this.client = client;
     }
 
+    /**
+     * Updates the workflow step factory
+     * @param searchPipelineService the search pipeline service
+     */
     public void updateWorkflowStepFactory(SearchPipelineService searchPipelineService) {
         this.workflowStepFactory.updateWorkflowStepFactory(searchPipelineService);
     }

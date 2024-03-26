@@ -14,6 +14,7 @@ import org.opensearch.flowframework.indices.FlowFrameworkIndicesHandler;
 import org.opensearch.flowframework.workflow.WorkflowStepFactory;
 import org.opensearch.flowframework.workflow.WorkflowStepFactory.WorkflowSteps;
 import org.opensearch.ml.client.MachineLearningNodeClient;
+import org.opensearch.search.pipeline.SearchPipelineService;
 import org.opensearch.test.OpenSearchTestCase;
 import org.opensearch.threadpool.ThreadPool;
 
@@ -46,7 +47,7 @@ public class WorkflowValidatorTests extends OpenSearchTestCase {
 
         WorkflowValidator validator = new WorkflowValidator(workflowStepValidators);
 
-        assertEquals(19, validator.getWorkflowStepValidators().size());
+        assertEquals(20, validator.getWorkflowStepValidators().size());
 
         assertTrue(validator.getWorkflowStepValidators().keySet().contains("create_connector"));
         assertEquals(7, validator.getWorkflowStepValidators().get("create_connector").getInputs().size());
@@ -118,6 +119,7 @@ public class WorkflowValidatorTests extends OpenSearchTestCase {
             flowFrameworkSettings,
             client
         );
+        workflowStepFactory.updateWorkflowStepFactory(mock(SearchPipelineService.class));
 
         WorkflowValidator workflowValidator = workflowStepFactory.getWorkflowValidator();
 

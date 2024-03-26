@@ -41,6 +41,10 @@ public class SearchResponseProcessorStep implements WorkflowStep {
     private final SearchPipelineService searchPipelineService;
     public static final String NAME = "search_response_processor";
 
+    /**
+     * Creates a new SearchResponseProcessorStep
+     * @param searchPipelineService the search pipeline service
+     */
     public SearchResponseProcessorStep(SearchPipelineService searchPipelineService) {
         this.searchPipelineService = searchPipelineService;
     }
