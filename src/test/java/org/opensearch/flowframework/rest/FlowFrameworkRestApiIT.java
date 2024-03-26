@@ -393,7 +393,7 @@ public class FlowFrameworkRestApiIT extends FlowFrameworkRestTestCase {
         assertEquals(5, resourcesCreated.size());
         String modelId = resourcesCreated.get(2).resourceId();
 
-        GetPipelineResponse getPipelinesResponse = getPipelines("append-1");
+        GetPipelineResponse getPipelinesResponse = getPipelines();
 
         assertTrue(getPipelinesResponse.pipelines().get(0).toString().contains(modelId));
 

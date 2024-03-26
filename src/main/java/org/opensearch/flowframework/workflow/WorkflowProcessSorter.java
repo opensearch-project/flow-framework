@@ -21,6 +21,7 @@ import org.opensearch.flowframework.model.WorkflowEdge;
 import org.opensearch.flowframework.model.WorkflowNode;
 import org.opensearch.plugins.PluginInfo;
 import org.opensearch.plugins.PluginsService;
+import org.opensearch.search.pipeline.SearchPipelineService;
 import org.opensearch.threadpool.ThreadPool;
 
 import java.util.ArrayDeque;
@@ -81,6 +82,10 @@ public class WorkflowProcessSorter {
         this.maxWorkflowSteps = flowFrameworkSettings.getMaxWorkflowSteps();
         this.clusterService = clusterService;
         this.client = client;
+    }
+
+    public void updateWorkflowStepFactory(SearchPipelineService searchPipelineService) {
+        this.workflowStepFactory.updateWorkflowStepFactory(searchPipelineService);
     }
 
     /**
