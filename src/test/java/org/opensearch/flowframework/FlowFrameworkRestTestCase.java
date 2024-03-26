@@ -689,7 +689,7 @@ public abstract class FlowFrameworkRestTestCase extends OpenSearchRestTestCase {
         Response getPipelinesResponse = TestHelpers.makeRequest(
             client(),
             "GET",
-            "_ingest/pipeline/",
+            "_ingest/pipeline",
             null,
             "",
             ImmutableList.of(new BasicHeader(HttpHeaders.USER_AGENT, ""))
