@@ -25,6 +25,7 @@ import org.opensearch.flowframework.exception.FlowFrameworkException;
 import org.opensearch.flowframework.model.Template;
 import org.opensearch.flowframework.model.Workflow;
 import org.opensearch.flowframework.workflow.ProcessNode;
+import org.opensearch.flowframework.workflow.WorkflowData;
 import org.opensearch.flowframework.workflow.WorkflowProcessSorter;
 import org.opensearch.plugins.PluginsService;
 import org.opensearch.search.pipeline.SearchPipelineService;
@@ -39,6 +40,7 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 import static org.opensearch.flowframework.common.CommonValue.GLOBAL_CONTEXT_INDEX;
+import static org.opensearch.flowframework.common.CommonValue.SEARCH_RESPONSE;
 
 /**
  * Orchestrate transport action
@@ -129,9 +131,9 @@ public class OrchestrateTransportAction extends HandledTransportAction<Orchestra
                     SearchResponse searchResponse = null;
                     for (Map.Entry<String, PlainActionFuture<?>> entry : workflowFutureMap.entrySet()) {
                         currentStepId = entry.getKey();
-                        Object result = entry.getValue().actionGet();
-                        if (result instanceof SearchResponse) {
-                            searchResponse = (SearchResponse) result;
+                        WorkflowData result = (WorkflowData) entry.getValue().actionGet();
+                        if (result.getContent().containsKey(SEARCH_RESPONSE)) {
+                            searchResponse = (SearchResponse) result.getContent().get(SEARCH_RESPONSE);
                         }
                     }
                     if (searchResponse == null) {
