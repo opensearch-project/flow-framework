@@ -169,6 +169,20 @@ public class CommonValue {
     /** Pipeline Configurations */
     public static final String CONFIGURATIONS = "configurations";
 
+    /** Indexes for knn query **/
+    public static final String INPUT_INDEX = "input_index";
+
+    /** Query for knn Search Request*/
+    public static final String INCLUDES = "includes";
+
+    /** Vectors field */
+    public static final String VECTORS = "vectors";
+
+    /** Search request */
+    public static final String SEARCH_REQUEST = "search_request";
+    /** Search response */
+    public static final String SEARCH_RESPONSE = "search_response";
+
     /*
      * Constants associated with resource provisioning / state
      */

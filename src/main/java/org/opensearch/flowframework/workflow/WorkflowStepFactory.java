@@ -37,6 +37,8 @@ import static org.opensearch.flowframework.common.CommonValue.DESCRIPTION_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.EMBEDDING_DIMENSION;
 import static org.opensearch.flowframework.common.CommonValue.FRAMEWORK_TYPE;
 import static org.opensearch.flowframework.common.CommonValue.FUNCTION_NAME;
+import static org.opensearch.flowframework.common.CommonValue.INCLUDES;
+import static org.opensearch.flowframework.common.CommonValue.INPUT_INDEX;
 import static org.opensearch.flowframework.common.CommonValue.MODEL_CONTENT_HASH_VALUE;
 import static org.opensearch.flowframework.common.CommonValue.MODEL_FORMAT;
 import static org.opensearch.flowframework.common.CommonValue.MODEL_GROUP_STATUS;
@@ -47,10 +49,13 @@ import static org.opensearch.flowframework.common.CommonValue.PARAMETERS_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.PIPELINE_ID;
 import static org.opensearch.flowframework.common.CommonValue.PROTOCOL_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.REGISTER_MODEL_STATUS;
+import static org.opensearch.flowframework.common.CommonValue.SEARCH_REQUEST;
+import static org.opensearch.flowframework.common.CommonValue.SEARCH_RESPONSE;
 import static org.opensearch.flowframework.common.CommonValue.SUCCESS;
 import static org.opensearch.flowframework.common.CommonValue.TOOLS_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.TYPE;
 import static org.opensearch.flowframework.common.CommonValue.URL;
+import static org.opensearch.flowframework.common.CommonValue.VECTORS;
 import static org.opensearch.flowframework.common.CommonValue.VERSION_FIELD;
 import static org.opensearch.flowframework.common.WorkflowResources.AGENT_ID;
 import static org.opensearch.flowframework.common.WorkflowResources.CONNECTOR_ID;
@@ -104,6 +109,8 @@ public class WorkflowStepFactory {
         );
         stepMap.put(UndeployModelStep.NAME, () -> new UndeployModelStep(mlClient));
         stepMap.put(CreateConnectorStep.NAME, () -> new CreateConnectorStep(mlClient, flowFrameworkIndicesHandler));
+        stepMap.put(PredictStep.NAME, () -> new PredictStep(mlClient));
+        stepMap.put(SearchRequestStep.NAME, () -> new SearchRequestStep(client));
         stepMap.put(DeleteConnectorStep.NAME, () -> new DeleteConnectorStep(mlClient));
         stepMap.put(RegisterModelGroupStep.NAME, () -> new RegisterModelGroupStep(mlClient, flowFrameworkIndicesHandler));
         stepMap.put(ToolStep.NAME, ToolStep::new);
@@ -226,6 +233,20 @@ public class WorkflowStepFactory {
             List.of(PIPELINE_ID),
             Collections.emptyList(),
             null
+        ),
+
+        /** Predict Step */
+        PREDICT(PredictStep.NAME, List.of(MODEL_ID, INPUT_INDEX, INCLUDES), List.of(VECTORS), Collections.emptyList(), null),
+
+        /** Create Search Request Step */
+        SEARCH_REQUEST_STEP(
+            SearchRequestStep.NAME,
+            List.of(INDEX_NAME, CONFIGURATIONS),
+            // temporary for POC
+            List.of(SEARCH_REQUEST, SEARCH_RESPONSE),
+            Collections.emptyList(),
+            null
+
         );
 
         private final String workflowStepName;
