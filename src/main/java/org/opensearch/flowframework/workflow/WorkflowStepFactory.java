@@ -20,6 +20,7 @@ import org.opensearch.flowframework.indices.FlowFrameworkIndicesHandler;
 import org.opensearch.flowframework.model.WorkflowStepValidator;
 import org.opensearch.flowframework.model.WorkflowValidator;
 import org.opensearch.ml.client.MachineLearningNodeClient;
+import org.opensearch.search.pipeline.SearchPipelineService;
 import org.opensearch.threadpool.ThreadPool;
 
 import java.util.Collections;
@@ -45,9 +46,13 @@ import static org.opensearch.flowframework.common.CommonValue.NAME_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.OPENSEARCH_ML;
 import static org.opensearch.flowframework.common.CommonValue.PARAMETERS_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.PIPELINE_ID;
+import static org.opensearch.flowframework.common.CommonValue.PROCESSOR_CONFIG;
 import static org.opensearch.flowframework.common.CommonValue.PROTOCOL_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.REGISTER_MODEL_STATUS;
+import static org.opensearch.flowframework.common.CommonValue.SEARCH_REQUEST;
+import static org.opensearch.flowframework.common.CommonValue.SEARCH_RESPONSE;
 import static org.opensearch.flowframework.common.CommonValue.SUCCESS;
+import static org.opensearch.flowframework.common.CommonValue.TAG;
 import static org.opensearch.flowframework.common.CommonValue.TOOLS_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.TYPE;
 import static org.opensearch.flowframework.common.CommonValue.URL;
@@ -111,6 +116,16 @@ public class WorkflowStepFactory {
         stepMap.put(DeleteAgentStep.NAME, () -> new DeleteAgentStep(mlClient));
         stepMap.put(CreateIngestPipelineStep.NAME, () -> new CreateIngestPipelineStep(client, flowFrameworkIndicesHandler));
         stepMap.put(CreateSearchPipelineStep.NAME, () -> new CreateSearchPipelineStep(client, flowFrameworkIndicesHandler));
+    }
+
+    /**
+     * Updates the step map with search response processors
+     * @param searchPipelineService the search pipeline service
+     */
+    public void updateWorkflowStepFactory(SearchPipelineService searchPipelineService) {
+        if (!this.stepMap.containsKey(SearchResponseProcessorStep.NAME)) {
+            this.stepMap.put(SearchResponseProcessorStep.NAME, () -> new SearchResponseProcessorStep(searchPipelineService));
+        }
     }
 
     /**
@@ -224,6 +239,15 @@ public class WorkflowStepFactory {
             CreateSearchPipelineStep.NAME,
             List.of(PIPELINE_ID, CONFIGURATIONS),
             List.of(PIPELINE_ID),
+            Collections.emptyList(),
+            null
+        ),
+
+        /** Search Response Processor Step */
+        SEARCH_RESPONSE_PROCESSOR(
+            SearchResponseProcessorStep.NAME,
+            List.of(TYPE, PROCESSOR_CONFIG, TAG, DESCRIPTION_FIELD, SEARCH_REQUEST, SEARCH_RESPONSE),
+            List.of(SEARCH_RESPONSE),
             Collections.emptyList(),
             null
         );
