@@ -23,7 +23,7 @@
                 {
                   "text_image_embedding": {
                     "model_id": "${{create_ingest_pipeline.model_id}}",
-                    "embedding": "${{create_ingest_pipeline.embedding}}",
+                    "embedding": "${{text_image_embedding.embedding}}",
                     "field_map": {
                       "text": "${{text_image_embedding.field_map.text}}",
                       "image": "${{text_image_embedding.field_map.image}}"
@@ -54,7 +54,7 @@
                     "id": {
                       "type": "text"
                     },
-                    "${{text_embedding.field_map.output}}": {
+                    "${{text_image_embedding.embedding}}": {
                       "type": "knn_vector",
                       "dimension": "${{text_image_embedding.field_map.output.dimension}}",
                       "method": {

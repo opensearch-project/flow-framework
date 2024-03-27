@@ -4,12 +4,12 @@
     "create_ingest_pipeline.pipeline_id": "nlp-multimodal-ingest-pipeline",
     "create_ingest_pipeline.description": "A text/image embedding pipeline",
     "create_ingest_pipeline.model_id": "123",
-    "create_ingest_pipeline.embedding": "vector_embedding",
+    "text_image_embedding.embedding": "vector_embedding",
     "text_image_embedding.field_map.text": "image_description",
     "text_image_embedding.field_map.image": "image_binary",
     "create_index.name": "my-multimodal-nlp-index",
-    "create_index.settings.number_of_shards": 2,
-    "text_image_embedding.field_map.output.dimension": 1024,
+    "create_index.settings.number_of_shards": "2",
+    "text_image_embedding.field_map.output.dimension": "1024",
     "create_index.mappings.method.engine": "lucene",
     "create_index.mappings.method.name": "hnsw"
 }

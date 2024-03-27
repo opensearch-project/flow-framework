@@ -70,8 +70,7 @@ public class CreateIndexStepTests extends OpenSearchTestCase {
         this.flowFrameworkIndicesHandler = mock(FlowFrameworkIndicesHandler.class);
         MockitoAnnotations.openMocks(this);
         String configurations =
-            "{\"settings\":{\"index\":{\"number_of_shards\":2,\"number_of_replicas\":1}},\"mappings\":{\"_doc\":{\"properties\":{\"age\":{\"type\":\"integer\"}}}},\"aliases\":{\"sample-alias1\":{}}}";
-
+            "{\"settings\":{\"index\":{\"number_of_shards\":2,\"number_of_replicas\":1}},\"mappings\":{\"properties\":{\"age\":{\"type\":\"integer\"}}},\"aliases\":{\"sample-alias1\":{}}}";
         inputData = new WorkflowData(
             Map.ofEntries(Map.entry(INDEX_NAME, "demo"), Map.entry(CONFIGURATIONS, configurations)),
             "test-id",

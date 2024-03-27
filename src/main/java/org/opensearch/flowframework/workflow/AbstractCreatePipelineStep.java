@@ -85,12 +85,11 @@ public abstract class AbstractCreatePipelineStep implements WorkflowStep {
             String pipelineId = (String) inputs.get(PIPELINE_ID);
             String configurations = (String) inputs.get(CONFIGURATIONS);
 
-            // Special case for processors that have arrays that need to have the quotes removed
-            // (e.g. "weights": "[0.7, 0.3]" -> "weights": [0.7, 0.3]
-            // Define a regular expression pattern to match stringified arrays
-            String transformedJsonString = configurations.replaceAll("\"\\[(.*?)]\"", "[$1]");
+            // Special case for processors that have arrays that need to have the quotes around or
+            // backslashes around strings in array removed
+            String transformedJsonStringForStringArray = ParseUtils.removingBackslashesAndQuotesInArrayInJsonString(configurations);
 
-            byte[] byteArr = transformedJsonString.getBytes(StandardCharsets.UTF_8);
+            byte[] byteArr = transformedJsonStringForStringArray.getBytes(StandardCharsets.UTF_8);
             BytesReference configurationsBytes = new BytesArray(byteArr);
 
             String pipelineToBeCreated = this.getName();
