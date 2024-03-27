@@ -52,10 +52,18 @@ public class OrchestrateRequest extends ActionRequest {
         this.userInputs = in.readMap(StreamInput::readString, StreamInput::readString);
     }
 
+    /**
+     * Returns the workflow ID
+     * @return the workflow ID
+     */
     public String getWorkflowId() {
         return this.workflowId;
     }
 
+    /**
+     * Returns the user inputs map
+     * @return the user inputs map
+     */
     public Map<String, String> getUserInputs() {
         return this.userInputs;
     }

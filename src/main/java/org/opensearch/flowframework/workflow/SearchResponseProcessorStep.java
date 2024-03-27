@@ -39,6 +39,9 @@ public class SearchResponseProcessorStep implements WorkflowStep {
 
     private static final Logger logger = LogManager.getLogger(SearchResponseProcessorStep.class);
     private final SearchPipelineService searchPipelineService;
+    /**
+     * The name of the SearchResponseProcessor step
+     */
     public static final String NAME = "search_response_processor";
 
     /**
