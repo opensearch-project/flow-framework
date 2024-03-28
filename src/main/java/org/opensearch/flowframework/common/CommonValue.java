@@ -168,6 +168,8 @@ public class CommonValue {
     public static final String PIPELINE_ID = "pipeline_id";
     /** Pipeline Configurations */
     public static final String CONFIGURATIONS = "configurations";
+    /** Guardrails field */
+    public static final String GUARDRAILS_FIELD = "guardrails";
 
     /*
      * Constants associated with resource provisioning / state
