@@ -163,7 +163,7 @@ public class WorkflowNode implements ToXContentObject {
                                         String configurationsString = ParseUtils.parseArbitraryStringToObjectMapToString(configurationsMap);
                                         userInputs.put(inputFieldName, configurationsString);
                                     } catch (Exception ex) {
-                                        String errorMessage = "Failed to parse" + inputFieldName +  "map";
+                                        String errorMessage = "Failed to parse" + inputFieldName + "map";
                                         logger.error(errorMessage, ex);
                                         throw new FlowFrameworkException(errorMessage, RestStatus.BAD_REQUEST);
                                     }

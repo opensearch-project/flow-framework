@@ -14,21 +14,21 @@ import org.opensearch.ExceptionsHelper;
 import org.opensearch.action.support.PlainActionFuture;
 import org.opensearch.action.update.UpdateResponse;
 import org.opensearch.core.action.ActionListener;
+import org.opensearch.core.common.bytes.BytesArray;
+import org.opensearch.core.common.bytes.BytesReference;
 import org.opensearch.flowframework.exception.FlowFrameworkException;
 import org.opensearch.flowframework.exception.WorkflowStepException;
 import org.opensearch.flowframework.indices.FlowFrameworkIndicesHandler;
 import org.opensearch.flowframework.util.ParseUtils;
 import org.opensearch.ml.client.MachineLearningNodeClient;
 import org.opensearch.ml.common.FunctionName;
-import org.opensearch.ml.common.model.Guardrail;
 import org.opensearch.ml.common.model.Guardrails;
-import org.opensearch.ml.common.model.StopWords;
 import org.opensearch.ml.common.transport.register.MLRegisterModelInput;
 import org.opensearch.ml.common.transport.register.MLRegisterModelInput.MLRegisterModelInputBuilder;
 import org.opensearch.ml.common.transport.register.MLRegisterModelResponse;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.Map;
 import java.util.Set;
 
@@ -93,7 +93,20 @@ public class RegisterRemoteModelStep implements WorkflowStep {
             String modelGroupId = (String) inputs.get(MODEL_GROUP_ID);
             String description = (String) inputs.get(DESCRIPTION_FIELD);
             String connectorId = (String) inputs.get(CONNECTOR_ID);
+            String guardRails = (String) inputs.get(GUARDRAILS_FIELD);
             final Boolean deploy = (Boolean) inputs.get(DEPLOY_FIELD);
+
+            byte[] byteArr = guardRails.getBytes(StandardCharsets.UTF_8);
+            BytesReference guardRailsBytes = new BytesArray(byteArr);
+            Guardrails guardrail = null;
+
+            try {
+                guardrail = new Guardrails(guardRailsBytes.streamInput());
+            } catch (IOException e) {
+                String errorMessage = "Failed to add guardrails";
+                logger.error(errorMessage, e);
+                registerRemoteModelFuture.onFailure(new WorkflowStepException(errorMessage, ExceptionsHelper.status(e)));
+            }
 
             MLRegisterModelInputBuilder builder = MLRegisterModelInput.builder()
                 .functionName(FunctionName.REMOTE)
@@ -108,6 +121,10 @@ public class RegisterRemoteModelStep implements WorkflowStep {
             }
             if (deploy != null) {
                 builder.deployModel(deploy);
+            }
+
+            if (guardRails != null) {
+                builder.guardrails(guardrail);
             }
 
             MLRegisterModelInput mlInput = builder.build();
