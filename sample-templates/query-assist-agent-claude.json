@@ -59,7 +59,7 @@
             "deploy": true,
             "name": "claude-instant",
             "guardrails": {
-              "type": "",
+              "type": "local_regex",
               "input_guardrail": {
                   "stop_words": [
                       {

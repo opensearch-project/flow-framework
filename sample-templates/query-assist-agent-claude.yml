@@ -70,7 +70,7 @@ workflows:
         # Guardrails can filter the input and output to the model.
         guardrails:
           # The type is presently unused but required. Any string works here.
-          type: ''
+          type: local_regex
           input_guardrail:
             stop_words:
             - index_name: words0
