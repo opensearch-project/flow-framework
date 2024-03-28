@@ -1,5 +1,5 @@
 {
-    "template.name": "deploy-cohere-chat-model",
+    "template.name": "cohere_chat_model_deploy",
     "template.description": "Deploying a Cohere chat model",
     "create_connector.name": "Cohere Chat Model",
     "create_connector.description": "The connector to Cohere's public chat API",

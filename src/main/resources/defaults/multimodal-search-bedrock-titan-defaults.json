@@ -1,5 +1,5 @@
 {
-    "template.name": "multimodal-search-with-bedrock-titan-deployment",
+    "template.name": "multimodal_search_with_bedrock_titan",
     "template.description": "Setting up multimodal search with Amazon Bedrock Titan embedding model deployment",
     "create_connector.name": "Amazon Bedrock Connector: multi-modal embedding",
     "create_connector.description": "The connector to bedrock Titan multi-modal embedding model",
