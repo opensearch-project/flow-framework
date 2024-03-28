@@ -1,5 +1,5 @@
 {
-      "template.name": "deploy-openai-chat-model",
+      "template.name": "openai_chat_model_deploy",
       "template.description": "Deploying an OpenAI chat model",
       "create_connector.name": "OpenAI Chat Connector",
       "create_connector.description": "Connector to public OpenAI model",

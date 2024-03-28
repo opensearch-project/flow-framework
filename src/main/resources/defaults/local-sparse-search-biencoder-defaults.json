@@ -1,5 +1,5 @@
 {
-    "template.name": "local-model-neural-sparse-search",
+    "template.name": "local_neural_sparse_search_bi_encoder",
     "template.description": "Setting up neural sparse search with pretrained local model",
     "register_local_sparse_encoding_model.name": "amazon/neural-sparse/opensearch-neural-sparse-encoding-v1",
     "register_local_sparse_encoding_model.description": "This is a neural sparse encoding model",
