@@ -20,6 +20,7 @@ import org.opensearch.flowframework.util.ParseUtils;
 import org.opensearch.flowframework.workflow.ProcessNode;
 import org.opensearch.flowframework.workflow.WorkflowData;
 import org.opensearch.flowframework.workflow.WorkflowStep;
+import org.opensearch.ml.common.model.Guardrails;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -96,6 +97,9 @@ public class WorkflowNode implements ToXContentObject {
             xContentBuilder.field(e.getKey());
             if (e.getValue() instanceof String || e.getValue() instanceof Number || e.getValue() instanceof Boolean) {
                 xContentBuilder.value(e.getValue());
+            } else if (GUARDRAILS_FIELD.equals(e.getKey())) {
+                Guardrails g = (Guardrails) e.getValue();
+                xContentBuilder.value(g);
             } else if (e.getValue() instanceof Map<?, ?>) {
                 buildStringToStringMap(xContentBuilder, (Map<?, ?>) e.getValue());
             } else if (e.getValue() instanceof Object[]) {
@@ -157,7 +161,9 @@ public class WorkflowNode implements ToXContentObject {
                                 userInputs.put(inputFieldName, parser.text());
                                 break;
                             case START_OBJECT:
-                                if (CONFIGURATIONS.equals(inputFieldName) || GUARDRAILS_FIELD.equals(inputFieldName)) {
+                                if (GUARDRAILS_FIELD.equals(inputFieldName)) {
+                                    userInputs.put(inputFieldName, Guardrails.parse(parser));
+                                } else if (CONFIGURATIONS.equals(inputFieldName)) {
                                     Map<String, Object> configurationsMap = parser.map();
                                     try {
                                         String configurationsString = ParseUtils.parseArbitraryStringToObjectMapToString(configurationsMap);
