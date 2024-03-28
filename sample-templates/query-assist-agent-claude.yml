@@ -1,10 +1,10 @@
-# This template creates connectors to OpenAI GPT model.
+# This template creates a connectors to Claude v1 model on Bedrock
 #
 # It then creates tools in the Agent Framework to create a query assist agent.
 #
 # To use:
-#  - update the "credential" fields under the create_openai_connector node.
-#  - if needed, update region
+#  - update the "credential" fields under the create_claude_connector node.
+#  - if needed, update region and endpoint
 #
 # After provisioning:
 #  - returns a workflow ID
@@ -12,53 +12,86 @@
 #  - use those models and agents to create a chat experience
 ---
 name: Query Assist Agent
-description: Create a Query Assist Agent using Bedrock and Sagemaker models
+description: Create a Query Assist Agent using Claude on BedRock
 use_case: REGISTER_AGENT
 version:
   template: 1.0.0
   compatibility:
-  - 2.12.0
+  - 2.13.0
   - 3.0.0
-# This section defines the provision workflow. Nodes are connected in a graph.
-# Either previous_node_inputs or explicit edges can be used to enforce ordering.
 workflows:
   provision:
+    user_params: {}
     nodes:
-    #
-    # SETUP EXTERNAL MODEL
-    #
-    # Create a connector to an OpenAI model and deploy the model
-    - id: create_openai_connector
+    # This node (workflow step) creates the connector to the Claude model on Bedrock.
+    # To use a different model, you can update this node.
+    # Be sure to enter your keys in the credentials section, and change the region and endpoint if applicable.
+    - id: create_claude_connector
       type: create_connector
+      previous_node_inputs: {}
       user_inputs:
-        name: OpenAI Chat Connector
-        description: The connector to public OpenAI model service for GPT 3.5
         version: '1'
-        protocol: http
-        parameters:
-          endpoint: api.openai.com
-          model: gpt-3.5-turbo
-        credential:
-          openAI_key: 'PUT_YOUR_API_KEY_HERE'
+        name: Claude instant runtime Connector
+        protocol: aws_sigv4
+        description: The connector to BedRock service for Claude model
         actions:
-        - action_type: predict
+        - headers:
+            x-amz-content-sha256: required
+            content-type: application/json
           method: POST
-          url: https://${parameters.endpoint}/v1/chat/completions
-    - id: register_openai_model
+          request_body: '{"prompt":"${parameters.prompt}", "max_tokens_to_sample":${parameters.max_tokens_to_sample},
+            "temperature":${parameters.temperature},  "anthropic_version":"${parameters.anthropic_version}"
+            }'
+          action_type: predict
+          url: https://bedrock-runtime.us-west-2.amazonaws.com/model/anthropic.claude-instant-v1/invoke
+        credential:
+          access_key: "<put your access key here>"
+          secret_key: "<put your secret key here>"
+        parameters:
+          region: us-west-2
+          endpoint: bedrock-runtime.us-west-2.amazonaws.com
+          content_type: application/json
+          auth: Sig_V4
+          max_tokens_to_sample: '8000'
+          service_name: bedrock
+          temperature: '0.0001'
+          response_filter: "$.completion"
+          anthropic_version: bedrock-2023-05-31
+    # This node registers the connector in the previous step and loads it into memory.
+    # The resulting model_id can be used later when configuring the agents to use this model.
+    - id: register_claude_model
       type: register_remote_model
       previous_node_inputs:
-        create_openai_connector: connector_id
+        create_claude_connector: connector_id
       user_inputs:
-        name: openAI-gpt-3.5-turbo
+        description: Claude model
         deploy: true
-    #
-    # SETUP PPL AGENT
-    #
-    # Create a PPLTool
+        name: claude-instant
+        # Guardrails can filter the input and output to the model.
+        guardrails:
+          # The type is presently unused but required. Any string works here.
+          type: ''
+          input_guardrail:
+            stop_words:
+            - index_name: words0
+              source_fields:
+              - title
+            regex:
+            - regex1
+            - regex2
+          output_guardrail:
+            stop_words:
+            - index_name: words0
+              source_fields:
+              - title
+            regex:
+            - regex1
+            - regex2
+    # The next node uses the model_id generated from the previous node in tools for the Agent Framework
     - id: TransferQuestionToPPLAndExecuteTool
       type: create_tool
       previous_node_inputs:
-        register_openai_model: model_id
+        register_claude_model: model_id
       user_inputs:
         type: PPLTool
         name: TransferQuestionToPPLAndExecuteTool
@@ -69,27 +102,12 @@ workflows:
         parameters:
           response_filter: "$.completion"
           execute: false
-          model_type: openai
         include_output_in_agent_response: true
-      # Create a flow agent to use the PPLTool
-    - id: ppl_agent
-      type: register_agent
-      previous_node_inputs:
-        TransferQuestionToPPLAndExecuteTool: tools
-      user_inputs:
-        parameters: {}
-        app_type: query_assist
-        name: PPL agent
-        description: this is the PPL agent
-        type: flow
-    #
-    # SETUP RESPONPSE SUMMARY AGENT
-    #
-    # Create a tool to summarize successful results in natural language
+    # This tool is presently unused in this template. Add it to the Agent to be used.
     - id: summarize_success_tool
       type: create_tool
       previous_node_inputs:
-        register_openai_model: model_id
+        register_claude_model: model_id
       user_inputs:
         type: MLModelTool
         Name: SummarizeSuccessTool
@@ -114,25 +132,11 @@ workflows:
 
             Assistant:
           response_filter: "$.completion"
-    # Create a flow agent to use the PPLTool
-    - id: response_summary_agent
-      type: register_agent
-      previous_node_inputs:
-        summarize_success_tool: tools
-      user_inputs:
-        parameters: {}
-        app_type: query_assist
-        name: Response summary agent
-        description: this is the summarize success PPL response agent
-        type: flow
-    #
-    # SETUP ERROR AND SUGGESTIONS AGENT
-    #
-    # Create a tool to summarize error results in natural language
+    # This tool is presently unused in this template. Add it to the Agent to be used.
     - id: summarize_error_tool
       type: create_tool
       previous_node_inputs:
-        register_openai_model: model_id
+        register_claude_model: model_id
       user_inputs:
         type: MLModelTool
         name: SummarizeErrorTool
@@ -159,16 +163,16 @@ workflows:
 
             Assistant:
           response_filter: "$.completion"
-    # Create a tool to give suggestions for future questions
+    # This tool is presently unused in this template. Add it to the Agent to be used.
     - id: suggestions_tool
       type: create_tool
       previous_node_inputs:
-        register_openai_model: model_id
+        register_claude_model: model_id
       user_inputs:
         type: MLModelTool
         name: SuggestionsTool
-        description: Use this tool to generate possible questions for an index in query
-          assist
+        description: Use this tool to generate possible questions for an index in
+          query assist
         include_output_in_agent_response: true
         parameters:
           prompt: |2-
@@ -190,75 +194,19 @@ workflows:
 
             Assistant:
           response_filter: "$.completion"
-    # Create a flow agent to summarize the errors and suggest possible questions
-    - id: error_summary_agent
+    # This is the Flow Agent that uses the TransferQuestionToPPLAndExecuteTool
+    # To use more tools, add them in a new tools_order field under user_inputs
+    - id: ppl_agent
       type: register_agent
       previous_node_inputs:
-        summarize_error_tool: tools
-        suggestions_tool: tools
+        TransferQuestionToPPLAndExecuteTool: tools
       user_inputs:
         parameters: {}
         app_type: query_assist
-        name: Error summary agent
-        description: this is the agent for summarizing PPL error and give suggested questions
-        tools_order:
-        - summarize_error_tool
-        - suggestions_tool
+        name: PPL agent
+        description: this is the PPL agent
         type: flow
-    #
-    # WRAP AGENTS IN AGENT TOOLS FOR ROOT AGENT
-    #
-    - id: ppl_agent_tool
-      type: create_tool
-      previous_node_inputs:
-        ppl_agent: agent_id
-      user_inputs:
-        description: PPL Agent Tool
-        include_output_in_agent_response: true
-        type: AgentTool
-        parameters:
-          max_iteration: '5'
-        name: PPLAgentTool
-    - id: response_summary_agent_tool
-      type: create_tool
-      previous_node_inputs:
-        response_summary_agent: agent_id
-      user_inputs:
-        description: Response Summary Agent Tool
-        include_output_in_agent_response: true
-        type: AgentTool
-        parameters:
-          max_iteration: '5'
-        name: ResponseSummaryPPLAgentTool
-    - id: error_summary_agent_tool
-      type: create_tool
-      previous_node_inputs:
-        error_summary_agent: agent_id
-      user_inputs:
-        description: Error Summary Agent Tool
-        include_output_in_agent_response: true
-        type: AgentTool
-        parameters:
-          max_iteration: '5'
-        name: ErrorSummaryAgentTool
-    # The root agent will use the agent tools
-    - id: root_agent
-      type: register_agent
-      previous_node_inputs:
-        ppl_agent_tool: tools
-        response_summary_agent_tool: tools
-        error_summary_agent_tool: tools
-        register_openai_model: model_id
-      user_inputs:
-        parameters:
-          prompt: Answer the question as best you can.
-        app_type: chatbot
-        name: Root agent
-        description: this is the root agent
-        tools_order:
-        - ppl_agent_tool
-        - response_summary_agent_tool
-        - error_summary_agent_tool
-        memory:
-          type: conversation_index
-        type: flow
+        # Uncomment if you want to add more tools. Order matters for flow agent.
+        # tools_order:
+        # - TransferQuestionToPPLAndExecuteTool
+        # - add other tools here in order
