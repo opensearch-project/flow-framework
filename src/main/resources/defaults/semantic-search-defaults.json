@@ -1,5 +1,5 @@
 {
-    "template.name": "semantic-search",
+    "template.name": "semantic_search",
     "template.description": "Setting up semantic search, ingest pipeline and index",
     "create_ingest_pipeline.pipeline_id": "nlp-ingest-pipeline",
     "create_ingest_pipeline.description": "A text embedding pipeline",
