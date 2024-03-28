@@ -1,5 +1,5 @@
 {
-    "template.name": "deploy-openai-model",
+    "template.name": "open_ai_embedding_model_deploy",
     "template.description": "Deploying an OpenAI embedding model",
     "create_connector.name": "OpenAI-embedding-connector",
     "create_connector.description": "Connector to public OpenAI model",
