@@ -20,6 +20,7 @@ import org.opensearch.flowframework.indices.FlowFrameworkIndicesHandler;
 import org.opensearch.flowframework.util.ParseUtils;
 import org.opensearch.ml.client.MachineLearningNodeClient;
 import org.opensearch.ml.common.FunctionName;
+import org.opensearch.ml.common.model.Guardrails;
 import org.opensearch.ml.common.transport.register.MLRegisterModelInput;
 import org.opensearch.ml.common.transport.register.MLRegisterModelInput.MLRegisterModelInputBuilder;
 import org.opensearch.ml.common.transport.register.MLRegisterModelResponse;
@@ -29,6 +30,7 @@ import java.util.Set;
 
 import static org.opensearch.flowframework.common.CommonValue.DEPLOY_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.DESCRIPTION_FIELD;
+import static org.opensearch.flowframework.common.CommonValue.GUARDRAILS_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.NAME_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.REGISTER_MODEL_STATUS;
 import static org.opensearch.flowframework.common.WorkflowResources.CONNECTOR_ID;
@@ -71,7 +73,7 @@ public class RegisterRemoteModelStep implements WorkflowStep {
         PlainActionFuture<WorkflowData> registerRemoteModelFuture = PlainActionFuture.newFuture();
 
         Set<String> requiredKeys = Set.of(NAME_FIELD, CONNECTOR_ID);
-        Set<String> optionalKeys = Set.of(MODEL_GROUP_ID, DESCRIPTION_FIELD, DEPLOY_FIELD);
+        Set<String> optionalKeys = Set.of(MODEL_GROUP_ID, DESCRIPTION_FIELD, DEPLOY_FIELD, GUARDRAILS_FIELD);
 
         try {
             Map<String, Object> inputs = ParseUtils.getInputsFromPreviousSteps(
@@ -87,6 +89,7 @@ public class RegisterRemoteModelStep implements WorkflowStep {
             String modelGroupId = (String) inputs.get(MODEL_GROUP_ID);
             String description = (String) inputs.get(DESCRIPTION_FIELD);
             String connectorId = (String) inputs.get(CONNECTOR_ID);
+            Guardrails guardRails = (Guardrails) inputs.get(GUARDRAILS_FIELD);
             final Boolean deploy = (Boolean) inputs.get(DEPLOY_FIELD);
 
             MLRegisterModelInputBuilder builder = MLRegisterModelInput.builder()
@@ -103,6 +106,11 @@ public class RegisterRemoteModelStep implements WorkflowStep {
             if (deploy != null) {
                 builder.deployModel(deploy);
             }
+
+            if (guardRails != null) {
+                builder.guardrails(guardRails);
+            }
+
             MLRegisterModelInput mlInput = builder.build();
 
             mlClient.register(mlInput, new ActionListener<MLRegisterModelResponse>() {
