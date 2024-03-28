@@ -27,7 +27,10 @@ import org.opensearch.ml.common.transport.register.MLRegisterModelInput;
 import org.opensearch.ml.common.transport.register.MLRegisterModelInput.MLRegisterModelInputBuilder;
 import org.opensearch.ml.common.transport.register.MLRegisterModelResponse;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 import static org.opensearch.flowframework.common.CommonValue.DEPLOY_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.DESCRIPTION_FIELD;
@@ -90,7 +93,6 @@ public class RegisterRemoteModelStep implements WorkflowStep {
             String modelGroupId = (String) inputs.get(MODEL_GROUP_ID);
             String description = (String) inputs.get(DESCRIPTION_FIELD);
             String connectorId = (String) inputs.get(CONNECTOR_ID);
-            Guardrails guardRails = getGuardRails(inputs.get(GUARDRAILS_FIELD));
             final Boolean deploy = (Boolean) inputs.get(DEPLOY_FIELD);
 
             MLRegisterModelInputBuilder builder = MLRegisterModelInput.builder()
@@ -106,9 +108,6 @@ public class RegisterRemoteModelStep implements WorkflowStep {
             }
             if (deploy != null) {
                 builder.deployModel(deploy);
-            }
-            if (guardRails != null) {
-                builder.guardrails(guardRails);
             }
 
             MLRegisterModelInput mlInput = builder.build();
@@ -194,40 +193,6 @@ public class RegisterRemoteModelStep implements WorkflowStep {
             registerRemoteModelFuture.onFailure(e);
         }
         return registerRemoteModelFuture;
-    }
-
-    private Guardrails getGuardRails(Object guardRails) {
-        Map<?, ?> map = (Map<?, ?>) guardRails;
-
-        String type = null;
-        Guardrail inputGuardRail = null;
-        Guardrail outputGuardRail = null;
-
-        type = (String) map.get(Guardrails.TYPE_FIELD);
-        inputGuardRail = getGuardRail(map.get(Guardrails.INPUT_GUARDRAIL_FIELD));
-        outputGuardRail = getGuardRail(map.get(Guardrails.OUTPUT_GUARDRAIL_FIELD));
-
-        return new Guardrails(type, inputGuardRail, outputGuardRail);
-    }
-
-    private Guardrail getGuardRail(Object guardRail) {
-        Map<?, ?> map = (Map<?, ?>) guardRail;
-
-        List<StopWords> stopWords = new ArrayList<>();
-        String[] regex = {};
-
-        List<Map<?, ?>> stopWordsList = (List<Map<?, ?>>) map.get(Guardrail.STOP_WORDS_FIELD);
-
-        for (Map<?, ?> stopWord : stopWordsList) {
-            String indexName = (String) stopWord.get("index_name");
-            String[] sourceFields = (String[]) stopWord.get("source_fields");
-            StopWords stopWordsObject = new StopWords(indexName, sourceFields);
-            stopWords.add(stopWordsObject);
-        }
-
-        regex = (String[]) map.get(Guardrail.REGEX_FIELD);
-
-        return new Guardrail(stopWords, regex);
     }
 
     @Override
