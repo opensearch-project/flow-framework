@@ -163,6 +163,7 @@ public class WorkflowNode implements ToXContentObject {
                             case START_OBJECT:
                                 if (GUARDRAILS_FIELD.equals(inputFieldName)) {
                                     userInputs.put(inputFieldName, Guardrails.parse(parser));
+                                    break;
                                 } else if (CONFIGURATIONS.equals(inputFieldName)) {
                                     Map<String, Object> configurationsMap = parser.map();
                                     try {
