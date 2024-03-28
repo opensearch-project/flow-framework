@@ -1,5 +1,5 @@
 {
-    "template.name": "deploy-bedrock-titan-multimodal-embedding-model",
+    "template.name": "bedrock_titan_multimodal_model_deploy",
     "template.description": "Deploying Amazon Bedrock Titan multimodal embedding model ",
     "create_connector.name": "Amazon Bedrock Connector: multi-modal embedding",
     "create_connector.description": "The connector to bedrock Titan multi-modal embedding model",

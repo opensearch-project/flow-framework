@@ -26,31 +26,31 @@ public enum DefaultUseCases {
     ),
     /** defaults file and substitution ready template for Cohere embedding model */
     COHERE_EMBEDDING_MODEL_DEPLOY(
-        "cohere-embedding_model_deploy",
+        "cohere_embedding_model_deploy",
         "defaults/cohere-embedding-defaults.json",
         "substitutionTemplates/deploy-remote-model-extra-params-template.json"
     ),
     /** defaults file and substitution ready template for Bedrock Titan embedding model */
     BEDROCK_TITAN_EMBEDDING_MODEL_DEPLOY(
-        "bedrock-titan-embedding_model_deploy",
+        "bedrock_titan_embedding_model_deploy",
         "defaults/bedrock-titan-embedding-defaults.json",
         "substitutionTemplates/deploy-remote-bedrock-model-template.json"
     ),
     /** defaults file and substitution ready template for Bedrock Titan multimodal embedding model */
     BEDROCK_TITAN_MULTIMODAL_MODEL_DEPLOY(
-        "bedrock-titan-multimodal_model_deploy",
+        "bedrock_titan_multimodal_model_deploy",
         "defaults/bedrock-titan-multimodal-defaults.json",
         "substitutionTemplates/deploy-remote-bedrock-model-template.json"
     ),
     /** defaults file and substitution ready template for Cohere chat model */
     COHERE_CHAT_MODEL_DEPLOY(
-        "cohere-chat_model_deploy",
+        "cohere_chat_model_deploy",
         "defaults/cohere-chat-defaults.json",
         "substitutionTemplates/deploy-remote-model-chat-template.json"
     ),
     /** defaults file and substitution ready template for OpenAI chat model */
     OPENAI_CHAT_MODEL_DEPLOY(
-        "openai-chat_model_deploy",
+        "openai_chat_model_deploy",
         "defaults/openai-chat-defaults.json",
         "substitutionTemplates/deploy-remote-model-chat-template.json"
     ),
@@ -64,20 +64,20 @@ public enum DefaultUseCases {
     SEMANTIC_SEARCH("semantic_search", "defaults/semantic-search-defaults.json", "substitutionTemplates/semantic-search-template.json"),
     /** defaults file and substitution ready template for multimodal search, no model creation*/
     MULTI_MODAL_SEARCH(
-        "multi_modal_search",
+        "multimodal_search",
         "defaults/multi-modal-search-defaults.json",
         "substitutionTemplates/multi-modal-search-template.json"
     ),
     /** defaults file and substitution ready template for multimodal search, no model creation*/
     MULTI_MODAL_SEARCH_WITH_BEDROCK_TITAN(
-        "multi_modal_search_with_bedrock_titan_multi_modal",
+        "multimodal_search_with_bedrock_titan",
         "defaults/multimodal-search-bedrock-titan-defaults.json",
         "substitutionTemplates/multi-modal-search-with-bedrock-titan-template.json"
     ),
     /** defaults file and substitution ready template for semantic search with query enricher processor attached, no model creation*/
     SEMANTIC_SEARCH_WITH_QUERY_ENRICHER(
         "semantic_search_with_query_enricher",
-        "defaults/semantic-search-defaults.json",
+        "defaults/semantic-search-query-enricher-defaults.json",
         "substitutionTemplates/semantic-search-with-query-enricher-template.json"
     ),
     /** defaults file and substitution ready template for semantic search with cohere embedding model*/
@@ -89,7 +89,7 @@ public enum DefaultUseCases {
     /** defaults file and substitution ready template for semantic search with query enricher processor attached and cohere embedding model*/
     SEMANTIC_SEARCH_WITH_COHERE_EMBEDDING_AND_QUERY_ENRICHER(
         "semantic_search_with_cohere_embedding_query_enricher",
-        "defaults/cohere-embedding-semantic-search-defaults.json",
+        "defaults/cohere-embedding-semantic-search-with-query-enricher-defaults.json",
         "substitutionTemplates/semantic-search-with-model-and-query-enricher-template.json"
     ),
     /** defaults file and substitution ready template for hybrid search, no model creation*/
