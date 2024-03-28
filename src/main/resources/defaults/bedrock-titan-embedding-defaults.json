@@ -1,5 +1,5 @@
 {
-    "template.name": "deploy-bedrock-titan-embedding-model",
+    "template.name": "bedrock_titan_embedding_model_deploy",
     "template.description": "Deploying Amazon Bedrock Titan embedding model ",
     "create_connector.name": "Amazon Bedrock Connector: embedding",
     "create_connector.description": "The connector to bedrock Titan embedding model",

@@ -1,5 +1,5 @@
 {
-    "template.name": "multi-modal-search",
+    "template.name": "multimodal_search",
     "template.description": "Setting up multimodal search, ingest pipeline and index",
     "create_ingest_pipeline.pipeline_id": "nlp-multimodal-ingest-pipeline",
     "create_ingest_pipeline.description": "A text/image embedding pipeline",

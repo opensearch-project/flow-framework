@@ -404,7 +404,7 @@ public class FlowFrameworkRestApiIT extends FlowFrameworkRestTestCase {
     public void testDefaultCohereUseCase() throws Exception {
 
         // Hit Create Workflow API with original template
-        Response response = createWorkflowWithUseCase(client(), "cohere-embedding_model_deploy");
+        Response response = createWorkflowWithUseCase(client(), "cohere_embedding_model_deploy");
         assertEquals(RestStatus.CREATED, TestHelpers.restStatus(response));
 
         Map<String, Object> responseMap = entityAsMap(response);
