@@ -32,8 +32,9 @@
               }
             ],
             "credential": {
-                "access_key": "<put your access key here>",
-                "secret_key": "<put your secret key here>"
+                "access_key": "<YOUR_ACCESS_KEY>",
+                "secret_key": "<YOUR_SECRET_KEY>",
+                "session_token": "<YOUR_SESSION_TOKEN>"
             },
             "parameters": {
               "region": "us-west-2",

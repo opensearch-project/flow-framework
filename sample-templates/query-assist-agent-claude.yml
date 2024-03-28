@@ -25,7 +25,7 @@ workflows:
     nodes:
     # This node (workflow step) creates the connector to the Claude model on Bedrock.
     # To use a different model, you can update this node.
-    # Be sure to enter your keys in the credentials section, and change the region and endpoint if applicable.
+    # Be sure to enter your keys/token in the credentials section, and change the region and endpoint if applicable.
     - id: create_claude_connector
       type: create_connector
       previous_node_inputs: {}
@@ -45,8 +45,9 @@ workflows:
           action_type: predict
           url: https://bedrock-runtime.us-west-2.amazonaws.com/model/anthropic.claude-instant-v1/invoke
         credential:
-          access_key: "<put your access key here>"
-          secret_key: "<put your secret key here>"
+          access_key: "<YOUR_ACCESS_KEY>"
+          secret_key: "<YOUR_SECRET_KEY>"
+          session_token: "<YOUR_SESSION_TOKEN>"
         parameters:
           region: us-west-2
           endpoint: bedrock-runtime.us-west-2.amazonaws.com
