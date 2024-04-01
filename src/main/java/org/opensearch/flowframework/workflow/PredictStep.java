@@ -22,18 +22,14 @@ import org.opensearch.ml.common.dataset.MLInputDataset;
 import org.opensearch.ml.common.dataset.SearchQueryInputDataset;
 import org.opensearch.ml.common.input.MLInput;
 import org.opensearch.ml.common.output.MLOutput;
-import org.opensearch.ml.common.output.model.ModelTensor;
 import org.opensearch.ml.common.output.model.ModelTensorOutput;
 import org.opensearch.ml.common.output.model.ModelTensors;
 import org.opensearch.search.builder.SearchSourceBuilder;
 
-import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.stream.Collectors;
 
 import static org.opensearch.flowframework.common.CommonValue.INCLUDES;
 import static org.opensearch.flowframework.common.CommonValue.INPUT_INDEX;
@@ -74,10 +70,11 @@ public class PredictStep implements WorkflowStep {
             @Override
             public void onResponse(MLOutput mlOutput) {
                 logger.info("Prediction done. Storing vectors");
-                final List<List<Float>> vector = buildVectorFromResponse(mlOutput);
+                final ModelTensorOutput modelTensorOutput = (ModelTensorOutput) mlOutput;
+                final List<ModelTensors> vectors = modelTensorOutput.getMlModelOutputs();
 
                 predictFuture.onResponse(
-                    new WorkflowData(Map.ofEntries(Map.entry(VECTORS, vector)), currentNodeInputs.getWorkflowId(), currentNodeId)
+                    new WorkflowData(Map.ofEntries(Map.entry(VECTORS, vectors)), currentNodeInputs.getWorkflowId(), currentNodeId)
                 );
             }
 
@@ -117,19 +114,6 @@ public class PredictStep implements WorkflowStep {
             predictFuture.onFailure(e);
         }
         return predictFuture;
-    }
-
-    private List<List<Float>> buildVectorFromResponse(MLOutput mlOutput) {
-        final List<List<Float>> vector = new ArrayList<>();
-        final ModelTensorOutput modelTensorOutput = (ModelTensorOutput) mlOutput;
-        final List<ModelTensors> tensorOutputList = modelTensorOutput.getMlModelOutputs();
-        for (final ModelTensors tensors : tensorOutputList) {
-            final List<ModelTensor> tensorsList = tensors.getMlModelTensors();
-            for (final ModelTensor tensor : tensorsList) {
-                vector.add(Arrays.stream(tensor.getData()).map(value -> (Float) value).collect(Collectors.toList()));
-            }
-        }
-        return vector;
     }
 
     private SearchSourceBuilder generateQuery(String[] includes) {
