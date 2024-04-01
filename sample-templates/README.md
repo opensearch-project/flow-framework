@@ -6,6 +6,8 @@ Each template is provided in both YAML and JSON format with identical functional
 The YAML templates include comments which give more insight into the template's usage.
 Use the corresponding `Content-Type` (`application/yaml` or `application/json`) when providing them as the body of a REST request.
 
+Note that several of the templates use both the single quote (`'`) and double quote (`"`) characters which may create issues if using the templates using `curl` on the command line with `--data`. Escaping the single quotes or reading the template from a file is needed to work around this.
+
 You will need to update the `credentials` field with appropriate API keys.
 
 To create a workflow and provision the resources:
