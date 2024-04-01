@@ -23,6 +23,7 @@ import org.opensearch.core.rest.RestStatus;
 import org.opensearch.core.xcontent.NamedXContentRegistry;
 import org.opensearch.core.xcontent.XContentParser;
 import org.opensearch.flowframework.exception.FlowFrameworkException;
+import org.opensearch.flowframework.indices.DynamoDbUtil.DDBClient;
 import org.opensearch.flowframework.model.WorkflowState;
 import org.opensearch.flowframework.util.ParseUtils;
 import org.opensearch.index.IndexNotFoundException;
@@ -43,6 +44,7 @@ public class GetWorkflowStateTransportAction extends HandledTransportAction<GetW
     private final Logger logger = LogManager.getLogger(GetWorkflowStateTransportAction.class);
 
     private final Client client;
+    private final DDBClient ddbClient;
     private final NamedXContentRegistry xContentRegistry;
 
     /**
@@ -50,6 +52,7 @@ public class GetWorkflowStateTransportAction extends HandledTransportAction<GetW
      * @param transportService The TransportService
      * @param actionFilters action filters
      * @param client The client used to make the request to OS
+     * @param ddbClient The Dynamo DB client
      * @param xContentRegistry contentRegister to parse get response
      */
     @Inject
@@ -57,10 +60,12 @@ public class GetWorkflowStateTransportAction extends HandledTransportAction<GetW
         TransportService transportService,
         ActionFilters actionFilters,
         Client client,
+        DDBClient ddbClient,
         NamedXContentRegistry xContentRegistry
     ) {
         super(GetWorkflowStateAction.NAME, transportService, actionFilters, GetWorkflowStateRequest::new);
         this.client = client;
+        this.ddbClient = ddbClient;
         this.xContentRegistry = xContentRegistry;
     }
 
@@ -71,7 +76,7 @@ public class GetWorkflowStateTransportAction extends HandledTransportAction<GetW
         GetRequest getRequest = new GetRequest(WORKFLOW_STATE_INDEX).id(workflowId);
         try (ThreadContext.StoredContext context = client.threadPool().getThreadContext().stashContext()) {
             logger.info("Querying state workflow doc: {}", workflowId);
-            client.get(getRequest, ActionListener.runBefore(ActionListener.wrap(r -> {
+            ddbClient.get(getRequest, ActionListener.runBefore(ActionListener.wrap(r -> {
                 if (r != null && r.isExists()) {
                     try (XContentParser parser = ParseUtils.createXContentParserFromRegistry(xContentRegistry, r.getSourceAsBytesRef())) {
                         ensureExpectedToken(XContentParser.Token.START_OBJECT, parser.nextToken(), parser);

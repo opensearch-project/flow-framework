@@ -21,6 +21,7 @@ import org.opensearch.core.action.ActionListener;
 import org.opensearch.core.common.bytes.BytesReference;
 import org.opensearch.core.xcontent.XContentBuilder;
 import org.opensearch.flowframework.TestHelpers;
+import org.opensearch.flowframework.indices.DynamoDbUtil.DDBClient;
 import org.opensearch.flowframework.indices.FlowFrameworkIndicesHandler;
 import org.opensearch.flowframework.model.Template;
 import org.opensearch.flowframework.model.Workflow;
@@ -52,6 +53,7 @@ public class GetWorkflowTransportActionTests extends OpenSearchTestCase {
 
     private ThreadPool threadPool;
     private Client client;
+    private DDBClient ddbClient;
     private GetWorkflowTransportAction getTemplateTransportAction;
     private FlowFrameworkIndicesHandler flowFrameworkIndicesHandler;
     private Template template;
@@ -62,13 +64,15 @@ public class GetWorkflowTransportActionTests extends OpenSearchTestCase {
         super.setUp();
         this.threadPool = mock(ThreadPool.class);
         this.client = mock(Client.class);
+        this.ddbClient = mock(DDBClient.class);
         this.flowFrameworkIndicesHandler = mock(FlowFrameworkIndicesHandler.class);
-        this.encryptorUtils = new EncryptorUtils(mock(ClusterService.class), client);
+        this.encryptorUtils = new EncryptorUtils(mock(ClusterService.class), client, ddbClient);
         this.getTemplateTransportAction = new GetWorkflowTransportAction(
             mock(TransportService.class),
             mock(ActionFilters.class),
             flowFrameworkIndicesHandler,
             client,
+            mock(DDBClient.class),
             encryptorUtils
         );
 

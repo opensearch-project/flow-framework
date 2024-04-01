@@ -22,6 +22,7 @@ import org.opensearch.core.action.ActionListener;
 import org.opensearch.core.rest.RestStatus;
 import org.opensearch.flowframework.common.FlowFrameworkSettings;
 import org.opensearch.flowframework.exception.FlowFrameworkException;
+import org.opensearch.flowframework.indices.DynamoDbUtil.DDBClient;
 import org.opensearch.flowframework.indices.FlowFrameworkIndicesHandler;
 import org.opensearch.flowframework.model.ProvisioningProgress;
 import org.opensearch.flowframework.model.ResourceCreated;
@@ -59,6 +60,7 @@ public class DeprovisionWorkflowTransportAction extends HandledTransportAction<W
 
     private final ThreadPool threadPool;
     private final Client client;
+    private final DDBClient ddbClient;
     private final WorkflowStepFactory workflowStepFactory;
     private final FlowFrameworkIndicesHandler flowFrameworkIndicesHandler;
     private final FlowFrameworkSettings flowFrameworkSettings;
@@ -69,6 +71,7 @@ public class DeprovisionWorkflowTransportAction extends HandledTransportAction<W
      * @param actionFilters action filters
      * @param threadPool The OpenSearch thread pool
      * @param client The node client to retrieve a stored use case template
+     * @param ddbClient The Dynamo DB client
      * @param workflowStepFactory The factory instantiating workflow steps
      * @param flowFrameworkIndicesHandler Class to handle all internal system indices actions
      * @param flowFrameworkSettings The plugin settings
@@ -79,6 +82,7 @@ public class DeprovisionWorkflowTransportAction extends HandledTransportAction<W
         ActionFilters actionFilters,
         ThreadPool threadPool,
         Client client,
+        DDBClient ddbClient,
         WorkflowStepFactory workflowStepFactory,
         FlowFrameworkIndicesHandler flowFrameworkIndicesHandler,
         FlowFrameworkSettings flowFrameworkSettings
@@ -86,6 +90,7 @@ public class DeprovisionWorkflowTransportAction extends HandledTransportAction<W
         super(DeprovisionWorkflowAction.NAME, transportService, actionFilters, WorkflowRequest::new);
         this.threadPool = threadPool;
         this.client = client;
+        this.ddbClient = ddbClient;
         this.workflowStepFactory = workflowStepFactory;
         this.flowFrameworkIndicesHandler = flowFrameworkIndicesHandler;
         this.flowFrameworkSettings = flowFrameworkSettings;

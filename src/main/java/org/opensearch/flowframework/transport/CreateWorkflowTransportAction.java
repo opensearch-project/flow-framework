@@ -25,6 +25,8 @@ import org.opensearch.core.rest.RestStatus;
 import org.opensearch.flowframework.common.CommonValue;
 import org.opensearch.flowframework.common.FlowFrameworkSettings;
 import org.opensearch.flowframework.exception.FlowFrameworkException;
+import org.opensearch.flowframework.indices.DynamoDbUtil;
+import org.opensearch.flowframework.indices.DynamoDbUtil.DDBClient;
 import org.opensearch.flowframework.indices.FlowFrameworkIndicesHandler;
 import org.opensearch.flowframework.model.ProvisioningProgress;
 import org.opensearch.flowframework.model.State;
@@ -61,6 +63,7 @@ public class CreateWorkflowTransportAction extends HandledTransportAction<Workfl
     private final WorkflowProcessSorter workflowProcessSorter;
     private final FlowFrameworkIndicesHandler flowFrameworkIndicesHandler;
     private final Client client;
+    private final DDBClient ddbClient;
     private final FlowFrameworkSettings flowFrameworkSettings;
     private final PluginsService pluginsService;
 
@@ -72,6 +75,7 @@ public class CreateWorkflowTransportAction extends HandledTransportAction<Workfl
      * @param flowFrameworkIndicesHandler The handler for the global context index
      * @param flowFrameworkSettings Plugin settings
      * @param client The client used to make the request to OS
+     * @param ddbClient The Dynamo DB client
      * @param pluginsService The plugin service
      */
     @Inject
@@ -82,6 +86,7 @@ public class CreateWorkflowTransportAction extends HandledTransportAction<Workfl
         FlowFrameworkIndicesHandler flowFrameworkIndicesHandler,
         FlowFrameworkSettings flowFrameworkSettings,
         Client client,
+        DDBClient ddbClient,
         PluginsService pluginsService
     ) {
         super(CreateWorkflowAction.NAME, transportService, actionFilters, WorkflowRequest::new);
@@ -89,6 +94,7 @@ public class CreateWorkflowTransportAction extends HandledTransportAction<Workfl
         this.flowFrameworkIndicesHandler = flowFrameworkIndicesHandler;
         this.flowFrameworkSettings = flowFrameworkSettings;
         this.client = client;
+        this.ddbClient = ddbClient;
         this.pluginsService = pluginsService;
     }
 
@@ -236,7 +242,7 @@ public class CreateWorkflowTransportAction extends HandledTransportAction<Workfl
             // Fetch existing entry for time stamps
             logger.info("Querying existing workflow from global context: {}", workflowId);
             try (ThreadContext.StoredContext context = client.threadPool().getThreadContext().stashContext()) {
-                client.get(new GetRequest(GLOBAL_CONTEXT_INDEX, workflowId), ActionListener.wrap(getResponse -> {
+                ddbClient.get(new GetRequest(GLOBAL_CONTEXT_INDEX, workflowId), ActionListener.wrap(getResponse -> {
                     context.restore();
                     if (getResponse.isExists()) {
                         Template existingTemplate = Template.parse(getResponse.getSourceAsString());
@@ -301,7 +307,9 @@ public class CreateWorkflowTransportAction extends HandledTransportAction<Workfl
      *  @param internalListener listener for search request
      */
     void checkMaxWorkflows(TimeValue requestTimeOut, Integer maxWorkflow, ActionListener<Boolean> internalListener) {
-        if (!flowFrameworkIndicesHandler.doesIndexExist(CommonValue.GLOBAL_CONTEXT_INDEX)) {
+        if (DynamoDbUtil.USE_DYNAMODB) {
+            internalListener.onResponse(DynamoDbUtil.itemCount(CommonValue.GLOBAL_CONTEXT_INDEX) < maxWorkflow);
+        } else if (!flowFrameworkIndicesHandler.doesIndexExist(CommonValue.GLOBAL_CONTEXT_INDEX)) {
             internalListener.onResponse(true);
         } else {
             QueryBuilder query = QueryBuilders.matchAllQuery();

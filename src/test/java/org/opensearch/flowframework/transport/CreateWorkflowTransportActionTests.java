@@ -25,6 +25,7 @@ import org.opensearch.core.action.ActionListener;
 import org.opensearch.core.index.shard.ShardId;
 import org.opensearch.flowframework.TestHelpers;
 import org.opensearch.flowframework.common.FlowFrameworkSettings;
+import org.opensearch.flowframework.indices.DynamoDbUtil.DDBClient;
 import org.opensearch.flowframework.indices.FlowFrameworkIndicesHandler;
 import org.opensearch.flowframework.model.Template;
 import org.opensearch.flowframework.model.Workflow;
@@ -102,6 +103,7 @@ public class CreateWorkflowTransportActionTests extends OpenSearchTestCase {
                 flowFrameworkIndicesHandler,
                 flowFrameworkSettings,
                 client,
+                mock(DDBClient.class),
                 pluginsService
             )
         );

@@ -20,6 +20,7 @@ import org.opensearch.common.util.concurrent.ThreadContext;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.core.rest.RestStatus;
 import org.opensearch.flowframework.exception.FlowFrameworkException;
+import org.opensearch.flowframework.indices.DynamoDbUtil.DDBClient;
 import org.opensearch.flowframework.indices.FlowFrameworkIndicesHandler;
 import org.opensearch.flowframework.model.Template;
 import org.opensearch.flowframework.util.EncryptorUtils;
@@ -37,6 +38,7 @@ public class GetWorkflowTransportAction extends HandledTransportAction<WorkflowR
 
     private final FlowFrameworkIndicesHandler flowFrameworkIndicesHandler;
     private final Client client;
+    private final DDBClient ddbClient;
     private final EncryptorUtils encryptorUtils;
 
     /**
@@ -46,6 +48,7 @@ public class GetWorkflowTransportAction extends HandledTransportAction<WorkflowR
      * @param flowFrameworkIndicesHandler The Flow Framework indices handler
      * @param encryptorUtils Encryptor utils
      * @param client the Opensearch Client
+     * @param ddbClient The Dynamo DB client
      */
     @Inject
     public GetWorkflowTransportAction(
@@ -53,11 +56,13 @@ public class GetWorkflowTransportAction extends HandledTransportAction<WorkflowR
         ActionFilters actionFilters,
         FlowFrameworkIndicesHandler flowFrameworkIndicesHandler,
         Client client,
+        DDBClient ddbClient,
         EncryptorUtils encryptorUtils
     ) {
         super(GetWorkflowAction.NAME, transportService, actionFilters, WorkflowRequest::new);
         this.flowFrameworkIndicesHandler = flowFrameworkIndicesHandler;
         this.client = client;
+        this.ddbClient = ddbClient;
         this.encryptorUtils = encryptorUtils;
     }
 
@@ -71,7 +76,7 @@ public class GetWorkflowTransportAction extends HandledTransportAction<WorkflowR
             // Retrieve workflow by ID
             try (ThreadContext.StoredContext context = client.threadPool().getThreadContext().stashContext()) {
                 logger.info("Querying workflow from global context: {}", workflowId);
-                client.get(getRequest, ActionListener.wrap(response -> {
+                ddbClient.get(getRequest, ActionListener.wrap(response -> {
                     context.restore();
 
                     if (!response.isExists()) {

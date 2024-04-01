@@ -23,6 +23,7 @@ import org.opensearch.core.common.bytes.BytesReference;
 import org.opensearch.core.index.shard.ShardId;
 import org.opensearch.core.xcontent.XContentBuilder;
 import org.opensearch.flowframework.TestHelpers;
+import org.opensearch.flowframework.indices.DynamoDbUtil.DDBClient;
 import org.opensearch.flowframework.indices.FlowFrameworkIndicesHandler;
 import org.opensearch.flowframework.model.Template;
 import org.opensearch.flowframework.model.Workflow;
@@ -79,6 +80,7 @@ public class ProvisionWorkflowTransportActionTests extends OpenSearchTestCase {
             mock(ActionFilters.class),
             threadPool,
             client,
+            mock(DDBClient.class),
             workflowProcessSorter,
             flowFrameworkIndicesHandler,
             encryptorUtils,

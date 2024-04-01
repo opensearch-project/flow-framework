@@ -20,6 +20,7 @@ import org.opensearch.common.util.concurrent.ThreadContext;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.flowframework.TestHelpers;
 import org.opensearch.flowframework.exception.FlowFrameworkException;
+import org.opensearch.flowframework.indices.DynamoDbUtil.DDBClient;
 import org.opensearch.flowframework.model.Template;
 import org.opensearch.flowframework.model.Workflow;
 import org.opensearch.flowframework.model.WorkflowNode;
@@ -42,6 +43,7 @@ public class EncryptorUtilsTests extends OpenSearchTestCase {
 
     private ClusterService clusterService;
     private Client client;
+    private DDBClient ddbClient;
     private EncryptorUtils encryptorUtils;
     private String testMasterKey;
     private Template testTemplate;
@@ -53,7 +55,8 @@ public class EncryptorUtilsTests extends OpenSearchTestCase {
         super.setUp();
         this.clusterService = mock(ClusterService.class);
         this.client = mock(Client.class);
-        this.encryptorUtils = new EncryptorUtils(clusterService, client);
+        this.ddbClient = mock(DDBClient.class);
+        this.encryptorUtils = new EncryptorUtils(clusterService, client, ddbClient);
         this.testMasterKey = encryptorUtils.generateMasterKey();
         this.testCredentialKey = "credential_key";
         this.testCredentialValue = "12345";

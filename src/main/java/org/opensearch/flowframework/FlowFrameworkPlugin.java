@@ -26,6 +26,7 @@ import org.opensearch.core.xcontent.NamedXContentRegistry;
 import org.opensearch.env.Environment;
 import org.opensearch.env.NodeEnvironment;
 import org.opensearch.flowframework.common.FlowFrameworkSettings;
+import org.opensearch.flowframework.indices.DynamoDbUtil.DDBClient;
 import org.opensearch.flowframework.indices.FlowFrameworkIndicesHandler;
 import org.opensearch.flowframework.rest.RestCreateWorkflowAction;
 import org.opensearch.flowframework.rest.RestDeleteWorkflowAction;
@@ -112,9 +113,11 @@ public class FlowFrameworkPlugin extends Plugin implements ActionPlugin {
         Settings settings = environment.settings();
         flowFrameworkSettings = new FlowFrameworkSettings(clusterService, settings);
         MachineLearningNodeClient mlClient = new MachineLearningNodeClient(client);
-        EncryptorUtils encryptorUtils = new EncryptorUtils(clusterService, client);
+        DDBClient ddbClient = new DDBClient(client);
+        EncryptorUtils encryptorUtils = new EncryptorUtils(clusterService, client, ddbClient);
         FlowFrameworkIndicesHandler flowFrameworkIndicesHandler = new FlowFrameworkIndicesHandler(
             client,
+            ddbClient,
             clusterService,
             encryptorUtils,
             xContentRegistry
@@ -134,7 +137,14 @@ public class FlowFrameworkPlugin extends Plugin implements ActionPlugin {
             flowFrameworkSettings
         );
 
-        return List.of(workflowStepFactory, workflowProcessSorter, encryptorUtils, flowFrameworkIndicesHandler, flowFrameworkSettings);
+        return List.of(
+            workflowStepFactory,
+            workflowProcessSorter,
+            encryptorUtils,
+            flowFrameworkIndicesHandler,
+            flowFrameworkSettings,
+            ddbClient
+        );
     }
 
     @Override

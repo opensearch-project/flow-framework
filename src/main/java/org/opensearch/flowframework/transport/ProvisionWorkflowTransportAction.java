@@ -21,6 +21,7 @@ import org.opensearch.common.util.concurrent.ThreadContext;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.core.rest.RestStatus;
 import org.opensearch.flowframework.exception.FlowFrameworkException;
+import org.opensearch.flowframework.indices.DynamoDbUtil.DDBClient;
 import org.opensearch.flowframework.indices.FlowFrameworkIndicesHandler;
 import org.opensearch.flowframework.model.ProvisioningProgress;
 import org.opensearch.flowframework.model.State;
@@ -62,6 +63,7 @@ public class ProvisionWorkflowTransportAction extends HandledTransportAction<Wor
 
     private final ThreadPool threadPool;
     private final Client client;
+    private final DDBClient ddbClient;
     private final WorkflowProcessSorter workflowProcessSorter;
     private final FlowFrameworkIndicesHandler flowFrameworkIndicesHandler;
     private final EncryptorUtils encryptorUtils;
@@ -73,6 +75,7 @@ public class ProvisionWorkflowTransportAction extends HandledTransportAction<Wor
      * @param actionFilters action filters
      * @param threadPool The OpenSearch thread pool
      * @param client The node client to retrieve a stored use case template
+     * @param ddbClient The Dynamo DB client
      * @param workflowProcessSorter Utility class to generate a togologically sorted list of Process nodes
      * @param flowFrameworkIndicesHandler Class to handle all internal system indices actions
      * @param encryptorUtils Utility class to handle encryption/decryption
@@ -84,6 +87,7 @@ public class ProvisionWorkflowTransportAction extends HandledTransportAction<Wor
         ActionFilters actionFilters,
         ThreadPool threadPool,
         Client client,
+        DDBClient ddbClient,
         WorkflowProcessSorter workflowProcessSorter,
         FlowFrameworkIndicesHandler flowFrameworkIndicesHandler,
         EncryptorUtils encryptorUtils,
@@ -92,6 +96,7 @@ public class ProvisionWorkflowTransportAction extends HandledTransportAction<Wor
         super(ProvisionWorkflowAction.NAME, transportService, actionFilters, WorkflowRequest::new);
         this.threadPool = threadPool;
         this.client = client;
+        this.ddbClient = ddbClient;
         this.workflowProcessSorter = workflowProcessSorter;
         this.flowFrameworkIndicesHandler = flowFrameworkIndicesHandler;
         this.encryptorUtils = encryptorUtils;
@@ -107,7 +112,7 @@ public class ProvisionWorkflowTransportAction extends HandledTransportAction<Wor
         // Stash thread context to interact with system index
         try (ThreadContext.StoredContext context = client.threadPool().getThreadContext().stashContext()) {
             logger.info("Querying workflow from global context: {}", workflowId);
-            client.get(getRequest, ActionListener.wrap(response -> {
+            ddbClient.get(getRequest, ActionListener.wrap(response -> {
                 context.restore();
 
                 if (!response.isExists()) {

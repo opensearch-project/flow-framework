@@ -20,6 +20,7 @@ import org.opensearch.common.util.concurrent.ThreadContext;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.core.rest.RestStatus;
 import org.opensearch.flowframework.exception.FlowFrameworkException;
+import org.opensearch.flowframework.indices.DynamoDbUtil.DDBClient;
 import org.opensearch.flowframework.indices.FlowFrameworkIndicesHandler;
 import org.opensearch.tasks.Task;
 import org.opensearch.transport.TransportService;
@@ -35,6 +36,7 @@ public class DeleteWorkflowTransportAction extends HandledTransportAction<Workfl
 
     private final FlowFrameworkIndicesHandler flowFrameworkIndicesHandler;
     private final Client client;
+    private final DDBClient ddbClient;
 
     /**
      * Instantiates a new DeleteWorkflowTransportAction instance
@@ -42,17 +44,20 @@ public class DeleteWorkflowTransportAction extends HandledTransportAction<Workfl
      * @param actionFilters action filters
      * @param flowFrameworkIndicesHandler The Flow Framework indices handler
      * @param client the OpenSearch Client
+     * @param ddbClient The Dynamo DB client
      */
     @Inject
     public DeleteWorkflowTransportAction(
         TransportService transportService,
         ActionFilters actionFilters,
         FlowFrameworkIndicesHandler flowFrameworkIndicesHandler,
-        Client client
+        Client client,
+        DDBClient ddbClient
     ) {
         super(DeleteWorkflowAction.NAME, transportService, actionFilters, WorkflowRequest::new);
         this.flowFrameworkIndicesHandler = flowFrameworkIndicesHandler;
         this.client = client;
+        this.ddbClient = ddbClient;
     }
 
     @Override
@@ -63,7 +68,7 @@ public class DeleteWorkflowTransportAction extends HandledTransportAction<Workfl
 
             ThreadContext.StoredContext context = client.threadPool().getThreadContext().stashContext();
             logger.info("Deleting workflow doc: {}", workflowId);
-            client.delete(deleteRequest, ActionListener.runBefore(listener, context::restore));
+            ddbClient.delete(deleteRequest, ActionListener.runBefore(listener, context::restore));
         } else {
             String errorMessage = "There are no templates in the global context";
             logger.error(errorMessage);

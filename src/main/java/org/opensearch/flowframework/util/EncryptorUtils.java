@@ -20,6 +20,8 @@ import org.opensearch.common.util.concurrent.ThreadContext;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.core.rest.RestStatus;
 import org.opensearch.flowframework.exception.FlowFrameworkException;
+import org.opensearch.flowframework.indices.DynamoDbUtil;
+import org.opensearch.flowframework.indices.DynamoDbUtil.DDBClient;
 import org.opensearch.flowframework.model.Template;
 import org.opensearch.flowframework.model.Workflow;
 import org.opensearch.flowframework.model.WorkflowNode;
@@ -61,17 +63,20 @@ public class EncryptorUtils {
 
     private ClusterService clusterService;
     private Client client;
+    private DDBClient ddbClient;
     private String masterKey;
 
     /**
      * Instantiates a new EncryptorUtils object
      * @param clusterService the cluster service
      * @param client the node client
+     * @param ddbClient the DynamoDB client
      */
-    public EncryptorUtils(ClusterService clusterService, Client client) {
+    public EncryptorUtils(ClusterService clusterService, Client client, DDBClient ddbClient) {
         this.masterKey = null;
         this.clusterService = clusterService;
         this.client = client;
+        this.ddbClient = ddbClient;
     }
 
     /**
@@ -242,7 +247,7 @@ public class EncryptorUtils {
         try (ThreadContext.StoredContext context = client.threadPool().getThreadContext().stashContext()) {
 
             GetRequest getRequest = new GetRequest(CONFIG_INDEX).id(MASTER_KEY);
-            client.get(getRequest, ActionListener.wrap(getResponse -> {
+            ddbClient.get(getRequest, ActionListener.wrap(getResponse -> {
 
                 if (!getResponse.isExists()) {
 
@@ -252,7 +257,7 @@ public class EncryptorUtils {
                         .source(Map.ofEntries(Map.entry(MASTER_KEY, generatedKey), Map.entry(CREATE_TIME, Instant.now().toEpochMilli())))
                         .setRefreshPolicy(WriteRequest.RefreshPolicy.IMMEDIATE);
 
-                    client.index(masterKeyIndexRequest, ActionListener.wrap(indexResponse -> {
+                    ddbClient.index(masterKeyIndexRequest, ActionListener.wrap(indexResponse -> {
                         // Set generated key to master
                         logger.info("Config has been initialized successfully");
                         this.masterKey = generatedKey;
@@ -286,13 +291,15 @@ public class EncryptorUtils {
         if (masterKey != null) {
             return;
         }
-
-        if (!clusterService.state().metadata().hasIndex(CONFIG_INDEX)) {
+        boolean indexExists = DynamoDbUtil.USE_DYNAMODB
+            ? DynamoDbUtil.tableExists(CONFIG_INDEX)
+            : clusterService.state().metadata().hasIndex(CONFIG_INDEX);
+        if (!indexExists) {
             throw new FlowFrameworkException("Config Index has not been initialized", RestStatus.INTERNAL_SERVER_ERROR);
         } else {
             try (ThreadContext.StoredContext context = client.threadPool().getThreadContext().stashContext()) {
                 GetRequest getRequest = new GetRequest(CONFIG_INDEX).id(MASTER_KEY);
-                client.get(getRequest, ActionListener.wrap(response -> {
+                ddbClient.get(getRequest, ActionListener.wrap(response -> {
                     if (response.isExists()) {
                         this.masterKey = (String) response.getSourceAsMap().get(MASTER_KEY);
                     } else {

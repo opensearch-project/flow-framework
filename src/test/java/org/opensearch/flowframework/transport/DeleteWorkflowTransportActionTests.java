@@ -18,6 +18,7 @@ import org.opensearch.common.util.concurrent.ThreadContext;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.core.index.Index;
 import org.opensearch.core.index.shard.ShardId;
+import org.opensearch.flowframework.indices.DynamoDbUtil.DDBClient;
 import org.opensearch.flowframework.indices.FlowFrameworkIndicesHandler;
 import org.opensearch.tasks.Task;
 import org.opensearch.test.OpenSearchTestCase;
@@ -49,7 +50,8 @@ public class DeleteWorkflowTransportActionTests extends OpenSearchTestCase {
             mock(TransportService.class),
             mock(ActionFilters.class),
             flowFrameworkIndicesHandler,
-            client
+            client,
+            mock(DDBClient.class)
         );
 
         ThreadPool clientThreadPool = mock(ThreadPool.class);

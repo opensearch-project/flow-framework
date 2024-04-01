@@ -30,6 +30,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 
 import static org.opensearch.core.xcontent.XContentParserUtils.ensureExpectedToken;
 import static org.opensearch.flowframework.common.CommonValue.ERROR_FIELD;
@@ -141,9 +142,25 @@ public class WorkflowState implements ToXContentObject, Writeable {
         private List<ResourceCreated> resourcesCreated = null;
 
         /**
-         * Empty Constructor for the Builder object
+         * Empty Constructor for the Builder objectf
          */
         public Builder() {}
+
+        /**
+         * Builder from existing state
+         * @param existingState a WorkflowState object to initialize the builder with
+         */
+        public Builder(WorkflowState existingState) {
+            this.workflowId = existingState.getWorkflowId();
+            this.error = existingState.getError();
+            this.state = existingState.getState();
+            this.provisioningProgress = existingState.getProvisioningProgress();
+            this.provisionStartTime = existingState.getProvisionStartTime();
+            this.provisionEndTime = existingState.getProvisionEndTime();
+            this.user = existingState.getUser();
+            this.userOutputs = existingState.userOutputs();
+            this.resourcesCreated = existingState.resourcesCreated();
+        }
 
         /**
          * Builder method for adding workflowID
@@ -251,6 +268,49 @@ public class WorkflowState implements ToXContentObject, Writeable {
             workflowState.userOutputs = this.userOutputs;
             workflowState.resourcesCreated = this.resourcesCreated;
             return workflowState;
+        }
+
+        /**
+         * Update the specified fields in the builder
+         * @param updatedFields a key-value map containing the field to update and new value
+         * @return the updated builder
+         */
+        @SuppressWarnings("unchecked")
+        public Builder updateFields(Map<String, Object> updatedFields) {
+            for (Entry<String, Object> entry : updatedFields.entrySet()) {
+                switch (entry.getKey()) {
+                    case WORKFLOW_ID_FIELD:
+                        workflowId(entry.getValue().toString());
+                        break;
+                    case ERROR_FIELD:
+                        error(entry.getValue().toString());
+                        break;
+                    case STATE_FIELD:
+                        state(entry.getValue().toString());
+                        break;
+                    case PROVISIONING_PROGRESS_FIELD:
+                        provisioningProgress(entry.getValue().toString());
+                        break;
+                    case PROVISION_START_TIME_FIELD:
+                        provisionStartTime(Instant.ofEpochMilli((long) entry.getValue()));
+                        break;
+                    case PROVISION_END_TIME_FIELD:
+                        provisionEndTime(Instant.ofEpochMilli((long) entry.getValue()));
+                        break;
+                    case USER_FIELD:
+                        user((User) entry.getValue());
+                        break;
+                    case USER_OUTPUTS_FIELD:
+                        userOutputs((Map<String, Object>) entry.getValue());
+                        break;
+                    case RESOURCES_CREATED_FIELD:
+                        resourcesCreated((List<ResourceCreated>) entry.getValue());
+                        break;
+                    default:
+                        break;
+                }
+            }
+            return this;
         }
     }
 
@@ -418,13 +478,16 @@ public class WorkflowState implements ToXContentObject, Writeable {
      * @throws IOException on failure to parse
      */
     public static WorkflowState parse(String json) throws IOException {
-        XContentParser parser = JsonXContent.jsonXContent.createParser(
-            NamedXContentRegistry.EMPTY,
-            LoggingDeprecationHandler.INSTANCE,
-            json
-        );
-        ensureExpectedToken(XContentParser.Token.START_OBJECT, parser.nextToken(), parser);
-        return parse(parser);
+        try (
+            XContentParser parser = JsonXContent.jsonXContent.createParser(
+                NamedXContentRegistry.EMPTY,
+                LoggingDeprecationHandler.INSTANCE,
+                json
+            )
+        ) {
+            ensureExpectedToken(XContentParser.Token.START_OBJECT, parser.nextToken(), parser);
+            return parse(parser);
+        }
     }
 
     /**

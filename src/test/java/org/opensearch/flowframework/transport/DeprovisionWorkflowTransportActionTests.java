@@ -18,6 +18,7 @@ import org.opensearch.common.util.concurrent.OpenSearchExecutors;
 import org.opensearch.common.util.concurrent.ThreadContext;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.flowframework.common.FlowFrameworkSettings;
+import org.opensearch.flowframework.indices.DynamoDbUtil.DDBClient;
 import org.opensearch.flowframework.indices.FlowFrameworkIndicesHandler;
 import org.opensearch.flowframework.model.ResourceCreated;
 import org.opensearch.flowframework.model.WorkflowState;
@@ -93,6 +94,7 @@ public class DeprovisionWorkflowTransportActionTests extends OpenSearchTestCase 
             mock(ActionFilters.class),
             clientThreadPool,
             client,
+            mock(DDBClient.class),
             workflowStepFactory,
             flowFrameworkIndicesHandler,
             flowFrameworkSettings

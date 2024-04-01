@@ -19,6 +19,7 @@ import org.opensearch.core.common.io.stream.StreamInput;
 import org.opensearch.core.xcontent.ToXContent;
 import org.opensearch.core.xcontent.XContentBuilder;
 import org.opensearch.flowframework.TestHelpers;
+import org.opensearch.flowframework.indices.DynamoDbUtil.DDBClient;
 import org.opensearch.flowframework.indices.FlowFrameworkIndicesHandler;
 import org.opensearch.flowframework.model.WorkflowState;
 import org.opensearch.tasks.Task;
@@ -56,6 +57,7 @@ public class GetWorkflowStateTransportActionTests extends OpenSearchTestCase {
             mock(TransportService.class),
             mock(ActionFilters.class),
             client,
+            mock(DDBClient.class),
             xContentRegistry()
         );
         task = Mockito.mock(Task.class);

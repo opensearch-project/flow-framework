@@ -31,6 +31,7 @@ import org.opensearch.core.action.ActionListener;
 import org.opensearch.core.common.bytes.BytesReference;
 import org.opensearch.core.xcontent.XContentBuilder;
 import org.opensearch.flowframework.TestHelpers;
+import org.opensearch.flowframework.indices.DynamoDbUtil.DDBClient;
 import org.opensearch.flowframework.model.Template;
 import org.opensearch.flowframework.model.Workflow;
 import org.opensearch.flowframework.model.WorkflowState;
@@ -67,6 +68,8 @@ public class FlowFrameworkIndicesHandlerTests extends OpenSearchTestCase {
     @Mock
     private Client client;
     @Mock
+    private DDBClient ddbClient;
+    @Mock
     private CreateIndexStep createIndexStep;
     @Mock
     private ThreadPool threadPool;
@@ -97,7 +100,13 @@ public class FlowFrameworkIndicesHandlerTests extends OpenSearchTestCase {
         threadContext = new ThreadContext(settings);
         when(client.threadPool()).thenReturn(threadPool);
         when(threadPool.getThreadContext()).thenReturn(threadContext);
-        flowFrameworkIndicesHandler = new FlowFrameworkIndicesHandler(client, clusterService, encryptorUtils, xContentRegistry());
+        flowFrameworkIndicesHandler = new FlowFrameworkIndicesHandler(
+            client,
+            ddbClient,
+            clusterService,
+            encryptorUtils,
+            xContentRegistry()
+        );
         adminClient = mock(AdminClient.class);
         indicesAdminClient = mock(IndicesAdminClient.class);
         metadata = mock(Metadata.class);

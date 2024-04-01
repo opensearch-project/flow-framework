@@ -11,6 +11,7 @@ package org.opensearch.flowframework.indices;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.opensearch.ExceptionsHelper;
+import org.opensearch.action.DocWriteResponse.Result;
 import org.opensearch.action.admin.indices.create.CreateIndexRequest;
 import org.opensearch.action.admin.indices.create.CreateIndexResponse;
 import org.opensearch.action.admin.indices.mapping.put.PutMappingRequest;
@@ -29,25 +30,31 @@ import org.opensearch.common.xcontent.XContentFactory;
 import org.opensearch.common.xcontent.XContentType;
 import org.opensearch.commons.authuser.User;
 import org.opensearch.core.action.ActionListener;
+import org.opensearch.core.index.shard.ShardId;
 import org.opensearch.core.rest.RestStatus;
 import org.opensearch.core.xcontent.NamedXContentRegistry;
 import org.opensearch.core.xcontent.ToXContent;
 import org.opensearch.core.xcontent.XContentBuilder;
 import org.opensearch.core.xcontent.XContentParser;
 import org.opensearch.flowframework.exception.FlowFrameworkException;
+import org.opensearch.flowframework.indices.DynamoDbUtil.DDBClient;
 import org.opensearch.flowframework.model.ProvisioningProgress;
 import org.opensearch.flowframework.model.ResourceCreated;
 import org.opensearch.flowframework.model.State;
 import org.opensearch.flowframework.model.Template;
 import org.opensearch.flowframework.model.WorkflowState;
+import org.opensearch.flowframework.transport.GetWorkflowStateAction;
+import org.opensearch.flowframework.transport.GetWorkflowStateRequest;
 import org.opensearch.flowframework.util.EncryptorUtils;
 import org.opensearch.flowframework.util.ParseUtils;
 import org.opensearch.script.Script;
 import org.opensearch.script.ScriptType;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Consumer;
@@ -59,6 +66,7 @@ import static org.opensearch.flowframework.common.CommonValue.GLOBAL_CONTEXT_IND
 import static org.opensearch.flowframework.common.CommonValue.GLOBAL_CONTEXT_INDEX_MAPPING;
 import static org.opensearch.flowframework.common.CommonValue.META;
 import static org.opensearch.flowframework.common.CommonValue.NO_SCHEMA_VERSION;
+import static org.opensearch.flowframework.common.CommonValue.RESOURCES_CREATED_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.SCHEMA_VERSION_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.WORKFLOW_STATE_INDEX;
 import static org.opensearch.flowframework.common.CommonValue.WORKFLOW_STATE_INDEX_MAPPING;
@@ -71,6 +79,7 @@ import static org.opensearch.flowframework.common.WorkflowResources.getResourceB
 public class FlowFrameworkIndicesHandler {
     private static final Logger logger = LogManager.getLogger(FlowFrameworkIndicesHandler.class);
     private final Client client;
+    private final DDBClient ddbClient;
     private final ClusterService clusterService;
     private final EncryptorUtils encryptorUtils;
     private static final Map<String, AtomicBoolean> indexMappingUpdated = new HashMap<>();
@@ -80,17 +89,20 @@ public class FlowFrameworkIndicesHandler {
     /**
      * constructor
      * @param client the open search client
+     * @param ddbClient the DynamoDB client
      * @param clusterService ClusterService
      * @param encryptorUtils encryption utility
      * @param xContentRegistry contentRegister to parse any response
      */
     public FlowFrameworkIndicesHandler(
         Client client,
+        DDBClient ddbClient,
         ClusterService clusterService,
         EncryptorUtils encryptorUtils,
         NamedXContentRegistry xContentRegistry
     ) {
         this.client = client;
+        this.ddbClient = ddbClient;
         this.clusterService = clusterService;
         this.encryptorUtils = encryptorUtils;
         for (FlowFrameworkIndex mlIndex : FlowFrameworkIndex.values()) {
@@ -162,7 +174,7 @@ public class FlowFrameworkIndicesHandler {
      * @return boolean indicating the existence of an index
      */
     public boolean doesIndexExist(String indexName) {
-        return clusterService.state().metadata().hasIndex(indexName);
+        return DynamoDbUtil.USE_DYNAMODB ? DynamoDbUtil.tableExists(indexName) : clusterService.state().metadata().hasIndex(indexName);
     }
 
     /**
@@ -176,7 +188,7 @@ public class FlowFrameworkIndicesHandler {
 
         try (ThreadContext.StoredContext threadContext = client.threadPool().getThreadContext().stashContext()) {
             ActionListener<Boolean> internalListener = ActionListener.runBefore(listener, threadContext::restore);
-            if (!clusterService.state().metadata().hasIndex(indexName)) {
+            if (!doesIndexExist(indexName)) {
                 @SuppressWarnings("deprecation")
                 ActionListener<CreateIndexResponse> actionListener = ActionListener.wrap(r -> {
                     if (r.isAcknowledged()) {
@@ -191,7 +203,7 @@ public class FlowFrameworkIndicesHandler {
                     internalListener.onFailure(new FlowFrameworkException(errorMessage, ExceptionsHelper.status(e)));
                 });
                 CreateIndexRequest request = new CreateIndexRequest(indexName).mapping(mapping).settings(indexSettings);
-                client.admin().indices().create(request, actionListener);
+                ddbClient.admin().indices().create(request, actionListener);
             } else {
                 logger.debug("index: {} is already created", indexName);
                 if (indexMappingUpdated.containsKey(indexName) && !indexMappingUpdated.get(indexName).get()) {
@@ -269,6 +281,10 @@ public class FlowFrameworkIndicesHandler {
      * @param listener action listener, if update index is needed, will pass true to its onResponse method
      */
     private void shouldUpdateIndex(String indexName, Integer newVersion, ActionListener<Boolean> listener) {
+        if (DynamoDbUtil.USE_DYNAMODB) {
+            listener.onResponse(Boolean.FALSE);
+            return;
+        }
         IndexMetadata indexMetaData = clusterService.state().getMetadata().indices().get(indexName);
         if (indexMetaData == null) {
             listener.onResponse(Boolean.FALSE);
@@ -318,7 +334,7 @@ public class FlowFrameworkIndicesHandler {
                 Template templateWithEncryptedCredentials = encryptorUtils.encryptTemplateCredentials(template);
                 request.source(templateWithEncryptedCredentials.toXContent(builder, ToXContent.EMPTY_PARAMS))
                     .setRefreshPolicy(WriteRequest.RefreshPolicy.IMMEDIATE);
-                client.index(request, ActionListener.runBefore(listener, context::restore));
+                ddbClient.index(request, ActionListener.runBefore(listener, context::restore));
             } catch (Exception e) {
                 String errorMessage = "Failed to index global_context index";
                 logger.error(errorMessage, e);
@@ -374,7 +390,7 @@ public class FlowFrameworkIndicesHandler {
             ) {
                 request.source(state.toXContent(builder, ToXContent.EMPTY_PARAMS)).setRefreshPolicy(WriteRequest.RefreshPolicy.IMMEDIATE);
                 request.id(workflowId);
-                client.index(request, ActionListener.runBefore(listener, context::restore));
+                ddbClient.index(request, ActionListener.runBefore(listener, context::restore));
             } catch (Exception e) {
                 String errorMessage = "Failed to put state index document";
                 logger.error(errorMessage, e);
@@ -429,7 +445,7 @@ public class FlowFrameworkIndicesHandler {
                             Template encryptedTemplate = encryptorUtils.encryptTemplateCredentials(template);
                             request.source(encryptedTemplate.toXContent(builder, ToXContent.EMPTY_PARAMS))
                                 .setRefreshPolicy(WriteRequest.RefreshPolicy.IMMEDIATE);
-                            client.index(request, ActionListener.runBefore(listener, context::restore));
+                            ddbClient.index(request, ActionListener.runBefore(listener, context::restore));
                         } catch (Exception e) {
                             String errorMessage = "Failed to update global_context entry : " + documentId;
                             logger.error(errorMessage, e);
@@ -460,7 +476,7 @@ public class FlowFrameworkIndicesHandler {
     public <T> void doesTemplateExist(String documentId, Consumer<Boolean> booleanResultConsumer, ActionListener<T> listener) {
         GetRequest getRequest = new GetRequest(GLOBAL_CONTEXT_INDEX, documentId);
         try (ThreadContext.StoredContext context = client.threadPool().getThreadContext().stashContext()) {
-            client.get(getRequest, ActionListener.wrap(response -> { booleanResultConsumer.accept(response.isExists()); }, exception -> {
+            ddbClient.get(getRequest, ActionListener.wrap(response -> { booleanResultConsumer.accept(response.isExists()); }, exception -> {
                 context.restore();
                 String errorMessage = "Failed to get template " + documentId;
                 logger.error(errorMessage);
@@ -484,7 +500,7 @@ public class FlowFrameworkIndicesHandler {
     public <T> void isWorkflowNotStarted(String documentId, Consumer<Boolean> booleanResultConsumer, ActionListener<T> listener) {
         GetRequest getRequest = new GetRequest(WORKFLOW_STATE_INDEX, documentId);
         try (ThreadContext.StoredContext context = client.threadPool().getThreadContext().stashContext()) {
-            client.get(getRequest, ActionListener.wrap(response -> {
+            ddbClient.get(getRequest, ActionListener.wrap(response -> {
                 context.restore();
                 if (!response.isExists()) {
                     booleanResultConsumer.accept(false);
@@ -523,25 +539,50 @@ public class FlowFrameworkIndicesHandler {
         Map<String, Object> updatedFields,
         ActionListener<UpdateResponse> listener
     ) {
+
         if (!doesIndexExist(WORKFLOW_STATE_INDEX)) {
             String errorMessage = "Failed to update document for given workflow due to missing " + WORKFLOW_STATE_INDEX + " index";
             logger.error(errorMessage);
             listener.onFailure(new FlowFrameworkException(errorMessage, RestStatus.BAD_REQUEST));
         } else {
             try (ThreadContext.StoredContext context = client.threadPool().getThreadContext().stashContext()) {
-                UpdateRequest updateRequest = new UpdateRequest(WORKFLOW_STATE_INDEX, documentId);
-                Map<String, Object> updatedContent = new HashMap<>(updatedFields);
-                updateRequest.doc(updatedContent);
-                updateRequest.setRefreshPolicy(WriteRequest.RefreshPolicy.IMMEDIATE);
-                updateRequest.retryOnConflict(5);
-                // TODO: decide what condition can be considered as an update conflict and add retry strategy
-                client.update(updateRequest, ActionListener.runBefore(listener, context::restore));
+                // For DynamoDB need full state index
+                if (DynamoDbUtil.USE_DYNAMODB) {
+                    GetWorkflowStateRequest getWorkflowRequest = new GetWorkflowStateRequest(documentId, true);
+                    client.execute(GetWorkflowStateAction.INSTANCE, getWorkflowRequest, ActionListener.wrap(response -> {
+                        WorkflowState state = new WorkflowState.Builder(response.getWorkflowState()).updateFields(updatedFields).build();
+                        XContentBuilder builder = XContentFactory.jsonBuilder();
+                        IndexRequest request = new IndexRequest(WORKFLOW_STATE_INDEX).id(documentId)
+                            .source(state.toXContent(builder, ToXContent.EMPTY_PARAMS));
+                        ddbClient.index(request, ActionListener.wrap(indexResponse -> {
+                            ShardId shardId = new ShardId(WORKFLOW_STATE_INDEX, WORKFLOW_STATE_INDEX, 0);
+                            listener.onResponse(new UpdateResponse(shardId, documentId, 0, 0, 0, Result.UPDATED));
+                        }, indexEx -> {
+                            String errorMessage = "Failed to update " + WORKFLOW_STATE_INDEX + " entry : " + documentId;
+                            logger.error(errorMessage, indexEx);
+                            listener.onFailure(new FlowFrameworkException(errorMessage, ExceptionsHelper.status(indexEx)));
+                        }));
+                    }, ex -> {
+                        String errorMessage = "Failed to get existing " + WORKFLOW_STATE_INDEX + " entry: " + documentId;
+                        logger.error(errorMessage, ex);
+                        listener.onFailure(new FlowFrameworkException(errorMessage, ExceptionsHelper.status(ex)));
+                    }));
+                } else {
+                    UpdateRequest updateRequest = new UpdateRequest(WORKFLOW_STATE_INDEX, documentId);
+                    Map<String, Object> updatedContent = new HashMap<>(updatedFields);
+                    updateRequest.doc(updatedContent);
+                    updateRequest.setRefreshPolicy(WriteRequest.RefreshPolicy.IMMEDIATE);
+                    updateRequest.retryOnConflict(5);
+                    // TODO: decide what condition can be considered as an update conflict and add retry strategy
+                    client.update(updateRequest, ActionListener.runBefore(listener, context::restore));
+                }
             } catch (Exception e) {
                 String errorMessage = "Failed to update " + WORKFLOW_STATE_INDEX + " entry : " + documentId;
                 logger.error(errorMessage, e);
                 listener.onFailure(new FlowFrameworkException(errorMessage, ExceptionsHelper.status(e)));
             }
         }
+
     }
 
     /**
@@ -579,6 +620,42 @@ public class FlowFrameworkIndicesHandler {
     }
 
     /**
+     * DynamoDB version of {@link #updateFlowFrameworkSystemIndexDocWithScript(String, String, Script, ActionListener)} for the "add a new resource" use case.
+     * @param documentId the document id (workflow id) to add the resource to the state index
+     * @param newResource the resource to add
+     * @param listener action listener
+     */
+    public void updateFlowFrameworkSystemIndexDocWithNewResource(
+        String documentId,
+        ResourceCreated newResource,
+        ActionListener<UpdateResponse> listener
+    ) {
+        GetWorkflowStateRequest getWorkflowRequest = new GetWorkflowStateRequest(documentId, true);
+        client.execute(GetWorkflowStateAction.INSTANCE, getWorkflowRequest, ActionListener.wrap(response -> {
+            List<ResourceCreated> resourcesCreated = new ArrayList<>(response.getWorkflowState().resourcesCreated());
+            resourcesCreated.add(newResource);
+            WorkflowState state = new WorkflowState.Builder(response.getWorkflowState()).updateFields(
+                Map.of(RESOURCES_CREATED_FIELD, resourcesCreated)
+            ).build();
+            XContentBuilder builder = XContentFactory.jsonBuilder();
+            IndexRequest request = new IndexRequest(WORKFLOW_STATE_INDEX).id(documentId)
+                .source(state.toXContent(builder, ToXContent.EMPTY_PARAMS));
+            ddbClient.index(request, ActionListener.wrap(indexResponse -> {
+                ShardId shardId = new ShardId(WORKFLOW_STATE_INDEX, WORKFLOW_STATE_INDEX, 0);
+                listener.onResponse(new UpdateResponse(shardId, documentId, 0, 0, 0, Result.UPDATED));
+            }, indexEx -> {
+                String errorMessage = "Failed to update " + WORKFLOW_STATE_INDEX + " entry : " + documentId;
+                logger.error(errorMessage, indexEx);
+                listener.onFailure(new FlowFrameworkException(errorMessage, ExceptionsHelper.status(indexEx)));
+            }));
+        }, ex -> {
+            String errorMessage = "Failed to get existing " + WORKFLOW_STATE_INDEX + " entry: " + documentId;
+            logger.error(errorMessage, ex);
+            listener.onFailure(new FlowFrameworkException(errorMessage, ExceptionsHelper.status(ex)));
+        }));
+    }
+
+    /**
      * Creates a new ResourceCreated object and a script to update the state index
      * @param workflowId workflowId for the relevant step
      * @param nodeId WorkflowData object with relevent step information
@@ -601,17 +678,24 @@ public class FlowFrameworkIndicesHandler {
             resourceId
         );
 
-        // The script to append a new object to the resources_created array
-        Script script = new Script(
-            ScriptType.INLINE,
-            "painless",
-            "ctx._source.resources_created.add(params.newResource)",
-            Collections.singletonMap("newResource", newResource.resourceMap())
-        );
+        if (DynamoDbUtil.USE_DYNAMODB) {
+            updateFlowFrameworkSystemIndexDocWithNewResource(workflowId, newResource, ActionListener.wrap(updateResponse -> {
+                logger.info("updated resources created of {}", workflowId);
+                listener.onResponse(updateResponse);
+            }, listener::onFailure));
+        } else {
+            // The script to append a new object to the resources_created array
+            Script script = new Script(
+                ScriptType.INLINE,
+                "painless",
+                "ctx._source.resources_created.add(params.newResource)",
+                Collections.singletonMap("newResource", newResource.resourceMap())
+            );
 
-        updateFlowFrameworkSystemIndexDocWithScript(WORKFLOW_STATE_INDEX, workflowId, script, ActionListener.wrap(updateResponse -> {
-            logger.info("updated resources created of {}", workflowId);
-            listener.onResponse(updateResponse);
-        }, exception -> { listener.onFailure(exception); }));
+            updateFlowFrameworkSystemIndexDocWithScript(WORKFLOW_STATE_INDEX, workflowId, script, ActionListener.wrap(updateResponse -> {
+                logger.info("updated resources created of {}", workflowId);
+                listener.onResponse(updateResponse);
+            }, listener::onFailure));
+        }
     }
 }
