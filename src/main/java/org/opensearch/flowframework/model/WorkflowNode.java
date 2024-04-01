@@ -32,6 +32,7 @@ import java.util.Objects;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.opensearch.core.xcontent.XContentParserUtils.ensureExpectedToken;
 import static org.opensearch.flowframework.common.CommonValue.CONFIGURATIONS;
+import static org.opensearch.flowframework.common.CommonValue.PROCESSOR_CONFIG;
 import static org.opensearch.flowframework.common.CommonValue.TOOLS_ORDER_FIELD;
 import static org.opensearch.flowframework.util.ParseUtils.buildStringToObjectMap;
 import static org.opensearch.flowframework.util.ParseUtils.buildStringToStringMap;
@@ -156,7 +157,7 @@ public class WorkflowNode implements ToXContentObject {
                                 userInputs.put(inputFieldName, parser.text());
                                 break;
                             case START_OBJECT:
-                                if (CONFIGURATIONS.equals(inputFieldName)) {
+                                if (CONFIGURATIONS.equals(inputFieldName) || PROCESSOR_CONFIG.equals(inputFieldName)) {
                                     Map<String, Object> configurationsMap = parser.map();
                                     try {
                                         String configurationsString = ParseUtils.parseArbitraryStringToObjectMapToString(configurationsMap);

@@ -11,10 +11,12 @@ package org.opensearch.flowframework.workflow;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.opensearch.action.search.SearchRequest;
-import org.opensearch.action.search.SearchResponse;
 import org.opensearch.action.support.PlainActionFuture;
 import org.opensearch.core.action.ActionListener;
+import org.opensearch.core.common.bytes.BytesArray;
+import org.opensearch.core.xcontent.MediaTypeRegistry;
 import org.opensearch.flowframework.util.ParseUtils;
+import org.opensearch.search.pipeline.PipelineConfiguration;
 import org.opensearch.search.pipeline.Processor;
 import org.opensearch.search.pipeline.Processor.PipelineContext;
 import org.opensearch.search.pipeline.Processor.PipelineSource;
@@ -74,9 +76,12 @@ public class SearchResponseProcessorStep implements WorkflowStep {
             previousNodeInputs,
             params
         );
-
         String type = (String) inputs.get(TYPE);
-        Map<String, Object> config = (Map<String, Object>) inputs.get(PROCESSOR_CONFIG);
+        PipelineConfiguration pipelineConfiguration = new PipelineConfiguration(
+            "id",
+            new BytesArray((String) inputs.get(PROCESSOR_CONFIG)),
+            MediaTypeRegistry.JSON
+        );
         String tag = (String) inputs.get(TAG);
         String description = (String) inputs.get(DESCRIPTION_FIELD);
         SearchRequest searchRequest = (SearchRequest) inputs.get(SEARCH_REQUEST);
@@ -89,7 +94,14 @@ public class SearchResponseProcessorStep implements WorkflowStep {
 
             // Create an instance of the processor
             SearchResponseProcessor processor = responseProcessors.get(type)
-                .create(responseProcessors, tag, description, false, config, new PipelineContext(PipelineSource.UPDATE_PIPELINE));
+                .create(
+                    responseProcessors,
+                    tag,
+                    description,
+                    false,
+                    pipelineConfiguration.getConfigAsMap(),
+                    new PipelineContext(PipelineSource.UPDATE_PIPELINE)
+                );
 
             // Temp : rerank processor only invokes processResponse async, doesnt need request context
             processor.processResponseAsync(searchRequest, searchResponse, null, ActionListener.wrap(processedSearchResponse -> {

@@ -26,6 +26,7 @@ import org.opensearch.rest.BytesRestResponse;
 import org.opensearch.rest.RestRequest;
 
 import java.io.IOException;
+import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -74,32 +75,30 @@ public class RestOrchestrateAction extends BaseRestHandler {
             }
 
             // Retrieve string to string map from content
+            Map<String, String> userInputs = Collections.emptyMap();
             if (request.hasContent()) {
                 XContentParser parser = request.contentParser();
                 ensureExpectedToken(XContentParser.Token.START_OBJECT, parser.nextToken(), parser);
-                Map<String, String> userInputs = ParseUtils.parseStringToStringMap(parser);
-
-                // Create Request object and execute transport action with client to pass ID and values
-                OrchestrateRequest orchestrateRequest = new OrchestrateRequest(workflowId, userInputs);
-                return channel -> client.execute(OrchestrateAction.INSTANCE, orchestrateRequest, ActionListener.wrap(response -> {
-                    XContentBuilder builder = response.toXContent(channel.newBuilder(), ToXContent.EMPTY_PARAMS);
-                    channel.sendResponse(new BytesRestResponse(RestStatus.OK, builder));
-                }, exception -> {
-                    try {
-                        FlowFrameworkException ex = exception instanceof FlowFrameworkException
-                            ? (FlowFrameworkException) exception
-                            : new FlowFrameworkException("Failed to get workflow.", ExceptionsHelper.status(exception));
-                        XContentBuilder exceptionBuilder = ex.toXContent(channel.newErrorBuilder(), ToXContent.EMPTY_PARAMS);
-                        channel.sendResponse(new BytesRestResponse(ex.getRestStatus(), exceptionBuilder));
-                    } catch (IOException e) {
-                        String errorMessage = "IOException: Failed to send back orchestrate exception";
-                        logger.error(errorMessage, e);
-                        channel.sendResponse(new BytesRestResponse(ExceptionsHelper.status(e), errorMessage));
-                    }
-                }));
-            } else {
-                throw new FlowFrameworkException("Request has no content", RestStatus.BAD_REQUEST);
+                userInputs = ParseUtils.parseStringToStringMap(parser);
             }
+            // Create Request object and execute transport action with client to pass ID and values
+            OrchestrateRequest orchestrateRequest = new OrchestrateRequest(workflowId, userInputs);
+            return channel -> client.execute(OrchestrateAction.INSTANCE, orchestrateRequest, ActionListener.wrap(response -> {
+                XContentBuilder builder = response.toXContent(channel.newBuilder(), ToXContent.EMPTY_PARAMS);
+                channel.sendResponse(new BytesRestResponse(RestStatus.OK, builder));
+            }, exception -> {
+                try {
+                    FlowFrameworkException ex = exception instanceof FlowFrameworkException
+                        ? (FlowFrameworkException) exception
+                        : new FlowFrameworkException("Failed to get workflow.", ExceptionsHelper.status(exception));
+                    XContentBuilder exceptionBuilder = ex.toXContent(channel.newErrorBuilder(), ToXContent.EMPTY_PARAMS);
+                    channel.sendResponse(new BytesRestResponse(ex.getRestStatus(), exceptionBuilder));
+                } catch (IOException e) {
+                    String errorMessage = "IOException: Failed to send back orchestrate exception";
+                    logger.error(errorMessage, e);
+                    channel.sendResponse(new BytesRestResponse(ExceptionsHelper.status(e), errorMessage));
+                }
+            }));
 
         } catch (FlowFrameworkException ex) {
             return channel -> channel.sendResponse(

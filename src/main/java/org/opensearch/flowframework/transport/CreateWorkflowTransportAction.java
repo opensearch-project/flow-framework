@@ -36,6 +36,7 @@ import org.opensearch.index.query.QueryBuilder;
 import org.opensearch.index.query.QueryBuilders;
 import org.opensearch.plugins.PluginsService;
 import org.opensearch.search.builder.SearchSourceBuilder;
+import org.opensearch.search.pipeline.SearchPipelineService;
 import org.opensearch.tasks.Task;
 import org.opensearch.transport.TransportService;
 
@@ -63,6 +64,7 @@ public class CreateWorkflowTransportAction extends HandledTransportAction<Workfl
     private final Client client;
     private final FlowFrameworkSettings flowFrameworkSettings;
     private final PluginsService pluginsService;
+    private final SearchPipelineService searchPipelineService;
 
     /**
      * Instantiates a new CreateWorkflowTransportAction
@@ -73,6 +75,7 @@ public class CreateWorkflowTransportAction extends HandledTransportAction<Workfl
      * @param flowFrameworkSettings Plugin settings
      * @param client The client used to make the request to OS
      * @param pluginsService The plugin service
+     * @param searchPipelineService The searchPipelineService
      */
     @Inject
     public CreateWorkflowTransportAction(
@@ -82,7 +85,8 @@ public class CreateWorkflowTransportAction extends HandledTransportAction<Workfl
         FlowFrameworkIndicesHandler flowFrameworkIndicesHandler,
         FlowFrameworkSettings flowFrameworkSettings,
         Client client,
-        PluginsService pluginsService
+        PluginsService pluginsService,
+        SearchPipelineService searchPipelineService
     ) {
         super(CreateWorkflowAction.NAME, transportService, actionFilters, WorkflowRequest::new);
         this.workflowProcessSorter = workflowProcessSorter;
@@ -90,6 +94,7 @@ public class CreateWorkflowTransportAction extends HandledTransportAction<Workfl
         this.flowFrameworkSettings = flowFrameworkSettings;
         this.client = client;
         this.pluginsService = pluginsService;
+        this.searchPipelineService = searchPipelineService;
     }
 
     @Override
@@ -326,6 +331,8 @@ public class CreateWorkflowTransportAction extends HandledTransportAction<Workfl
     }
 
     private void validateWorkflows(Template template) throws Exception {
+        // Hacky way to get search pipeline service into workflow step factory
+        workflowProcessSorter.updateWorkflowStepFactory(searchPipelineService);
         for (Workflow workflow : template.workflows().values()) {
             List<ProcessNode> sortedNodes = workflowProcessSorter.sortProcessNodes(workflow, null, Collections.emptyMap());
             workflowProcessSorter.validate(sortedNodes, pluginsService);

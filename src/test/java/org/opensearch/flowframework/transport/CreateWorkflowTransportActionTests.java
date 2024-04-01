@@ -34,6 +34,7 @@ import org.opensearch.flowframework.workflow.WorkflowProcessSorter;
 import org.opensearch.plugins.PluginsService;
 import org.opensearch.search.SearchHit;
 import org.opensearch.search.SearchHits;
+import org.opensearch.search.pipeline.SearchPipelineService;
 import org.opensearch.tasks.Task;
 import org.opensearch.test.OpenSearchTestCase;
 import org.opensearch.threadpool.ThreadPool;
@@ -102,7 +103,8 @@ public class CreateWorkflowTransportActionTests extends OpenSearchTestCase {
                 flowFrameworkIndicesHandler,
                 flowFrameworkSettings,
                 client,
-                pluginsService
+                pluginsService,
+                mock(SearchPipelineService.class)
             )
         );
         // client = mock(Client.class);
