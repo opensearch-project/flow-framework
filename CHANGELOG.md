@@ -16,6 +16,8 @@ Inspired from [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 ### Features
 ### Enhancements
 ### Bug Fixes
+- Reset workflow state to initial state after successful deprovision ([#635](https://github.com/opensearch-project/flow-framework/pull/635))
+
 ### Infrastructure
 ### Documentation
 ### Maintenance
