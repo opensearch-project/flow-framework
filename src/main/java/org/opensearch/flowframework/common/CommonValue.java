@@ -168,6 +168,10 @@ public class CommonValue {
     public static final String PIPELINE_ID = "pipeline_id";
     /** Pipeline Configurations */
     public static final String CONFIGURATIONS = "configurations";
+    /** Processor Config*/
+    public static final String PROCESSOR_CONFIG = "processor_config";
+    /** Processor Tag */
+    public static final String TAG = "tag";
 
     /** Indexes for knn query **/
     public static final String INPUT_INDEX = "input_index";
