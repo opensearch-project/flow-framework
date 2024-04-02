@@ -9,9 +9,7 @@
 package org.opensearch.flowframework.rest;
 
 import org.opensearch.client.node.NodeClient;
-import org.opensearch.core.common.bytes.BytesArray;
 import org.opensearch.core.rest.RestStatus;
-import org.opensearch.core.xcontent.MediaTypeRegistry;
 import org.opensearch.flowframework.common.FlowFrameworkSettings;
 import org.opensearch.rest.RestHandler.Route;
 import org.opensearch.rest.RestRequest;
@@ -69,22 +67,6 @@ public class RestDeprovisionWorkflowActionTests extends OpenSearchTestCase {
         assertEquals(1, channel.errors().get());
         assertEquals(RestStatus.BAD_REQUEST, channel.capturedResponse().status());
         assertTrue(channel.capturedResponse().content().utf8ToString().contains("workflow_id cannot be null"));
-    }
-
-    public void testInvalidRequestWithContent() {
-        RestRequest request = new FakeRestRequest.Builder(xContentRegistry()).withMethod(RestRequest.Method.POST)
-            .withPath(this.deprovisionWorkflowPath)
-            .withContent(new BytesArray("request body"), MediaTypeRegistry.JSON)
-            .build();
-
-        FakeRestChannel channel = new FakeRestChannel(request, false, 1);
-        IllegalArgumentException ex = expectThrows(IllegalArgumentException.class, () -> {
-            deprovisionWorkflowRestAction.handleRequest(request, channel, nodeClient);
-        });
-        assertEquals(
-            "request [POST /_plugins/_flow_framework/workflow/{workflow_id}/_deprovision] does not support having a body",
-            ex.getMessage()
-        );
     }
 
     public void testFeatureFlagNotEnabled() throws Exception {

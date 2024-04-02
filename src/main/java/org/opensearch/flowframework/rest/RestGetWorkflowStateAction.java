@@ -66,11 +66,10 @@ public class RestGetWorkflowStateAction extends BaseRestHandler {
                 );
             }
 
-            // Validate content
-            if (request.hasContent()) {
-                // BaseRestHandler will give appropriate error message
-                return channel -> channel.sendResponse(null);
-            }
+            // Always consume content to silently ignore it
+            // https://github.com/opensearch-project/flow-framework/issues/578
+            request.content();
+
             // Validate params
             if (workflowId == null) {
                 throw new FlowFrameworkException("workflow_id cannot be null", RestStatus.BAD_REQUEST);
