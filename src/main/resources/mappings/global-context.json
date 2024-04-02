@@ -85,6 +85,10 @@
     "last_provisioned_time": {
       "type": "date",
       "format": "strict_date_time||epoch_millis"
+    },
+    "ui_metadata": {
+      "type": "object",
+      "enabled": false
     }
   }
 }

@@ -46,10 +46,6 @@
           "type": "keyword"
         }
       }
-    },
-    "ui_metadata": {
-      "type": "object",
-      "enabled": false
     }
   }
 }
