@@ -64,10 +64,11 @@ public class RestDeprovisionWorkflowAction extends BaseRestHandler {
                     RestStatus.FORBIDDEN
                 );
             }
-            // Validate content
-            if (request.hasContent()) {
-                throw new FlowFrameworkException("deprovision request should have no payload", RestStatus.BAD_REQUEST);
-            }
+
+            // Always consume content to silently ignore it
+            // https://github.com/opensearch-project/flow-framework/issues/578
+            request.content();
+
             // Validate params
             if (workflowId == null) {
                 throw new FlowFrameworkException("workflow_id cannot be null", RestStatus.BAD_REQUEST);
