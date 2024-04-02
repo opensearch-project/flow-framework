@@ -31,6 +31,7 @@ import org.opensearch.core.action.ActionListener;
 import org.opensearch.core.common.bytes.BytesReference;
 import org.opensearch.core.xcontent.XContentBuilder;
 import org.opensearch.flowframework.TestHelpers;
+import org.opensearch.flowframework.model.ProvisioningProgress;
 import org.opensearch.flowframework.model.Template;
 import org.opensearch.flowframework.model.Workflow;
 import org.opensearch.flowframework.model.WorkflowState;
@@ -46,6 +47,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Consumer;
 
@@ -253,7 +255,7 @@ public class FlowFrameworkIndicesHandlerTests extends OpenSearchTestCase {
 
     public void testIsWorkflowProvisionedFailedParsing() {
         String documentId = randomAlphaOfLength(5);
-        Consumer<Boolean> function = mock(Consumer.class);
+        Consumer<Optional<ProvisioningProgress>> function = mock(Consumer.class);
         ActionListener<GetResponse> listener = mock(ActionListener.class);
         WorkflowState workFlowState = new WorkflowState(
             documentId,
@@ -277,7 +279,7 @@ public class FlowFrameworkIndicesHandlerTests extends OpenSearchTestCase {
             responseListener.onResponse(new GetResponse(getResult));
             return null;
         }).when(client).get(any(GetRequest.class), any());
-        flowFrameworkIndicesHandler.isWorkflowNotStarted(documentId, function, listener);
+        flowFrameworkIndicesHandler.getProvisioningProgress(documentId, function, listener);
         ArgumentCaptor<Exception> exceptionCaptor = ArgumentCaptor.forClass(Exception.class);
         verify(listener, times(1)).onFailure(exceptionCaptor.capture());
         assertTrue(exceptionCaptor.getValue().getMessage().contains("Failed to parse workflow state"));
