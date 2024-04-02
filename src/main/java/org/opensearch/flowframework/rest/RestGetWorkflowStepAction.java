@@ -71,6 +71,10 @@ public class RestGetWorkflowStepAction extends BaseRestHandler {
                 );
             }
 
+            // Always consume content to silently ignore it
+            // https://github.com/opensearch-project/flow-framework/issues/578
+            request.content();
+
             Map<String, String> params = request.hasParam(WORKFLOW_STEP)
                 ? Map.of(WORKFLOW_STEP, request.param(WORKFLOW_STEP))
                 : Collections.emptyMap();
