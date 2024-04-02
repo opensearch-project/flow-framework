@@ -44,11 +44,12 @@ import java.util.stream.Collectors;
 
 import static org.opensearch.flowframework.common.CommonValue.DEPROVISION_WORKFLOW_THREAD_POOL;
 import static org.opensearch.flowframework.common.CommonValue.PROVISIONING_PROGRESS_FIELD;
-import static org.opensearch.flowframework.common.CommonValue.PROVISION_START_TIME_FIELD;
+import static org.opensearch.flowframework.common.CommonValue.PROVISION_END_TIME_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.RESOURCES_CREATED_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.STATE_FIELD;
 import static org.opensearch.flowframework.common.WorkflowResources.getDeprovisionStepByWorkflowStep;
 import static org.opensearch.flowframework.common.WorkflowResources.getResourceByWorkflowStep;
+import static org.opensearch.flowframework.util.ParseUtils.getUserContext;
 
 /**
  * Transport Action to deprovision a workflow from a stored use case template
@@ -224,18 +225,13 @@ public class DeprovisionWorkflowTransportAction extends HandledTransportAction<W
         ActionListener<WorkflowResponse> listener
     ) {
         if (remainingResources.isEmpty()) {
-            // Successful deprovision
-            flowFrameworkIndicesHandler.updateFlowFrameworkSystemIndexDoc(
+            // Successful deprovision, reset state to initial
+            flowFrameworkIndicesHandler.putInitialStateToWorkflowState(
                 workflowId,
-                Map.ofEntries(
-                    Map.entry(STATE_FIELD, State.NOT_STARTED),
-                    Map.entry(PROVISIONING_PROGRESS_FIELD, ProvisioningProgress.NOT_STARTED),
-                    Map.entry(PROVISION_START_TIME_FIELD, Instant.now().toEpochMilli()),
-                    Map.entry(RESOURCES_CREATED_FIELD, Collections.emptyList())
-                ),
-                ActionListener.wrap(updateResponse -> {
-                    logger.info("updated workflow {} state to NOT_STARTED", workflowId);
-                }, exception -> { logger.error("Failed to update workflow state", exception); })
+                getUserContext(client),
+                ActionListener.wrap(indexResponse -> {
+                    logger.info("Reset workflow {} state to NOT_STARTED", workflowId);
+                }, exception -> { logger.error("Failed to reset to initial workflow state for {}", workflowId, exception); })
             );
             // return workflow ID
             listener.onResponse(new WorkflowResponse(workflowId));
@@ -246,7 +242,7 @@ public class DeprovisionWorkflowTransportAction extends HandledTransportAction<W
                 Map.ofEntries(
                     Map.entry(STATE_FIELD, State.COMPLETED),
                     Map.entry(PROVISIONING_PROGRESS_FIELD, ProvisioningProgress.DONE),
-                    Map.entry(PROVISION_START_TIME_FIELD, Instant.now().toEpochMilli()),
+                    Map.entry(PROVISION_END_TIME_FIELD, Instant.now().toEpochMilli()),
                     Map.entry(RESOURCES_CREATED_FIELD, remainingResources)
                 ),
                 ActionListener.wrap(updateResponse -> {
