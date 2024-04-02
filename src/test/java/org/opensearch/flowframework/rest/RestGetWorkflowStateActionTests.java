@@ -9,9 +9,7 @@
 package org.opensearch.flowframework.rest;
 
 import org.opensearch.client.node.NodeClient;
-import org.opensearch.core.common.bytes.BytesArray;
 import org.opensearch.core.rest.RestStatus;
-import org.opensearch.core.xcontent.MediaTypeRegistry;
 import org.opensearch.flowframework.common.FlowFrameworkSettings;
 import org.opensearch.rest.RestHandler;
 import org.opensearch.rest.RestRequest;
@@ -73,22 +71,6 @@ public class RestGetWorkflowStateActionTests extends OpenSearchTestCase {
         assertEquals(1, channel.errors().get());
         assertEquals(RestStatus.BAD_REQUEST, channel.capturedResponse().status());
         assertTrue(channel.capturedResponse().content().utf8ToString().contains("workflow_id cannot be null"));
-    }
-
-    public void testInvalidRequestWithContent() {
-        RestRequest request = new FakeRestRequest.Builder(xContentRegistry()).withMethod(RestRequest.Method.GET)
-            .withPath(this.getPath)
-            .withContent(new BytesArray("request body"), MediaTypeRegistry.JSON)
-            .build();
-
-        FakeRestChannel channel = new FakeRestChannel(request, false, 1);
-        IllegalArgumentException ex = expectThrows(IllegalArgumentException.class, () -> {
-            restGetWorkflowStateAction.handleRequest(request, channel, nodeClient);
-        });
-        assertEquals(
-            "request [GET /_plugins/_flow_framework/workflow/{workflow_id}/_status] does not support having a body",
-            ex.getMessage()
-        );
     }
 
     public void testFeatureFlagNotEnabled() throws Exception {

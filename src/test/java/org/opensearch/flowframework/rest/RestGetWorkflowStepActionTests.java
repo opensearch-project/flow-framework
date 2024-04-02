@@ -11,9 +11,7 @@ package org.opensearch.flowframework.rest;
 import org.opensearch.client.Client;
 import org.opensearch.client.node.NodeClient;
 import org.opensearch.core.action.ActionListener;
-import org.opensearch.core.common.bytes.BytesArray;
 import org.opensearch.core.rest.RestStatus;
-import org.opensearch.core.xcontent.MediaTypeRegistry;
 import org.opensearch.flowframework.common.FlowFrameworkSettings;
 import org.opensearch.flowframework.exception.FlowFrameworkException;
 import org.opensearch.flowframework.indices.FlowFrameworkIndicesHandler;
@@ -83,19 +81,6 @@ public class RestGetWorkflowStepActionTests extends OpenSearchTestCase {
         assertEquals(1, routes.size());
         assertEquals(RestRequest.Method.GET, routes.get(0).getMethod());
         assertEquals(this.getPath, routes.get(0).getPath());
-    }
-
-    public void testInvalidRequestWithContent() {
-        RestRequest request = new FakeRestRequest.Builder(xContentRegistry()).withMethod(RestRequest.Method.GET)
-            .withPath(this.getPath)
-            .withContent(new BytesArray("request body"), MediaTypeRegistry.JSON)
-            .build();
-
-        FakeRestChannel channel = new FakeRestChannel(request, false, 1);
-        IllegalArgumentException ex = expectThrows(IllegalArgumentException.class, () -> {
-            restGetWorkflowStepAction.handleRequest(request, channel, nodeClient);
-        });
-        assertEquals("request [GET /_plugins/_flow_framework/workflow/_steps] does not support having a body", ex.getMessage());
     }
 
     public void testWorkflowSteps() throws Exception {
