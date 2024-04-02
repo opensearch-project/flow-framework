@@ -1,7 +1,7 @@
 {
   "dynamic": false,
   "_meta": {
-    "schema_version": 2
+    "schema_version": 3
   },
   "properties": {
     "workflow_id": {
@@ -85,6 +85,10 @@
     "last_provisioned_time": {
       "type": "date",
       "format": "strict_date_time||epoch_millis"
+    },
+    "ui_metadata": {
+      "type": "object",
+      "enabled": false
     }
   }
 }
