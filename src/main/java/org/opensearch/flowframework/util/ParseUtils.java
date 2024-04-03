@@ -8,11 +8,6 @@
  */
 package org.opensearch.flowframework.util;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-
-import jakarta.json.bind.Jsonb;
-import jakarta.json.bind.JsonbBuilder;
-
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.opensearch.client.Client;
@@ -48,6 +43,9 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
+import jakarta.json.bind.Jsonb;
+import jakarta.json.bind.JsonbBuilder;
+
 import static org.opensearch.core.xcontent.XContentParserUtils.ensureExpectedToken;
 import static org.opensearch.flowframework.common.CommonValue.PARAMETERS_FIELD;
 import static org.opensearch.flowframework.common.WorkflowResources.MODEL_ID;
@@ -59,13 +57,10 @@ public class ParseUtils {
     private static final Logger logger = LogManager.getLogger(ParseUtils.class);
 
     // Matches ${{ foo.bar }} (whitespace optional) with capturing groups 1=foo, 2=bar
-    // private static final Pattern SUBSTITUTION_PATTERN = Pattern.compile("\\$\\{\\{\\s*(.+)\\.(.+?)\\s*\\}\\}");
     private static final Pattern SUBSTITUTION_PATTERN = Pattern.compile("\\$\\{\\{\\s*([\\w_]+)\\.([\\w_]+)\\s*\\}\\}");
     private static final Pattern JSON_ARRAY_DOUBLE_QUOTES_PATTERN = Pattern.compile("\"\\[(.*?)]\"");
 
     private ParseUtils() {}
-
-    private static final ObjectMapper mapper = new ObjectMapper();
 
     /**
      * Converts a JSON string into an XContentParser
@@ -416,17 +411,11 @@ public class ParseUtils {
      *
      * @param map content map
      * @return instance of the string
-     * @throws JsonProcessingException JsonProcessingException from Jackson for issues processing map
+     * @throws Exception for issues processing map
      */
     public static String parseArbitraryStringToObjectMapToString(Map<String, Object> map) throws Exception {
-        Jsonb jsonb = JsonbBuilder.create();
-        try {
-            // Convert the map to a JSON string
-            String jsonString = jsonb.toJson(map);
-            return jsonString;
-        } finally {
-            // Close the Jsonb instance
-            jsonb.close();
+        try (Jsonb jsonb = JsonbBuilder.create()) {
+            return jsonb.toJson(map);
         }
     }
 
@@ -435,12 +424,15 @@ public class ParseUtils {
      *
      * @param path file path
      * @return instance of the string
-     * @throws JsonProcessingException JsonProcessingException from Jackson for issues processing map
+     * @throws Exception for issues processing map
      */
-    public static Map<String, String> parseJsonFileToStringToStringMap(String path) throws IOException {
+    public static Map<String, String> parseJsonFileToStringToStringMap(String path) throws Exception {
         String jsonContent = resourceToString(path);
-        Map<String, String> mappedJsonFile = mapper.readValue(jsonContent, Map.class);
-        return mappedJsonFile;
+        try (Jsonb jsonb = JsonbBuilder.create()) {
+            @SuppressWarnings("unchecked")
+            Map<String, String> resultMap = jsonb.fromJson(jsonContent, Map.class);
+            return resultMap;
+        }
     }
 
     /**
