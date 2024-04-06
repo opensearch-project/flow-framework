@@ -24,6 +24,7 @@ import org.opensearch.core.index.shard.ShardId;
 import org.opensearch.core.xcontent.XContentBuilder;
 import org.opensearch.flowframework.TestHelpers;
 import org.opensearch.flowframework.indices.FlowFrameworkIndicesHandler;
+import org.opensearch.flowframework.model.ProvisioningProgress;
 import org.opensearch.flowframework.model.Template;
 import org.opensearch.flowframework.model.Workflow;
 import org.opensearch.flowframework.model.WorkflowEdge;
@@ -40,6 +41,7 @@ import org.opensearch.transport.TransportService;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.function.Consumer;
 
 import org.mockito.ArgumentCaptor;
@@ -138,10 +140,10 @@ public class ProvisionWorkflowTransportActionTests extends OpenSearchTestCase {
 
         // Bypass isWorkflowNotStarted and force true response
         doAnswer(invocation -> {
-            Consumer<Boolean> boolConsumer = invocation.getArgument(1);
-            boolConsumer.accept(true);
+            Consumer<Optional<ProvisioningProgress>> progressConsumer = invocation.getArgument(1);
+            progressConsumer.accept(Optional.of(ProvisioningProgress.NOT_STARTED));
             return null;
-        }).when(flowFrameworkIndicesHandler).isWorkflowNotStarted(any(), any(), any());
+        }).when(flowFrameworkIndicesHandler).getProvisioningProgress(any(), any(), any());
 
         // Bypass updateFlowFrameworkSystemIndexDoc and stub on response
         doAnswer(invocation -> {
@@ -185,10 +187,10 @@ public class ProvisionWorkflowTransportActionTests extends OpenSearchTestCase {
 
         // Bypass isWorkflowNotStarted and force false response
         doAnswer(invocation -> {
-            Consumer<Boolean> boolConsumer = invocation.getArgument(1);
-            boolConsumer.accept(false);
+            Consumer<Optional<ProvisioningProgress>> progressConsumer = invocation.getArgument(1);
+            progressConsumer.accept(Optional.of(ProvisioningProgress.DONE));
             return null;
-        }).when(flowFrameworkIndicesHandler).isWorkflowNotStarted(any(), any(), any());
+        }).when(flowFrameworkIndicesHandler).getProvisioningProgress(any(), any(), any());
 
         // Bypass updateFlowFrameworkSystemIndexDoc and stub on response
         doAnswer(invocation -> {
@@ -200,7 +202,10 @@ public class ProvisionWorkflowTransportActionTests extends OpenSearchTestCase {
         provisionWorkflowTransportAction.doExecute(mock(Task.class), workflowRequest, listener);
         ArgumentCaptor<Exception> exceptionCaptor = ArgumentCaptor.forClass(Exception.class);
         verify(listener, times(1)).onFailure(exceptionCaptor.capture());
-        assertEquals("The template has already been provisioned: 2", exceptionCaptor.getValue().getMessage());
+        assertEquals(
+            "The workflow provisioning state is DONE and can not be provisioned unless its state is NOT_STARTED: 2. Deprovision the workflow to reset the state.",
+            exceptionCaptor.getValue().getMessage()
+        );
     }
 
     public void testFailedToRetrieveTemplateFromGlobalContext() {

@@ -23,3 +23,4 @@ Inspired from [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 ### Documentation
 ### Maintenance
 ### Refactoring
+- Improve error messages for workflow states other than NOT_STARTED ([#642](https://github.com/opensearch-project/flow-framework/pull/642))
