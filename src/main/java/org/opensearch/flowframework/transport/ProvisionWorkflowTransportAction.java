@@ -42,7 +42,6 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-import static java.lang.Boolean.TRUE;
 import static org.opensearch.flowframework.common.CommonValue.ERROR_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.GLOBAL_CONTEXT_INDEX;
 import static org.opensearch.flowframework.common.CommonValue.PROVISIONING_PROGRESS_FIELD;
@@ -132,8 +131,8 @@ public class ProvisionWorkflowTransportAction extends HandledTransportAction<Wor
                 );
                 workflowProcessSorter.validate(provisionProcessSequence, pluginsService);
 
-                flowFrameworkIndicesHandler.isWorkflowNotStarted(workflowId, workflowIsNotStarted -> {
-                    if (TRUE.equals(workflowIsNotStarted)) {
+                flowFrameworkIndicesHandler.getProvisioningProgress(workflowId, progress -> {
+                    if (ProvisioningProgress.NOT_STARTED.equals(progress.orElse(null))) {
                         // update state index
                         flowFrameworkIndicesHandler.updateFlowFrameworkSystemIndexDoc(
                             workflowId,
@@ -174,7 +173,11 @@ public class ProvisionWorkflowTransportAction extends HandledTransportAction<Wor
                             })
                         );
                     } else {
-                        String errorMessage = "The template has already been provisioned: " + workflowId;
+                        String errorMessage = "The workflow provisioning state is "
+                            + (progress.isPresent() ? progress.get().toString() : "unknown")
+                            + " and can not be provisioned unless its state is NOT_STARTED: "
+                            + workflowId
+                            + ". Deprovision the workflow to reset the state.";
                         logger.info(errorMessage);
                         listener.onFailure(new FlowFrameworkException(errorMessage, RestStatus.BAD_REQUEST));
                     }

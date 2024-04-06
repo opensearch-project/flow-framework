@@ -49,6 +49,7 @@ import java.io.IOException;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Consumer;
 
@@ -419,8 +420,8 @@ public class FlowFrameworkIndicesHandler {
         }
         doesTemplateExist(documentId, templateExists -> {
             if (templateExists) {
-                isWorkflowNotStarted(documentId, workflowIsNotStarted -> {
-                    if (workflowIsNotStarted || ignoreNotStartedCheck) {
+                getProvisioningProgress(documentId, progress -> {
+                    if (ignoreNotStartedCheck || ProvisioningProgress.NOT_STARTED.equals(progress.orElse(null))) {
                         IndexRequest request = new IndexRequest(GLOBAL_CONTEXT_INDEX).id(documentId);
                         try (
                             XContentBuilder builder = XContentFactory.jsonBuilder();
@@ -436,7 +437,9 @@ public class FlowFrameworkIndicesHandler {
                             listener.onFailure(new FlowFrameworkException(errorMessage, ExceptionsHelper.status(e)));
                         }
                     } else {
-                        String errorMessage = "The template has already been provisioned so it can't be updated: " + documentId;
+                        String errorMessage = "The template can not be updated unless its provisioning state is NOT_STARTED: "
+                            + documentId
+                            + ". Deprovision the workflow to reset the state.";
                         logger.error(errorMessage);
                         listener.onFailure(new FlowFrameworkException(errorMessage, RestStatus.BAD_REQUEST));
                     }
@@ -474,20 +477,24 @@ public class FlowFrameworkIndicesHandler {
     }
 
     /**
-     * Check if the workflow has been provisioned and executes the consumer by passing a boolean
+     * Check workflow provisioning state and executes the consumer
      *
      * @param documentId document id
-     * @param booleanResultConsumer boolean consumer function based on if workflow is provisioned or not
+     * @param provisioningProgressConsumer consumer function based on if workflow is provisioned.
      * @param listener action listener
      * @param <T> action listener response type
      */
-    public <T> void isWorkflowNotStarted(String documentId, Consumer<Boolean> booleanResultConsumer, ActionListener<T> listener) {
+    public <T> void getProvisioningProgress(
+        String documentId,
+        Consumer<Optional<ProvisioningProgress>> provisioningProgressConsumer,
+        ActionListener<T> listener
+    ) {
         GetRequest getRequest = new GetRequest(WORKFLOW_STATE_INDEX, documentId);
         try (ThreadContext.StoredContext context = client.threadPool().getThreadContext().stashContext()) {
             client.get(getRequest, ActionListener.wrap(response -> {
                 context.restore();
                 if (!response.isExists()) {
-                    booleanResultConsumer.accept(false);
+                    provisioningProgressConsumer.accept(Optional.empty());
                     return;
                 }
                 try (
@@ -495,7 +502,7 @@ public class FlowFrameworkIndicesHandler {
                 ) {
                     ensureExpectedToken(XContentParser.Token.START_OBJECT, parser.nextToken(), parser);
                     WorkflowState workflowState = WorkflowState.parse(parser);
-                    booleanResultConsumer.accept(workflowState.getProvisioningProgress().equals(ProvisioningProgress.NOT_STARTED.name()));
+                    provisioningProgressConsumer.accept(Optional.of(ProvisioningProgress.valueOf(workflowState.getProvisioningProgress())));
                 } catch (Exception e) {
                     String errorMessage = "Failed to parse workflow state " + documentId;
                     logger.error(errorMessage, e);
@@ -503,7 +510,7 @@ public class FlowFrameworkIndicesHandler {
                 }
             }, exception -> {
                 logger.error("Failed to get workflow state for {} ", documentId);
-                booleanResultConsumer.accept(false);
+                provisioningProgressConsumer.accept(Optional.empty());
             }));
         } catch (Exception e) {
             String errorMessage = "Failed to retrieve workflow state to check provisioning status";

@@ -110,7 +110,9 @@ public class FlowFrameworkRestApiIT extends FlowFrameworkRestTestCase {
             ResponseException.class,
             () -> updateWorkflow(client(), workflowId, template)
         );
-        assertTrue(exceptionProvisioned.getMessage().contains("The template has already been provisioned so it can't be updated"));
+        assertTrue(
+            exceptionProvisioned.getMessage().contains("The template can not be updated unless its provisioning state is NOT_STARTED")
+        );
 
     }
 
