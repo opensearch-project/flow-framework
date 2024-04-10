@@ -141,7 +141,7 @@ public class RestCreateWorkflowActionTests extends OpenSearchTestCase {
         RestRequest request = new FakeRestRequest.Builder(xContentRegistry()).withMethod(RestRequest.Method.POST)
             .withPath(this.createWorkflowPath)
             .withParams(Map.of(USE_CASE, DefaultUseCases.COHERE_EMBEDDING_MODEL_DEPLOY.getUseCaseName()))
-            .withContent(new BytesArray(""), MediaTypeRegistry.JSON)
+            .withContent(new BytesArray("{\"" + CREATE_CONNECTOR_CREDENTIAL_KEY + "\":\"\"}"), MediaTypeRegistry.JSON)
             .build();
         FakeRestChannel channel = new FakeRestChannel(request, false, 1);
         doAnswer(invocation -> {

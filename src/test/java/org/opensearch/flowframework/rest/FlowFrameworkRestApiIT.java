@@ -445,11 +445,17 @@ public class FlowFrameworkRestApiIT extends FlowFrameworkRestTestCase {
 
     public void testDefaultSemanticSearchUseCaseWithFailureExpected() throws Exception {
         // Hit Create Workflow API with original template without required params
-        Response response = createWorkflowWithUseCase(client(), "semantic_search", Collections.emptyList());
-        assertEquals(RestStatus.BAD_REQUEST, TestHelpers.restStatus(response));
+        ResponseException exception = expectThrows(
+            ResponseException.class,
+            () -> createWorkflowWithUseCase(client(), "semantic_search", Collections.emptyList())
+        );
+        assertTrue(
+            exception.getMessage()
+                .contains("Missing the following required parameters for use case [semantic_search] : [create_ingest_pipeline.model_id]")
+        );
 
         // Pass in required params
-        response = createWorkflowWithUseCase(client(), "semantic_search", List.of(CREATE_INGEST_PIPELINE_MODEL_ID));
+        Response response = createWorkflowWithUseCase(client(), "semantic_search", List.of(CREATE_INGEST_PIPELINE_MODEL_ID));
         assertEquals(RestStatus.CREATED, TestHelpers.restStatus(response));
 
         Map<String, Object> responseMap = entityAsMap(response);
