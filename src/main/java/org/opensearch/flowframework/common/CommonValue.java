@@ -202,4 +202,18 @@ public class CommonValue {
     public static final String RESOURCE_ID = "resource_id";
     /** The field name for the opensearch-ml plugin */
     public static final String OPENSEARCH_ML = "opensearch-ml";
+
+    /*
+     * Constants assoicated with substitution / default templates
+     */
+    /** The field name for connector credential key substitution */
+    public static final String CREATE_CONNECTOR_CREDENTIAL_KEY = "create_connector.credential.key";
+    /** The field name for connector credential access key substitution */
+    public static final String CREATE_CONNECTOR_CREDENTIAL_ACCESS_KEY = "create_connector.credential.access_key";
+    /** The field name for connector credential secret key substitution */
+    public static final String CREATE_CONNECTOR_CREDENTIAL_SECRET_KEY = "create_connector.credential.secret_key";
+    /** The field name for connector credential session token substitution */
+    public static final String CREATE_CONNECTOR_CREDENTIAL_SESSION_TOKEN = "create_connector.credential.session_token";
+    /** The field name for ingest pipeline model ID substitution */
+    public static final String CREATE_INGEST_PIPELINE_MODEL_ID = "create_ingest_pipeline.model_id";
 }
