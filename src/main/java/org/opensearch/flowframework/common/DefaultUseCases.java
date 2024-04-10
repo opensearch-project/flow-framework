@@ -215,6 +215,12 @@ public enum DefaultUseCases {
         throw new FlowFrameworkException("Unable to find substitution ready file for use case: " + useCaseName, RestStatus.BAD_REQUEST);
     }
 
+    /**
+     * Gets the required parameters based on the given use case
+     * @param useCaseName name of the given use case
+     * @return the list of required params
+     * @throws FlowFrameworkException if the use case doesn't exist in enum
+     */
     public static List<String> getRequiredParamsByUseCaseName(String useCaseName) throws FlowFrameworkException {
         if (useCaseName != null && !useCaseName.isEmpty()) {
             for (DefaultUseCases useCase : values()) {
