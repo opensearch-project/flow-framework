@@ -34,6 +34,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 
+import static org.opensearch.flowframework.common.CommonValue.CREATE_CONNECTOR_CREDENTIAL_KEY;
 import static org.opensearch.flowframework.common.CommonValue.PROVISION_WORKFLOW;
 import static org.opensearch.flowframework.common.CommonValue.USE_CASE;
 import static org.opensearch.flowframework.common.CommonValue.WORKFLOW_URI;
@@ -157,7 +158,7 @@ public class RestCreateWorkflowActionTests extends OpenSearchTestCase {
         RestRequest request = new FakeRestRequest.Builder(xContentRegistry()).withMethod(RestRequest.Method.POST)
             .withPath(this.createWorkflowPath)
             .withParams(Map.of(USE_CASE, DefaultUseCases.COHERE_EMBEDDING_MODEL_DEPLOY.getUseCaseName()))
-            .withContent(new BytesArray("{\"key\":\"step\"}"), MediaTypeRegistry.JSON)
+            .withContent(new BytesArray("{\"" + CREATE_CONNECTOR_CREDENTIAL_KEY + "\":\"step\"}"), MediaTypeRegistry.JSON)
             .build();
         FakeRestChannel channel = new FakeRestChannel(request, false, 1);
         doAnswer(invocation -> {
