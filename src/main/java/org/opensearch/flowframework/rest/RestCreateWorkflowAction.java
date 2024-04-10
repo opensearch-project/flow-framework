@@ -127,8 +127,14 @@ public class RestCreateWorkflowAction extends BaseRestHandler {
                 );
                 String defaultsFilePath = DefaultUseCases.getDefaultsFileByUseCaseName(useCase);
                 useCaseDefaultsMap = ParseUtils.parseJsonFileToStringToStringMap("/" + defaultsFilePath);
+                List<String> requiredParams = DefaultUseCases.getRequiredParamsByUseCaseName(useCase);
 
-                if (request.hasContent()) {
+                if (request.hasContent() == false && requiredParams.size() != 0) {
+                    throw new FlowFrameworkException(
+                        "Missing the following required parameters for use case [" + useCase + "] : " + requiredParams.toString(),
+                        RestStatus.BAD_REQUEST
+                    );
+                } else {
                     try {
                         XContentParser parser = request.contentParser();
                         ensureExpectedToken(XContentParser.Token.START_OBJECT, parser.nextToken(), parser);
@@ -136,7 +142,6 @@ public class RestCreateWorkflowAction extends BaseRestHandler {
 
                         // Validate user defaults key set
                         Set<String> userDefaultKeys = userDefaults.keySet();
-                        List<String> requiredParams = DefaultUseCases.getRequiredParamsByUseCaseName(useCase);
                         if (!userDefaultKeys.containsAll(requiredParams)) {
                             requiredParams.removeAll(userDefaultKeys);
                             throw new FlowFrameworkException(
