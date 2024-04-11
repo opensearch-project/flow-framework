@@ -219,9 +219,8 @@ public enum DefaultUseCases {
      * Gets the required parameters based on the given use case
      * @param useCaseName name of the given use case
      * @return the list of required params
-     * @throws FlowFrameworkException if the use case doesn't exist in enum
      */
-    public static List<String> getRequiredParamsByUseCaseName(String useCaseName) throws FlowFrameworkException {
+    public static List<String> getRequiredParamsByUseCaseName(String useCaseName) {
         if (useCaseName != null && !useCaseName.isEmpty()) {
             for (DefaultUseCases useCase : values()) {
                 if (useCase.getUseCaseName().equals(useCaseName)) {
@@ -229,7 +228,7 @@ public enum DefaultUseCases {
                 }
             }
         }
-        logger.error("Unable to find required parameters for use case: {}", useCaseName);
-        throw new FlowFrameworkException("Unable to find required parameters for use case: " + useCaseName, RestStatus.BAD_REQUEST);
+        logger.error("Default use case [" + useCaseName + "] does not exist");
+        throw new FlowFrameworkException("Default use case [" + useCaseName + "] does not exist", RestStatus.BAD_REQUEST);
     }
 }
