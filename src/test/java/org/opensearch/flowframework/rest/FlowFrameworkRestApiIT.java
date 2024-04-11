@@ -43,6 +43,8 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
 
+import static org.opensearch.flowframework.common.CommonValue.CREATE_CONNECTOR_CREDENTIAL_KEY;
+import static org.opensearch.flowframework.common.CommonValue.CREATE_INGEST_PIPELINE_MODEL_ID;
 import static org.opensearch.flowframework.common.CommonValue.PROVISION_WORKFLOW;
 import static org.opensearch.flowframework.common.CommonValue.WORKFLOW_ID;
 
@@ -406,7 +408,7 @@ public class FlowFrameworkRestApiIT extends FlowFrameworkRestTestCase {
     public void testDefaultCohereUseCase() throws Exception {
 
         // Hit Create Workflow API with original template
-        Response response = createWorkflowWithUseCase(client(), "cohere_embedding_model_deploy");
+        Response response = createWorkflowWithUseCase(client(), "cohere_embedding_model_deploy", List.of(CREATE_CONNECTOR_CREDENTIAL_KEY));
         assertEquals(RestStatus.CREATED, TestHelpers.restStatus(response));
 
         Map<String, Object> responseMap = entityAsMap(response);
@@ -442,8 +444,18 @@ public class FlowFrameworkRestApiIT extends FlowFrameworkRestTestCase {
     }
 
     public void testDefaultSemanticSearchUseCaseWithFailureExpected() throws Exception {
-        // Hit Create Workflow API with original template
-        Response response = createWorkflowWithUseCase(client(), "semantic_search");
+        // Hit Create Workflow API with original template without required params
+        ResponseException exception = expectThrows(
+            ResponseException.class,
+            () -> createWorkflowWithUseCase(client(), "semantic_search", Collections.emptyList())
+        );
+        assertTrue(
+            exception.getMessage()
+                .contains("Missing the following required parameters for use case [semantic_search] : [create_ingest_pipeline.model_id]")
+        );
+
+        // Pass in required params
+        Response response = createWorkflowWithUseCase(client(), "semantic_search", List.of(CREATE_INGEST_PIPELINE_MODEL_ID));
         assertEquals(RestStatus.CREATED, TestHelpers.restStatus(response));
 
         Map<String, Object> responseMap = entityAsMap(response);
@@ -483,7 +495,11 @@ public class FlowFrameworkRestApiIT extends FlowFrameworkRestTestCase {
             .collect(Collectors.toSet());
 
         for (String useCaseName : allUseCaseNames) {
-            Response response = createWorkflowWithUseCase(client(), useCaseName);
+            Response response = createWorkflowWithUseCase(
+                client(),
+                useCaseName,
+                DefaultUseCases.getRequiredParamsByUseCaseName(useCaseName)
+            );
             assertEquals(RestStatus.CREATED, TestHelpers.restStatus(response));
 
             Map<String, Object> responseMap = entityAsMap(response);

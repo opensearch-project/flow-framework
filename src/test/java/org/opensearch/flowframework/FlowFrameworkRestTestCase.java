@@ -345,16 +345,26 @@ public abstract class FlowFrameworkRestTestCase extends OpenSearchRestTestCase {
      * Helper method to invoke the Create Workflow Rest Action without validation
      * @param client the rest client
      * @param useCase the usecase to create
+     * @param the required params
      * @throws Exception if the request fails
      * @return a rest response
      */
-    protected Response createWorkflowWithUseCase(RestClient client, String useCase) throws Exception {
+    protected Response createWorkflowWithUseCase(RestClient client, String useCase, List<String> params) throws Exception {
+
+        StringBuilder sb = new StringBuilder();
+        for (String param : params) {
+            sb.append('"').append(param).append("\" : \"\",");
+        }
+        if (!params.isEmpty()) {
+            sb.deleteCharAt(sb.length() - 1);
+        }
+
         return TestHelpers.makeRequest(
             client,
             "POST",
             WORKFLOW_URI + "?validation=off&use_case=" + useCase,
             Collections.emptyMap(),
-            "{}",
+            "{" + sb.toString() + "}",
             null
         );
     }
