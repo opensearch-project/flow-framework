@@ -33,6 +33,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -126,12 +127,31 @@ public class RestCreateWorkflowAction extends BaseRestHandler {
                 );
                 String defaultsFilePath = DefaultUseCases.getDefaultsFileByUseCaseName(useCase);
                 useCaseDefaultsMap = ParseUtils.parseJsonFileToStringToStringMap("/" + defaultsFilePath);
+                List<String> requiredParams = DefaultUseCases.getRequiredParamsByUseCaseName(useCase);
 
-                if (request.hasContent()) {
+                if (!request.hasContent()) {
+                    if (!requiredParams.isEmpty()) {
+                        throw new FlowFrameworkException(
+                            "Missing the following required parameters for use case [" + useCase + "] : " + requiredParams.toString(),
+                            RestStatus.BAD_REQUEST
+                        );
+                    }
+                } else {
                     try {
                         XContentParser parser = request.contentParser();
                         ensureExpectedToken(XContentParser.Token.START_OBJECT, parser.nextToken(), parser);
                         Map<String, Object> userDefaults = ParseUtils.parseStringToObjectMap(parser);
+
+                        // Validate user defaults key set
+                        Set<String> userDefaultKeys = userDefaults.keySet();
+                        if (!userDefaultKeys.containsAll(requiredParams)) {
+                            requiredParams.removeAll(userDefaultKeys);
+                            throw new FlowFrameworkException(
+                                "Missing the following required parameters for use case [" + useCase + "] : " + requiredParams.toString(),
+                                RestStatus.BAD_REQUEST
+                            );
+                        }
+
                         // updates the default params with anything user has given that matches
                         for (Map.Entry<String, Object> userDefaultsEntry : userDefaults.entrySet()) {
                             String key = userDefaultsEntry.getKey();
@@ -141,13 +161,16 @@ public class RestCreateWorkflowAction extends BaseRestHandler {
                             }
                         }
                     } catch (Exception ex) {
-                        RestStatus status = ex instanceof IOException ? RestStatus.BAD_REQUEST : ExceptionsHelper.status(ex);
-                        String errorMessage =
-                            "failure parsing request body when a use case is given, make sure to provide a map with values that are either Strings, Arrays, or Map of Strings to Strings";
-                        logger.error(errorMessage, ex);
-                        throw new FlowFrameworkException(errorMessage, status);
+                        if (ex instanceof FlowFrameworkException) {
+                            throw ex;
+                        } else {
+                            RestStatus status = ex instanceof IOException ? RestStatus.BAD_REQUEST : ExceptionsHelper.status(ex);
+                            String errorMessage =
+                                "failure parsing request body when a use case is given, make sure to provide a map with values that are either Strings, Arrays, or Map of Strings to Strings";
+                            logger.error(errorMessage, ex);
+                            throw new FlowFrameworkException(errorMessage, status);
+                        }
                     }
-
                 }
 
                 useCaseTemplateFileInStringFormat = (String) ParseUtils.conditionallySubstitute(
