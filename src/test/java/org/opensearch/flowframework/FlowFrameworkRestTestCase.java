@@ -355,7 +355,7 @@ public abstract class FlowFrameworkRestTestCase extends OpenSearchRestTestCase {
         for (String param : params) {
             sb.append('"').append(param).append("\" : \"\",");
         }
-        if (params.isEmpty()) {
+        if (!params.isEmpty()) {
             sb.deleteCharAt(sb.length() - 1);
         }
 
