@@ -129,11 +129,13 @@ public class RestCreateWorkflowAction extends BaseRestHandler {
                 useCaseDefaultsMap = ParseUtils.parseJsonFileToStringToStringMap("/" + defaultsFilePath);
                 List<String> requiredParams = DefaultUseCases.getRequiredParamsByUseCaseName(useCase);
 
-                if (request.hasContent() == false && requiredParams.size() != 0) {
-                    throw new FlowFrameworkException(
-                        "Missing the following required parameters for use case [" + useCase + "] : " + requiredParams.toString(),
-                        RestStatus.BAD_REQUEST
-                    );
+                if (request.hasContent() == false) {
+                    if (requiredParams.size() != 0) {
+                        throw new FlowFrameworkException(
+                            "Missing the following required parameters for use case [" + useCase + "] : " + requiredParams.toString(),
+                            RestStatus.BAD_REQUEST
+                        );
+                    }
                 } else {
                     try {
                         XContentParser parser = request.contentParser();
