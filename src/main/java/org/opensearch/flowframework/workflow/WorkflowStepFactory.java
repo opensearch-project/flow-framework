@@ -34,6 +34,7 @@ import static org.opensearch.flowframework.common.CommonValue.ACTIONS_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.CONFIGURATIONS;
 import static org.opensearch.flowframework.common.CommonValue.CREDENTIAL_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.DESCRIPTION_FIELD;
+import static org.opensearch.flowframework.common.CommonValue.DESTINATION_INDEX;
 import static org.opensearch.flowframework.common.CommonValue.EMBEDDING_DIMENSION;
 import static org.opensearch.flowframework.common.CommonValue.FRAMEWORK_TYPE;
 import static org.opensearch.flowframework.common.CommonValue.FUNCTION_NAME;
@@ -47,6 +48,8 @@ import static org.opensearch.flowframework.common.CommonValue.PARAMETERS_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.PIPELINE_ID;
 import static org.opensearch.flowframework.common.CommonValue.PROTOCOL_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.REGISTER_MODEL_STATUS;
+import static org.opensearch.flowframework.common.CommonValue.RE_INDEX_FIELD;
+import static org.opensearch.flowframework.common.CommonValue.SOURCE_INDEX;
 import static org.opensearch.flowframework.common.CommonValue.SUCCESS;
 import static org.opensearch.flowframework.common.CommonValue.TOOLS_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.TYPE;
@@ -84,6 +87,7 @@ public class WorkflowStepFactory {
     ) {
         stepMap.put(NoOpStep.NAME, NoOpStep::new);
         stepMap.put(CreateIndexStep.NAME, () -> new CreateIndexStep(client, flowFrameworkIndicesHandler));
+        stepMap.put(ReIndexStep.NAME, () -> new CreateIndexStep(client, flowFrameworkIndicesHandler));
         stepMap.put(
             RegisterLocalCustomModelStep.NAME,
             () -> new RegisterLocalCustomModelStep(threadPool, mlClient, flowFrameworkIndicesHandler, flowFrameworkSettings)
@@ -124,6 +128,9 @@ public class WorkflowStepFactory {
 
         /** Create Index Step */
         CREATE_INDEX(CreateIndexStep.NAME, List.of(INDEX_NAME, CONFIGURATIONS), List.of(INDEX_NAME), Collections.emptyList(), null),
+
+        /** Create ReIndex Step */
+        RE_INDEX(ReIndexStep.NAME, List.of(SOURCE_INDEX, DESTINATION_INDEX), List.of(RE_INDEX_FIELD), Collections.emptyList(), null),
 
         /** Create Connector Step */
         CREATE_CONNECTOR(

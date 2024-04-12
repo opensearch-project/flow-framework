@@ -94,28 +94,14 @@ public class CommonValue {
     public static final String SUCCESS = "success";
     /** Type field */
     public static final String TYPE = "type";
-    /** default_mapping_option filed */
-    public static final String DEFAULT_MAPPING_OPTION = "default_mapping_option";
     /** ID Field */
     public static final String ID = "id";
-    /** Processors field */
-    public static final String PROCESSORS = "processors";
-    /** Field map field */
-    public static final String FIELD_MAP = "field_map";
-    /** Input Field Name field */
-    public static final String INPUT_FIELD_NAME = "input_field_name";
-    /** Output Field Name field */
-    public static final String OUTPUT_FIELD_NAME = "output_field_name";
-    /** Task Id field */
-    public static final String TASK_ID = "task_id";
     /** Register Model Status field */
     public static final String REGISTER_MODEL_STATUS = "register_model_status";
     /** Function Name field */
     public static final String FUNCTION_NAME = "function_name";
     /** Name field */
     public static final String NAME_FIELD = "name";
-    /** Model Version field */
-    public static final String MODEL_VERSION = "model_version";
     /** Model Group Id field */
     public static final String MODEL_GROUP_STATUS = "model_group_status";
     /** Description field */
@@ -128,8 +114,6 @@ public class CommonValue {
     public static final String MODEL_CONTENT_HASH_VALUE = "model_content_hash_value";
     /** URL field */
     public static final String URL = "url";
-    /** Model config field */
-    public static final String MODEL_CONFIG = "model_config";
     /** Model type field */
     public static final String MODEL_TYPE = "model_type";
     /** Embedding dimension field */
@@ -174,6 +158,12 @@ public class CommonValue {
     public static final String DELAY_FIELD = "delay";
     /** Model Interface Field */
     public static final String INTERFACE_FIELD = "interface";
+
+    public static final String RE_INDEX_FIELD = "reindex";
+    /** The source index field for reindex */
+    public static final String SOURCE_INDEX = "source_index";
+    /** The destination index field for reindex */
+    public static final String DESTINATION_INDEX = "destination_index";
 
     /*
      * Constants associated with resource provisioning / state
