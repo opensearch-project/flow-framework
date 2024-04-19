@@ -12,8 +12,10 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.opensearch.ExceptionsHelper;
 import org.opensearch.action.support.PlainActionFuture;
+import org.opensearch.common.Booleans;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.core.common.util.CollectionUtils;
+import org.opensearch.core.rest.RestStatus;
 import org.opensearch.flowframework.exception.FlowFrameworkException;
 import org.opensearch.flowframework.exception.WorkflowStepException;
 import org.opensearch.flowframework.indices.FlowFrameworkIndicesHandler;
@@ -139,7 +141,9 @@ public class RegisterModelGroupStep implements WorkflowStep {
             String description = (String) inputs.get(DESCRIPTION_FIELD);
             List<String> backendRoles = getBackendRoles(inputs);
             AccessMode modelAccessMode = (AccessMode) inputs.get(MODEL_ACCESS_MODE);
-            Boolean isAddAllBackendRoles = (Boolean) inputs.get(ADD_ALL_BACKEND_ROLES);
+            Boolean isAddAllBackendRoles = inputs.containsKey(ADD_ALL_BACKEND_ROLES)
+                ? Booleans.parseBoolean(inputs.get(ADD_ALL_BACKEND_ROLES).toString())
+                : null;
 
             MLRegisterModelGroupInputBuilder builder = MLRegisterModelGroupInput.builder();
             builder.name(modelGroupName);
@@ -158,6 +162,8 @@ public class RegisterModelGroupStep implements WorkflowStep {
             MLRegisterModelGroupInput mlInput = builder.build();
 
             mlClient.registerModelGroup(mlInput, actionListener);
+        } catch (IllegalArgumentException iae) {
+            registerModelGroupFuture.onFailure(new WorkflowStepException(iae.getMessage(), RestStatus.BAD_REQUEST));
         } catch (FlowFrameworkException e) {
             registerModelGroupFuture.onFailure(e);
         }

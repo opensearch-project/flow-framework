@@ -14,7 +14,9 @@ import org.opensearch.action.support.PlainActionFuture;
 import org.opensearch.action.update.UpdateResponse;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.core.index.shard.ShardId;
+import org.opensearch.core.rest.RestStatus;
 import org.opensearch.flowframework.exception.FlowFrameworkException;
+import org.opensearch.flowframework.exception.WorkflowStepException;
 import org.opensearch.flowframework.indices.FlowFrameworkIndicesHandler;
 import org.opensearch.ml.client.MachineLearningNodeClient;
 import org.opensearch.ml.common.MLTaskState;
@@ -22,6 +24,7 @@ import org.opensearch.ml.common.transport.register.MLRegisterModelInput;
 import org.opensearch.ml.common.transport.register.MLRegisterModelResponse;
 import org.opensearch.test.OpenSearchTestCase;
 
+import java.io.IOException;
 import java.util.Collections;
 import java.util.Map;
 import java.util.concurrent.ExecutionException;
@@ -193,4 +196,77 @@ public class RegisterRemoteModelStepTests extends OpenSearchTestCase {
         assertTrue(ex.getCause().getMessage().endsWith("] in workflow [test-id] node [test-node-id]"));
     }
 
+    public void testBoolParse() throws IOException, ExecutionException, InterruptedException {
+        String taskId = "abcd";
+        String modelId = "efgh";
+        String status = MLTaskState.CREATED.name();
+
+        doAnswer(invocation -> {
+            ActionListener<MLRegisterModelResponse> actionListener = invocation.getArgument(1);
+            MLRegisterModelResponse output = new MLRegisterModelResponse(taskId, status, modelId);
+            actionListener.onResponse(output);
+            return null;
+        }).when(mlNodeClient).register(any(MLRegisterModelInput.class), any());
+
+        doAnswer(invocation -> {
+            ActionListener<UpdateResponse> updateResponseListener = invocation.getArgument(4);
+            updateResponseListener.onResponse(new UpdateResponse(new ShardId(WORKFLOW_STATE_INDEX, "", 1), "id", -2, 0, 0, UPDATED));
+            return null;
+        }).when(flowFrameworkIndicesHandler).updateResourceInStateIndex(anyString(), anyString(), anyString(), anyString(), any());
+
+        WorkflowData deployWorkflowData = new WorkflowData(
+            Map.ofEntries(
+                Map.entry("name", "xyz"),
+                Map.entry("description", "description"),
+                Map.entry(CONNECTOR_ID, "abcdefg"),
+                Map.entry(DEPLOY_FIELD, "true")
+            ),
+            "test-id",
+            "test-node-id"
+        );
+
+        PlainActionFuture<WorkflowData> future = this.registerRemoteModelStep.execute(
+            deployWorkflowData.getNodeId(),
+            deployWorkflowData,
+            Collections.emptyMap(),
+            Collections.emptyMap(),
+            Collections.emptyMap()
+        );
+
+        verify(mlNodeClient, times(1)).register(any(MLRegisterModelInput.class), any());
+        // updates both register and deploy resources
+        verify(flowFrameworkIndicesHandler, times(2)).updateResourceInStateIndex(anyString(), anyString(), anyString(), anyString(), any());
+
+        assertTrue(future.isDone());
+        assertEquals(modelId, future.get().getContent().get(MODEL_ID));
+        assertEquals(status, future.get().getContent().get(REGISTER_MODEL_STATUS));
+    }
+
+    public void testBoolParseFail() throws IOException, ExecutionException, InterruptedException {
+        WorkflowData deployWorkflowData = new WorkflowData(
+            Map.ofEntries(
+                Map.entry("name", "xyz"),
+                Map.entry("description", "description"),
+                Map.entry(CONNECTOR_ID, "abcdefg"),
+                Map.entry(DEPLOY_FIELD, "yes")
+            ),
+            "test-id",
+            "test-node-id"
+        );
+
+        PlainActionFuture<WorkflowData> future = this.registerRemoteModelStep.execute(
+            deployWorkflowData.getNodeId(),
+            deployWorkflowData,
+            Collections.emptyMap(),
+            Collections.emptyMap(),
+            Collections.emptyMap()
+        );
+
+        assertTrue(future.isDone());
+        ExecutionException e = assertThrows(ExecutionException.class, () -> future.get());
+        assertEquals(WorkflowStepException.class, e.getCause().getClass());
+        WorkflowStepException w = (WorkflowStepException) e.getCause();
+        assertEquals("Failed to parse value [yes] as only [true] or [false] are allowed.", w.getMessage());
+        assertEquals(RestStatus.BAD_REQUEST, w.getRestStatus());
+    }
 }

@@ -17,8 +17,10 @@ import org.opensearch.common.unit.TimeValue;
 import org.opensearch.common.util.concurrent.OpenSearchExecutors;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.core.index.shard.ShardId;
+import org.opensearch.core.rest.RestStatus;
 import org.opensearch.flowframework.common.FlowFrameworkSettings;
 import org.opensearch.flowframework.exception.FlowFrameworkException;
+import org.opensearch.flowframework.exception.WorkflowStepException;
 import org.opensearch.flowframework.indices.FlowFrameworkIndicesHandler;
 import org.opensearch.ml.client.MachineLearningNodeClient;
 import org.opensearch.ml.common.MLTask;
@@ -31,6 +33,7 @@ import org.opensearch.threadpool.TestThreadPool;
 import org.opensearch.threadpool.ThreadPool;
 import org.junit.AfterClass;
 
+import java.io.IOException;
 import java.util.Collections;
 import java.util.Map;
 import java.util.concurrent.ExecutionException;
@@ -40,6 +43,7 @@ import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
 import static org.opensearch.action.DocWriteResponse.Result.UPDATED;
+import static org.opensearch.flowframework.common.CommonValue.DEPLOY_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.FLOW_FRAMEWORK_THREAD_POOL_PREFIX;
 import static org.opensearch.flowframework.common.CommonValue.PROVISION_WORKFLOW_THREAD_POOL;
 import static org.opensearch.flowframework.common.CommonValue.REGISTER_MODEL_STATUS;
@@ -267,5 +271,107 @@ public class RegisterLocalPretrainedModelStepTests extends OpenSearchTestCase {
             assertTrue(ex.getCause().getMessage().contains(s));
         }
         assertTrue(ex.getCause().getMessage().endsWith("] in workflow [test-id] node [test-node-id]"));
+    }
+
+    public void testBoolParse() throws IOException, ExecutionException, InterruptedException {
+        String taskId = "abcd";
+        String modelId = "model-id";
+        String status = MLTaskState.COMPLETED.name();
+
+        // Stub register for success case
+        doAnswer(invocation -> {
+            ActionListener<MLRegisterModelResponse> actionListener = invocation.getArgument(1);
+            MLRegisterModelResponse output = new MLRegisterModelResponse(taskId, status, null);
+            actionListener.onResponse(output);
+            return null;
+        }).when(machineLearningNodeClient).register(any(MLRegisterModelInput.class), any());
+
+        // Stub getTask for success case
+        doAnswer(invocation -> {
+            ActionListener<MLTask> actionListener = invocation.getArgument(1);
+            MLTask output = new MLTask(
+                taskId,
+                modelId,
+                null,
+                null,
+                MLTaskState.COMPLETED,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                false
+            );
+            actionListener.onResponse(output);
+            return null;
+        }).when(machineLearningNodeClient).getTask(any(), any());
+
+        doAnswer(invocation -> {
+            ActionListener<UpdateResponse> updateResponseListener = invocation.getArgument(4);
+            updateResponseListener.onResponse(new UpdateResponse(new ShardId(WORKFLOW_STATE_INDEX, "", 1), "id", -2, 0, 0, UPDATED));
+            return null;
+        }).when(flowFrameworkIndicesHandler).updateResourceInStateIndex(anyString(), anyString(), anyString(), anyString(), any());
+
+        WorkflowData boolStringWorkflowData = new WorkflowData(
+            Map.ofEntries(
+                Map.entry("name", "xyz"),
+                Map.entry("version", "1.0.0"),
+                Map.entry("model_format", "TORCH_SCRIPT"),
+                Map.entry(MODEL_GROUP_ID, "abcdefg"),
+                Map.entry("description", "aiwoeifjoaijeofiwe"),
+                Map.entry(DEPLOY_FIELD, "false")
+            ),
+            "test-id",
+            "test-node-id"
+        );
+
+        PlainActionFuture<WorkflowData> future = registerLocalPretrainedModelStep.execute(
+            boolStringWorkflowData.getNodeId(),
+            boolStringWorkflowData,
+            Collections.emptyMap(),
+            Collections.emptyMap(),
+            Collections.emptyMap()
+        );
+
+        future.actionGet();
+
+        verify(machineLearningNodeClient, times(1)).register(any(MLRegisterModelInput.class), any());
+        verify(machineLearningNodeClient, times(1)).getTask(any(), any());
+
+        assertEquals(modelId, future.get().getContent().get(MODEL_ID));
+        assertEquals(status, future.get().getContent().get(REGISTER_MODEL_STATUS));
+    }
+
+    public void testBoolParseFail() throws IOException, ExecutionException, InterruptedException {
+        WorkflowData boolStringWorkflowData = new WorkflowData(
+            Map.ofEntries(
+                Map.entry("name", "xyz"),
+                Map.entry("version", "1.0.0"),
+                Map.entry("model_format", "TORCH_SCRIPT"),
+                Map.entry(MODEL_GROUP_ID, "abcdefg"),
+                Map.entry("description", "aiwoeifjoaijeofiwe"),
+                Map.entry(DEPLOY_FIELD, "no")
+            ),
+            "test-id",
+            "test-node-id"
+        );
+
+        PlainActionFuture<WorkflowData> future = registerLocalPretrainedModelStep.execute(
+            boolStringWorkflowData.getNodeId(),
+            boolStringWorkflowData,
+            Collections.emptyMap(),
+            Collections.emptyMap(),
+            Collections.emptyMap()
+        );
+
+        assertTrue(future.isDone());
+        ExecutionException e = assertThrows(ExecutionException.class, () -> future.get());
+        assertEquals(WorkflowStepException.class, e.getCause().getClass());
+        WorkflowStepException w = (WorkflowStepException) e.getCause();
+        assertEquals("Failed to parse value [no] as only [true] or [false] are allowed.", w.getMessage());
+        assertEquals(RestStatus.BAD_REQUEST, w.getRestStatus());
     }
 }
