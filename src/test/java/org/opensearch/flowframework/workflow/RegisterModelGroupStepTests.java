@@ -130,6 +130,17 @@ public class RegisterModelGroupStepTests extends OpenSearchTestCase {
         assertEquals(modelGroupId, future.get().getContent().get(MODEL_GROUP_ID));
         assertEquals(status, future.get().getContent().get("model_group_status"));
 
+        future = modelGroupStep.execute(
+            boolStringInputData.getNodeId(),
+            boolStringInputData,
+            Collections.emptyMap(),
+            Collections.emptyMap(),
+            Collections.emptyMap()
+        );
+
+        assertTrue(future.isDone());
+        assertEquals(modelGroupId, future.get().getContent().get(MODEL_GROUP_ID));
+        assertEquals(status, future.get().getContent().get("model_group_status"));
     }
 
     public void testRegisterModelGroupFailure() throws IOException {
@@ -176,38 +187,6 @@ public class RegisterModelGroupStepTests extends OpenSearchTestCase {
         ExecutionException ex = assertThrows(ExecutionException.class, () -> future.get().getContent());
         assertTrue(ex.getCause() instanceof FlowFrameworkException);
         assertEquals("Missing required inputs [name] in workflow [test-id] node [test-node-id]", ex.getCause().getMessage());
-    }
-
-    public void testBoolParse() throws IOException, ExecutionException, InterruptedException {
-        RegisterModelGroupStep modelGroupStep = new RegisterModelGroupStep(machineLearningNodeClient, flowFrameworkIndicesHandler);
-
-        @SuppressWarnings("unchecked")
-        ArgumentCaptor<ActionListener<MLRegisterModelGroupResponse>> actionListenerCaptor = ArgumentCaptor.forClass(ActionListener.class);
-
-        doAnswer(invocation -> {
-            ActionListener<MLRegisterModelGroupResponse> actionListener = invocation.getArgument(1);
-            MLRegisterModelGroupResponse output = new MLRegisterModelGroupResponse(modelGroupId, status);
-            actionListener.onResponse(output);
-            return null;
-        }).when(machineLearningNodeClient).registerModelGroup(any(MLRegisterModelGroupInput.class), actionListenerCaptor.capture());
-
-        doAnswer(invocation -> {
-            ActionListener<UpdateResponse> updateResponseListener = invocation.getArgument(4);
-            updateResponseListener.onResponse(new UpdateResponse(new ShardId(WORKFLOW_STATE_INDEX, "", 1), "id", -2, 0, 0, UPDATED));
-            return null;
-        }).when(flowFrameworkIndicesHandler).updateResourceInStateIndex(anyString(), anyString(), anyString(), anyString(), any());
-
-        PlainActionFuture<WorkflowData> future = modelGroupStep.execute(
-            boolStringInputData.getNodeId(),
-            boolStringInputData,
-            Collections.emptyMap(),
-            Collections.emptyMap(),
-            Collections.emptyMap()
-        );
-
-        assertTrue(future.isDone());
-        assertEquals(modelGroupId, future.get().getContent().get(MODEL_GROUP_ID));
-        assertEquals(status, future.get().getContent().get("model_group_status"));
     }
 
     public void testBoolParseFail() throws IOException, ExecutionException, InterruptedException {

@@ -107,7 +107,6 @@ public class RegisterRemoteModelStepTests extends OpenSearchTestCase {
         assertTrue(future.isDone());
         assertEquals(modelId, future.get().getContent().get(MODEL_ID));
         assertEquals(status, future.get().getContent().get(REGISTER_MODEL_STATUS));
-
     }
 
     public void testRegisterAndDeployRemoteModelSuccess() throws Exception {
@@ -155,6 +154,32 @@ public class RegisterRemoteModelStepTests extends OpenSearchTestCase {
         assertTrue(future.isDone());
         assertEquals(modelId, future.get().getContent().get(MODEL_ID));
         assertEquals(status, future.get().getContent().get(REGISTER_MODEL_STATUS));
+
+        deployWorkflowData = new WorkflowData(
+            Map.ofEntries(
+                Map.entry("name", "xyz"),
+                Map.entry("description", "description"),
+                Map.entry(CONNECTOR_ID, "abcdefg"),
+                Map.entry(DEPLOY_FIELD, "true")
+            ),
+            "test-id",
+            "test-node-id"
+        );
+        future = this.registerRemoteModelStep.execute(
+            deployWorkflowData.getNodeId(),
+            deployWorkflowData,
+            Collections.emptyMap(),
+            Collections.emptyMap(),
+            Collections.emptyMap()
+        );
+
+        verify(mlNodeClient, times(2)).register(any(MLRegisterModelInput.class), any());
+        // updates both register and deploy resources
+        verify(flowFrameworkIndicesHandler, times(4)).updateResourceInStateIndex(anyString(), anyString(), anyString(), anyString(), any());
+
+        assertTrue(future.isDone());
+        assertEquals(modelId, future.get().getContent().get(MODEL_ID));
+        assertEquals(status, future.get().getContent().get(REGISTER_MODEL_STATUS));
     }
 
     public void testRegisterRemoteModelFailure() {
@@ -194,52 +219,6 @@ public class RegisterRemoteModelStepTests extends OpenSearchTestCase {
             assertTrue(ex.getCause().getMessage().contains(s));
         }
         assertTrue(ex.getCause().getMessage().endsWith("] in workflow [test-id] node [test-node-id]"));
-    }
-
-    public void testBoolParse() throws IOException, ExecutionException, InterruptedException {
-        String taskId = "abcd";
-        String modelId = "efgh";
-        String status = MLTaskState.CREATED.name();
-
-        doAnswer(invocation -> {
-            ActionListener<MLRegisterModelResponse> actionListener = invocation.getArgument(1);
-            MLRegisterModelResponse output = new MLRegisterModelResponse(taskId, status, modelId);
-            actionListener.onResponse(output);
-            return null;
-        }).when(mlNodeClient).register(any(MLRegisterModelInput.class), any());
-
-        doAnswer(invocation -> {
-            ActionListener<UpdateResponse> updateResponseListener = invocation.getArgument(4);
-            updateResponseListener.onResponse(new UpdateResponse(new ShardId(WORKFLOW_STATE_INDEX, "", 1), "id", -2, 0, 0, UPDATED));
-            return null;
-        }).when(flowFrameworkIndicesHandler).updateResourceInStateIndex(anyString(), anyString(), anyString(), anyString(), any());
-
-        WorkflowData deployWorkflowData = new WorkflowData(
-            Map.ofEntries(
-                Map.entry("name", "xyz"),
-                Map.entry("description", "description"),
-                Map.entry(CONNECTOR_ID, "abcdefg"),
-                Map.entry(DEPLOY_FIELD, "true")
-            ),
-            "test-id",
-            "test-node-id"
-        );
-
-        PlainActionFuture<WorkflowData> future = this.registerRemoteModelStep.execute(
-            deployWorkflowData.getNodeId(),
-            deployWorkflowData,
-            Collections.emptyMap(),
-            Collections.emptyMap(),
-            Collections.emptyMap()
-        );
-
-        verify(mlNodeClient, times(1)).register(any(MLRegisterModelInput.class), any());
-        // updates both register and deploy resources
-        verify(flowFrameworkIndicesHandler, times(2)).updateResourceInStateIndex(anyString(), anyString(), anyString(), anyString(), any());
-
-        assertTrue(future.isDone());
-        assertEquals(modelId, future.get().getContent().get(MODEL_ID));
-        assertEquals(status, future.get().getContent().get(REGISTER_MODEL_STATUS));
     }
 
     public void testBoolParseFail() throws IOException, ExecutionException, InterruptedException {

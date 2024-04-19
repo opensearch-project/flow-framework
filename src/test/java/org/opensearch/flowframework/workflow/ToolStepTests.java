@@ -73,22 +73,17 @@ public class ToolStepTests extends OpenSearchTestCase {
             Collections.emptyMap(),
             Collections.emptyMap()
         );
-
         assertTrue(future.isDone());
         assertEquals(MLToolSpec.class, future.get().getContent().get("tools").getClass());
-    }
 
-    public void testBoolParse() throws IOException, ExecutionException, InterruptedException {
-        ToolStep toolStep = new ToolStep();
-
-        PlainActionFuture<WorkflowData> future = toolStep.execute(
+        toolStep = new ToolStep();
+        future = toolStep.execute(
             boolStringInputData.getNodeId(),
             boolStringInputData,
             Collections.emptyMap(),
             Collections.emptyMap(),
             Collections.emptyMap()
         );
-
         assertTrue(future.isDone());
         assertEquals(MLToolSpec.class, future.get().getContent().get("tools").getClass());
     }

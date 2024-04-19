@@ -188,6 +188,41 @@ public class RegisterLocalCustomModelStepTests extends OpenSearchTestCase {
 
         assertEquals(modelId, future.get().getContent().get(MODEL_ID));
         assertEquals(status, future.get().getContent().get(REGISTER_MODEL_STATUS));
+
+        WorkflowData boolStringWorkflowData = new WorkflowData(
+            Map.ofEntries(
+                Map.entry("name", "xyz"),
+                Map.entry("version", "1.0.0"),
+                Map.entry("description", "description"),
+                Map.entry("function_name", "SPARSE_TOKENIZE"),
+                Map.entry("model_format", "TORCH_SCRIPT"),
+                Map.entry(MODEL_GROUP_ID, "abcdefg"),
+                Map.entry("model_content_hash_value", "aiwoeifjoaijeofiwe"),
+                Map.entry("model_type", "bert"),
+                Map.entry("embedding_dimension", "384"),
+                Map.entry("framework_type", "sentence_transformers"),
+                Map.entry("url", "something.com"),
+                Map.entry(DEPLOY_FIELD, "false")
+            ),
+            "test-id",
+            "test-node-id"
+        );
+
+        future = registerLocalModelStep.execute(
+            boolStringWorkflowData.getNodeId(),
+            boolStringWorkflowData,
+            Collections.emptyMap(),
+            Collections.emptyMap(),
+            Collections.emptyMap()
+        );
+
+        future.actionGet();
+
+        verify(machineLearningNodeClient, times(2)).register(any(MLRegisterModelInput.class), any());
+        verify(machineLearningNodeClient, times(2)).getTask(any(), any());
+
+        assertEquals(modelId, future.get().getContent().get(MODEL_ID));
+        assertEquals(status, future.get().getContent().get(REGISTER_MODEL_STATUS));
     }
 
     public void testRegisterLocalCustomModelFailure() {
@@ -286,84 +321,6 @@ public class RegisterLocalCustomModelStepTests extends OpenSearchTestCase {
             assertTrue(ex.getCause().getMessage().contains(s));
         }
         assertTrue(ex.getCause().getMessage().endsWith("] in workflow [test-id] node [test-node-id]"));
-    }
-
-    public void testBoolParse() throws IOException, ExecutionException, InterruptedException {
-        String taskId = "abcd";
-        String modelId = "model-id";
-        String status = MLTaskState.COMPLETED.name();
-
-        // Stub register for success case
-        doAnswer(invocation -> {
-            ActionListener<MLRegisterModelResponse> actionListener = invocation.getArgument(1);
-            MLRegisterModelResponse output = new MLRegisterModelResponse(taskId, status, null);
-            actionListener.onResponse(output);
-            return null;
-        }).when(machineLearningNodeClient).register(any(MLRegisterModelInput.class), any());
-
-        // Stub getTask for success case
-        doAnswer(invocation -> {
-            ActionListener<MLTask> actionListener = invocation.getArgument(1);
-            MLTask output = new MLTask(
-                taskId,
-                modelId,
-                null,
-                null,
-                MLTaskState.COMPLETED,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                false
-            );
-            actionListener.onResponse(output);
-            return null;
-        }).when(machineLearningNodeClient).getTask(any(), any());
-
-        doAnswer(invocation -> {
-            ActionListener<UpdateResponse> updateResponseListener = invocation.getArgument(4);
-            updateResponseListener.onResponse(new UpdateResponse(new ShardId(WORKFLOW_STATE_INDEX, "", 1), "id", -2, 0, 0, UPDATED));
-            return null;
-        }).when(flowFrameworkIndicesHandler).updateResourceInStateIndex(anyString(), anyString(), anyString(), anyString(), any());
-
-        WorkflowData boolStringWorkflowData = new WorkflowData(
-            Map.ofEntries(
-                Map.entry("name", "xyz"),
-                Map.entry("version", "1.0.0"),
-                Map.entry("description", "description"),
-                Map.entry("function_name", "SPARSE_TOKENIZE"),
-                Map.entry("model_format", "TORCH_SCRIPT"),
-                Map.entry(MODEL_GROUP_ID, "abcdefg"),
-                Map.entry("model_content_hash_value", "aiwoeifjoaijeofiwe"),
-                Map.entry("model_type", "bert"),
-                Map.entry("embedding_dimension", "384"),
-                Map.entry("framework_type", "sentence_transformers"),
-                Map.entry("url", "something.com"),
-                Map.entry(DEPLOY_FIELD, "false")
-            ),
-            "test-id",
-            "test-node-id"
-        );
-
-        PlainActionFuture<WorkflowData> future = registerLocalModelStep.execute(
-            boolStringWorkflowData.getNodeId(),
-            boolStringWorkflowData,
-            Collections.emptyMap(),
-            Collections.emptyMap(),
-            Collections.emptyMap()
-        );
-
-        future.actionGet();
-
-        verify(machineLearningNodeClient, times(1)).register(any(MLRegisterModelInput.class), any());
-        verify(machineLearningNodeClient, times(1)).getTask(any(), any());
-
-        assertEquals(modelId, future.get().getContent().get(MODEL_ID));
-        assertEquals(status, future.get().getContent().get(REGISTER_MODEL_STATUS));
     }
 
     public void testBoolParseFail() throws IOException, ExecutionException, InterruptedException {
