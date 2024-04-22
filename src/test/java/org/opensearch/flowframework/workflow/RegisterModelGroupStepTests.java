@@ -14,6 +14,7 @@ import org.opensearch.core.action.ActionListener;
 import org.opensearch.core.index.shard.ShardId;
 import org.opensearch.core.rest.RestStatus;
 import org.opensearch.flowframework.exception.FlowFrameworkException;
+import org.opensearch.flowframework.exception.WorkflowStepException;
 import org.opensearch.flowframework.indices.FlowFrameworkIndicesHandler;
 import org.opensearch.ml.client.MachineLearningNodeClient;
 import org.opensearch.ml.common.AccessMode;
@@ -41,9 +42,14 @@ import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 
-public class ModelGroupStepTests extends OpenSearchTestCase {
+public class RegisterModelGroupStepTests extends OpenSearchTestCase {
     private WorkflowData inputData;
     private WorkflowData inputDataWithNoName;
+    private WorkflowData boolStringInputData;
+    private WorkflowData badBoolInputData;
+
+    private String modelGroupId = MODEL_GROUP_ID;
+    private String status = MLTaskState.CREATED.name();
 
     @Mock
     MachineLearningNodeClient machineLearningNodeClient;
@@ -67,12 +73,31 @@ public class ModelGroupStepTests extends OpenSearchTestCase {
             "test-node-id"
         );
         inputDataWithNoName = new WorkflowData(Collections.emptyMap(), "test-id", "test-node-id");
+        boolStringInputData = new WorkflowData(
+            Map.ofEntries(
+                Map.entry("name", "test"),
+                Map.entry("description", "description"),
+                Map.entry("backend_roles", List.of("role-1")),
+                Map.entry("access_mode", AccessMode.PUBLIC),
+                Map.entry("add_all_backend_roles", "false")
+            ),
+            "test-id",
+            "test-node-id"
+        );
+        badBoolInputData = new WorkflowData(
+            Map.ofEntries(
+                Map.entry("name", "test"),
+                Map.entry("description", "description"),
+                Map.entry("backend_roles", List.of("role-1")),
+                Map.entry("access_mode", AccessMode.PUBLIC),
+                Map.entry("add_all_backend_roles", "no")
+            ),
+            "test-id",
+            "test-node-id"
+        );
     }
 
     public void testRegisterModelGroup() throws ExecutionException, InterruptedException, IOException {
-        String modelGroupId = MODEL_GROUP_ID;
-        String status = MLTaskState.CREATED.name();
-
         RegisterModelGroupStep modelGroupStep = new RegisterModelGroupStep(machineLearningNodeClient, flowFrameworkIndicesHandler);
 
         @SuppressWarnings("unchecked")
@@ -105,6 +130,17 @@ public class ModelGroupStepTests extends OpenSearchTestCase {
         assertEquals(modelGroupId, future.get().getContent().get(MODEL_GROUP_ID));
         assertEquals(status, future.get().getContent().get("model_group_status"));
 
+        future = modelGroupStep.execute(
+            boolStringInputData.getNodeId(),
+            boolStringInputData,
+            Collections.emptyMap(),
+            Collections.emptyMap(),
+            Collections.emptyMap()
+        );
+
+        assertTrue(future.isDone());
+        assertEquals(modelGroupId, future.get().getContent().get(MODEL_GROUP_ID));
+        assertEquals(status, future.get().getContent().get("model_group_status"));
     }
 
     public void testRegisterModelGroupFailure() throws IOException {
@@ -153,4 +189,22 @@ public class ModelGroupStepTests extends OpenSearchTestCase {
         assertEquals("Missing required inputs [name] in workflow [test-id] node [test-node-id]", ex.getCause().getMessage());
     }
 
+    public void testBoolParseFail() throws IOException, ExecutionException, InterruptedException {
+        RegisterModelGroupStep modelGroupStep = new RegisterModelGroupStep(machineLearningNodeClient, flowFrameworkIndicesHandler);
+
+        PlainActionFuture<WorkflowData> future = modelGroupStep.execute(
+            badBoolInputData.getNodeId(),
+            badBoolInputData,
+            Collections.emptyMap(),
+            Collections.emptyMap(),
+            Collections.emptyMap()
+        );
+
+        assertTrue(future.isDone());
+        ExecutionException e = assertThrows(ExecutionException.class, () -> future.get());
+        assertEquals(WorkflowStepException.class, e.getCause().getClass());
+        WorkflowStepException w = (WorkflowStepException) e.getCause();
+        assertEquals("Failed to parse value [no] as only [true] or [false] are allowed.", w.getMessage());
+        assertEquals(RestStatus.BAD_REQUEST, w.getRestStatus());
+    }
 }

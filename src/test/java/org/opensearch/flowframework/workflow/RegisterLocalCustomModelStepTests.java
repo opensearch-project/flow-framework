@@ -17,8 +17,10 @@ import org.opensearch.common.unit.TimeValue;
 import org.opensearch.common.util.concurrent.OpenSearchExecutors;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.core.index.shard.ShardId;
+import org.opensearch.core.rest.RestStatus;
 import org.opensearch.flowframework.common.FlowFrameworkSettings;
 import org.opensearch.flowframework.exception.FlowFrameworkException;
+import org.opensearch.flowframework.exception.WorkflowStepException;
 import org.opensearch.flowframework.indices.FlowFrameworkIndicesHandler;
 import org.opensearch.ml.client.MachineLearningNodeClient;
 import org.opensearch.ml.common.MLTask;
@@ -31,6 +33,7 @@ import org.opensearch.threadpool.TestThreadPool;
 import org.opensearch.threadpool.ThreadPool;
 import org.junit.AfterClass;
 
+import java.io.IOException;
 import java.util.Collections;
 import java.util.Map;
 import java.util.concurrent.ExecutionException;
@@ -40,6 +43,7 @@ import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
 import static org.opensearch.action.DocWriteResponse.Result.UPDATED;
+import static org.opensearch.flowframework.common.CommonValue.DEPLOY_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.FLOW_FRAMEWORK_THREAD_POOL_PREFIX;
 import static org.opensearch.flowframework.common.CommonValue.PROVISION_WORKFLOW_THREAD_POOL;
 import static org.opensearch.flowframework.common.CommonValue.REGISTER_MODEL_STATUS;
@@ -184,6 +188,41 @@ public class RegisterLocalCustomModelStepTests extends OpenSearchTestCase {
 
         assertEquals(modelId, future.get().getContent().get(MODEL_ID));
         assertEquals(status, future.get().getContent().get(REGISTER_MODEL_STATUS));
+
+        WorkflowData boolStringWorkflowData = new WorkflowData(
+            Map.ofEntries(
+                Map.entry("name", "xyz"),
+                Map.entry("version", "1.0.0"),
+                Map.entry("description", "description"),
+                Map.entry("function_name", "SPARSE_TOKENIZE"),
+                Map.entry("model_format", "TORCH_SCRIPT"),
+                Map.entry(MODEL_GROUP_ID, "abcdefg"),
+                Map.entry("model_content_hash_value", "aiwoeifjoaijeofiwe"),
+                Map.entry("model_type", "bert"),
+                Map.entry("embedding_dimension", "384"),
+                Map.entry("framework_type", "sentence_transformers"),
+                Map.entry("url", "something.com"),
+                Map.entry(DEPLOY_FIELD, "false")
+            ),
+            "test-id",
+            "test-node-id"
+        );
+
+        future = registerLocalModelStep.execute(
+            boolStringWorkflowData.getNodeId(),
+            boolStringWorkflowData,
+            Collections.emptyMap(),
+            Collections.emptyMap(),
+            Collections.emptyMap()
+        );
+
+        future.actionGet();
+
+        verify(machineLearningNodeClient, times(2)).register(any(MLRegisterModelInput.class), any());
+        verify(machineLearningNodeClient, times(2)).getTask(any(), any());
+
+        assertEquals(modelId, future.get().getContent().get(MODEL_ID));
+        assertEquals(status, future.get().getContent().get(REGISTER_MODEL_STATUS));
     }
 
     public void testRegisterLocalCustomModelFailure() {
@@ -282,5 +321,41 @@ public class RegisterLocalCustomModelStepTests extends OpenSearchTestCase {
             assertTrue(ex.getCause().getMessage().contains(s));
         }
         assertTrue(ex.getCause().getMessage().endsWith("] in workflow [test-id] node [test-node-id]"));
+    }
+
+    public void testBoolParseFail() throws IOException, ExecutionException, InterruptedException {
+        WorkflowData boolStringWorkflowData = new WorkflowData(
+            Map.ofEntries(
+                Map.entry("name", "xyz"),
+                Map.entry("version", "1.0.0"),
+                Map.entry("description", "description"),
+                Map.entry("function_name", "SPARSE_TOKENIZE"),
+                Map.entry("model_format", "TORCH_SCRIPT"),
+                Map.entry(MODEL_GROUP_ID, "abcdefg"),
+                Map.entry("model_content_hash_value", "aiwoeifjoaijeofiwe"),
+                Map.entry("model_type", "bert"),
+                Map.entry("embedding_dimension", "384"),
+                Map.entry("framework_type", "sentence_transformers"),
+                Map.entry("url", "something.com"),
+                Map.entry(DEPLOY_FIELD, "no")
+            ),
+            "test-id",
+            "test-node-id"
+        );
+
+        PlainActionFuture<WorkflowData> future = registerLocalModelStep.execute(
+            boolStringWorkflowData.getNodeId(),
+            boolStringWorkflowData,
+            Collections.emptyMap(),
+            Collections.emptyMap(),
+            Collections.emptyMap()
+        );
+
+        assertTrue(future.isDone());
+        ExecutionException e = assertThrows(ExecutionException.class, () -> future.get());
+        assertEquals(WorkflowStepException.class, e.getCause().getClass());
+        WorkflowStepException w = (WorkflowStepException) e.getCause();
+        assertEquals("Failed to parse value [no] as only [true] or [false] are allowed.", w.getMessage());
+        assertEquals(RestStatus.BAD_REQUEST, w.getRestStatus());
     }
 }
