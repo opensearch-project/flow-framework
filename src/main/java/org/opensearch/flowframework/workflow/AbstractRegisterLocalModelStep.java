@@ -12,7 +12,9 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.opensearch.ExceptionsHelper;
 import org.opensearch.action.support.PlainActionFuture;
+import org.opensearch.common.Booleans;
 import org.opensearch.core.action.ActionListener;
+import org.opensearch.core.rest.RestStatus;
 import org.opensearch.flowframework.common.FlowFrameworkSettings;
 import org.opensearch.flowframework.exception.FlowFrameworkException;
 import org.opensearch.flowframework.exception.WorkflowStepException;
@@ -113,7 +115,7 @@ public abstract class AbstractRegisterLocalModelStep extends AbstractRetryableWo
             String description = (String) inputs.get(DESCRIPTION_FIELD);
             String modelGroupId = (String) inputs.get(MODEL_GROUP_ID);
             String allConfig = (String) inputs.get(ALL_CONFIG);
-            final Boolean deploy = (Boolean) inputs.get(DEPLOY_FIELD);
+            final Boolean deploy = inputs.containsKey(DEPLOY_FIELD) ? Booleans.parseBoolean(inputs.get(DEPLOY_FIELD).toString()) : null;
 
             // Build register model input
             MLRegisterModelInputBuilder mlInputBuilder = MLRegisterModelInput.builder()
@@ -217,6 +219,8 @@ public abstract class AbstractRegisterLocalModelStep extends AbstractRetryableWo
                 logger.error(errorMessage, exception);
                 registerLocalModelFuture.onFailure(new WorkflowStepException(errorMessage, ExceptionsHelper.status(exception)));
             }));
+        } catch (IllegalArgumentException iae) {
+            registerLocalModelFuture.onFailure(new WorkflowStepException(iae.getMessage(), RestStatus.BAD_REQUEST));
         } catch (FlowFrameworkException e) {
             registerLocalModelFuture.onFailure(e);
         }
