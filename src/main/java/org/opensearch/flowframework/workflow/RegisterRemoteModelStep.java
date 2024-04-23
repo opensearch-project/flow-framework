@@ -13,7 +13,9 @@ import org.apache.logging.log4j.Logger;
 import org.opensearch.ExceptionsHelper;
 import org.opensearch.action.support.PlainActionFuture;
 import org.opensearch.action.update.UpdateResponse;
+import org.opensearch.common.Booleans;
 import org.opensearch.core.action.ActionListener;
+import org.opensearch.core.rest.RestStatus;
 import org.opensearch.flowframework.exception.FlowFrameworkException;
 import org.opensearch.flowframework.exception.WorkflowStepException;
 import org.opensearch.flowframework.indices.FlowFrameworkIndicesHandler;
@@ -90,7 +92,7 @@ public class RegisterRemoteModelStep implements WorkflowStep {
             String description = (String) inputs.get(DESCRIPTION_FIELD);
             String connectorId = (String) inputs.get(CONNECTOR_ID);
             Guardrails guardRails = (Guardrails) inputs.get(GUARDRAILS_FIELD);
-            final Boolean deploy = (Boolean) inputs.get(DEPLOY_FIELD);
+            final Boolean deploy = inputs.containsKey(DEPLOY_FIELD) ? Booleans.parseBoolean(inputs.get(DEPLOY_FIELD).toString()) : null;
 
             MLRegisterModelInputBuilder builder = MLRegisterModelInput.builder()
                 .functionName(FunctionName.REMOTE)
@@ -106,7 +108,6 @@ public class RegisterRemoteModelStep implements WorkflowStep {
             if (deploy != null) {
                 builder.deployModel(deploy);
             }
-
             if (guardRails != null) {
                 builder.guardrails(guardRails);
             }
@@ -190,6 +191,8 @@ public class RegisterRemoteModelStep implements WorkflowStep {
                 }
             });
 
+        } catch (IllegalArgumentException iae) {
+            registerRemoteModelFuture.onFailure(new WorkflowStepException(iae.getMessage(), RestStatus.BAD_REQUEST));
         } catch (FlowFrameworkException e) {
             registerRemoteModelFuture.onFailure(e);
         }

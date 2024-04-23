@@ -11,7 +11,10 @@ package org.opensearch.flowframework.workflow;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.opensearch.action.support.PlainActionFuture;
+import org.opensearch.common.Booleans;
+import org.opensearch.core.rest.RestStatus;
 import org.opensearch.flowframework.exception.FlowFrameworkException;
+import org.opensearch.flowframework.exception.WorkflowStepException;
 import org.opensearch.flowframework.util.ParseUtils;
 import org.opensearch.ml.common.agent.MLToolSpec;
 
@@ -61,7 +64,9 @@ public class ToolStep implements WorkflowStep {
             String type = (String) inputs.get(TYPE);
             String name = (String) inputs.get(NAME_FIELD);
             String description = (String) inputs.get(DESCRIPTION_FIELD);
-            Boolean includeOutputInAgentResponse = (Boolean) inputs.get(INCLUDE_OUTPUT_IN_AGENT_RESPONSE);
+            Boolean includeOutputInAgentResponse = inputs.containsKey(INCLUDE_OUTPUT_IN_AGENT_RESPONSE)
+                ? Booleans.parseBoolean(inputs.get(INCLUDE_OUTPUT_IN_AGENT_RESPONSE).toString())
+                : null;
             Map<String, String> parameters = getToolsParametersMap(inputs.get(PARAMETERS_FIELD), previousNodeInputs, outputs);
 
             MLToolSpec.MLToolSpecBuilder builder = MLToolSpec.builder();
@@ -92,6 +97,8 @@ public class ToolStep implements WorkflowStep {
 
             logger.info("Tool registered successfully {}", type);
 
+        } catch (IllegalArgumentException iae) {
+            toolFuture.onFailure(new WorkflowStepException(iae.getMessage(), RestStatus.BAD_REQUEST));
         } catch (FlowFrameworkException e) {
             toolFuture.onFailure(e);
         }
