@@ -112,7 +112,7 @@ public class FlowFrameworkPlugin extends Plugin implements ActionPlugin {
         Settings settings = environment.settings();
         flowFrameworkSettings = new FlowFrameworkSettings(clusterService, settings);
         MachineLearningNodeClient mlClient = new MachineLearningNodeClient(client);
-        EncryptorUtils encryptorUtils = new EncryptorUtils(clusterService, client);
+        EncryptorUtils encryptorUtils = new EncryptorUtils(clusterService, client, xContentRegistry);
         FlowFrameworkIndicesHandler flowFrameworkIndicesHandler = new FlowFrameworkIndicesHandler(
             client,
             clusterService,

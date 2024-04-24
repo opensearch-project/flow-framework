@@ -18,9 +18,15 @@ import org.opensearch.cluster.service.ClusterService;
 import org.opensearch.common.settings.Settings;
 import org.opensearch.common.util.concurrent.ThreadContext;
 import org.opensearch.commons.authuser.User;
+import org.opensearch.common.xcontent.XContentFactory;
 import org.opensearch.core.action.ActionListener;
+import org.opensearch.core.common.bytes.BytesReference;
+import org.opensearch.core.xcontent.NamedXContentRegistry;
+import org.opensearch.core.xcontent.ToXContent;
+import org.opensearch.core.xcontent.XContentBuilder;
 import org.opensearch.flowframework.TestHelpers;
 import org.opensearch.flowframework.exception.FlowFrameworkException;
+import org.opensearch.flowframework.model.Config;
 import org.opensearch.flowframework.model.Template;
 import org.opensearch.flowframework.model.Workflow;
 import org.opensearch.flowframework.model.WorkflowNode;
@@ -28,12 +34,13 @@ import org.opensearch.test.OpenSearchTestCase;
 import org.opensearch.threadpool.ThreadPool;
 
 import java.util.ArrayList;
+import java.io.IOException;
+import java.time.Instant;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
 import static org.opensearch.flowframework.common.CommonValue.CREDENTIAL_FIELD;
-import static org.opensearch.flowframework.common.CommonValue.MASTER_KEY;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doAnswer;
@@ -44,6 +51,7 @@ public class EncryptorUtilsTests extends OpenSearchTestCase {
 
     private ClusterService clusterService;
     private Client client;
+    private NamedXContentRegistry xContentRegistry;
     private EncryptorUtils encryptorUtils;
     private String testMasterKey;
     private Template testTemplate;
@@ -55,7 +63,8 @@ public class EncryptorUtilsTests extends OpenSearchTestCase {
         super.setUp();
         this.clusterService = mock(ClusterService.class);
         this.client = mock(Client.class);
-        this.encryptorUtils = new EncryptorUtils(clusterService, client);
+        this.xContentRegistry = mock(NamedXContentRegistry.class);
+        this.encryptorUtils = new EncryptorUtils(clusterService, client, xContentRegistry);
         this.testMasterKey = encryptorUtils.generateMasterKey();
         this.testCredentialKey = "credential_key";
         this.testCredentialValue = "12345";
@@ -127,17 +136,23 @@ public class EncryptorUtilsTests extends OpenSearchTestCase {
         assertNotEquals(encrypted1, encrypted2);
     }
 
-    public void testInitializeMasterKeySuccess() {
+    public void testInitializeMasterKeySuccess() throws IOException {
         encryptorUtils.setMasterKey(null);
 
         String masterKey = encryptorUtils.generateMasterKey();
+        BytesReference bytesRef;
+        try (XContentBuilder builder = XContentFactory.jsonBuilder()) {
+            Config config = new Config(masterKey, Instant.now());
+            XContentBuilder source = config.toXContent(builder, ToXContent.EMPTY_PARAMS);
+            bytesRef = BytesReference.bytes(source);
+        }
         doAnswer(invocation -> {
             ActionListener<GetResponse> getRequestActionListener = invocation.getArgument(1);
 
             // Stub get response for success case
             GetResponse getResponse = mock(GetResponse.class);
             when(getResponse.isExists()).thenReturn(true);
-            when(getResponse.getSourceAsMap()).thenReturn(Map.of(MASTER_KEY, masterKey));
+            when(getResponse.getSourceAsBytesRef()).thenReturn(bytesRef);
 
             getRequestActionListener.onResponse(getResponse);
             return null;
