@@ -158,6 +158,13 @@ public class EncryptorUtilsTests extends OpenSearchTestCase {
             return null;
         }).when(client).get(any(GetRequest.class), any());
 
+        ActionListener<Boolean> listener = ActionListener.wrap(b -> {}, e -> {});
+        encryptorUtils.initializeMasterKey(listener);
+        assertEquals(masterKey, encryptorUtils.getMasterKey());
+
+        encryptorUtils.setMasterKey(null);
+        assertNull(encryptorUtils.getMasterKey());
+
         encryptorUtils.initializeMasterKeyIfAbsent();
         assertEquals(masterKey, encryptorUtils.getMasterKey());
     }

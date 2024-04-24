@@ -14,6 +14,7 @@ import org.opensearch.core.xcontent.NamedXContentRegistry;
 import org.opensearch.core.xcontent.ToXContent;
 import org.opensearch.core.xcontent.XContentBuilder;
 import org.opensearch.core.xcontent.XContentParser;
+import org.opensearch.flowframework.exception.FlowFrameworkException;
 import org.opensearch.flowframework.util.ParseUtils;
 import org.opensearch.test.OpenSearchTestCase;
 
@@ -53,4 +54,28 @@ public class ConfigTests extends OpenSearchTestCase {
         assertEquals(masterKey, config.masterKey());
         assertEquals(createTime, config.createTime());
     }
+
+    public void testBadConfig() throws IOException {
+        BytesReference bytesRef;
+        try (XContentBuilder builder = XContentFactory.jsonBuilder()) {
+            builder.startObject().endObject();
+            bytesRef = BytesReference.bytes(builder);
+        }
+        try (XContentParser parser = ParseUtils.createXContentParserFromRegistry(xContentRegistry, bytesRef)) {
+            ensureExpectedToken(XContentParser.Token.START_OBJECT, parser.nextToken(), parser);
+            FlowFrameworkException e = assertThrows(FlowFrameworkException.class, () -> Config.parse(parser));
+            assertEquals("The config object requires a master key.", e.getMessage());
+        }
+
+        try (XContentBuilder builder = XContentFactory.jsonBuilder()) {
+            builder.startObject().field("foo", "bar").endObject();
+            bytesRef = BytesReference.bytes(builder);
+        }
+        try (XContentParser parser = ParseUtils.createXContentParserFromRegistry(xContentRegistry, bytesRef)) {
+            ensureExpectedToken(XContentParser.Token.START_OBJECT, parser.nextToken(), parser);
+            FlowFrameworkException e = assertThrows(FlowFrameworkException.class, () -> Config.parse(parser));
+            assertEquals("Unable to parse field [foo] in a config object.", e.getMessage());
+        }
+    }
+
 }
