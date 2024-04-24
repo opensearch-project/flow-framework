@@ -170,6 +170,8 @@ public class CommonValue {
     public static final String CONFIGURATIONS = "configurations";
     /** Guardrails field */
     public static final String GUARDRAILS_FIELD = "guardrails";
+    /** Delay field */
+    public static final String DELAY_FIELD = "delay";
 
     /*
      * Constants associated with resource provisioning / state
