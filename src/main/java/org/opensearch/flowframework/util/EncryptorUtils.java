@@ -255,10 +255,7 @@ public class EncryptorUtils {
         // generate
         // This is necessary in case of global context index restoration from snapshot, will need to use the same master key to decrypt
         // stored credentials
-        try (
-            XContentBuilder builder = XContentFactory.jsonBuilder();
-            ThreadContext.StoredContext context = client.threadPool().getThreadContext().stashContext()
-        ) {
+        try (ThreadContext.StoredContext context = client.threadPool().getThreadContext().stashContext()) {
             // Using the master_key string as the document id
             GetRequest getRequest = new GetRequest(CONFIG_INDEX).id(MASTER_KEY);
             client.get(getRequest, ActionListener.wrap(getResponse -> {
@@ -266,9 +263,10 @@ public class EncryptorUtils {
                 if (!getResponse.isExists()) {
                     Config config = new Config(generateMasterKey(), Instant.now());
                     IndexRequest masterKeyIndexRequest = new IndexRequest(CONFIG_INDEX).id(MASTER_KEY)
-                        .source(config.toXContent(builder, ToXContent.EMPTY_PARAMS))
                         .setRefreshPolicy(WriteRequest.RefreshPolicy.IMMEDIATE);
-
+                    try (XContentBuilder builder = XContentFactory.jsonBuilder()) {
+                        masterKeyIndexRequest.source(config.toXContent(builder, ToXContent.EMPTY_PARAMS));
+                    }
                     client.index(masterKeyIndexRequest, ActionListener.wrap(indexResponse -> {
                         // Set generated key to master
                         logger.info("Config has been initialized successfully");
