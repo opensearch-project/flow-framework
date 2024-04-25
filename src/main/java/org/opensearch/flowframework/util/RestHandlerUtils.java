@@ -9,6 +9,7 @@
 package org.opensearch.flowframework.util;
 
 import org.apache.commons.lang3.ArrayUtils;
+import org.opensearch.core.common.Strings;
 import org.opensearch.flowframework.common.CommonValue;
 import org.opensearch.rest.RestRequest;
 import org.opensearch.search.builder.SearchSourceBuilder;
@@ -20,7 +21,12 @@ import org.opensearch.search.fetch.subphase.FetchSourceContext;
 public class RestHandlerUtils {
 
     /** Fields that need to be excluded from the Search Response*/
-    public static final String[] USER_EXCLUDE = new String[] { CommonValue.USER_FIELD, CommonValue.UI_METADATA_FIELD };
+    public static final String[] DASHBOARD_EXCLUDES = new String[] {
+        CommonValue.USER_FIELD,
+        CommonValue.UI_METADATA_FIELD,
+        CommonValue.PATH_TO_CREDENTIAL_FIELD };
+
+    public static final String[] EXCLUDES = new String[] { CommonValue.USER_FIELD, CommonValue.PATH_TO_CREDENTIAL_FIELD };
 
     private RestHandlerUtils() {}
 
@@ -35,10 +41,11 @@ public class RestHandlerUtils {
         // TODO
         // 1. check if the request came from dashboard and exclude UI_METADATA
         if (searchSourceBuilder.fetchSource() != null) {
-            String[] newArray = (String[]) ArrayUtils.addAll(searchSourceBuilder.fetchSource().excludes(), USER_EXCLUDE);
+            String[] newArray = (String[]) ArrayUtils.addAll(searchSourceBuilder.fetchSource().excludes(), DASHBOARD_EXCLUDES);
             return new FetchSourceContext(true, searchSourceBuilder.fetchSource().includes(), newArray);
         } else {
-            return null;
+            // When user does not set the _source field in search api request, searchSourceBuilder.fetchSource becomes null
+            return new FetchSourceContext(true, Strings.EMPTY_ARRAY, EXCLUDES);
         }
     }
 }

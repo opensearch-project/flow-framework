@@ -22,7 +22,7 @@ Inspired from [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 ### Bug Fixes
 - Reset workflow state to initial state after successful deprovision ([#635](https://github.com/opensearch-project/flow-framework/pull/635))
 - Silently ignore content on APIs that don't require it ([#639](https://github.com/opensearch-project/flow-framework/pull/639))
-
+- Hide user and credential field from search response ([#680](https://github.com/opensearch-project/flow-framework/pull/680))
 ### Infrastructure
 ### Documentation
 ### Maintenance
