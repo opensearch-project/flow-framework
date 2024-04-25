@@ -17,12 +17,14 @@ import org.opensearch.action.support.HandledTransportAction;
 import org.opensearch.client.Client;
 import org.opensearch.common.inject.Inject;
 import org.opensearch.common.util.concurrent.ThreadContext;
+import org.opensearch.commons.authuser.User;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.core.rest.RestStatus;
 import org.opensearch.flowframework.exception.FlowFrameworkException;
 import org.opensearch.flowframework.indices.FlowFrameworkIndicesHandler;
 import org.opensearch.flowframework.model.Template;
 import org.opensearch.flowframework.util.EncryptorUtils;
+import org.opensearch.flowframework.util.ParseUtils;
 import org.opensearch.tasks.Task;
 import org.opensearch.transport.TransportService;
 
@@ -79,8 +81,9 @@ public class GetWorkflowTransportAction extends HandledTransportAction<WorkflowR
                         logger.error(errorMessage);
                         listener.onFailure(new FlowFrameworkException(errorMessage, RestStatus.NOT_FOUND));
                     } else {
-                        // Remove any credential from response
-                        Template template = encryptorUtils.redactTemplateCredentials(Template.parse(response.getSourceAsString()));
+                        // Remove any secured field from response
+                        User user = ParseUtils.getUserContext(client);
+                        Template template = encryptorUtils.redactTemplateSecuredFields(user, Template.parse(response.getSourceAsString()));
                         listener.onResponse(new GetWorkflowResponse(template));
                     }
                 }, exception -> {

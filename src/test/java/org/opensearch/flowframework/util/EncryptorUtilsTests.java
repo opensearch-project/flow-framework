@@ -17,6 +17,7 @@ import org.opensearch.cluster.metadata.Metadata;
 import org.opensearch.cluster.service.ClusterService;
 import org.opensearch.common.settings.Settings;
 import org.opensearch.common.util.concurrent.ThreadContext;
+import org.opensearch.commons.authuser.User;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.flowframework.TestHelpers;
 import org.opensearch.flowframework.exception.FlowFrameworkException;
@@ -26,6 +27,7 @@ import org.opensearch.flowframework.model.WorkflowNode;
 import org.opensearch.test.OpenSearchTestCase;
 import org.opensearch.threadpool.ThreadPool;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -199,11 +201,39 @@ public class EncryptorUtilsTests extends OpenSearchTestCase {
         WorkflowNode node = testTemplate.workflows().get("provision").nodes().get(0);
         assertNotNull(node.userInputs().get(CREDENTIAL_FIELD));
 
+        User user = new User("user", Collections.emptyList(), Collections.emptyList(), Collections.emptyList());
+
         // Redact template with credential field
-        Template redactedTemplate = encryptorUtils.redactTemplateCredentials(testTemplate);
+        Template redactedTemplate = encryptorUtils.redactTemplateSecuredFields(user, testTemplate);
 
         // Validate the credential field has been removed
         WorkflowNode redactedNode = redactedTemplate.workflows().get("provision").nodes().get(0);
         assertNull(redactedNode.userInputs().get(CREDENTIAL_FIELD));
+    }
+
+    public void testRedactTemplateUserField() {
+        // Confirm user is present in the non-redacted template
+        assertNotNull(testTemplate.getUser());
+
+        User user = new User("user", Collections.emptyList(), Collections.emptyList(), Collections.emptyList());
+        // Redact template with user field
+        Template redactedTemplate = encryptorUtils.redactTemplateSecuredFields(user, testTemplate);
+
+        // Validate the user field has been removed
+        assertNull(redactedTemplate.getUser());
+    }
+
+    public void testAdminUserTemplate() {
+        // Confirm user is present in the non-redacted template
+        assertNotNull(testTemplate.getUser());
+
+        List<String> roles = new ArrayList<>();
+        roles.add("all_access");
+
+        User user = new User("admin", roles, roles, Collections.emptyList());
+
+        // Redact template with user field
+        Template redactedTemplate = encryptorUtils.redactTemplateSecuredFields(user, testTemplate);
+        assertNotNull(redactedTemplate.getUser());
     }
 }

@@ -25,7 +25,6 @@ import org.opensearch.core.xcontent.XContentBuilder;
 import org.opensearch.core.xcontent.XContentParser;
 import org.opensearch.flowframework.exception.FlowFrameworkException;
 import org.opensearch.flowframework.workflow.WorkflowData;
-import org.opensearch.ml.common.agent.LLMSpec;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -47,8 +46,6 @@ import jakarta.json.bind.Jsonb;
 import jakarta.json.bind.JsonbBuilder;
 
 import static org.opensearch.core.xcontent.XContentParserUtils.ensureExpectedToken;
-import static org.opensearch.flowframework.common.CommonValue.PARAMETERS_FIELD;
-import static org.opensearch.flowframework.common.WorkflowResources.MODEL_ID;
 
 /**
  * Utility methods for Template parsing
@@ -114,6 +111,18 @@ public class ParseUtils {
     }
 
     /**
+     * 'all_access' role users are treated as admins.
+     * @param user of the current role
+     * @return boolean if the role is admin
+     */
+    public static boolean isAdmin(User user) {
+        if (user == null) {
+            return false;
+        }
+        return user.getRoles().contains("all_access");
+    }
+
+    /**
      * Builds an XContent object representing a map of String keys to Object values.
      *
      * @param xContentBuilder An XContent builder whose position is at the start of the map object to build
@@ -130,21 +139,6 @@ public class ParseUtils {
             }
         }
         xContentBuilder.endObject();
-    }
-
-    /**
-     * Builds an XContent object representing a LLMSpec.
-     *
-     * @param xContentBuilder An XContent builder whose position is at the start of the map object to build
-     * @param llm             LLMSpec
-     * @throws IOException on a build failure
-     */
-    public static void buildLLMMap(XContentBuilder xContentBuilder, LLMSpec llm) throws IOException {
-        String modelId = llm.getModelId();
-        Map<String, String> parameters = llm.getParameters();
-        xContentBuilder.field(MODEL_ID, modelId);
-        xContentBuilder.field(PARAMETERS_FIELD);
-        buildStringToStringMap(xContentBuilder, parameters);
     }
 
     /**
