@@ -15,6 +15,7 @@ import org.opensearch.client.Client;
 import org.opensearch.common.settings.Settings;
 import org.opensearch.common.util.concurrent.ThreadContext;
 import org.opensearch.core.action.ActionListener;
+import org.opensearch.search.builder.SearchSourceBuilder;
 import org.opensearch.tasks.Task;
 import org.opensearch.test.OpenSearchTestCase;
 import org.opensearch.threadpool.ThreadPool;
@@ -34,12 +35,17 @@ public class SearchWorkflowTransportActionTests extends OpenSearchTestCase {
     private SearchWorkflowTransportAction searchWorkflowTransportAction;
     private Client client;
     private ThreadPool threadPool;
+    ThreadContext threadContext;
 
     @Override
     public void setUp() throws Exception {
         super.setUp();
         this.client = mock(Client.class);
-
+        this.threadPool = mock(ThreadPool.class);
+        Settings settings = Settings.builder().build();
+        threadContext = new ThreadContext(settings);
+        when(client.threadPool()).thenReturn(threadPool);
+        when(threadPool.getThreadContext()).thenReturn(threadContext);
         this.searchWorkflowTransportAction = new SearchWorkflowTransportAction(
             mock(TransportService.class),
             mock(ActionFilters.class),
@@ -73,6 +79,8 @@ public class SearchWorkflowTransportActionTests extends OpenSearchTestCase {
         @SuppressWarnings("unchecked")
         ActionListener<SearchResponse> listener = mock(ActionListener.class);
         SearchRequest searchRequest = new SearchRequest();
+        SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder();
+        searchRequest.source(searchSourceBuilder);
 
         searchWorkflowTransportAction.doExecute(mock(Task.class), searchRequest, listener);
         verify(client, times(1)).search(any(SearchRequest.class), any());

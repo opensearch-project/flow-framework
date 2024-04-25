@@ -23,19 +23,14 @@ import org.opensearch.rest.RestChannel;
 import org.opensearch.rest.RestRequest;
 import org.opensearch.rest.RestResponse;
 import org.opensearch.rest.action.RestResponseListener;
-import org.opensearch.script.Script;
-import org.opensearch.script.ScriptType;
 import org.opensearch.search.builder.SearchSourceBuilder;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 
 import static org.opensearch.core.xcontent.ToXContent.EMPTY_PARAMS;
-import static org.opensearch.flowframework.common.CommonValue.GLOBAL_CONTEXT_INDEX;
 import static org.opensearch.flowframework.common.FlowFrameworkSettings.FLOW_FRAMEWORK_ENABLED;
-import static org.opensearch.flowframework.util.RestHandlerUtils.getSourceContext;
 
 /**
  * Abstract class to handle search request.
@@ -89,22 +84,8 @@ public abstract class AbstractSearchWorkflowAction<T extends ToXContentObject> e
         }
         SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder();
         searchSourceBuilder.parseXContent(request.contentOrSourceParamParser());
-        searchSourceBuilder.fetchSource(getSourceContext(request, searchSourceBuilder));
         searchSourceBuilder.seqNoAndPrimaryTerm(true).version(true);
         searchSourceBuilder.timeout(flowFrameworkSettings.getRequestTimeout());
-
-        // Apply credential filter when searching templates
-        if (index.equals(GLOBAL_CONTEXT_INDEX)) {
-            searchSourceBuilder.scriptField(
-                "filter",
-                new Script(
-                    ScriptType.INLINE,
-                    "painless",
-                    "def filteredSource = new HashMap(params._source); def workflows = filteredSource.get(\"workflows\"); if (workflows != null) { def provision = workflows.get(\"provision\"); if (provision != null) { def nodes = provision.get(\"nodes\"); if (nodes != null) { for (node in nodes) { def userInputs = node.get(\"user_inputs\"); if (userInputs != null) { userInputs.remove(\"credential\"); } } } } } return filteredSource;",
-                    Collections.emptyMap()
-                )
-            );
-        }
 
         SearchRequest searchRequest = new SearchRequest().source(searchSourceBuilder).indices(index);
         return channel -> client.execute(actionType, searchRequest, search(channel));
