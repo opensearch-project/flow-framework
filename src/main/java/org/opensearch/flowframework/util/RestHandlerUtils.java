@@ -20,13 +20,16 @@ import org.opensearch.search.fetch.subphase.FetchSourceContext;
  */
 public class RestHandlerUtils {
 
+    /** Path to credential field **/
+    private static final String PATH_TO_CREDENTIAL_FIELD = "workflows.provision.nodes.user_inputs.credential";
+
     /** Fields that need to be excluded from the Search Response*/
-    public static final String[] DASHBOARD_EXCLUDES = new String[] {
+    private static final String[] DASHBOARD_EXCLUDES = new String[] {
         CommonValue.USER_FIELD,
         CommonValue.UI_METADATA_FIELD,
-        CommonValue.PATH_TO_CREDENTIAL_FIELD };
+        PATH_TO_CREDENTIAL_FIELD };
 
-    public static final String[] EXCLUDES = new String[] { CommonValue.USER_FIELD, CommonValue.PATH_TO_CREDENTIAL_FIELD };
+    private static final String[] EXCLUDES = new String[] { CommonValue.USER_FIELD, PATH_TO_CREDENTIAL_FIELD };
 
     private RestHandlerUtils() {}
 

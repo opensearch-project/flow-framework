@@ -48,8 +48,6 @@ public class CommonValue {
     public static final String CREATE_TIME = "create_time";
     /** The template field name for the user who created the workflow **/
     public static final String USER_FIELD = "user";
-    /** Path to credential field **/
-    public static final String PATH_TO_CREDENTIAL_FIELD = "workflows.provision.nodes.user_inputs.credential";
     /** The created time field */
     public static final String CREATED_TIME = "created_time";
     /** The last updated time field */
