@@ -8,6 +8,7 @@
  */
 package org.opensearch.flowframework.workflow;
 
+import org.opensearch.ResourceNotFoundException;
 import org.opensearch.action.admin.indices.create.CreateIndexRequest;
 import org.opensearch.action.admin.indices.create.CreateIndexResponse;
 import org.opensearch.action.support.PlainActionFuture;
@@ -24,6 +25,7 @@ import org.opensearch.core.index.shard.ShardId;
 import org.opensearch.flowframework.indices.FlowFrameworkIndicesHandler;
 import org.opensearch.test.OpenSearchTestCase;
 import org.opensearch.threadpool.ThreadPool;
+import org.opensearch.transport.RemoteTransportException;
 
 import java.io.IOException;
 import java.util.Collections;
@@ -133,6 +135,27 @@ public class CreateIndexStepTests extends OpenSearchTestCase {
         verify(indicesAdminClient, times(1)).create(any(CreateIndexRequest.class), actionListenerCaptor.capture());
 
         actionListenerCaptor.getValue().onFailure(new Exception("Failed to create an index"));
+
+        assertTrue(future.isDone());
+        ExecutionException ex = assertThrows(ExecutionException.class, () -> future.get().getContent());
+        assertTrue(ex.getCause() instanceof Exception);
+        assertEquals("Failed to create the index demo", ex.getCause().getMessage());
+    }
+
+    public void testCreateIndexStepUnsafeFailure() throws ExecutionException, InterruptedException, IOException {
+        @SuppressWarnings({ "unchecked" })
+        ArgumentCaptor<ActionListener<CreateIndexResponse>> actionListenerCaptor = ArgumentCaptor.forClass(ActionListener.class);
+        PlainActionFuture<WorkflowData> future = createIndexStep.execute(
+            inputData.getNodeId(),
+            inputData,
+            Collections.emptyMap(),
+            Collections.emptyMap(),
+            Collections.emptyMap()
+        );
+        assertFalse(future.isDone());
+        verify(indicesAdminClient, times(1)).create(any(CreateIndexRequest.class), actionListenerCaptor.capture());
+
+        actionListenerCaptor.getValue().onFailure(new RemoteTransportException("test", new ResourceNotFoundException("test")));
 
         assertTrue(future.isDone());
         ExecutionException ex = assertThrows(ExecutionException.class, () -> future.get().getContent());

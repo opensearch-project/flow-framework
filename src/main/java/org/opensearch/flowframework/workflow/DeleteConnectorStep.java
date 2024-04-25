@@ -24,7 +24,7 @@ import java.util.Map;
 import java.util.Set;
 
 import static org.opensearch.flowframework.common.WorkflowResources.CONNECTOR_ID;
-import static org.opensearch.flowframework.exception.WorkflowStepException.getException;
+import static org.opensearch.flowframework.exception.WorkflowStepException.getSafeException;
 
 /**
  * Step to delete a connector for a remote model
@@ -84,7 +84,7 @@ public class DeleteConnectorStep implements WorkflowStep {
 
                 @Override
                 public void onFailure(Exception ex) {
-                    Exception e = getException(ex);
+                    Exception e = getSafeException(ex);
                     String errorMessage = (e == null ? "Failed to delete connector " + connectorId : e.getMessage());
                     logger.error(errorMessage, e);
                     deleteConnectorFuture.onFailure(new WorkflowStepException(errorMessage, ExceptionsHelper.status(e)));

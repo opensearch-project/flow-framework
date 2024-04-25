@@ -73,7 +73,7 @@ public class WorkflowStepException extends FlowFrameworkException implements ToX
      * @param ex exception
      * @return exception if safe
      */
-    public static Exception getException(Exception ex) {
+    public static Exception getSafeException(Exception ex) {
         if (ex instanceof IllegalArgumentException
             || ex instanceof OpenSearchStatusException
             || ex instanceof OpenSearchParseException

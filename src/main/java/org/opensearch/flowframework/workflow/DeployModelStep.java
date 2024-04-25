@@ -29,7 +29,7 @@ import java.util.Set;
 
 import static org.opensearch.flowframework.common.WorkflowResources.MODEL_ID;
 import static org.opensearch.flowframework.common.WorkflowResources.getResourceByWorkflowStep;
-import static org.opensearch.flowframework.exception.WorkflowStepException.getException;
+import static org.opensearch.flowframework.exception.WorkflowStepException.getSafeException;
 
 /**
  * Step to deploy a model
@@ -117,7 +117,7 @@ public class DeployModelStep extends AbstractRetryableWorkflowStep {
 
                 @Override
                 public void onFailure(Exception ex) {
-                    Exception e = getException(ex);
+                    Exception e = getSafeException(ex);
                     String errorMessage = (e == null ? "Failed to deploy model " + modelId : e.getMessage());
                     logger.error(errorMessage, e);
                     deployModelFuture.onFailure(new WorkflowStepException(errorMessage, ExceptionsHelper.status(e)));

@@ -38,7 +38,7 @@ import static org.opensearch.flowframework.common.CommonValue.REGISTER_MODEL_STA
 import static org.opensearch.flowframework.common.WorkflowResources.CONNECTOR_ID;
 import static org.opensearch.flowframework.common.WorkflowResources.MODEL_GROUP_ID;
 import static org.opensearch.flowframework.common.WorkflowResources.getResourceByWorkflowStep;
-import static org.opensearch.flowframework.exception.WorkflowStepException.getException;
+import static org.opensearch.flowframework.exception.WorkflowStepException.getSafeException;
 
 /**
  * Step to register a remote model
@@ -186,7 +186,7 @@ public class RegisterRemoteModelStep implements WorkflowStep {
 
                 @Override
                 public void onFailure(Exception ex) {
-                    Exception e = getException(ex);
+                    Exception e = getSafeException(ex);
                     String errorMessage = (e == null ? "Failed to register remote model" : e.getMessage());
                     logger.error(errorMessage, e);
                     registerRemoteModelFuture.onFailure(new WorkflowStepException(errorMessage, ExceptionsHelper.status(e)));
