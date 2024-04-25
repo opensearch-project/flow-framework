@@ -122,7 +122,7 @@ public class EncryptorUtils {
     /**
      * Applies the given cipher function on template credentials
      * @param template the template to process
-     * @param cipher the encryption/decryption function to apply on credential values
+     * @param cipherFunction the encryption/decryption function to apply on credential values
      * @return template with encrypted credentials
      */
     private Template processTemplateCredentials(Template template, Function<String, String> cipherFunction) {
@@ -204,9 +204,29 @@ public class EncryptorUtils {
      * @param template the template
      * @return the redacted template
      */
-    public Template redactTemplateCredentials(Template template) {
+    public Template redactTemplateSecuredFields(Template template) {
+        Template updatedTemplate = null;
+
+        if (template.getUser() != null) {
+            updatedTemplate = new Template.Builder(template).name(template.name())
+                .description(template.description())
+                .useCase(template.useCase())
+                .templateVersion(template.templateVersion())
+                .user(null)
+                .uiMetadata(template.getUiMetadata())
+                .compatibilityVersion(template.compatibilityVersion())
+                .workflows(template.workflows())
+                .createdTime(template.createdTime())
+                .lastUpdatedTime(template.lastUpdatedTime())
+                .lastProvisionedTime(template.lastProvisionedTime())
+                .build();
+        } else {
+            updatedTemplate = template;
+        }
+
         Map<String, Workflow> processedWorkflows = new HashMap<>();
-        for (Map.Entry<String, Workflow> entry : template.workflows().entrySet()) {
+
+        for (Map.Entry<String, Workflow> entry : updatedTemplate.workflows().entrySet()) {
 
             List<WorkflowNode> processedNodes = new ArrayList<>();
             for (WorkflowNode node : entry.getValue().nodes()) {
@@ -227,7 +247,7 @@ public class EncryptorUtils {
             processedWorkflows.put(entry.getKey(), new Workflow(entry.getValue().userParams(), processedNodes, entry.getValue().edges()));
         }
 
-        return new Template.Builder(template).workflows(processedWorkflows).build();
+        return new Template.Builder(updatedTemplate).workflows(processedWorkflows).build();
     }
 
     /**

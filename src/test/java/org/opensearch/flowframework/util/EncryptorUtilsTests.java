@@ -200,10 +200,21 @@ public class EncryptorUtilsTests extends OpenSearchTestCase {
         assertNotNull(node.userInputs().get(CREDENTIAL_FIELD));
 
         // Redact template with credential field
-        Template redactedTemplate = encryptorUtils.redactTemplateCredentials(testTemplate);
+        Template redactedTemplate = encryptorUtils.redactTemplateSecuredFields(testTemplate);
 
         // Validate the credential field has been removed
         WorkflowNode redactedNode = redactedTemplate.workflows().get("provision").nodes().get(0);
         assertNull(redactedNode.userInputs().get(CREDENTIAL_FIELD));
+    }
+
+    public void testRedactTemplateUserField() {
+        // Confirm user is present in the non-redacted template
+        assertNotNull(testTemplate.getUser());
+
+        // Redact template with user field
+        Template redactedTemplate = encryptorUtils.redactTemplateSecuredFields(testTemplate);
+
+        // Validate the user field has been removed
+        assertNull(redactedTemplate.getUser());
     }
 }

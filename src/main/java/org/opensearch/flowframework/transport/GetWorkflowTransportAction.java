@@ -80,7 +80,7 @@ public class GetWorkflowTransportAction extends HandledTransportAction<WorkflowR
                         listener.onFailure(new FlowFrameworkException(errorMessage, RestStatus.NOT_FOUND));
                     } else {
                         // Remove any credential from response
-                        Template template = encryptorUtils.redactTemplateCredentials(Template.parse(response.getSourceAsString()));
+                        Template template = encryptorUtils.redactTemplateSecuredFields(Template.parse(response.getSourceAsString()));
                         listener.onResponse(new GetWorkflowResponse(template));
                     }
                 }, exception -> {
