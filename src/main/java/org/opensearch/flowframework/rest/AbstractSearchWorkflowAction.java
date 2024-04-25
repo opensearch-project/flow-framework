@@ -31,7 +31,6 @@ import java.util.List;
 
 import static org.opensearch.core.xcontent.ToXContent.EMPTY_PARAMS;
 import static org.opensearch.flowframework.common.FlowFrameworkSettings.FLOW_FRAMEWORK_ENABLED;
-import static org.opensearch.flowframework.util.RestHandlerUtils.getSourceContext;
 
 /**
  * Abstract class to handle search request.
@@ -85,7 +84,6 @@ public abstract class AbstractSearchWorkflowAction<T extends ToXContentObject> e
         }
         SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder();
         searchSourceBuilder.parseXContent(request.contentOrSourceParamParser());
-        searchSourceBuilder.fetchSource(getSourceContext(request, searchSourceBuilder));
         searchSourceBuilder.seqNoAndPrimaryTerm(true).version(true);
         searchSourceBuilder.timeout(flowFrameworkSettings.getRequestTimeout());
 
