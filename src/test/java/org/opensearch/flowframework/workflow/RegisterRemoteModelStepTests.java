@@ -185,7 +185,7 @@ public class RegisterRemoteModelStepTests extends OpenSearchTestCase {
     public void testRegisterRemoteModelFailure() {
         doAnswer(invocation -> {
             ActionListener<MLRegisterModelResponse> actionListener = invocation.getArgument(1);
-            actionListener.onFailure(new IllegalArgumentException("test"));
+            actionListener.onFailure(new IllegalArgumentException("Failed to register remote model"));
             return null;
         }).when(mlNodeClient).register(any(MLRegisterModelInput.class), any());
 

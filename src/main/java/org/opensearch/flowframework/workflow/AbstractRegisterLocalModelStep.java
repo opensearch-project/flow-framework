@@ -49,6 +49,7 @@ import static org.opensearch.flowframework.common.CommonValue.URL;
 import static org.opensearch.flowframework.common.CommonValue.VERSION_FIELD;
 import static org.opensearch.flowframework.common.WorkflowResources.MODEL_GROUP_ID;
 import static org.opensearch.flowframework.common.WorkflowResources.getResourceByWorkflowStep;
+import static org.opensearch.flowframework.exception.WorkflowStepException.getException;
 
 /**
  * Abstract local model registration step
@@ -215,9 +216,10 @@ public abstract class AbstractRegisterLocalModelStep extends AbstractRetryableWo
                     }, exception -> { registerLocalModelFuture.onFailure(exception); })
                 );
             }, exception -> {
-                String errorMessage = "Failed to register local model in step " + currentNodeId;
-                logger.error(errorMessage, exception);
-                registerLocalModelFuture.onFailure(new WorkflowStepException(errorMessage, ExceptionsHelper.status(exception)));
+                Exception e = getException(exception);
+                String errorMessage = (e == null ? "Failed to register local model in step " + currentNodeId : e.getMessage());
+                logger.error(errorMessage, e);
+                registerLocalModelFuture.onFailure(new WorkflowStepException(errorMessage, ExceptionsHelper.status(e)));
             }));
         } catch (IllegalArgumentException iae) {
             registerLocalModelFuture.onFailure(new WorkflowStepException(iae.getMessage(), RestStatus.BAD_REQUEST));
