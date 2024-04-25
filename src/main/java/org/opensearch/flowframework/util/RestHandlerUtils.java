@@ -9,8 +9,9 @@
 package org.opensearch.flowframework.util;
 
 import org.apache.commons.lang3.ArrayUtils;
+import org.opensearch.commons.authuser.User;
+import org.opensearch.core.common.Strings;
 import org.opensearch.flowframework.common.CommonValue;
-import org.opensearch.rest.RestRequest;
 import org.opensearch.search.builder.SearchSourceBuilder;
 import org.opensearch.search.fetch.subphase.FetchSourceContext;
 
@@ -19,26 +20,36 @@ import org.opensearch.search.fetch.subphase.FetchSourceContext;
  */
 public class RestHandlerUtils {
 
+    /** Path to credential field **/
+    private static final String PATH_TO_CREDENTIAL_FIELD = "workflows.provision.nodes.user_inputs.credential";
+
     /** Fields that need to be excluded from the Search Response*/
-    public static final String[] USER_EXCLUDE = new String[] { CommonValue.USER_FIELD, CommonValue.UI_METADATA_FIELD };
+    private static final String[] DASHBOARD_EXCLUDES = new String[] {
+        CommonValue.USER_FIELD,
+        CommonValue.UI_METADATA_FIELD,
+        PATH_TO_CREDENTIAL_FIELD };
+
+    private static final String[] EXCLUDES = new String[] { CommonValue.USER_FIELD, PATH_TO_CREDENTIAL_FIELD };
 
     private RestHandlerUtils() {}
 
     /**
      * Creates a source context and include/exclude information to be shared based on the user
      *
-     * @param request the REST request
+     * @param user User
      * @param searchSourceBuilder the search request source builder
      * @return modified sources
      */
-    public static FetchSourceContext getSourceContext(RestRequest request, SearchSourceBuilder searchSourceBuilder) {
-        // TODO
-        // 1. check if the request came from dashboard and exclude UI_METADATA
+    public static FetchSourceContext getSourceContext(User user, SearchSourceBuilder searchSourceBuilder) {
         if (searchSourceBuilder.fetchSource() != null) {
-            String[] newArray = (String[]) ArrayUtils.addAll(searchSourceBuilder.fetchSource().excludes(), USER_EXCLUDE);
+            String[] newArray = (String[]) ArrayUtils.addAll(searchSourceBuilder.fetchSource().excludes(), DASHBOARD_EXCLUDES);
             return new FetchSourceContext(true, searchSourceBuilder.fetchSource().includes(), newArray);
         } else {
-            return null;
+            // When user does not set the _source field in search api request, searchSourceBuilder.fetchSource becomes null
+            if (ParseUtils.isAdmin(user)) {
+                return new FetchSourceContext(true, Strings.EMPTY_ARRAY, new String[] { PATH_TO_CREDENTIAL_FIELD });
+            }
+            return new FetchSourceContext(true, Strings.EMPTY_ARRAY, EXCLUDES);
         }
     }
 }

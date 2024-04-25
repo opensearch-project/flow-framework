@@ -17,9 +17,14 @@ import org.opensearch.action.support.HandledTransportAction;
 import org.opensearch.client.Client;
 import org.opensearch.common.inject.Inject;
 import org.opensearch.common.util.concurrent.ThreadContext;
+import org.opensearch.commons.authuser.User;
 import org.opensearch.core.action.ActionListener;
+import org.opensearch.flowframework.util.ParseUtils;
+import org.opensearch.search.builder.SearchSourceBuilder;
 import org.opensearch.tasks.Task;
 import org.opensearch.transport.TransportService;
+
+import static org.opensearch.flowframework.util.RestHandlerUtils.getSourceContext;
 
 /**
  * Transport Action to search workflows created
@@ -45,8 +50,11 @@ public class SearchWorkflowTransportAction extends HandledTransportAction<Search
     @Override
     protected void doExecute(Task task, SearchRequest request, ActionListener<SearchResponse> actionListener) {
         // AccessController should take care of letting the user with right permission to view the workflow
+        User user = ParseUtils.getUserContext(client);
         try (ThreadContext.StoredContext context = client.threadPool().getThreadContext().stashContext()) {
             logger.info("Searching workflows in global context");
+            SearchSourceBuilder searchSourceBuilder = request.source();
+            searchSourceBuilder.fetchSource(getSourceContext(user, searchSourceBuilder));
             client.search(request, ActionListener.runBefore(actionListener, context::restore));
         } catch (Exception e) {
             logger.error("Failed to search workflows in global context", e);
