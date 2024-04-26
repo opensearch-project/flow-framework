@@ -48,6 +48,7 @@ import static org.opensearch.flowframework.common.CommonValue.TOOLS_ORDER_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.TYPE;
 import static org.opensearch.flowframework.common.WorkflowResources.MODEL_ID;
 import static org.opensearch.flowframework.common.WorkflowResources.getResourceByWorkflowStep;
+import static org.opensearch.flowframework.exception.WorkflowStepException.getSafeException;
 import static org.opensearch.flowframework.util.ParseUtils.getStringToStringMap;
 
 /**
@@ -133,8 +134,9 @@ public class RegisterAgentStep implements WorkflowStep {
             }
 
             @Override
-            public void onFailure(Exception e) {
-                String errorMessage = "Failed to register the agent";
+            public void onFailure(Exception ex) {
+                Exception e = getSafeException(ex);
+                String errorMessage = (e == null ? "Failed to register the agent" : e.getMessage());
                 logger.error(errorMessage, e);
                 registerAgentModelFuture.onFailure(new WorkflowStepException(errorMessage, ExceptionsHelper.status(e)));
             }

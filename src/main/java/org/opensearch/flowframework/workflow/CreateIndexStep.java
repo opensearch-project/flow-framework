@@ -38,6 +38,7 @@ import static java.util.Collections.singletonMap;
 import static org.opensearch.flowframework.common.CommonValue.CONFIGURATIONS;
 import static org.opensearch.flowframework.common.WorkflowResources.INDEX_NAME;
 import static org.opensearch.flowframework.common.WorkflowResources.getResourceByWorkflowStep;
+import static org.opensearch.flowframework.exception.WorkflowStepException.getSafeException;
 
 /**
  * Step to create an index
@@ -136,10 +137,11 @@ public class CreateIndexStep implements WorkflowStep {
                     logger.error(errorMessage, ex);
                     createIndexFuture.onFailure(new FlowFrameworkException(errorMessage, ExceptionsHelper.status(ex)));
                 }
-            }, e -> {
-                String errorMessage = "Failed to create the index " + indexName;
+            }, ex -> {
+                Exception e = getSafeException(ex);
+                String errorMessage = (e == null ? "Failed to create the index " + indexName : e.getMessage());
                 logger.error(errorMessage, e);
-                createIndexFuture.onFailure(new FlowFrameworkException(errorMessage, ExceptionsHelper.status(e)));
+                createIndexFuture.onFailure(new WorkflowStepException(errorMessage, ExceptionsHelper.status(e)));
             }));
         } catch (Exception e) {
             createIndexFuture.onFailure(e);

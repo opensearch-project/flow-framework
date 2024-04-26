@@ -34,6 +34,7 @@ import static org.opensearch.flowframework.common.CommonValue.CONFIGURATIONS;
 import static org.opensearch.flowframework.common.WorkflowResources.MODEL_ID;
 import static org.opensearch.flowframework.common.WorkflowResources.PIPELINE_ID;
 import static org.opensearch.flowframework.common.WorkflowResources.getResourceByWorkflowStep;
+import static org.opensearch.flowframework.exception.WorkflowStepException.getSafeException;
 
 /**
  * Step to create either a search or ingest pipeline
@@ -137,8 +138,9 @@ public abstract class AbstractCreatePipelineStep implements WorkflowStep {
                 }
 
                 @Override
-                public void onFailure(Exception e) {
-                    String errorMessage = "Failed step " + pipelineToBeCreated;
+                public void onFailure(Exception ex) {
+                    Exception e = getSafeException(ex);
+                    String errorMessage = (e == null ? "Failed step " + pipelineToBeCreated : e.getMessage());
                     logger.error(errorMessage, e);
                     createPipelineFuture.onFailure(new WorkflowStepException(errorMessage, ExceptionsHelper.status(e)));
                 }

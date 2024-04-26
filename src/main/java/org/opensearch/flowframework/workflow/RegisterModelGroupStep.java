@@ -38,6 +38,7 @@ import static org.opensearch.flowframework.common.CommonValue.MODEL_ACCESS_MODE;
 import static org.opensearch.flowframework.common.CommonValue.MODEL_GROUP_STATUS;
 import static org.opensearch.flowframework.common.CommonValue.NAME_FIELD;
 import static org.opensearch.flowframework.common.WorkflowResources.getResourceByWorkflowStep;
+import static org.opensearch.flowframework.exception.WorkflowStepException.getSafeException;
 
 /**
  * Step to register a model group
@@ -118,8 +119,9 @@ public class RegisterModelGroupStep implements WorkflowStep {
             }
 
             @Override
-            public void onFailure(Exception e) {
-                String errorMessage = "Failed to register model group";
+            public void onFailure(Exception ex) {
+                Exception e = getSafeException(ex);
+                String errorMessage = (e == null ? "Failed to register model group" : e.getMessage());
                 logger.error(errorMessage, e);
                 registerModelGroupFuture.onFailure(new WorkflowStepException(errorMessage, ExceptionsHelper.status(e)));
             }
