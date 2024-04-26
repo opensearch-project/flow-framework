@@ -44,6 +44,7 @@ import static org.opensearch.flowframework.common.CommonValue.PARAMETERS_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.PROTOCOL_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.VERSION_FIELD;
 import static org.opensearch.flowframework.common.WorkflowResources.getResourceByWorkflowStep;
+import static org.opensearch.flowframework.exception.WorkflowStepException.getSafeException;
 import static org.opensearch.flowframework.util.ParseUtils.getStringToStringMap;
 
 /**
@@ -121,8 +122,9 @@ public class CreateConnectorStep implements WorkflowStep {
             }
 
             @Override
-            public void onFailure(Exception e) {
-                String errorMessage = "Failed to create connector";
+            public void onFailure(Exception ex) {
+                Exception e = getSafeException(ex);
+                String errorMessage = (e == null ? "Failed to create connector" : ex.getMessage());
                 logger.error(errorMessage, e);
                 createConnectorFuture.onFailure(new WorkflowStepException(errorMessage, ExceptionsHelper.status(e)));
             }

@@ -472,8 +472,6 @@ public class FlowFrameworkRestApiIT extends FlowFrameworkRestTestCase {
 
         assertEquals(RestStatus.OK, TestHelpers.restStatus(response));
         getAndAssertWorkflowStatus(client(), workflowId, State.FAILED, ProvisioningProgress.FAILED);
-        String error = getAndWorkflowStatusError(client(), workflowId);
-        assertTrue(error.contains("org.opensearch.flowframework.exception.WorkflowStepException during step create_ingest_pipeline"));
     }
 
     public void testAllDefaultUseCasesCreation() throws Exception {

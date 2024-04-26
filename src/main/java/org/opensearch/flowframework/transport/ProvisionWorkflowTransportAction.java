@@ -266,7 +266,7 @@ public class ProvisionWorkflowTransportAction extends HandledTransportAction<Wor
                 status = ExceptionsHelper.status(ex);
             }
             logger.error("Provisioning failed for workflow {} during step {}.", workflowId, currentStepId, ex);
-            String errorMessage = (ex.getCause() == null ? ex.getClass().getName() : ex.getCause().getClass().getName())
+            String errorMessage = (ex.getCause() == null ? ex.getMessage() : ex.getCause().getClass().getName())
                 + " during step "
                 + currentStepId
                 + ", restStatus: "

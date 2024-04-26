@@ -10,6 +10,7 @@ package org.opensearch.flowframework.workflow;
 
 import com.carrotsearch.randomizedtesting.annotations.ThreadLeakScope;
 
+import org.opensearch.ResourceNotFoundException;
 import org.opensearch.action.support.PlainActionFuture;
 import org.opensearch.action.update.UpdateResponse;
 import org.opensearch.core.action.ActionListener;
@@ -23,6 +24,7 @@ import org.opensearch.ml.common.MLTaskState;
 import org.opensearch.ml.common.transport.register.MLRegisterModelInput;
 import org.opensearch.ml.common.transport.register.MLRegisterModelResponse;
 import org.opensearch.test.OpenSearchTestCase;
+import org.opensearch.transport.RemoteTransportException;
 
 import java.io.IOException;
 import java.util.Collections;
@@ -185,7 +187,28 @@ public class RegisterRemoteModelStepTests extends OpenSearchTestCase {
     public void testRegisterRemoteModelFailure() {
         doAnswer(invocation -> {
             ActionListener<MLRegisterModelResponse> actionListener = invocation.getArgument(1);
-            actionListener.onFailure(new IllegalArgumentException("test"));
+            actionListener.onFailure(new IllegalArgumentException("Failed to register remote model"));
+            return null;
+        }).when(mlNodeClient).register(any(MLRegisterModelInput.class), any());
+
+        PlainActionFuture<WorkflowData> future = this.registerRemoteModelStep.execute(
+            workflowData.getNodeId(),
+            workflowData,
+            Collections.emptyMap(),
+            Collections.emptyMap(),
+            Collections.emptyMap()
+        );
+        assertTrue(future.isDone());
+        ExecutionException ex = expectThrows(ExecutionException.class, () -> future.get().getClass());
+        assertTrue(ex.getCause() instanceof FlowFrameworkException);
+        assertEquals("Failed to register remote model", ex.getCause().getMessage());
+
+    }
+
+    public void testRegisterRemoteModelUnSafeFailure() {
+        doAnswer(invocation -> {
+            ActionListener<MLRegisterModelResponse> actionListener = invocation.getArgument(1);
+            actionListener.onFailure(new RemoteTransportException("test", new ResourceNotFoundException("test")));
             return null;
         }).when(mlNodeClient).register(any(MLRegisterModelInput.class), any());
 

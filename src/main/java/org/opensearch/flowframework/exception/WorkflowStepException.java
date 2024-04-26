@@ -8,6 +8,9 @@
  */
 package org.opensearch.flowframework.exception;
 
+import org.opensearch.OpenSearchException;
+import org.opensearch.OpenSearchParseException;
+import org.opensearch.OpenSearchStatusException;
 import org.opensearch.core.rest.RestStatus;
 import org.opensearch.core.xcontent.ToXContentObject;
 import org.opensearch.core.xcontent.XContentBuilder;
@@ -63,5 +66,20 @@ public class WorkflowStepException extends FlowFrameworkException implements ToX
     @Override
     public XContentBuilder toXContent(XContentBuilder builder, Params params) throws IOException {
         return builder.startObject().field("error", this.getMessage()).endObject();
+    }
+
+    /**
+     * Getter for safe exceptions
+     * @param ex exception
+     * @return exception if safe
+     */
+    public static Exception getSafeException(Exception ex) {
+        if (ex instanceof IllegalArgumentException
+            || ex instanceof OpenSearchStatusException
+            || ex instanceof OpenSearchParseException
+            || (ex instanceof OpenSearchException && ex.getCause() instanceof OpenSearchParseException)) {
+            return ex;
+        }
+        return null;
     }
 }
