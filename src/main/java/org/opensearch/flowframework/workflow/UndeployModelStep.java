@@ -29,6 +29,7 @@ import java.util.stream.Collectors;
 
 import static org.opensearch.flowframework.common.CommonValue.SUCCESS;
 import static org.opensearch.flowframework.common.WorkflowResources.MODEL_ID;
+import static org.opensearch.flowframework.exception.WorkflowStepException.getSafeException;
 
 /**
  * Step to undeploy model
@@ -96,8 +97,9 @@ public class UndeployModelStep implements WorkflowStep {
                 }
 
                 @Override
-                public void onFailure(Exception e) {
-                    String errorMessage = "Failed to undeploy model " + modelId;
+                public void onFailure(Exception ex) {
+                    Exception e = getSafeException(ex);
+                    String errorMessage = (e == null ? "Failed to undeploy model " + modelId : e.getMessage());
                     logger.error(errorMessage, e);
                     undeployModelFuture.onFailure(new WorkflowStepException(errorMessage, ExceptionsHelper.status(e)));
                 }

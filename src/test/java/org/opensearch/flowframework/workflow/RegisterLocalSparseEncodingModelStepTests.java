@@ -222,7 +222,7 @@ public class RegisterLocalSparseEncodingModelStepTests extends OpenSearchTestCas
 
         doAnswer(invocation -> {
             ActionListener<MLRegisterModelResponse> actionListener = invocation.getArgument(1);
-            actionListener.onFailure(new IllegalArgumentException("test"));
+            actionListener.onFailure(new IllegalArgumentException("Failed to register local model in step test-node-id"));
             return null;
         }).when(machineLearningNodeClient).register(any(MLRegisterModelInput.class), any());
 

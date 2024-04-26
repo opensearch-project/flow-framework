@@ -24,6 +24,7 @@ import java.util.Map;
 import java.util.Set;
 
 import static org.opensearch.flowframework.common.WorkflowResources.MODEL_ID;
+import static org.opensearch.flowframework.exception.WorkflowStepException.getSafeException;
 
 /**
  * Step to delete a model for a remote model
@@ -83,8 +84,9 @@ public class DeleteModelStep implements WorkflowStep {
                 }
 
                 @Override
-                public void onFailure(Exception e) {
-                    String errorMessage = "Failed to delete model " + modelId;
+                public void onFailure(Exception ex) {
+                    Exception e = getSafeException(ex);
+                    String errorMessage = (e == null ? "Failed to delete model " + modelId : e.getMessage());
                     logger.error(errorMessage, e);
                     deleteModelFuture.onFailure(new WorkflowStepException(errorMessage, ExceptionsHelper.status(e)));
                 }

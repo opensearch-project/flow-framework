@@ -24,6 +24,7 @@ import java.util.Map;
 import java.util.Set;
 
 import static org.opensearch.flowframework.common.WorkflowResources.AGENT_ID;
+import static org.opensearch.flowframework.exception.WorkflowStepException.getSafeException;
 
 /**
  * Step to delete a agent for a remote model
@@ -82,8 +83,9 @@ public class DeleteAgentStep implements WorkflowStep {
                 }
 
                 @Override
-                public void onFailure(Exception e) {
-                    String errorMessage = "Failed to delete agent " + agentId;
+                public void onFailure(Exception ex) {
+                    Exception e = getSafeException(ex);
+                    String errorMessage = (e == null ? "Failed to delete agent " + agentId : e.getMessage());
                     logger.error(errorMessage, e);
                     deleteAgentFuture.onFailure(new WorkflowStepException(errorMessage, ExceptionsHelper.status(e)));
                 }
