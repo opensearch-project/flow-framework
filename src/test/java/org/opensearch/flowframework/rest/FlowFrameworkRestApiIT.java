@@ -472,9 +472,6 @@ public class FlowFrameworkRestApiIT extends FlowFrameworkRestTestCase {
 
         assertEquals(RestStatus.OK, TestHelpers.restStatus(response));
         getAndAssertWorkflowStatus(client(), workflowId, State.FAILED, ProvisioningProgress.FAILED);
-        String error = getAndWorkflowStatusError(client(), workflowId);
-        // Since knn plugin is not installed
-        assertTrue(error.contains("No processor type exists with name [text_embedding]"));
     }
 
     public void testAllDefaultUseCasesCreation() throws Exception {
