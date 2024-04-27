@@ -26,6 +26,8 @@ Inspired from [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 - Throw the correct error message in status API for WorkflowSteps ([#676](https://github.com/opensearch-project/flow-framework/pull/676))
 
 ### Infrastructure
+- Switch macos runner to macos-13 from macos-latest since macos-latest is now arm64 ([#686](https://github.com/opensearch-project/flow-framework/pull/686))
+
 ### Documentation
 ### Maintenance
 ### Refactoring
