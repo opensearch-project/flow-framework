@@ -129,13 +129,37 @@ public class FlowFrameworkSecureRestApiIT extends FlowFrameworkRestTestCase {
         response = getWorkflowStatus(fullAccessClient(), workflowId, false);
         assertEquals(RestStatus.OK, TestHelpers.restStatus(response));
 
+        // Invoke delete API while state still exists
+        response = deleteWorkflow(fullAccessClient(), workflowId);
+        assertEquals(RestStatus.OK, TestHelpers.restStatus(response));
+
+        // Invoke status API
+        response = getWorkflowStatus(fullAccessClient(), workflowId, false);
+        assertEquals(RestStatus.OK, TestHelpers.restStatus(response));
+
         // Invoke deprovision API
         response = deprovisionWorkflow(fullAccessClient(), workflowId);
         assertEquals(RestStatus.OK, TestHelpers.restStatus(response));
 
-        // Invoke delete API
+        // Invoke status API with failure
+        response = getWorkflowStatus(fullAccessClient(), workflowId, false);
+        assertEquals(RestStatus.NOT_FOUND, TestHelpers.restStatus(response));
+
+        // Recreate the template
+        response = createWorkflow(fullAccessClient(), template);
+        assertEquals(RestStatus.CREATED, TestHelpers.restStatus(response));
+
+        // Invoke status API
+        response = getWorkflowStatus(fullAccessClient(), workflowId, false);
+        assertEquals(RestStatus.OK, TestHelpers.restStatus(response));
+
+        // Invoke delete API while state is NOT_STARTED
         response = deleteWorkflow(fullAccessClient(), workflowId);
         assertEquals(RestStatus.OK, TestHelpers.restStatus(response));
+
+        // Invoke status API with failure
+        response = getWorkflowStatus(fullAccessClient(), workflowId, false);
+        assertEquals(RestStatus.NOT_FOUND, TestHelpers.restStatus(response));
     }
 
     public void testGetWorkflowStepWithFullAccess() throws Exception {

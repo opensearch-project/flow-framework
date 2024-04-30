@@ -292,7 +292,7 @@ public class FlowFrameworkIndicesHandlerTests extends OpenSearchTestCase {
         assertTrue(exceptionCaptor.getValue().getMessage().contains("Failed to parse workflow state"));
     }
 
-    public void testCanDeleteState() {
+    public void testCanDeleteWorkflowStateDoc() {
         String documentId = randomAlphaOfLength(5);
         @SuppressWarnings("unchecked")
         ActionListener<GetResponse> listener = mock(ActionListener.class);
@@ -318,10 +318,10 @@ public class FlowFrameworkIndicesHandlerTests extends OpenSearchTestCase {
             return null;
         }).when(client).get(any(GetRequest.class), any());
 
-        flowFrameworkIndicesHandler.canDeleteState(documentId, canDelete -> { assertTrue(canDelete); }, listener);
+        flowFrameworkIndicesHandler.canDeleteWorkflowStateDoc(documentId, canDelete -> { assertTrue(canDelete); }, listener);
     }
 
-    public void testCanNotDeleteStateInProgress() {
+    public void testCanNotDeleteWorkflowStateDocInProgress() {
         String documentId = randomAlphaOfLength(5);
         @SuppressWarnings("unchecked")
         ActionListener<GetResponse> listener = mock(ActionListener.class);
@@ -347,10 +347,10 @@ public class FlowFrameworkIndicesHandlerTests extends OpenSearchTestCase {
             return null;
         }).when(client).get(any(GetRequest.class), any());
 
-        flowFrameworkIndicesHandler.canDeleteState(documentId, canDelete -> { assertFalse(canDelete); }, listener);
+        flowFrameworkIndicesHandler.canDeleteWorkflowStateDoc(documentId, canDelete -> { assertFalse(canDelete); }, listener);
     }
 
-    public void testCanNotDeleteStateResourcesExist() {
+    public void testCanNotDeleteWorkflowStateDocResourcesExist() {
         String documentId = randomAlphaOfLength(5);
         @SuppressWarnings("unchecked")
         ActionListener<GetResponse> listener = mock(ActionListener.class);
@@ -376,7 +376,7 @@ public class FlowFrameworkIndicesHandlerTests extends OpenSearchTestCase {
             return null;
         }).when(client).get(any(GetRequest.class), any());
 
-        flowFrameworkIndicesHandler.canDeleteState(documentId, canDelete -> { assertFalse(canDelete); }, listener);
+        flowFrameworkIndicesHandler.canDeleteWorkflowStateDoc(documentId, canDelete -> { assertFalse(canDelete); }, listener);
     }
 
     public void testDoesTemplateExist() {

@@ -526,10 +526,10 @@ public class FlowFrameworkIndicesHandler {
      *
      * @param documentId document id
      * @param canDeleteStateConsumer consumer function which will be true if NOT_STARTED or COMPLETED and no resources
-     * @param listener action listener
+     * @param listener action listener from caller to fail on error
      * @param <T> action listener response type
      */
-    public <T> void canDeleteState(String documentId, Consumer<Boolean> canDeleteStateConsumer, ActionListener<T> listener) {
+    public <T> void canDeleteWorkflowStateDoc(String documentId, Consumer<Boolean> canDeleteStateConsumer, ActionListener<T> listener) {
         GetRequest getRequest = new GetRequest(WORKFLOW_STATE_INDEX, documentId);
         try (ThreadContext.StoredContext context = client.threadPool().getThreadContext().stashContext()) {
             client.get(getRequest, ActionListener.wrap(response -> {
