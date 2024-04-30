@@ -226,15 +226,23 @@ public class DeprovisionWorkflowTransportAction extends HandledTransportAction<W
     ) {
         if (remainingResources.isEmpty()) {
             // Successful deprovision, reset state to initial
-            flowFrameworkIndicesHandler.putInitialStateToWorkflowState(
-                workflowId,
-                getUserContext(client),
-                ActionListener.wrap(indexResponse -> {
-                    logger.info("Reset workflow {} state to NOT_STARTED", workflowId);
-                }, exception -> { logger.error("Failed to reset to initial workflow state for {}", workflowId, exception); })
-            );
-            // return workflow ID
-            listener.onResponse(new WorkflowResponse(workflowId));
+            flowFrameworkIndicesHandler.doesTemplateExist(workflowId, templateExists -> {
+                if (Boolean.TRUE.equals(templateExists)) {
+                    flowFrameworkIndicesHandler.putInitialStateToWorkflowState(
+                        workflowId,
+                        getUserContext(client),
+                        ActionListener.wrap(indexResponse -> {
+                            logger.info("Reset workflow {} state to NOT_STARTED", workflowId);
+                        }, exception -> { logger.error("Failed to reset to initial workflow state for {}", workflowId, exception); })
+                    );
+                } else {
+                    flowFrameworkIndicesHandler.deleteFlowFrameworkSystemIndexDoc(workflowId, ActionListener.wrap(deleteResponse -> {
+                        logger.info("Deleted workflow {} state", workflowId);
+                    }, exception -> { logger.error("Failed to delete workflow state for {}", workflowId, exception); }));
+                }
+                // return workflow ID
+                listener.onResponse(new WorkflowResponse(workflowId));
+            }, listener);
         } else {
             // Failed deprovision
             flowFrameworkIndicesHandler.updateFlowFrameworkSystemIndexDoc(
