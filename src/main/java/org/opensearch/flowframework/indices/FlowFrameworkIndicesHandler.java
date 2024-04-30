@@ -598,6 +598,11 @@ public class FlowFrameworkIndicesHandler {
         }
     }
 
+    /**
+     * Deletes a document in the workflow state index
+     * @param documentId the document ID
+     * @param listener action listener
+     */
     public void deleteFlowFrameworkSystemIndexDoc(String documentId, ActionListener<DeleteResponse> listener) {
         if (!doesIndexExist(WORKFLOW_STATE_INDEX)) {
             String errorMessage = "Failed to delete document " + documentId + " due to missing " + WORKFLOW_STATE_INDEX + " index";
