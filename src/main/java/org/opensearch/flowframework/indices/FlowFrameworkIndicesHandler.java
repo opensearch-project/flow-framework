@@ -15,6 +15,8 @@ import org.opensearch.action.admin.indices.create.CreateIndexRequest;
 import org.opensearch.action.admin.indices.create.CreateIndexResponse;
 import org.opensearch.action.admin.indices.mapping.put.PutMappingRequest;
 import org.opensearch.action.admin.indices.settings.put.UpdateSettingsRequest;
+import org.opensearch.action.delete.DeleteRequest;
+import org.opensearch.action.delete.DeleteResponse;
 import org.opensearch.action.get.GetRequest;
 import org.opensearch.action.index.IndexRequest;
 import org.opensearch.action.index.IndexResponse;
@@ -520,6 +522,51 @@ public class FlowFrameworkIndicesHandler {
     }
 
     /**
+     * Check workflow provisioning state and resources to see if state can be deleted with template
+     *
+     * @param documentId document id
+     * @param canDeleteStateConsumer consumer function which will be true if NOT_STARTED or COMPLETED and no resources
+     * @param listener action listener from caller to fail on error
+     * @param <T> action listener response type
+     */
+    public <T> void canDeleteWorkflowStateDoc(String documentId, Consumer<Boolean> canDeleteStateConsumer, ActionListener<T> listener) {
+        GetRequest getRequest = new GetRequest(WORKFLOW_STATE_INDEX, documentId);
+        try (ThreadContext.StoredContext context = client.threadPool().getThreadContext().stashContext()) {
+            client.get(getRequest, ActionListener.wrap(response -> {
+                context.restore();
+                if (!response.isExists()) {
+                    // no need to delete if it's not there to start with
+                    canDeleteStateConsumer.accept(Boolean.FALSE);
+                    return;
+                }
+                try (
+                    XContentParser parser = ParseUtils.createXContentParserFromRegistry(xContentRegistry, response.getSourceAsBytesRef())
+                ) {
+                    ensureExpectedToken(XContentParser.Token.START_OBJECT, parser.nextToken(), parser);
+                    WorkflowState workflowState = WorkflowState.parse(parser);
+                    canDeleteStateConsumer.accept(
+                        workflowState.resourcesCreated().isEmpty()
+                            && !ProvisioningProgress.IN_PROGRESS.equals(
+                                ProvisioningProgress.valueOf(workflowState.getProvisioningProgress())
+                            )
+                    );
+                } catch (Exception e) {
+                    String errorMessage = "Failed to parse workflow state " + documentId;
+                    logger.error(errorMessage, e);
+                    listener.onFailure(new FlowFrameworkException(errorMessage, RestStatus.INTERNAL_SERVER_ERROR));
+                }
+            }, exception -> {
+                logger.error("Failed to get workflow state for {} ", documentId);
+                canDeleteStateConsumer.accept(Boolean.FALSE);
+            }));
+        } catch (Exception e) {
+            String errorMessage = "Failed to retrieve workflow state to check provisioning status";
+            logger.error(errorMessage, e);
+            listener.onFailure(new FlowFrameworkException(errorMessage, ExceptionsHelper.status(e)));
+        }
+    }
+
+    /**
      * Updates a document in the workflow state index
      * @param documentId the document ID
      * @param updatedFields the fields to update the global state index with
@@ -531,7 +578,7 @@ public class FlowFrameworkIndicesHandler {
         ActionListener<UpdateResponse> listener
     ) {
         if (!doesIndexExist(WORKFLOW_STATE_INDEX)) {
-            String errorMessage = "Failed to update document for given workflow due to missing " + WORKFLOW_STATE_INDEX + " index";
+            String errorMessage = "Failed to update document " + documentId + " due to missing " + WORKFLOW_STATE_INDEX + " index";
             logger.error(errorMessage);
             listener.onFailure(new FlowFrameworkException(errorMessage, RestStatus.BAD_REQUEST));
         } else {
@@ -545,6 +592,29 @@ public class FlowFrameworkIndicesHandler {
                 client.update(updateRequest, ActionListener.runBefore(listener, context::restore));
             } catch (Exception e) {
                 String errorMessage = "Failed to update " + WORKFLOW_STATE_INDEX + " entry : " + documentId;
+                logger.error(errorMessage, e);
+                listener.onFailure(new FlowFrameworkException(errorMessage, ExceptionsHelper.status(e)));
+            }
+        }
+    }
+
+    /**
+     * Deletes a document in the workflow state index
+     * @param documentId the document ID
+     * @param listener action listener
+     */
+    public void deleteFlowFrameworkSystemIndexDoc(String documentId, ActionListener<DeleteResponse> listener) {
+        if (!doesIndexExist(WORKFLOW_STATE_INDEX)) {
+            String errorMessage = "Failed to delete document " + documentId + " due to missing " + WORKFLOW_STATE_INDEX + " index";
+            logger.error(errorMessage);
+            listener.onFailure(new FlowFrameworkException(errorMessage, RestStatus.BAD_REQUEST));
+        } else {
+            try (ThreadContext.StoredContext context = client.threadPool().getThreadContext().stashContext()) {
+                DeleteRequest deleteRequest = new DeleteRequest(WORKFLOW_STATE_INDEX, documentId);
+                deleteRequest.setRefreshPolicy(WriteRequest.RefreshPolicy.IMMEDIATE);
+                client.delete(deleteRequest, ActionListener.runBefore(listener, context::restore));
+            } catch (Exception e) {
+                String errorMessage = "Failed to delete " + WORKFLOW_STATE_INDEX + " entry : " + documentId;
                 logger.error(errorMessage, e);
                 listener.onFailure(new FlowFrameworkException(errorMessage, ExceptionsHelper.status(e)));
             }

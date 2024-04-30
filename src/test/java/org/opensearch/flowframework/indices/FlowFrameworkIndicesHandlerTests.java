@@ -9,12 +9,17 @@
 package org.opensearch.flowframework.indices;
 
 import org.opensearch.Version;
+import org.opensearch.action.DocWriteResponse.Result;
 import org.opensearch.action.admin.indices.create.CreateIndexRequest;
 import org.opensearch.action.admin.indices.mapping.put.PutMappingRequest;
+import org.opensearch.action.delete.DeleteRequest;
+import org.opensearch.action.delete.DeleteResponse;
 import org.opensearch.action.get.GetRequest;
 import org.opensearch.action.get.GetResponse;
 import org.opensearch.action.index.IndexResponse;
 import org.opensearch.action.support.master.AcknowledgedResponse;
+import org.opensearch.action.update.UpdateRequest;
+import org.opensearch.action.update.UpdateResponse;
 import org.opensearch.client.AdminClient;
 import org.opensearch.client.Client;
 import org.opensearch.client.IndicesAdminClient;
@@ -29,9 +34,11 @@ import org.opensearch.common.util.concurrent.ThreadContext;
 import org.opensearch.common.xcontent.XContentFactory;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.core.common.bytes.BytesReference;
+import org.opensearch.core.index.shard.ShardId;
 import org.opensearch.core.xcontent.XContentBuilder;
 import org.opensearch.flowframework.TestHelpers;
 import org.opensearch.flowframework.model.ProvisioningProgress;
+import org.opensearch.flowframework.model.ResourceCreated;
 import org.opensearch.flowframework.model.Template;
 import org.opensearch.flowframework.model.Workflow;
 import org.opensearch.flowframework.model.WorkflowState;
@@ -285,6 +292,93 @@ public class FlowFrameworkIndicesHandlerTests extends OpenSearchTestCase {
         assertTrue(exceptionCaptor.getValue().getMessage().contains("Failed to parse workflow state"));
     }
 
+    public void testCanDeleteWorkflowStateDoc() {
+        String documentId = randomAlphaOfLength(5);
+        @SuppressWarnings("unchecked")
+        ActionListener<GetResponse> listener = mock(ActionListener.class);
+        WorkflowState workFlowState = new WorkflowState(
+            documentId,
+            "test",
+            "PROVISIONING",
+            "NOT_STARTED",
+            Instant.now(),
+            Instant.now(),
+            TestHelpers.randomUser(),
+            Collections.emptyMap(),
+            Collections.emptyList()
+        );
+        doAnswer(invocation -> {
+            ActionListener<GetResponse> responseListener = invocation.getArgument(1);
+
+            XContentBuilder builder = XContentFactory.jsonBuilder();
+            workFlowState.toXContent(builder, null);
+            BytesReference workflowBytesRef = BytesReference.bytes(builder);
+            GetResult getResult = new GetResult(WORKFLOW_STATE_INDEX, documentId, 1, 1, 1, true, workflowBytesRef, null, null);
+            responseListener.onResponse(new GetResponse(getResult));
+            return null;
+        }).when(client).get(any(GetRequest.class), any());
+
+        flowFrameworkIndicesHandler.canDeleteWorkflowStateDoc(documentId, canDelete -> { assertTrue(canDelete); }, listener);
+    }
+
+    public void testCanNotDeleteWorkflowStateDocInProgress() {
+        String documentId = randomAlphaOfLength(5);
+        @SuppressWarnings("unchecked")
+        ActionListener<GetResponse> listener = mock(ActionListener.class);
+        WorkflowState workFlowState = new WorkflowState(
+            documentId,
+            "test",
+            "PROVISIONING",
+            "IN_PROGRESS",
+            Instant.now(),
+            Instant.now(),
+            TestHelpers.randomUser(),
+            Collections.emptyMap(),
+            Collections.emptyList()
+        );
+        doAnswer(invocation -> {
+            ActionListener<GetResponse> responseListener = invocation.getArgument(1);
+
+            XContentBuilder builder = XContentFactory.jsonBuilder();
+            workFlowState.toXContent(builder, null);
+            BytesReference workflowBytesRef = BytesReference.bytes(builder);
+            GetResult getResult = new GetResult(WORKFLOW_STATE_INDEX, documentId, 1, 1, 1, true, workflowBytesRef, null, null);
+            responseListener.onResponse(new GetResponse(getResult));
+            return null;
+        }).when(client).get(any(GetRequest.class), any());
+
+        flowFrameworkIndicesHandler.canDeleteWorkflowStateDoc(documentId, canDelete -> { assertFalse(canDelete); }, listener);
+    }
+
+    public void testCanNotDeleteWorkflowStateDocResourcesExist() {
+        String documentId = randomAlphaOfLength(5);
+        @SuppressWarnings("unchecked")
+        ActionListener<GetResponse> listener = mock(ActionListener.class);
+        WorkflowState workFlowState = new WorkflowState(
+            documentId,
+            "test",
+            "PROVISIONING",
+            "DONE",
+            Instant.now(),
+            Instant.now(),
+            TestHelpers.randomUser(),
+            Collections.emptyMap(),
+            List.of(new ResourceCreated("w", "x", "y", "z"))
+        );
+        doAnswer(invocation -> {
+            ActionListener<GetResponse> responseListener = invocation.getArgument(1);
+
+            XContentBuilder builder = XContentFactory.jsonBuilder();
+            workFlowState.toXContent(builder, null);
+            BytesReference workflowBytesRef = BytesReference.bytes(builder);
+            GetResult getResult = new GetResult(WORKFLOW_STATE_INDEX, documentId, 1, 1, 1, true, workflowBytesRef, null, null);
+            responseListener.onResponse(new GetResponse(getResult));
+            return null;
+        }).when(client).get(any(GetRequest.class), any());
+
+        flowFrameworkIndicesHandler.canDeleteWorkflowStateDoc(documentId, canDelete -> { assertFalse(canDelete); }, listener);
+    }
+
     public void testDoesTemplateExist() {
         String documentId = randomAlphaOfLength(5);
         Consumer<Boolean> function = mock(Consumer.class);
@@ -301,5 +395,99 @@ public class FlowFrameworkIndicesHandlerTests extends OpenSearchTestCase {
         }).when(client).get(any(GetRequest.class), any());
         flowFrameworkIndicesHandler.doesTemplateExist(documentId, function, listener);
         verify(function).accept(true);
+    }
+
+    public void testUpdateFlowFrameworkSystemIndexDoc() throws IOException {
+        ClusterState mockClusterState = mock(ClusterState.class);
+        Metadata mockMetaData = mock(Metadata.class);
+        when(clusterService.state()).thenReturn(mockClusterState);
+        when(mockClusterState.metadata()).thenReturn(mockMetaData);
+        when(mockMetaData.hasIndex(WORKFLOW_STATE_INDEX)).thenReturn(true);
+
+        @SuppressWarnings("unchecked")
+        ActionListener<UpdateResponse> listener = mock(ActionListener.class);
+
+        // test success
+        doAnswer(invocation -> {
+            ActionListener<UpdateResponse> responseListener = invocation.getArgument(1);
+            responseListener.onResponse(new UpdateResponse(new ShardId(WORKFLOW_STATE_INDEX, "", 1), "id", -2, 0, 0, Result.UPDATED));
+            return null;
+        }).when(client).update(any(UpdateRequest.class), any());
+
+        flowFrameworkIndicesHandler.updateFlowFrameworkSystemIndexDoc("1", Map.of("foo", "bar"), listener);
+
+        ArgumentCaptor<UpdateResponse> responseCaptor = ArgumentCaptor.forClass(UpdateResponse.class);
+        verify(listener, times(1)).onResponse(responseCaptor.capture());
+        assertEquals(Result.UPDATED, responseCaptor.getValue().getResult());
+
+        // test failure
+        doAnswer(invocation -> {
+            ActionListener<UpdateResponse> responseListener = invocation.getArgument(1);
+            responseListener.onFailure(new Exception("Failed to update state"));
+            return null;
+        }).when(client).update(any(UpdateRequest.class), any());
+
+        flowFrameworkIndicesHandler.updateFlowFrameworkSystemIndexDoc("1", Map.of("foo", "bar"), listener);
+
+        ArgumentCaptor<Exception> exceptionCaptor = ArgumentCaptor.forClass(Exception.class);
+        verify(listener, times(1)).onFailure(exceptionCaptor.capture());
+        assertEquals("Failed to update state", exceptionCaptor.getValue().getMessage());
+
+        // test no index
+        when(mockMetaData.hasIndex(WORKFLOW_STATE_INDEX)).thenReturn(false);
+        flowFrameworkIndicesHandler.updateFlowFrameworkSystemIndexDoc("1", Map.of("foo", "bar"), listener);
+
+        verify(listener, times(2)).onFailure(exceptionCaptor.capture());
+        assertEquals(
+            "Failed to update document 1 due to missing .plugins-flow-framework-state index",
+            exceptionCaptor.getValue().getMessage()
+        );
+    }
+
+    public void testDeleteFlowFrameworkSystemIndexDoc() throws IOException {
+        ClusterState mockClusterState = mock(ClusterState.class);
+        Metadata mockMetaData = mock(Metadata.class);
+        when(clusterService.state()).thenReturn(mockClusterState);
+        when(mockClusterState.metadata()).thenReturn(mockMetaData);
+        when(mockMetaData.hasIndex(WORKFLOW_STATE_INDEX)).thenReturn(true);
+
+        @SuppressWarnings("unchecked")
+        ActionListener<DeleteResponse> listener = mock(ActionListener.class);
+
+        // test success
+        doAnswer(invocation -> {
+            ActionListener<DeleteResponse> responseListener = invocation.getArgument(1);
+            responseListener.onResponse(new DeleteResponse(new ShardId(WORKFLOW_STATE_INDEX, "", 1), "id", -2, 0, 0, true));
+            return null;
+        }).when(client).delete(any(DeleteRequest.class), any());
+
+        flowFrameworkIndicesHandler.deleteFlowFrameworkSystemIndexDoc("1", listener);
+
+        ArgumentCaptor<DeleteResponse> responseCaptor = ArgumentCaptor.forClass(DeleteResponse.class);
+        verify(listener, times(1)).onResponse(responseCaptor.capture());
+        assertEquals(Result.DELETED, responseCaptor.getValue().getResult());
+
+        // test failure
+        doAnswer(invocation -> {
+            ActionListener<DeleteResponse> responseListener = invocation.getArgument(1);
+            responseListener.onFailure(new Exception("Failed to delete state"));
+            return null;
+        }).when(client).delete(any(DeleteRequest.class), any());
+
+        flowFrameworkIndicesHandler.deleteFlowFrameworkSystemIndexDoc("1", listener);
+
+        ArgumentCaptor<Exception> exceptionCaptor = ArgumentCaptor.forClass(Exception.class);
+        verify(listener, times(1)).onFailure(exceptionCaptor.capture());
+        assertEquals("Failed to delete state", exceptionCaptor.getValue().getMessage());
+
+        // test no index
+        when(mockMetaData.hasIndex(WORKFLOW_STATE_INDEX)).thenReturn(false);
+        flowFrameworkIndicesHandler.deleteFlowFrameworkSystemIndexDoc("1", listener);
+
+        verify(listener, times(2)).onFailure(exceptionCaptor.capture());
+        assertEquals(
+            "Failed to delete document 1 due to missing .plugins-flow-framework-state index",
+            exceptionCaptor.getValue().getMessage()
+        );
     }
 }

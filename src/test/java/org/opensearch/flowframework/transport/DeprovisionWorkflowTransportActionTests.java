@@ -35,6 +35,7 @@ import org.junit.AfterClass;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Consumer;
 
 import org.mockito.ArgumentCaptor;
 
@@ -121,6 +122,12 @@ public class DeprovisionWorkflowTransportActionTests extends OpenSearchTestCase 
             responseListener.onResponse(new GetWorkflowStateResponse(state, true));
             return null;
         }).when(client).execute(any(GetWorkflowStateAction.class), any(GetWorkflowStateRequest.class), any());
+
+        doAnswer(invocation -> {
+            Consumer<Boolean> booleanConsumer = invocation.getArgument(1);
+            booleanConsumer.accept(Boolean.TRUE);
+            return null;
+        }).when(flowFrameworkIndicesHandler).doesTemplateExist(anyString(), any(), any());
 
         PlainActionFuture<WorkflowData> future = PlainActionFuture.newFuture();
         future.onResponse(WorkflowData.EMPTY);

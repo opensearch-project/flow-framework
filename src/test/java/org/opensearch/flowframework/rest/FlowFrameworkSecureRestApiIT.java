@@ -129,13 +129,21 @@ public class FlowFrameworkSecureRestApiIT extends FlowFrameworkRestTestCase {
         response = getWorkflowStatus(fullAccessClient(), workflowId, false);
         assertEquals(RestStatus.OK, TestHelpers.restStatus(response));
 
+        // Invoke delete API while state still exists
+        response = deleteWorkflow(fullAccessClient(), workflowId);
+        assertEquals(RestStatus.OK, TestHelpers.restStatus(response));
+
+        // Invoke status API
+        response = getWorkflowStatus(fullAccessClient(), workflowId, false);
+        assertEquals(RestStatus.OK, TestHelpers.restStatus(response));
+
         // Invoke deprovision API
         response = deprovisionWorkflow(fullAccessClient(), workflowId);
         assertEquals(RestStatus.OK, TestHelpers.restStatus(response));
 
-        // Invoke delete API
-        response = deleteWorkflow(fullAccessClient(), workflowId);
-        assertEquals(RestStatus.OK, TestHelpers.restStatus(response));
+        // Invoke status API with failure
+        ResponseException exception = expectThrows(ResponseException.class, () -> getWorkflowStatus(fullAccessClient(), workflowId, false));
+        assertEquals(RestStatus.NOT_FOUND.getStatus(), exception.getResponse().getStatusLine().getStatusCode());
     }
 
     public void testGetWorkflowStepWithFullAccess() throws Exception {
