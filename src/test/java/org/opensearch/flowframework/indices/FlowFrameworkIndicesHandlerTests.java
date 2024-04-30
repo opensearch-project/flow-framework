@@ -38,6 +38,7 @@ import org.opensearch.core.index.shard.ShardId;
 import org.opensearch.core.xcontent.XContentBuilder;
 import org.opensearch.flowframework.TestHelpers;
 import org.opensearch.flowframework.model.ProvisioningProgress;
+import org.opensearch.flowframework.model.ResourceCreated;
 import org.opensearch.flowframework.model.Template;
 import org.opensearch.flowframework.model.Workflow;
 import org.opensearch.flowframework.model.WorkflowState;
@@ -289,6 +290,93 @@ public class FlowFrameworkIndicesHandlerTests extends OpenSearchTestCase {
         ArgumentCaptor<Exception> exceptionCaptor = ArgumentCaptor.forClass(Exception.class);
         verify(listener, times(1)).onFailure(exceptionCaptor.capture());
         assertTrue(exceptionCaptor.getValue().getMessage().contains("Failed to parse workflow state"));
+    }
+
+    public void testCanDeleteState() {
+        String documentId = randomAlphaOfLength(5);
+        @SuppressWarnings("unchecked")
+        ActionListener<GetResponse> listener = mock(ActionListener.class);
+        WorkflowState workFlowState = new WorkflowState(
+            documentId,
+            "test",
+            "PROVISIONING",
+            "NOT_STARTED",
+            Instant.now(),
+            Instant.now(),
+            TestHelpers.randomUser(),
+            Collections.emptyMap(),
+            Collections.emptyList()
+        );
+        doAnswer(invocation -> {
+            ActionListener<GetResponse> responseListener = invocation.getArgument(1);
+
+            XContentBuilder builder = XContentFactory.jsonBuilder();
+            workFlowState.toXContent(builder, null);
+            BytesReference workflowBytesRef = BytesReference.bytes(builder);
+            GetResult getResult = new GetResult(WORKFLOW_STATE_INDEX, documentId, 1, 1, 1, true, workflowBytesRef, null, null);
+            responseListener.onResponse(new GetResponse(getResult));
+            return null;
+        }).when(client).get(any(GetRequest.class), any());
+
+        flowFrameworkIndicesHandler.canDeleteState(documentId, canDelete -> { assertTrue(canDelete); }, listener);
+    }
+
+    public void testCanNotDeleteStateInProgress() {
+        String documentId = randomAlphaOfLength(5);
+        @SuppressWarnings("unchecked")
+        ActionListener<GetResponse> listener = mock(ActionListener.class);
+        WorkflowState workFlowState = new WorkflowState(
+            documentId,
+            "test",
+            "PROVISIONING",
+            "IN_PROGRESS",
+            Instant.now(),
+            Instant.now(),
+            TestHelpers.randomUser(),
+            Collections.emptyMap(),
+            Collections.emptyList()
+        );
+        doAnswer(invocation -> {
+            ActionListener<GetResponse> responseListener = invocation.getArgument(1);
+
+            XContentBuilder builder = XContentFactory.jsonBuilder();
+            workFlowState.toXContent(builder, null);
+            BytesReference workflowBytesRef = BytesReference.bytes(builder);
+            GetResult getResult = new GetResult(WORKFLOW_STATE_INDEX, documentId, 1, 1, 1, true, workflowBytesRef, null, null);
+            responseListener.onResponse(new GetResponse(getResult));
+            return null;
+        }).when(client).get(any(GetRequest.class), any());
+
+        flowFrameworkIndicesHandler.canDeleteState(documentId, canDelete -> { assertFalse(canDelete); }, listener);
+    }
+
+    public void testCanNotDeleteStateResourcesExist() {
+        String documentId = randomAlphaOfLength(5);
+        @SuppressWarnings("unchecked")
+        ActionListener<GetResponse> listener = mock(ActionListener.class);
+        WorkflowState workFlowState = new WorkflowState(
+            documentId,
+            "test",
+            "PROVISIONING",
+            "DONE",
+            Instant.now(),
+            Instant.now(),
+            TestHelpers.randomUser(),
+            Collections.emptyMap(),
+            List.of(new ResourceCreated("w", "x", "y", "z"))
+        );
+        doAnswer(invocation -> {
+            ActionListener<GetResponse> responseListener = invocation.getArgument(1);
+
+            XContentBuilder builder = XContentFactory.jsonBuilder();
+            workFlowState.toXContent(builder, null);
+            BytesReference workflowBytesRef = BytesReference.bytes(builder);
+            GetResult getResult = new GetResult(WORKFLOW_STATE_INDEX, documentId, 1, 1, 1, true, workflowBytesRef, null, null);
+            responseListener.onResponse(new GetResponse(getResult));
+            return null;
+        }).when(client).get(any(GetRequest.class), any());
+
+        flowFrameworkIndicesHandler.canDeleteState(documentId, canDelete -> { assertFalse(canDelete); }, listener);
     }
 
     public void testDoesTemplateExist() {
