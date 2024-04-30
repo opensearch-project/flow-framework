@@ -149,8 +149,12 @@ public class FlowFrameworkSecureRestApiIT extends FlowFrameworkRestTestCase {
         response = createWorkflow(fullAccessClient(), template);
         assertEquals(RestStatus.CREATED, TestHelpers.restStatus(response));
 
+        // Retrieve workflow ID
+        responseMap = entityAsMap(response);
+        String newWorkflowId = (String) responseMap.get(WORKFLOW_ID);
+
         // Invoke status API
-        response = getWorkflowStatus(fullAccessClient(), workflowId, false);
+        response = getWorkflowStatus(fullAccessClient(), newWorkflowId, false);
         assertEquals(RestStatus.OK, TestHelpers.restStatus(response));
 
         // Invoke delete API while state is NOT_STARTED
@@ -158,7 +162,7 @@ public class FlowFrameworkSecureRestApiIT extends FlowFrameworkRestTestCase {
         assertEquals(RestStatus.OK, TestHelpers.restStatus(response));
 
         // Invoke status API with failure
-        exception = expectThrows(ResponseException.class, () -> getWorkflowStatus(fullAccessClient(), workflowId, false));
+        exception = expectThrows(ResponseException.class, () -> getWorkflowStatus(fullAccessClient(), newWorkflowId, false));
         assertEquals(RestStatus.NOT_FOUND.getStatus(), exception.getResponse().getStatusLine().getStatusCode());
     }
 
