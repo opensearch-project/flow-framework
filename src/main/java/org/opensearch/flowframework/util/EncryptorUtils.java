@@ -250,7 +250,6 @@ public class EncryptorUtils {
 
             GetRequest getRequest = new GetRequest(CONFIG_INDEX).id(MASTER_KEY);
             client.get(getRequest, ActionListener.wrap(getResponse -> {
-
                 if (!getResponse.isExists()) {
 
                     // Generate new key and index
@@ -260,6 +259,7 @@ public class EncryptorUtils {
                         .setRefreshPolicy(WriteRequest.RefreshPolicy.IMMEDIATE);
 
                     client.index(masterKeyIndexRequest, ActionListener.wrap(indexResponse -> {
+                        context.restore();
                         // Set generated key to master
                         logger.info("Config has been initialized successfully");
                         this.masterKey = generatedKey;
@@ -270,6 +270,7 @@ public class EncryptorUtils {
                     }));
 
                 } else {
+                    context.restore();
                     // Set existing key to master
                     logger.info("Config has already been initialized");
                     this.masterKey = (String) getResponse.getSourceAsMap().get(MASTER_KEY);
@@ -300,6 +301,7 @@ public class EncryptorUtils {
             try (ThreadContext.StoredContext context = client.threadPool().getThreadContext().stashContext()) {
                 GetRequest getRequest = new GetRequest(CONFIG_INDEX).id(MASTER_KEY);
                 client.get(getRequest, ActionListener.wrap(response -> {
+                    context.restore();
                     if (response.isExists()) {
                         this.masterKey = (String) response.getSourceAsMap().get(MASTER_KEY);
                     } else {

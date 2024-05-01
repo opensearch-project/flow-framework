@@ -28,6 +28,7 @@ import org.opensearch.ml.common.transport.model_group.MLRegisterModelGroupRespon
 
 import java.util.Collections;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 
@@ -142,7 +143,7 @@ public class RegisterModelGroupStep implements WorkflowStep {
             String modelGroupName = (String) inputs.get(NAME_FIELD);
             String description = (String) inputs.get(DESCRIPTION_FIELD);
             List<String> backendRoles = getBackendRoles(inputs);
-            AccessMode modelAccessMode = (AccessMode) inputs.get(MODEL_ACCESS_MODE);
+            AccessMode modelAccessMode = AccessMode.from(((String) inputs.get(MODEL_ACCESS_MODE)).toLowerCase(Locale.ROOT));
             Boolean isAddAllBackendRoles = inputs.containsKey(ADD_ALL_BACKEND_ROLES)
                 ? Booleans.parseBoolean(inputs.get(ADD_ALL_BACKEND_ROLES).toString())
                 : null;
