@@ -13,6 +13,8 @@ Compatible with OpenSearch 2.14.0
 - Hide user and credential field from search response ([#680](https://github.com/opensearch-project/flow-framework/pull/680))
 - Throw the correct error message in status API for WorkflowSteps ([#676](https://github.com/opensearch-project/flow-framework/pull/676))
 - Delete workflow state when template is deleted and no resources exist ([#689](https://github.com/opensearch-project/flow-framework/pull/689))
+- Fixing model group parsing and restoring context ([#695] (https://github.com/opensearch-project/flow-framework/pull/695))
+
 
 ### Infrastructure
 - Switch macOS runner to macos-13 from macos-latest since macos-latest is now arm64 ([#686](https://github.com/opensearch-project/flow-framework/pull/686))
