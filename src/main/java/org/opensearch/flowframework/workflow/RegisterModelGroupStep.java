@@ -143,7 +143,10 @@ public class RegisterModelGroupStep implements WorkflowStep {
             String modelGroupName = (String) inputs.get(NAME_FIELD);
             String description = (String) inputs.get(DESCRIPTION_FIELD);
             List<String> backendRoles = getBackendRoles(inputs);
-            AccessMode modelAccessMode = AccessMode.from(((String) inputs.get(MODEL_ACCESS_MODE)).toLowerCase(Locale.ROOT));
+            AccessMode modelAccessMode = null;
+            if (inputs.get(MODEL_ACCESS_MODE) != null) {
+                modelAccessMode = AccessMode.from((inputs.get(MODEL_ACCESS_MODE)).toString().toLowerCase(Locale.ROOT));
+            }
             Boolean isAddAllBackendRoles = inputs.containsKey(ADD_ALL_BACKEND_ROLES)
                 ? Booleans.parseBoolean(inputs.get(ADD_ALL_BACKEND_ROLES).toString())
                 : null;
