@@ -311,6 +311,7 @@ public class CreateWorkflowTransportAction extends HandledTransportAction<Workfl
             try (ThreadContext.StoredContext context = client.threadPool().getThreadContext().stashContext()) {
                 logger.info("Querying existing workflows to count the max");
                 client.search(searchRequest, ActionListener.wrap(searchResponse -> {
+                    context.restore();
                     internalListener.onResponse(searchResponse.getHits().getTotalHits().value < maxWorkflow);
                 }, exception -> {
                     String errorMessage = "Unable to fetch the workflows";
