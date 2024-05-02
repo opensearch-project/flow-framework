@@ -24,6 +24,7 @@ import static org.opensearch.flowframework.common.CommonValue.FRAMEWORK_TYPE;
 import static org.opensearch.flowframework.common.CommonValue.FUNCTION_NAME;
 import static org.opensearch.flowframework.common.CommonValue.MODEL_CONTENT_HASH_VALUE;
 import static org.opensearch.flowframework.common.CommonValue.MODEL_FORMAT;
+import static org.opensearch.flowframework.common.CommonValue.MODEL_INTERFACE;
 import static org.opensearch.flowframework.common.CommonValue.MODEL_TYPE;
 import static org.opensearch.flowframework.common.CommonValue.NAME_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.URL;
@@ -71,7 +72,7 @@ public class RegisterLocalCustomModelStep extends AbstractRegisterLocalModelStep
 
     @Override
     protected Set<String> getOptionalKeys() {
-        return Set.of(DESCRIPTION_FIELD, MODEL_GROUP_ID, ALL_CONFIG, DEPLOY_FIELD);
+        return Set.of(DESCRIPTION_FIELD, MODEL_GROUP_ID, ALL_CONFIG, DEPLOY_FIELD, MODEL_INTERFACE);
     }
 
     @Override

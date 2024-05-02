@@ -451,4 +451,19 @@ public class ParseUtils {
         matcher.appendTail(result);
         return result.toString();
     }
+
+    public static Map<String, String> convertStringToObjectMapToStringToStringMap(Map<String, Object> stringToObjectMap) throws Exception {
+        try (Jsonb jsonb = JsonbBuilder.create()) {
+            Map<String, String> stringToStringMap = new HashMap<>();
+            for (Map.Entry<String, Object> entry : stringToObjectMap.entrySet()) {
+                Object value = entry.getValue();
+                if (value instanceof String) {
+                    stringToStringMap.put(entry.getKey(), (String) value);
+                } else {
+                    stringToStringMap.put(entry.getKey(), jsonb.toJson(value));
+                }
+            }
+            return stringToStringMap;
+        }
+    }
 }
