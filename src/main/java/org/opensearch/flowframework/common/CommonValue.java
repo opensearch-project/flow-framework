@@ -173,7 +173,7 @@ public class CommonValue {
     /** Delay field */
     public static final String DELAY_FIELD = "delay";
     /** Model Interface Field */
-    public static final String MODEL_INTERFACE = "interface";
+    public static final String INTERFACE_FIELD = "interface";
 
     /*
      * Constants associated with resource provisioning / state

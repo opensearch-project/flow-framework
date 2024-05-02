@@ -38,7 +38,7 @@ import java.util.Set;
 import static org.opensearch.flowframework.common.CommonValue.DEPLOY_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.DESCRIPTION_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.GUARDRAILS_FIELD;
-import static org.opensearch.flowframework.common.CommonValue.MODEL_INTERFACE;
+import static org.opensearch.flowframework.common.CommonValue.INTERFACE_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.NAME_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.REGISTER_MODEL_STATUS;
 import static org.opensearch.flowframework.common.WorkflowResources.CONNECTOR_ID;
@@ -82,7 +82,7 @@ public class RegisterRemoteModelStep implements WorkflowStep {
         PlainActionFuture<WorkflowData> registerRemoteModelFuture = PlainActionFuture.newFuture();
 
         Set<String> requiredKeys = Set.of(NAME_FIELD, CONNECTOR_ID);
-        Set<String> optionalKeys = Set.of(MODEL_GROUP_ID, DESCRIPTION_FIELD, DEPLOY_FIELD, GUARDRAILS_FIELD, MODEL_INTERFACE);
+        Set<String> optionalKeys = Set.of(MODEL_GROUP_ID, DESCRIPTION_FIELD, DEPLOY_FIELD, GUARDRAILS_FIELD, INTERFACE_FIELD);
 
         try {
             Map<String, Object> inputs = ParseUtils.getInputsFromPreviousSteps(
@@ -99,7 +99,7 @@ public class RegisterRemoteModelStep implements WorkflowStep {
             String description = (String) inputs.get(DESCRIPTION_FIELD);
             String connectorId = (String) inputs.get(CONNECTOR_ID);
             Guardrails guardRails = (Guardrails) inputs.get(GUARDRAILS_FIELD);
-            String modelInterface = (String) inputs.get(MODEL_INTERFACE);
+            String modelInterface = (String) inputs.get(INTERFACE_FIELD);
             final Boolean deploy = inputs.containsKey(DEPLOY_FIELD) ? Booleans.parseBoolean(inputs.get(DEPLOY_FIELD).toString()) : null;
 
             MLRegisterModelInputBuilder builder = MLRegisterModelInput.builder()

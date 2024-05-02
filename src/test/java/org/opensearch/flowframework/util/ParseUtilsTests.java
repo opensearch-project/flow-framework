@@ -90,6 +90,12 @@ public class ParseUtilsTests extends OpenSearchTestCase {
         assertEquals("{\"test-1\":{\"test-1\":\"test-1\"}}", parsedMap);
     }
 
+    public void testConvertStringToObjectMapToStringToStringMap() throws Exception {
+        Map<String, Object> map = Map.ofEntries(Map.entry("test", Map.of("test-1", "{'test-2', 'test-3'}")));
+        Map<String, String> convertedMap = ParseUtils.convertStringToObjectMapToStringToStringMap(map);
+        assertEquals("{test={\"test-1\":\"{'test-2', 'test-3'}\"}}", convertedMap.toString());
+    }
+
     public void testConditionallySubstituteWithNoPlaceholders() {
         String input = "This string has no placeholders";
         Map<String, WorkflowData> outputs = new HashMap<>();
