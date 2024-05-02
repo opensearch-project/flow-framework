@@ -17,10 +17,16 @@ import org.opensearch.action.support.WriteRequest;
 import org.opensearch.client.Client;
 import org.opensearch.cluster.service.ClusterService;
 import org.opensearch.common.util.concurrent.ThreadContext;
+import org.opensearch.common.xcontent.XContentFactory;
 import org.opensearch.commons.authuser.User;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.core.rest.RestStatus;
+import org.opensearch.core.xcontent.NamedXContentRegistry;
+import org.opensearch.core.xcontent.ToXContent;
+import org.opensearch.core.xcontent.XContentBuilder;
+import org.opensearch.core.xcontent.XContentParser;
 import org.opensearch.flowframework.exception.FlowFrameworkException;
+import org.opensearch.flowframework.model.Config;
 import org.opensearch.flowframework.model.Template;
 import org.opensearch.flowframework.model.Workflow;
 import org.opensearch.flowframework.model.WorkflowNode;
@@ -42,8 +48,8 @@ import com.amazonaws.encryptionsdk.CommitmentPolicy;
 import com.amazonaws.encryptionsdk.CryptoResult;
 import com.amazonaws.encryptionsdk.jce.JceMasterKey;
 
+import static org.opensearch.core.xcontent.XContentParserUtils.ensureExpectedToken;
 import static org.opensearch.flowframework.common.CommonValue.CONFIG_INDEX;
-import static org.opensearch.flowframework.common.CommonValue.CREATE_TIME;
 import static org.opensearch.flowframework.common.CommonValue.CREDENTIAL_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.MASTER_KEY;
 
@@ -60,19 +66,22 @@ public class EncryptorUtils {
     // https://github.com/aws/aws-encryption-sdk-java/issues/1879
     private static final String WRAPPING_ALGORITHM = "AES/GCM/NOPADDING";
 
-    private ClusterService clusterService;
-    private Client client;
+    private final ClusterService clusterService;
+    private final Client client;
     private String masterKey;
+    private final NamedXContentRegistry xContentRegistry;
 
     /**
      * Instantiates a new EncryptorUtils object
      * @param clusterService the cluster service
      * @param client the node client
+     * @param xContentRegistry the OpenSearch XContent Registry
      */
-    public EncryptorUtils(ClusterService clusterService, Client client) {
+    public EncryptorUtils(ClusterService clusterService, Client client, NamedXContentRegistry xContentRegistry) {
         this.masterKey = null;
         this.clusterService = clusterService;
         this.client = client;
+        this.xContentRegistry = xContentRegistry;
     }
 
     /**
@@ -247,22 +256,21 @@ public class EncryptorUtils {
         // This is necessary in case of global context index restoration from snapshot, will need to use the same master key to decrypt
         // stored credentials
         try (ThreadContext.StoredContext context = client.threadPool().getThreadContext().stashContext()) {
-
+            // Using the master_key string as the document id
             GetRequest getRequest = new GetRequest(CONFIG_INDEX).id(MASTER_KEY);
             client.get(getRequest, ActionListener.wrap(getResponse -> {
                 if (!getResponse.isExists()) {
-
-                    // Generate new key and index
-                    final String generatedKey = generateMasterKey();
+                    Config config = new Config(generateMasterKey(), Instant.now());
                     IndexRequest masterKeyIndexRequest = new IndexRequest(CONFIG_INDEX).id(MASTER_KEY)
-                        .source(Map.ofEntries(Map.entry(MASTER_KEY, generatedKey), Map.entry(CREATE_TIME, Instant.now().toEpochMilli())))
                         .setRefreshPolicy(WriteRequest.RefreshPolicy.IMMEDIATE);
-
+                    try (XContentBuilder builder = XContentFactory.jsonBuilder()) {
+                        masterKeyIndexRequest.source(config.toXContent(builder, ToXContent.EMPTY_PARAMS));
+                    }
                     client.index(masterKeyIndexRequest, ActionListener.wrap(indexResponse -> {
                         context.restore();
                         // Set generated key to master
                         logger.info("Config has been initialized successfully");
-                        this.masterKey = generatedKey;
+                        this.masterKey = config.masterKey();
                         listener.onResponse(true);
                     }, indexException -> {
                         logger.error("Failed to index config", indexException);
@@ -272,9 +280,20 @@ public class EncryptorUtils {
                 } else {
                     context.restore();
                     // Set existing key to master
-                    logger.info("Config has already been initialized");
-                    this.masterKey = (String) getResponse.getSourceAsMap().get(MASTER_KEY);
-                    listener.onResponse(true);
+                    logger.debug("Config has already been initialized, fetching key");
+                    try (
+                        XContentParser parser = ParseUtils.createXContentParserFromRegistry(
+                            xContentRegistry,
+                            getResponse.getSourceAsBytesRef()
+                        )
+                    ) {
+                        ensureExpectedToken(XContentParser.Token.START_OBJECT, parser.nextToken(), parser);
+                        Config config = Config.parse(parser);
+                        this.masterKey = config.masterKey();
+                        listener.onResponse(true);
+                    } catch (FlowFrameworkException e) {
+                        listener.onFailure(e);
+                    }
                 }
             }, getRequestException -> {
                 logger.error("Failed to search for config from config index", getRequestException);
@@ -303,7 +322,16 @@ public class EncryptorUtils {
                 client.get(getRequest, ActionListener.wrap(response -> {
                     context.restore();
                     if (response.isExists()) {
-                        this.masterKey = (String) response.getSourceAsMap().get(MASTER_KEY);
+                        try (
+                            XContentParser parser = ParseUtils.createXContentParserFromRegistry(
+                                xContentRegistry,
+                                response.getSourceAsBytesRef()
+                            )
+                        ) {
+                            ensureExpectedToken(XContentParser.Token.START_OBJECT, parser.nextToken(), parser);
+                            Config config = Config.parse(parser);
+                            this.masterKey = config.masterKey();
+                        }
                     } else {
                         throw new FlowFrameworkException("Master key has not been initialized in config index", RestStatus.NOT_FOUND);
                     }

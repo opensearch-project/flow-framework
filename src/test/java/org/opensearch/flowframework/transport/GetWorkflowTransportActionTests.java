@@ -19,6 +19,7 @@ import org.opensearch.common.util.concurrent.ThreadContext;
 import org.opensearch.common.xcontent.XContentFactory;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.core.common.bytes.BytesReference;
+import org.opensearch.core.xcontent.NamedXContentRegistry;
 import org.opensearch.core.xcontent.XContentBuilder;
 import org.opensearch.flowframework.TestHelpers;
 import org.opensearch.flowframework.indices.FlowFrameworkIndicesHandler;
@@ -50,8 +51,8 @@ import static org.mockito.Mockito.when;
 
 public class GetWorkflowTransportActionTests extends OpenSearchTestCase {
 
-    private ThreadPool threadPool;
     private Client client;
+    private NamedXContentRegistry xContentRegistry;
     private GetWorkflowTransportAction getTemplateTransportAction;
     private FlowFrameworkIndicesHandler flowFrameworkIndicesHandler;
     private Template template;
@@ -60,10 +61,10 @@ public class GetWorkflowTransportActionTests extends OpenSearchTestCase {
     @Override
     public void setUp() throws Exception {
         super.setUp();
-        this.threadPool = mock(ThreadPool.class);
         this.client = mock(Client.class);
+        this.xContentRegistry = mock(NamedXContentRegistry.class);
         this.flowFrameworkIndicesHandler = mock(FlowFrameworkIndicesHandler.class);
-        this.encryptorUtils = new EncryptorUtils(mock(ClusterService.class), client);
+        this.encryptorUtils = new EncryptorUtils(mock(ClusterService.class), client, xContentRegistry);
         this.getTemplateTransportAction = new GetWorkflowTransportAction(
             mock(TransportService.class),
             mock(ActionFilters.class),
