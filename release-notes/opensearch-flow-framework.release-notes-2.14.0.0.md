@@ -6,6 +6,7 @@ Compatible with OpenSearch 2.14.0
 - Add guardrails to default use case params ([#658](https://github.com/opensearch-project/flow-framework/pull/658))
 - Allow strings for boolean workflow step parameters ([#671](https://github.com/opensearch-project/flow-framework/pull/671))
 - Add optional delay parameter to no-op step ([#674](https://github.com/opensearch-project/flow-framework/pull/674))
+- Add model interface support for remote and local custom models ([#701](https://github.com/opensearch-project/flow-framework/pull/701))
 
 ### Bug Fixes
 - Reset workflow state to initial state after successful deprovision ([#635](https://github.com/opensearch-project/flow-framework/pull/635))

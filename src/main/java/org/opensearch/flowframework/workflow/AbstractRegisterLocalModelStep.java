@@ -13,8 +13,12 @@ import org.apache.logging.log4j.Logger;
 import org.opensearch.ExceptionsHelper;
 import org.opensearch.action.support.PlainActionFuture;
 import org.opensearch.common.Booleans;
+import org.opensearch.common.xcontent.XContentHelper;
 import org.opensearch.core.action.ActionListener;
+import org.opensearch.core.common.bytes.BytesArray;
+import org.opensearch.core.common.bytes.BytesReference;
 import org.opensearch.core.rest.RestStatus;
+import org.opensearch.core.xcontent.MediaTypeRegistry;
 import org.opensearch.flowframework.common.FlowFrameworkSettings;
 import org.opensearch.flowframework.exception.FlowFrameworkException;
 import org.opensearch.flowframework.exception.WorkflowStepException;
@@ -30,6 +34,7 @@ import org.opensearch.ml.common.transport.register.MLRegisterModelInput;
 import org.opensearch.ml.common.transport.register.MLRegisterModelInput.MLRegisterModelInputBuilder;
 import org.opensearch.threadpool.ThreadPool;
 
+import java.nio.charset.StandardCharsets;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Stream;
@@ -40,6 +45,7 @@ import static org.opensearch.flowframework.common.CommonValue.DESCRIPTION_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.EMBEDDING_DIMENSION;
 import static org.opensearch.flowframework.common.CommonValue.FRAMEWORK_TYPE;
 import static org.opensearch.flowframework.common.CommonValue.FUNCTION_NAME;
+import static org.opensearch.flowframework.common.CommonValue.INTERFACE_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.MODEL_CONTENT_HASH_VALUE;
 import static org.opensearch.flowframework.common.CommonValue.MODEL_FORMAT;
 import static org.opensearch.flowframework.common.CommonValue.MODEL_TYPE;
@@ -116,6 +122,7 @@ public abstract class AbstractRegisterLocalModelStep extends AbstractRetryableWo
             String description = (String) inputs.get(DESCRIPTION_FIELD);
             String modelGroupId = (String) inputs.get(MODEL_GROUP_ID);
             String allConfig = (String) inputs.get(ALL_CONFIG);
+            String modelInterface = (String) inputs.get(INTERFACE_FIELD);
             final Boolean deploy = inputs.containsKey(DEPLOY_FIELD) ? Booleans.parseBoolean(inputs.get(DEPLOY_FIELD).toString()) : null;
 
             // Build register model input
@@ -148,6 +155,27 @@ public abstract class AbstractRegisterLocalModelStep extends AbstractRetryableWo
             }
             if (modelGroupId != null) {
                 mlInputBuilder.modelGroupId(modelGroupId);
+            }
+            if (modelInterface != null) {
+                try {
+                    // Convert model interface string to map
+                    BytesReference modelInterfaceBytes = new BytesArray(modelInterface.getBytes(StandardCharsets.UTF_8));
+                    Map<String, Object> modelInterfaceAsMap = XContentHelper.convertToMap(
+                        modelInterfaceBytes,
+                        false,
+                        MediaTypeRegistry.JSON
+                    ).v2();
+
+                    // Convert to string to string map
+                    Map<String, String> parameters = ParseUtils.convertStringToObjectMapToStringToStringMap(modelInterfaceAsMap);
+                    mlInputBuilder.modelInterface(parameters);
+
+                } catch (Exception ex) {
+                    String errorMessage = "Failed to create model interface";
+                    logger.error(errorMessage, ex);
+                    registerLocalModelFuture.onFailure(new WorkflowStepException(errorMessage, RestStatus.BAD_REQUEST));
+                }
+
             }
             if (deploy != null) {
                 mlInputBuilder.deployModel(deploy);
