@@ -14,8 +14,12 @@ import org.opensearch.ExceptionsHelper;
 import org.opensearch.action.support.PlainActionFuture;
 import org.opensearch.action.update.UpdateResponse;
 import org.opensearch.common.Booleans;
+import org.opensearch.common.xcontent.XContentHelper;
 import org.opensearch.core.action.ActionListener;
+import org.opensearch.core.common.bytes.BytesArray;
+import org.opensearch.core.common.bytes.BytesReference;
 import org.opensearch.core.rest.RestStatus;
+import org.opensearch.core.xcontent.MediaTypeRegistry;
 import org.opensearch.flowframework.exception.FlowFrameworkException;
 import org.opensearch.flowframework.exception.WorkflowStepException;
 import org.opensearch.flowframework.indices.FlowFrameworkIndicesHandler;
@@ -27,12 +31,14 @@ import org.opensearch.ml.common.transport.register.MLRegisterModelInput;
 import org.opensearch.ml.common.transport.register.MLRegisterModelInput.MLRegisterModelInputBuilder;
 import org.opensearch.ml.common.transport.register.MLRegisterModelResponse;
 
+import java.nio.charset.StandardCharsets;
 import java.util.Map;
 import java.util.Set;
 
 import static org.opensearch.flowframework.common.CommonValue.DEPLOY_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.DESCRIPTION_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.GUARDRAILS_FIELD;
+import static org.opensearch.flowframework.common.CommonValue.INTERFACE_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.NAME_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.REGISTER_MODEL_STATUS;
 import static org.opensearch.flowframework.common.WorkflowResources.CONNECTOR_ID;
@@ -76,7 +82,7 @@ public class RegisterRemoteModelStep implements WorkflowStep {
         PlainActionFuture<WorkflowData> registerRemoteModelFuture = PlainActionFuture.newFuture();
 
         Set<String> requiredKeys = Set.of(NAME_FIELD, CONNECTOR_ID);
-        Set<String> optionalKeys = Set.of(MODEL_GROUP_ID, DESCRIPTION_FIELD, DEPLOY_FIELD, GUARDRAILS_FIELD);
+        Set<String> optionalKeys = Set.of(MODEL_GROUP_ID, DESCRIPTION_FIELD, DEPLOY_FIELD, GUARDRAILS_FIELD, INTERFACE_FIELD);
 
         try {
             Map<String, Object> inputs = ParseUtils.getInputsFromPreviousSteps(
@@ -93,6 +99,7 @@ public class RegisterRemoteModelStep implements WorkflowStep {
             String description = (String) inputs.get(DESCRIPTION_FIELD);
             String connectorId = (String) inputs.get(CONNECTOR_ID);
             Guardrails guardRails = (Guardrails) inputs.get(GUARDRAILS_FIELD);
+            String modelInterface = (String) inputs.get(INTERFACE_FIELD);
             final Boolean deploy = inputs.containsKey(DEPLOY_FIELD) ? Booleans.parseBoolean(inputs.get(DEPLOY_FIELD).toString()) : null;
 
             MLRegisterModelInputBuilder builder = MLRegisterModelInput.builder()
@@ -111,6 +118,27 @@ public class RegisterRemoteModelStep implements WorkflowStep {
             }
             if (guardRails != null) {
                 builder.guardrails(guardRails);
+            }
+            if (modelInterface != null) {
+                try {
+                    // Convert model interface string to map
+                    BytesReference modelInterfaceBytes = new BytesArray(modelInterface.getBytes(StandardCharsets.UTF_8));
+                    Map<String, Object> modelInterfaceAsMap = XContentHelper.convertToMap(
+                        modelInterfaceBytes,
+                        false,
+                        MediaTypeRegistry.JSON
+                    ).v2();
+
+                    // Convert to string to string map
+                    Map<String, String> parameters = ParseUtils.convertStringToObjectMapToStringToStringMap(modelInterfaceAsMap);
+                    builder.modelInterface(parameters);
+
+                } catch (Exception ex) {
+                    String errorMessage = "Failed to create model interface";
+                    logger.error(errorMessage, ex);
+                    registerRemoteModelFuture.onFailure(new WorkflowStepException(errorMessage, RestStatus.BAD_REQUEST));
+                }
+
             }
 
             MLRegisterModelInput mlInput = builder.build();
