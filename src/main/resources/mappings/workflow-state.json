@@ -1,7 +1,7 @@
 {
   "dynamic": false,
   "_meta": {
-    "schema_version": 2
+    "schema_version": 3
   },
   "properties": {
     "schema_version": {
@@ -29,6 +29,44 @@
     },
     "user_outputs": {
       "type": "object"
+    },
+    "user": {
+      "type": "nested",
+      "properties": {
+        "name": {
+          "type": "text",
+          "fields": {
+            "keyword": {
+              "type": "keyword",
+              "ignore_above": 256
+            }
+          }
+        },
+        "backend_roles": {
+          "type" : "text",
+          "fields" : {
+            "keyword" : {
+              "type" : "keyword"
+            }
+          }
+        },
+        "roles": {
+          "type" : "text",
+          "fields" : {
+            "keyword" : {
+              "type" : "keyword"
+            }
+          }
+        },
+        "custom_attribute_names": {
+          "type" : "text",
+          "fields" : {
+            "keyword" : {
+              "type" : "keyword"
+            }
+          }
+        }
+      }
     },
     "resources_created": {
       "type": "nested",
