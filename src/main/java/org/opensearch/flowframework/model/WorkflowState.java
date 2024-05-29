@@ -70,7 +70,7 @@ public class WorkflowState implements ToXContentObject, Writeable {
      * @param provisionEndTime Indicates the end time of the whole provisioning flow
      * @param user The user extracted from the thread context from the request
      * @param userOutputs A map of essential API responses for backend to use and lookup.
-     * @param resourcesCreated A map of all the resources created.
+     * @param resourcesCreated A list of all the resources created.
      */
     public WorkflowState(
         String workflowId,

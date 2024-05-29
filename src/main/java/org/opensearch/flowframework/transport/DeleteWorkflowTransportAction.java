@@ -10,6 +10,7 @@ package org.opensearch.flowframework.transport;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.apache.logging.log4j.core.util.Booleans;
 import org.opensearch.action.delete.DeleteRequest;
 import org.opensearch.action.delete.DeleteResponse;
 import org.opensearch.action.support.ActionFilters;
@@ -24,6 +25,7 @@ import org.opensearch.flowframework.indices.FlowFrameworkIndicesHandler;
 import org.opensearch.tasks.Task;
 import org.opensearch.transport.TransportService;
 
+import static org.opensearch.flowframework.common.CommonValue.CLEAR_STATUS;
 import static org.opensearch.flowframework.common.CommonValue.GLOBAL_CONTEXT_INDEX;
 
 /**
@@ -65,10 +67,12 @@ public class DeleteWorkflowTransportAction extends HandledTransportAction<Workfl
             logger.info("Deleting workflow doc: {}", workflowId);
             client.delete(deleteRequest, ActionListener.runBefore(listener, context::restore));
 
+            // Whether to force deletion of corresponding state
+            final boolean clearStatus = Booleans.parseBoolean(request.getParams().get(CLEAR_STATUS), false);
             ActionListener<DeleteResponse> stateListener = ActionListener.wrap(response -> {
                 logger.info("Deleted workflow state doc: {}", workflowId);
             }, exception -> { logger.info("Failed to delete workflow state doc: {}", workflowId, exception); });
-            flowFrameworkIndicesHandler.canDeleteWorkflowStateDoc(workflowId, canDelete -> {
+            flowFrameworkIndicesHandler.canDeleteWorkflowStateDoc(workflowId, clearStatus, canDelete -> {
                 if (Boolean.TRUE.equals(canDelete)) {
                     flowFrameworkIndicesHandler.deleteFlowFrameworkSystemIndexDoc(workflowId, stateListener);
                 }
