@@ -474,11 +474,12 @@ public class ParseUtils {
     }
 
     /**
-     * Checks if the inputs map contains the specified key and parses the associated value to a Boolean.
+     * Checks if the inputs map contains the specified key and parses the associated value to a generic class.
      *
      * @param inputs the map containing the input data
      * @param key the key to check in the map
-     * @return the Boolean value associated with the key if present, or null if the key is not found
+     * @param type the class to parse the value to
+     * @return the generic type value associated with the key if present, or null if the key is not found
      */
     public static <T> T parseIfExists(Map<String, Object> inputs, String key, Class<T> type) {
         if (!inputs.containsKey(key)) {
