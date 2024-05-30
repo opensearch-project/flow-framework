@@ -174,22 +174,10 @@ public class CommonValue {
     public static final String DELAY_FIELD = "delay";
     /** Model Interface Field */
     public static final String INTERFACE_FIELD = "interface";
-    /** The reindex field for created resources */
-    public static final String RE_INDEX_FIELD = "reindex";
     /** The source index field for reindex */
-    public static final String SOURCE_INDEX = "source_index";
+    public static final String SOURCE_INDICES = "source_indices";
     /** The destination index field for reindex */
     public static final String DESTINATION_INDEX = "destination_index";
-    /** The refresh field for reindex */
-    public static final String REFRESH = "refresh";
-    /** The requests_per_second field for reindex */
-    public static final String REQUESTS_PER_SECOND = "requests_per_second";
-    /** The require_alias field for reindex */
-    public static final String REQUIRE_ALIAS = "require_alias";
-    /** The slices field for reindex */
-    public static final String SLICES = "slices";
-    /** The max_docs field for reindex */
-    public static final String MAX_DOCS = "max_docs";
     /*
      * Constants associated with resource provisioning / state
      */

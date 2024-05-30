@@ -15,6 +15,7 @@ import org.opensearch.action.support.PlainActionFuture;
 import org.opensearch.client.Client;
 import org.opensearch.common.Booleans;
 import org.opensearch.core.action.ActionListener;
+import org.opensearch.core.rest.RestStatus;
 import org.opensearch.flowframework.exception.FlowFrameworkException;
 import org.opensearch.flowframework.exception.WorkflowStepException;
 import org.opensearch.flowframework.indices.FlowFrameworkIndicesHandler;
@@ -27,25 +28,29 @@ import java.util.Map;
 import java.util.Set;
 
 import static org.opensearch.flowframework.common.CommonValue.DESTINATION_INDEX;
-import static org.opensearch.flowframework.common.CommonValue.MAX_DOCS;
-import static org.opensearch.flowframework.common.CommonValue.REFRESH;
-import static org.opensearch.flowframework.common.CommonValue.REQUESTS_PER_SECOND;
-import static org.opensearch.flowframework.common.CommonValue.REQUIRE_ALIAS;
-import static org.opensearch.flowframework.common.CommonValue.RE_INDEX_FIELD;
-import static org.opensearch.flowframework.common.CommonValue.SLICES;
-import static org.opensearch.flowframework.common.CommonValue.SOURCE_INDEX;
+import static org.opensearch.flowframework.common.CommonValue.SOURCE_INDICES;
 
 /**
  * Step to reindex
  */
-public class ReIndexStep implements WorkflowStep {
+public class ReindexStep implements WorkflowStep {
 
-    private static final Logger logger = LogManager.getLogger(ReIndexStep.class);
+    private static final Logger logger = LogManager.getLogger(ReindexStep.class);
     private final Client client;
     private final FlowFrameworkIndicesHandler flowFrameworkIndicesHandler;
 
     /** The name of this step, used as a key in the template and the {@link WorkflowStepFactory} */
     public static final String NAME = "reindex";
+    /** The refresh field for reindex */
+    private static final String REFRESH = "refresh";
+    /** The requests_per_second field for reindex */
+    private static final String REQUESTS_PER_SECOND = "requests_per_second";
+    /** The require_alias field for reindex */
+    private static final String REQUIRE_ALIAS = "require_alias";
+    /** The slices field for reindex */
+    private static final String SLICES = "slices";
+    /** The max_docs field for reindex */
+    private static final String MAX_DOCS = "max_docs";
 
     /**
      * Instantiate this class
@@ -53,7 +58,7 @@ public class ReIndexStep implements WorkflowStep {
      * @param client Client to create an index
      * @param flowFrameworkIndicesHandler FlowFrameworkIndicesHandler class to update system indices
      */
-    public ReIndexStep(Client client, FlowFrameworkIndicesHandler flowFrameworkIndicesHandler) {
+    public ReindexStep(Client client, FlowFrameworkIndicesHandler flowFrameworkIndicesHandler) {
         this.client = client;
         this.flowFrameworkIndicesHandler = flowFrameworkIndicesHandler;
     }
@@ -69,7 +74,7 @@ public class ReIndexStep implements WorkflowStep {
 
         PlainActionFuture<WorkflowData> reIndexFuture = PlainActionFuture.newFuture();
 
-        Set<String> requiredKeys = Set.of(SOURCE_INDEX, DESTINATION_INDEX);
+        Set<String> requiredKeys = Set.of(SOURCE_INDICES, DESTINATION_INDEX);
 
         Set<String> optionalKeys = Set.of(REFRESH, REQUESTS_PER_SECOND, REQUIRE_ALIAS, SLICES, MAX_DOCS);
 
@@ -83,7 +88,7 @@ public class ReIndexStep implements WorkflowStep {
                 params
             );
 
-            String sourceIndices = (String) inputs.get(SOURCE_INDEX);
+            String sourceIndices = (String) inputs.get(SOURCE_INDICES);
             String destinationIndex = (String) inputs.get(DESTINATION_INDEX);
             Boolean refresh = inputs.containsKey(REFRESH) ? Booleans.parseBoolean(inputs.get(REFRESH).toString()) : null;
             Integer requestsPerSecond = (Integer) inputs.get(REQUESTS_PER_SECOND);
@@ -91,9 +96,8 @@ public class ReIndexStep implements WorkflowStep {
             Integer slices = (Integer) inputs.get(SLICES);
             Integer maxDocs = (Integer) inputs.get(MAX_DOCS);
 
-            ReindexRequest reindexRequest = new ReindexRequest();
-            reindexRequest.setSourceIndices(sourceIndices);
-            reindexRequest.setDestIndex(destinationIndex);
+            ReindexRequest reindexRequest = new ReindexRequest().setSourceIndices(sourceIndices).setDestIndex(destinationIndex);
+
             if (refresh != null) {
                 reindexRequest.setRefresh(refresh);
             }
@@ -127,13 +131,13 @@ public class ReIndexStep implements WorkflowStep {
 
                                     reIndexFuture.onResponse(
                                         new WorkflowData(
-                                            Map.of(RE_INDEX_FIELD, Map.of(sourceIndices, destinationIndex)),
+                                            Map.of(NAME, Map.of(sourceIndices, destinationIndex)),
                                             currentNodeInputs.getWorkflowId(),
                                             currentNodeInputs.getNodeId()
                                         )
                                     );
                                 }, exception -> {
-                                    String errorMessage = "Failed to update new reindexed"
+                                    String errorMessage = "Failed to update new reindexed "
                                         + currentNodeId
                                         + " resource "
                                         + getName()
@@ -143,6 +147,9 @@ public class ReIndexStep implements WorkflowStep {
                                     reIndexFuture.onFailure(new FlowFrameworkException(errorMessage, ExceptionsHelper.status(exception)));
                                 })
                             );
+                        } else {
+                            String errorMessage = "Failed to get bulk response";
+                            reIndexFuture.onFailure(new FlowFrameworkException(errorMessage, RestStatus.BAD_REQUEST));
                         }
                     } catch (Exception e) {
                         String errorMessage = "Failed to parse and update new created resource";

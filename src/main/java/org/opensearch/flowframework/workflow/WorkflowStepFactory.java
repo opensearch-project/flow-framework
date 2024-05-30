@@ -48,8 +48,7 @@ import static org.opensearch.flowframework.common.CommonValue.PARAMETERS_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.PIPELINE_ID;
 import static org.opensearch.flowframework.common.CommonValue.PROTOCOL_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.REGISTER_MODEL_STATUS;
-import static org.opensearch.flowframework.common.CommonValue.RE_INDEX_FIELD;
-import static org.opensearch.flowframework.common.CommonValue.SOURCE_INDEX;
+import static org.opensearch.flowframework.common.CommonValue.SOURCE_INDICES;
 import static org.opensearch.flowframework.common.CommonValue.SUCCESS;
 import static org.opensearch.flowframework.common.CommonValue.TOOLS_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.TYPE;
@@ -87,7 +86,7 @@ public class WorkflowStepFactory {
     ) {
         stepMap.put(NoOpStep.NAME, NoOpStep::new);
         stepMap.put(CreateIndexStep.NAME, () -> new CreateIndexStep(client, flowFrameworkIndicesHandler));
-        stepMap.put(ReIndexStep.NAME, () -> new ReIndexStep(client, flowFrameworkIndicesHandler));
+        stepMap.put(ReindexStep.NAME, () -> new ReindexStep(client, flowFrameworkIndicesHandler));
         stepMap.put(
             RegisterLocalCustomModelStep.NAME,
             () -> new RegisterLocalCustomModelStep(threadPool, mlClient, flowFrameworkIndicesHandler, flowFrameworkSettings)
@@ -130,7 +129,7 @@ public class WorkflowStepFactory {
         CREATE_INDEX(CreateIndexStep.NAME, List.of(INDEX_NAME, CONFIGURATIONS), List.of(INDEX_NAME), Collections.emptyList(), null),
 
         /** Create ReIndex Step */
-        RE_INDEX(ReIndexStep.NAME, List.of(SOURCE_INDEX, DESTINATION_INDEX), List.of(RE_INDEX_FIELD), Collections.emptyList(), null),
+        REINDEX(ReindexStep.NAME, List.of(SOURCE_INDICES, DESTINATION_INDEX), List.of(ReindexStep.NAME), Collections.emptyList(), null),
 
         /** Create Connector Step */
         CREATE_CONNECTOR(

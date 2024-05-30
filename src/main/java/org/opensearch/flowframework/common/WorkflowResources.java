@@ -21,13 +21,13 @@ import org.opensearch.flowframework.workflow.DeleteConnectorStep;
 import org.opensearch.flowframework.workflow.DeleteModelStep;
 import org.opensearch.flowframework.workflow.DeployModelStep;
 import org.opensearch.flowframework.workflow.NoOpStep;
-import org.opensearch.flowframework.workflow.ReIndexStep;
 import org.opensearch.flowframework.workflow.RegisterAgentStep;
 import org.opensearch.flowframework.workflow.RegisterLocalCustomModelStep;
 import org.opensearch.flowframework.workflow.RegisterLocalPretrainedModelStep;
 import org.opensearch.flowframework.workflow.RegisterLocalSparseEncodingModelStep;
 import org.opensearch.flowframework.workflow.RegisterModelGroupStep;
 import org.opensearch.flowframework.workflow.RegisterRemoteModelStep;
+import org.opensearch.flowframework.workflow.ReindexStep;
 import org.opensearch.flowframework.workflow.UndeployModelStep;
 
 import java.util.Set;
@@ -60,7 +60,7 @@ public enum WorkflowResources {
     /** Workflow steps for creating an index and associated created resource */
     CREATE_INDEX(CreateIndexStep.NAME, WorkflowResources.INDEX_NAME, NoOpStep.NAME),
     /** Workflow steps for reindex a source index to destination index and associated created resource */
-    RE_INDEX(ReIndexStep.NAME, CommonValue.DESTINATION_INDEX, NoOpStep.NAME),
+    REINDEX(ReindexStep.NAME, CommonValue.DESTINATION_INDEX, NoOpStep.NAME),
     /** Workflow steps for registering/deleting an agent and the associated created resource */
     REGISTER_AGENT(RegisterAgentStep.NAME, WorkflowResources.AGENT_ID, DeleteAgentStep.NAME);
 

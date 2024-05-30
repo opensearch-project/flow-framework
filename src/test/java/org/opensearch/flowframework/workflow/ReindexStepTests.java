@@ -39,14 +39,9 @@ import static java.util.stream.Collectors.toList;
 import static org.opensearch.action.DocWriteResponse.Result.UPDATED;
 import static org.opensearch.common.unit.TimeValue.timeValueMillis;
 import static org.opensearch.flowframework.common.CommonValue.DESTINATION_INDEX;
-import static org.opensearch.flowframework.common.CommonValue.MAX_DOCS;
-import static org.opensearch.flowframework.common.CommonValue.REFRESH;
-import static org.opensearch.flowframework.common.CommonValue.REQUESTS_PER_SECOND;
-import static org.opensearch.flowframework.common.CommonValue.REQUIRE_ALIAS;
-import static org.opensearch.flowframework.common.CommonValue.RE_INDEX_FIELD;
-import static org.opensearch.flowframework.common.CommonValue.SLICES;
-import static org.opensearch.flowframework.common.CommonValue.SOURCE_INDEX;
+import static org.opensearch.flowframework.common.CommonValue.SOURCE_INDICES;
 import static org.opensearch.flowframework.common.CommonValue.WORKFLOW_STATE_INDEX;
+import static org.opensearch.flowframework.workflow.ReindexStep.NAME;
 import static org.apache.lucene.tests.util.TestUtil.randomSimpleString;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -55,10 +50,20 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
-public class ReIndexStepTests extends OpenSearchTestCase {
+public class ReindexStepTests extends OpenSearchTestCase {
     private WorkflowData inputData = WorkflowData.EMPTY;
     private Client client;
-    private ReIndexStep reIndexStep;
+    private ReindexStep reIndexStep;
+    /** The refresh field for reindex */
+    private static final String REFRESH = "refresh";
+    /** The requests_per_second field for reindex */
+    private static final String REQUESTS_PER_SECOND = "requests_per_second";
+    /** The require_alias field for reindex */
+    private static final String REQUIRE_ALIAS = "require_alias";
+    /** The slices field for reindex */
+    private static final String SLICES = "slices";
+    /** The max_docs field for reindex */
+    private static final String MAX_DOCS = "max_docs";
 
     private FlowFrameworkIndicesHandler flowFrameworkIndicesHandler;
 
@@ -70,7 +75,7 @@ public class ReIndexStepTests extends OpenSearchTestCase {
 
         inputData = new WorkflowData(
             Map.ofEntries(
-                Map.entry(SOURCE_INDEX, "demo"),
+                Map.entry(SOURCE_INDICES, "demo"),
                 Map.entry(DESTINATION_INDEX, "dest"),
                 Map.entry(REFRESH, true),
                 Map.entry(REQUESTS_PER_SECOND, 2),
@@ -83,10 +88,13 @@ public class ReIndexStepTests extends OpenSearchTestCase {
         );
 
         client = mock(Client.class);
-        reIndexStep = new ReIndexStep(client, flowFrameworkIndicesHandler);
+        reIndexStep = new ReindexStep(client, flowFrameworkIndicesHandler);
     }
 
-    public void testReIndexStep() throws ExecutionException, InterruptedException, IOException {
+    public void testReindexStep() throws ExecutionException, InterruptedException, IOException {
+
+        @SuppressWarnings({ "unchecked" })
+        ArgumentCaptor<ActionListener<BulkByScrollResponse>> actionListenerCaptor = ArgumentCaptor.forClass(ActionListener.class);
 
         doAnswer(invocation -> {
             ActionListener<UpdateResponse> updateResponseListener = invocation.getArgument(4);
@@ -94,8 +102,6 @@ public class ReIndexStepTests extends OpenSearchTestCase {
             return null;
         }).when(flowFrameworkIndicesHandler).updateResourceInStateIndex(anyString(), anyString(), anyString(), anyString(), any());
 
-        @SuppressWarnings({ "unchecked" })
-        ArgumentCaptor<ActionListener<BulkByScrollResponse>> actionListenerCaptor = ArgumentCaptor.forClass(ActionListener.class);
         PlainActionFuture<WorkflowData> future = reIndexStep.execute(
             inputData.getNodeId(),
             inputData,
@@ -118,12 +124,12 @@ public class ReIndexStepTests extends OpenSearchTestCase {
 
         assertTrue(future.isDone());
 
-        Map<String, Object> outputData = Map.of(RE_INDEX_FIELD, Map.of("demo", "dest"));
+        Map<String, Object> outputData = Map.of(NAME, Map.of("demo", "dest"));
         assertEquals(outputData, future.get().getContent());
 
     }
 
-    public void testReIndexStepFailure() throws ExecutionException, InterruptedException {
+    public void testReindexStepFailure() throws ExecutionException, InterruptedException {
         @SuppressWarnings({ "unchecked" })
         ArgumentCaptor<ActionListener<BulkByScrollResponse>> actionListenerCaptor = ArgumentCaptor.forClass(ActionListener.class);
         PlainActionFuture<WorkflowData> future = reIndexStep.execute(
