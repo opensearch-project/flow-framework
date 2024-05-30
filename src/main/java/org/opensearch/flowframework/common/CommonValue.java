@@ -174,7 +174,10 @@ public class CommonValue {
     public static final String DELAY_FIELD = "delay";
     /** Model Interface Field */
     public static final String INTERFACE_FIELD = "interface";
-
+    /** The source index field for reindex */
+    public static final String SOURCE_INDEX = "source_index";
+    /** The destination index field for reindex */
+    public static final String DESTINATION_INDEX = "destination_index";
     /*
      * Constants associated with resource provisioning / state
      */
