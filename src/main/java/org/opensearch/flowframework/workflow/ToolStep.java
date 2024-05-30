@@ -11,7 +11,6 @@ package org.opensearch.flowframework.workflow;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.opensearch.action.support.PlainActionFuture;
-import org.opensearch.common.Booleans;
 import org.opensearch.core.rest.RestStatus;
 import org.opensearch.flowframework.exception.FlowFrameworkException;
 import org.opensearch.flowframework.exception.WorkflowStepException;
@@ -64,7 +63,7 @@ public class ToolStep implements WorkflowStep {
             String type = (String) inputs.get(TYPE);
             String name = (String) inputs.get(NAME_FIELD);
             String description = (String) inputs.get(DESCRIPTION_FIELD);
-            Boolean includeOutputInAgentResponse = ParseUtils.checkIfInputsContainsKey(inputs ,INCLUDE_OUTPUT_IN_AGENT_RESPONSE);
+            Boolean includeOutputInAgentResponse = ParseUtils.parseBooleanIfExists(inputs ,INCLUDE_OUTPUT_IN_AGENT_RESPONSE);
             Map<String, String> parameters = getToolsParametersMap(inputs.get(PARAMETERS_FIELD), previousNodeInputs, outputs);
 
             MLToolSpec.MLToolSpecBuilder builder = MLToolSpec.builder();

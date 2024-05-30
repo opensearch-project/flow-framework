@@ -221,4 +221,16 @@ public class ParseUtilsTests extends OpenSearchTestCase {
         assertEquals("Missing required inputs [not-here] in workflow [workflowId] node [nodeId]", e.getMessage());
         assertEquals(RestStatus.BAD_REQUEST, e.getRestStatus());
     }
+
+    public void testParseBooleanIfExists() {
+        Map<String, Object> inputs = new HashMap<>();
+        inputs.put("key1", "true");
+        inputs.put("key2", "false");
+        inputs.put("key3", "true");
+
+        assertEquals(Boolean.TRUE, ParseUtils.parseBooleanIfExists(inputs, "key1"));
+        assertEquals(Boolean.FALSE, ParseUtils.parseBooleanIfExists(inputs, "key2"));
+        assertNull(ParseUtils.parseBooleanIfExists(inputs, "keyThatDoesntExist"));
+
+    }
 }

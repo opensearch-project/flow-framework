@@ -12,7 +12,6 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.opensearch.ExceptionsHelper;
 import org.opensearch.action.support.PlainActionFuture;
-import org.opensearch.common.Booleans;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.core.common.util.CollectionUtils;
 import org.opensearch.core.rest.RestStatus;
@@ -147,7 +146,7 @@ public class RegisterModelGroupStep implements WorkflowStep {
             if (inputs.containsKey(MODEL_ACCESS_MODE)) {
                 modelAccessMode = AccessMode.from((inputs.get(MODEL_ACCESS_MODE)).toString().toLowerCase(Locale.ROOT));
             }
-            Boolean isAddAllBackendRoles = ParseUtils.checkIfInputsContainsKey(inputs, ADD_ALL_BACKEND_ROLES);
+            Boolean isAddAllBackendRoles = ParseUtils.parseBooleanIfExists(inputs, ADD_ALL_BACKEND_ROLES);
 
             MLRegisterModelGroupInputBuilder builder = MLRegisterModelGroupInput.builder();
             builder.name(modelGroupName);

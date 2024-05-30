@@ -474,7 +474,14 @@ public class ParseUtils {
         }
     }
 
-    public static Boolean checkIfInputsContainsKey(Map<String, Object> inputs, String enumKey){
-        return inputs.containsKey(enumKey) ? Booleans.parseBoolean(inputs.get(enumKey).toString()) : null;
+    /**
+     * Checks if the inputs map contains the specified key and parses the associated value to a Boolean.
+     *
+     * @param inputs the map containing the input data
+     * @param key the key to check in the map
+     * @return the Boolean value associated with the key if present, or null if the key is not found
+     */
+    public static Boolean parseBooleanIfExists(Map<String, Object> inputs, String key) {
+        return inputs.containsKey(key) ? Booleans.parseBoolean(inputs.get(key).toString()) : null;
     }
 }
