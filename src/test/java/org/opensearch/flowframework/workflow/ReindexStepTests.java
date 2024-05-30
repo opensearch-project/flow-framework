@@ -39,7 +39,7 @@ import static java.util.stream.Collectors.toList;
 import static org.opensearch.action.DocWriteResponse.Result.UPDATED;
 import static org.opensearch.common.unit.TimeValue.timeValueMillis;
 import static org.opensearch.flowframework.common.CommonValue.DESTINATION_INDEX;
-import static org.opensearch.flowframework.common.CommonValue.SOURCE_INDICES;
+import static org.opensearch.flowframework.common.CommonValue.SOURCE_INDEX;
 import static org.opensearch.flowframework.common.CommonValue.WORKFLOW_STATE_INDEX;
 import static org.opensearch.flowframework.workflow.ReindexStep.NAME;
 import static org.apache.lucene.tests.util.TestUtil.randomSimpleString;
@@ -75,7 +75,7 @@ public class ReindexStepTests extends OpenSearchTestCase {
 
         inputData = new WorkflowData(
             Map.ofEntries(
-                Map.entry(SOURCE_INDICES, "demo"),
+                Map.entry(SOURCE_INDEX, "demo"),
                 Map.entry(DESTINATION_INDEX, "dest"),
                 Map.entry(REFRESH, true),
                 Map.entry(REQUESTS_PER_SECOND, 2.0),
@@ -123,10 +123,7 @@ public class ReindexStepTests extends OpenSearchTestCase {
             );
 
         assertTrue(future.isDone());
-        Map<String, Object> outputData = Map.of(
-            NAME,
-            Map.ofEntries(Map.entry(DESTINATION_INDEX, "dest"), Map.entry(SOURCE_INDICES, "demo"))
-        );
+        Map<String, Object> outputData = Map.of(NAME, Map.ofEntries(Map.entry(DESTINATION_INDEX, "dest"), Map.entry(SOURCE_INDEX, "demo")));
         assertEquals(outputData, future.get().getContent());
 
     }

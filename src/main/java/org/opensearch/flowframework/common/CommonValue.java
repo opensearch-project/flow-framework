@@ -175,7 +175,7 @@ public class CommonValue {
     /** Model Interface Field */
     public static final String INTERFACE_FIELD = "interface";
     /** The source index field for reindex */
-    public static final String SOURCE_INDICES = "source_indices";
+    public static final String SOURCE_INDEX = "source_index";
     /** The destination index field for reindex */
     public static final String DESTINATION_INDEX = "destination_index";
     /*

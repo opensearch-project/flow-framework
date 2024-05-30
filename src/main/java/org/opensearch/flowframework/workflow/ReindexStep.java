@@ -29,7 +29,7 @@ import java.util.Map;
 import java.util.Set;
 
 import static org.opensearch.flowframework.common.CommonValue.DESTINATION_INDEX;
-import static org.opensearch.flowframework.common.CommonValue.SOURCE_INDICES;
+import static org.opensearch.flowframework.common.CommonValue.SOURCE_INDEX;
 
 /**
  * Step to reindex
@@ -75,7 +75,7 @@ public class ReindexStep implements WorkflowStep {
 
         PlainActionFuture<WorkflowData> reIndexFuture = PlainActionFuture.newFuture();
 
-        Set<String> requiredKeys = Set.of(SOURCE_INDICES, DESTINATION_INDEX);
+        Set<String> requiredKeys = Set.of(SOURCE_INDEX, DESTINATION_INDEX);
 
         Set<String> optionalKeys = Set.of(REFRESH, REQUESTS_PER_SECOND, REQUIRE_ALIAS, SLICES, MAX_DOCS);
 
@@ -89,12 +89,12 @@ public class ReindexStep implements WorkflowStep {
                 params
             );
 
-            String sourceIndices = (String) inputs.get(SOURCE_INDICES);
+            String sourceIndices = (String) inputs.get(SOURCE_INDEX);
             String destinationIndex = (String) inputs.get(DESTINATION_INDEX);
             Boolean refresh = inputs.containsKey(REFRESH) ? Booleans.parseBoolean(inputs.get(REFRESH).toString()) : null;
             Float requestsPerSecond = inputs.containsKey(REQUESTS_PER_SECOND)
                 ? Float.parseFloat(inputs.get(REQUESTS_PER_SECOND).toString())
-                : Float.POSITIVE_INFINITY;
+                : null;
             Boolean requireAlias = inputs.containsKey(REQUIRE_ALIAS) ? Booleans.parseBoolean(inputs.get(REQUIRE_ALIAS).toString()) : null;
             Integer slices = (Integer) inputs.get(SLICES);
             Integer maxDocs = (Integer) inputs.get(MAX_DOCS);
@@ -131,7 +131,7 @@ public class ReindexStep implements WorkflowStep {
                                         NAME,
                                         Map.ofEntries(
                                             Map.entry(DESTINATION_INDEX, destinationIndex),
-                                            Map.entry(SOURCE_INDICES, sourceIndices)
+                                            Map.entry(SOURCE_INDEX, sourceIndices)
                                         )
                                     ),
                                     currentNodeInputs.getWorkflowId(),
@@ -160,7 +160,8 @@ public class ReindexStep implements WorkflowStep {
             client.execute(ReindexAction.INSTANCE, reindexRequest, actionListener);
 
         } catch (IllegalArgumentException iae) {
-            reIndexFuture.onFailure(new WorkflowStepException(iae.getMessage(), RestStatus.BAD_REQUEST));
+            String error = "Failed to reindex " + iae.getMessage();
+            reIndexFuture.onFailure(new WorkflowStepException(error, RestStatus.BAD_REQUEST));
         } catch (Exception e) {
             reIndexFuture.onFailure(e);
         }
