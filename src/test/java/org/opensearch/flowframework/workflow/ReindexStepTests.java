@@ -123,8 +123,10 @@ public class ReindexStepTests extends OpenSearchTestCase {
             );
 
         assertTrue(future.isDone());
-
-        Map<String, Object> outputData = Map.of(NAME, Map.of("demo", "dest"));
+        Map<String, Object> outputData = Map.of(
+            NAME,
+            Map.ofEntries(Map.entry(DESTINATION_INDEX, "dest"), Map.entry(SOURCE_INDICES, "demo"))
+        );
         assertEquals(outputData, future.get().getContent());
 
     }

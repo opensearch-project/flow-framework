@@ -60,7 +60,7 @@ public enum WorkflowResources {
     /** Workflow steps for creating an index and associated created resource */
     CREATE_INDEX(CreateIndexStep.NAME, WorkflowResources.INDEX_NAME, NoOpStep.NAME),
     /** Workflow steps for reindex a source index to destination index and associated created resource */
-    REINDEX(ReindexStep.NAME, CommonValue.DESTINATION_INDEX, NoOpStep.NAME),
+    REINDEX(ReindexStep.NAME, WorkflowResources.INDEX_NAME, NoOpStep.NAME),
     /** Workflow steps for registering/deleting an agent and the associated created resource */
     REGISTER_AGENT(RegisterAgentStep.NAME, WorkflowResources.AGENT_ID, DeleteAgentStep.NAME);
 

@@ -15,6 +15,7 @@ import org.opensearch.action.support.PlainActionFuture;
 import org.opensearch.client.Client;
 import org.opensearch.common.Booleans;
 import org.opensearch.core.action.ActionListener;
+import org.opensearch.core.common.Strings;
 import org.opensearch.core.rest.RestStatus;
 import org.opensearch.flowframework.exception.FlowFrameworkException;
 import org.opensearch.flowframework.exception.WorkflowStepException;
@@ -98,7 +99,8 @@ public class ReindexStep implements WorkflowStep {
             Integer slices = (Integer) inputs.get(SLICES);
             Integer maxDocs = (Integer) inputs.get(MAX_DOCS);
 
-            ReindexRequest reindexRequest = new ReindexRequest().setSourceIndices(sourceIndices).setDestIndex(destinationIndex);
+            ReindexRequest reindexRequest = new ReindexRequest().setSourceIndices(Strings.splitStringByCommaToArray(sourceIndices))
+                .setDestIndex(destinationIndex);
 
             if (refresh != null) {
                 reindexRequest.setRefresh(refresh);
@@ -123,34 +125,21 @@ public class ReindexStep implements WorkflowStep {
                     logger.info("Reindex from source: {} to destination {}", sourceIndices, destinationIndex);
                     try {
                         if (bulkByScrollResponse.getBulkFailures().isEmpty() && bulkByScrollResponse.getSearchFailures().isEmpty()) {
-                            flowFrameworkIndicesHandler.updateResourceInStateIndex(
-                                currentNodeInputs.getWorkflowId(),
-                                currentNodeId,
-                                getName(),
-                                destinationIndex,
-                                ActionListener.wrap(response -> {
-                                    logger.info("successfully updated resource created in state index: {}", response.getIndex());
-
-                                    reIndexFuture.onResponse(
-                                        new WorkflowData(
-                                            Map.of(NAME, Map.of(sourceIndices, destinationIndex)),
-                                            currentNodeInputs.getWorkflowId(),
-                                            currentNodeInputs.getNodeId()
+                            reIndexFuture.onResponse(
+                                new WorkflowData(
+                                    Map.of(
+                                        NAME,
+                                        Map.ofEntries(
+                                            Map.entry(DESTINATION_INDEX, destinationIndex),
+                                            Map.entry(SOURCE_INDICES, sourceIndices)
                                         )
-                                    );
-                                }, exception -> {
-                                    String errorMessage = "Failed to update new reindexed "
-                                        + currentNodeId
-                                        + " resource "
-                                        + getName()
-                                        + " id "
-                                        + destinationIndex;
-                                    logger.error(errorMessage, exception);
-                                    reIndexFuture.onFailure(new FlowFrameworkException(errorMessage, ExceptionsHelper.status(exception)));
-                                })
+                                    ),
+                                    currentNodeInputs.getWorkflowId(),
+                                    currentNodeInputs.getNodeId()
+                                )
                             );
                         } else {
-                            String errorMessage = "Failed to get bulk response";
+                            String errorMessage = "Failed to get bulk response " + bulkByScrollResponse.getBulkFailures();
                             reIndexFuture.onFailure(new FlowFrameworkException(errorMessage, RestStatus.BAD_REQUEST));
                         }
                     } catch (Exception e) {
@@ -170,6 +159,8 @@ public class ReindexStep implements WorkflowStep {
 
             client.execute(ReindexAction.INSTANCE, reindexRequest, actionListener);
 
+        } catch (IllegalArgumentException iae) {
+            reIndexFuture.onFailure(new WorkflowStepException(iae.getMessage(), RestStatus.BAD_REQUEST));
         } catch (Exception e) {
             reIndexFuture.onFailure(e);
         }
