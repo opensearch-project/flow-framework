@@ -78,7 +78,7 @@ public class ReindexStepTests extends OpenSearchTestCase {
                 Map.entry(SOURCE_INDICES, "demo"),
                 Map.entry(DESTINATION_INDEX, "dest"),
                 Map.entry(REFRESH, true),
-                Map.entry(REQUESTS_PER_SECOND, 2),
+                Map.entry(REQUESTS_PER_SECOND, 2.0),
                 Map.entry(REQUIRE_ALIAS, false),
                 Map.entry(SLICES, 1),
                 Map.entry(MAX_DOCS, 2)
