@@ -146,7 +146,7 @@ public class RegisterModelGroupStep implements WorkflowStep {
             if (inputs.containsKey(MODEL_ACCESS_MODE)) {
                 modelAccessMode = AccessMode.from((inputs.get(MODEL_ACCESS_MODE)).toString().toLowerCase(Locale.ROOT));
             }
-            Boolean isAddAllBackendRoles = ParseUtils.parseBooleanIfExists(inputs, ADD_ALL_BACKEND_ROLES);
+            Boolean isAddAllBackendRoles = ParseUtils.parseIfExists(inputs, ADD_ALL_BACKEND_ROLES, Boolean.class);
 
             MLRegisterModelGroupInputBuilder builder = MLRegisterModelGroupInput.builder();
             builder.name(modelGroupName);

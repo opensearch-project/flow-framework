@@ -11,7 +11,6 @@ package org.opensearch.flowframework.util;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.opensearch.client.Client;
-import org.opensearch.common.Booleans;
 import org.opensearch.common.io.Streams;
 import org.opensearch.common.xcontent.LoggingDeprecationHandler;
 import org.opensearch.common.xcontent.XContentHelper;
@@ -481,7 +480,18 @@ public class ParseUtils {
      * @param key the key to check in the map
      * @return the Boolean value associated with the key if present, or null if the key is not found
      */
-    public static Boolean parseBooleanIfExists(Map<String, Object> inputs, String key) {
-        return inputs.containsKey(key) ? Booleans.parseBoolean(inputs.get(key).toString()) : null;
+    public static <T> T parseIfExists(Map<String, Object> inputs, String key, Class<T> type) {
+        if (!inputs.containsKey(key)) {
+            return null;
+        }
+
+        Object value = inputs.get(key);
+        if (type == Boolean.class) {
+            return type.cast(Boolean.valueOf(value.toString()));
+        } else if (type == Float.class) {
+            return type.cast(Float.valueOf(value.toString()));
+        } else {
+            throw new IllegalArgumentException("Unsupported type: " + type);
+        }
     }
 }
