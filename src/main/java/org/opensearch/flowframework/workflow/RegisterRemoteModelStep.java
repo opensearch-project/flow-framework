@@ -100,7 +100,7 @@ public class RegisterRemoteModelStep implements WorkflowStep {
             String connectorId = (String) inputs.get(CONNECTOR_ID);
             Guardrails guardRails = (Guardrails) inputs.get(GUARDRAILS_FIELD);
             String modelInterface = (String) inputs.get(INTERFACE_FIELD);
-            final Boolean deploy = inputs.containsKey(DEPLOY_FIELD) ? Booleans.parseBoolean(inputs.get(DEPLOY_FIELD).toString()) : null;
+            final Boolean deploy = ParseUtils.checkIfInputsContainsKey(inputs, DEPLOY_FIELD);
 
             MLRegisterModelInputBuilder builder = MLRegisterModelInput.builder()
                 .functionName(FunctionName.REMOTE)

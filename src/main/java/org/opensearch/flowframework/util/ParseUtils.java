@@ -11,6 +11,7 @@ package org.opensearch.flowframework.util;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.opensearch.client.Client;
+import org.opensearch.common.Booleans;
 import org.opensearch.common.io.Streams;
 import org.opensearch.common.xcontent.LoggingDeprecationHandler;
 import org.opensearch.common.xcontent.XContentHelper;
@@ -471,5 +472,9 @@ public class ParseUtils {
             }
             return stringToStringMap;
         }
+    }
+
+    public static Boolean checkIfInputsContainsKey(Map<String, Object> inputs, String enumKey){
+        return inputs.containsKey(enumKey) ? Booleans.parseBoolean(inputs.get(enumKey).toString()) : null;
     }
 }

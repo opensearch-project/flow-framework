@@ -123,7 +123,7 @@ public abstract class AbstractRegisterLocalModelStep extends AbstractRetryableWo
             String modelGroupId = (String) inputs.get(MODEL_GROUP_ID);
             String allConfig = (String) inputs.get(ALL_CONFIG);
             String modelInterface = (String) inputs.get(INTERFACE_FIELD);
-            final Boolean deploy = inputs.containsKey(DEPLOY_FIELD) ? Booleans.parseBoolean(inputs.get(DEPLOY_FIELD).toString()) : null;
+            final Boolean deploy = ParseUtils.checkIfInputsContainsKey(inputs, DEPLOY_FIELD);
 
             // Build register model input
             MLRegisterModelInputBuilder mlInputBuilder = MLRegisterModelInput.builder()

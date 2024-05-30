@@ -64,9 +64,7 @@ public class ToolStep implements WorkflowStep {
             String type = (String) inputs.get(TYPE);
             String name = (String) inputs.get(NAME_FIELD);
             String description = (String) inputs.get(DESCRIPTION_FIELD);
-            Boolean includeOutputInAgentResponse = inputs.containsKey(INCLUDE_OUTPUT_IN_AGENT_RESPONSE)
-                ? Booleans.parseBoolean(inputs.get(INCLUDE_OUTPUT_IN_AGENT_RESPONSE).toString())
-                : null;
+            Boolean includeOutputInAgentResponse = ParseUtils.checkIfInputsContainsKey(inputs ,INCLUDE_OUTPUT_IN_AGENT_RESPONSE);
             Map<String, String> parameters = getToolsParametersMap(inputs.get(PARAMETERS_FIELD), previousNodeInputs, outputs);
 
             MLToolSpec.MLToolSpecBuilder builder = MLToolSpec.builder();
