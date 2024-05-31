@@ -28,6 +28,7 @@ import java.io.IOException;
 import java.util.List;
 import java.util.Locale;
 
+import static org.opensearch.flowframework.common.CommonValue.CLEAR_STATUS;
 import static org.opensearch.flowframework.common.CommonValue.WORKFLOW_ID;
 import static org.opensearch.flowframework.common.CommonValue.WORKFLOW_URI;
 import static org.opensearch.flowframework.common.FlowFrameworkSettings.FLOW_FRAMEWORK_ENABLED;
@@ -62,6 +63,7 @@ public class RestDeleteWorkflowAction extends BaseRestHandler {
     @Override
     protected BaseRestHandler.RestChannelConsumer prepareRequest(RestRequest request, NodeClient client) throws IOException {
         String workflowId = request.param(WORKFLOW_ID);
+        request.param(CLEAR_STATUS); // consume and ignore, we will pass params to workflow
         try {
             if (!flowFrameworkFeatureEnabledSetting.isFlowFrameworkEnabled()) {
                 throw new FlowFrameworkException(
@@ -78,7 +80,7 @@ public class RestDeleteWorkflowAction extends BaseRestHandler {
             if (workflowId == null) {
                 throw new FlowFrameworkException("workflow_id cannot be null", RestStatus.BAD_REQUEST);
             }
-            WorkflowRequest workflowRequest = new WorkflowRequest(workflowId, null);
+            WorkflowRequest workflowRequest = new WorkflowRequest(workflowId, null, request.params());
             return channel -> client.execute(DeleteWorkflowAction.INSTANCE, workflowRequest, ActionListener.wrap(response -> {
                 XContentBuilder builder = response.toXContent(channel.newBuilder(), ToXContent.EMPTY_PARAMS);
                 channel.sendResponse(new BytesRestResponse(RestStatus.OK, builder));
