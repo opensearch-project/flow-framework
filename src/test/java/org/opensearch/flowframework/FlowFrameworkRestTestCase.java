@@ -23,6 +23,7 @@ import org.opensearch.action.ingest.GetPipelineResponse;
 import org.opensearch.action.search.SearchResponse;
 import org.opensearch.client.Request;
 import org.opensearch.client.Response;
+import org.opensearch.client.ResponseException;
 import org.opensearch.client.RestClient;
 import org.opensearch.client.RestClientBuilder;
 import org.opensearch.common.settings.Settings;
@@ -444,10 +445,22 @@ public abstract class FlowFrameworkRestTestCase extends OpenSearchRestTestCase {
      * @throws Exception if the request fails
      */
     protected Response deleteWorkflow(RestClient client, String workflowId) throws Exception {
+        return deleteWorkflow(client, workflowId, "");
+    }
+
+    /**
+     * Helper method to invoke the Delete Workflow Rest Action
+     * @param client the rest client
+     * @param workflowId the workflow ID to delete
+     * @param params a string adding any rest path params
+     * @return a rest response
+     * @throws Exception if the request fails
+     */
+    protected Response deleteWorkflow(RestClient client, String workflowId, String params) throws Exception {
         return TestHelpers.makeRequest(
             client,
             "DELETE",
-            String.format(Locale.ROOT, "%s/%s", WORKFLOW_URI, workflowId),
+            String.format(Locale.ROOT, "%s/%s%s", WORKFLOW_URI, workflowId, params),
             Collections.emptyMap(),
             "",
             null
@@ -471,7 +484,6 @@ public abstract class FlowFrameworkRestTestCase extends OpenSearchRestTestCase {
             "",
             null
         );
-
     }
 
     /**
@@ -576,7 +588,7 @@ public abstract class FlowFrameworkRestTestCase extends OpenSearchRestTestCase {
     }
 
     /**
-     * Helper method to invoke the Get Workflow Rest Action and assert the provisioning and state status
+     * Helper method to invoke the Get Workflow Status Rest Action and assert the provisioning and state status
      * @param client the rest client
      * @param workflowId the workflow ID to get the status
      * @param stateStatus the state status name
@@ -594,6 +606,17 @@ public abstract class FlowFrameworkRestTestCase extends OpenSearchRestTestCase {
         Map<String, Object> responseMap = entityAsMap(response);
         assertEquals(stateStatus.name(), responseMap.get(CommonValue.STATE_FIELD));
         assertEquals(provisioningStatus.name(), responseMap.get(CommonValue.PROVISIONING_PROGRESS_FIELD));
+    }
+
+    /**
+     * Helper method to invoke the Get Workflow Status Rest Action and assert document is not found
+     * @param client the rest client
+     * @param workflowId the workflow ID to get the status
+     * @throws Exception if the request fails
+     */
+    protected void getAndAssertWorkflowStatusNotFound(RestClient client, String workflowId) throws Exception {
+        ResponseException ex = assertThrows(ResponseException.class, () -> getWorkflowStatus(client, workflowId, true));
+        assertEquals(RestStatus.NOT_FOUND.getStatus(), ex.getResponse().getStatusLine().getStatusCode());
     }
 
     /**
