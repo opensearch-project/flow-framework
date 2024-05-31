@@ -199,6 +199,8 @@ public class CommonValue {
     public static final String USER_OUTPUTS_FIELD = "user_outputs";
     /** The template field name for template resources created */
     public static final String RESOURCES_CREATED_FIELD = "resources_created";
+    /** The parameter to clear workflow state when deleting template */
+    public static final String CLEAR_STATUS = "clear_status";
     /** The field name for the step name where a resource is created */
     public static final String WORKFLOW_STEP_NAME = "workflow_step_name";
     /** The field name for the step ID where a resource is created */

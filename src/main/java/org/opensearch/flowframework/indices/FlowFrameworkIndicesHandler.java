@@ -525,11 +525,17 @@ public class FlowFrameworkIndicesHandler {
      * Check workflow provisioning state and resources to see if state can be deleted with template
      *
      * @param documentId document id
-     * @param canDeleteStateConsumer consumer function which will be true if NOT_STARTED or COMPLETED and no resources
+     * @param clearStatus if set true, always deletes the state document unless status is IN_PROGRESS
+     * @param canDeleteStateConsumer consumer function which will be true if workflow state is not IN_PROGRESS and either no resources or true clearStatus
      * @param listener action listener from caller to fail on error
      * @param <T> action listener response type
      */
-    public <T> void canDeleteWorkflowStateDoc(String documentId, Consumer<Boolean> canDeleteStateConsumer, ActionListener<T> listener) {
+    public <T> void canDeleteWorkflowStateDoc(
+        String documentId,
+        boolean clearStatus,
+        Consumer<Boolean> canDeleteStateConsumer,
+        ActionListener<T> listener
+    ) {
         GetRequest getRequest = new GetRequest(WORKFLOW_STATE_INDEX, documentId);
         try (ThreadContext.StoredContext context = client.threadPool().getThreadContext().stashContext()) {
             client.get(getRequest, ActionListener.wrap(response -> {
@@ -545,7 +551,7 @@ public class FlowFrameworkIndicesHandler {
                     ensureExpectedToken(XContentParser.Token.START_OBJECT, parser.nextToken(), parser);
                     WorkflowState workflowState = WorkflowState.parse(parser);
                     canDeleteStateConsumer.accept(
-                        workflowState.resourcesCreated().isEmpty()
+                        (clearStatus || workflowState.resourcesCreated().isEmpty())
                             && !ProvisioningProgress.IN_PROGRESS.equals(
                                 ProvisioningProgress.valueOf(workflowState.getProvisioningProgress())
                             )

@@ -175,6 +175,17 @@ public class FlowFrameworkRestApiIT extends FlowFrameworkRestTestCase {
         assertNotNull(resourcesCreated.get(0).resourceId());
         assertEquals("deploy_model", resourcesCreated.get(1).workflowStepName());
         assertNotNull(resourcesCreated.get(1).resourceId());
+
+        // Delete the workflow without deleting the resources
+        Response deleteResponse = deleteWorkflow(client(), workflowId);
+        assertEquals(RestStatus.OK, TestHelpers.restStatus(deleteResponse));
+
+        // Verify state doc is not deleted
+        assertBusy(
+            () -> { getAndAssertWorkflowStatus(client(), workflowId, State.COMPLETED, ProvisioningProgress.DONE); },
+            30,
+            TimeUnit.SECONDS
+        );
     }
 
     public void testCreateAndProvisionCyclicalTemplate() throws Exception {
@@ -235,6 +246,13 @@ public class FlowFrameworkRestApiIT extends FlowFrameworkRestTestCase {
         assertNotNull(resourcesCreated.get(1).resourceId());
         assertEquals("deploy_model", resourcesCreated.get(2).workflowStepName());
         assertNotNull(resourcesCreated.get(2).resourceId());
+
+        // Delete the workflow without deleting the resources
+        Response deleteResponse = deleteWorkflow(client(), workflowId, "?clear_status=true");
+        assertEquals(RestStatus.OK, TestHelpers.restStatus(deleteResponse));
+
+        // Verify state doc is deleted
+        assertBusy(() -> { getAndAssertWorkflowStatusNotFound(client(), workflowId); }, 30, TimeUnit.SECONDS);
     }
 
     public void testCreateAndProvisionAgentFrameworkWorkflow() throws Exception {
@@ -305,6 +323,9 @@ public class FlowFrameworkRestApiIT extends FlowFrameworkRestTestCase {
         // Hit Delete API
         Response deleteResponse = deleteWorkflow(client(), workflowId);
         assertEquals(RestStatus.OK, TestHelpers.restStatus(deleteResponse));
+
+        // Verify state doc is deleted
+        assertBusy(() -> { getAndAssertWorkflowStatusNotFound(client(), workflowId); }, 30, TimeUnit.SECONDS);
     }
 
     public void testTimestamps() throws Exception {
