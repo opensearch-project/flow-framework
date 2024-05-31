@@ -91,11 +91,9 @@ public class ReindexStep implements WorkflowStep {
 
             String sourceIndices = (String) inputs.get(SOURCE_INDEX);
             String destinationIndex = (String) inputs.get(DESTINATION_INDEX);
-            Boolean refresh = inputs.containsKey(REFRESH) ? Booleans.parseBoolean(inputs.get(REFRESH).toString()) : null;
-            Float requestsPerSecond = inputs.containsKey(REQUESTS_PER_SECOND)
-                ? Float.parseFloat(inputs.get(REQUESTS_PER_SECOND).toString())
-                : null;
-            Boolean requireAlias = inputs.containsKey(REQUIRE_ALIAS) ? Booleans.parseBoolean(inputs.get(REQUIRE_ALIAS).toString()) : null;
+            Boolean refresh = ParseUtils.parseIfExists(inputs, REFRESH, Boolean.class);
+            Float requestsPerSecond = ParseUtils.parseIfExists(inputs, REQUESTS_PER_SECOND, Float.class);
+            Boolean requireAlias = ParseUtils.parseIfExists(inputs, REQUIRE_ALIAS, Boolean.class);
             Integer slices = (Integer) inputs.get(SLICES);
             Integer maxDocs = (Integer) inputs.get(MAX_DOCS);
 
