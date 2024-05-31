@@ -83,11 +83,11 @@ public class GetWorkflowStateTransportAction extends HandledTransportAction<GetW
                         listener.onFailure(new FlowFrameworkException(errorMessage, RestStatus.BAD_REQUEST));
                     }
                 } else {
-                    listener.onFailure(new FlowFrameworkException("Fail to find workflow " + workflowId, RestStatus.NOT_FOUND));
+                    listener.onFailure(new FlowFrameworkException("Fail to find workflow status of " + workflowId, RestStatus.NOT_FOUND));
                 }
             }, e -> {
                 if (e instanceof IndexNotFoundException) {
-                    listener.onFailure(new FlowFrameworkException("Fail to find workflow " + workflowId, RestStatus.NOT_FOUND));
+                    listener.onFailure(new FlowFrameworkException("Fail to find workflow status of " + workflowId, RestStatus.NOT_FOUND));
                 } else {
                     String errorMessage = "Failed to get workflow status of: " + workflowId;
                     logger.error(errorMessage, e);

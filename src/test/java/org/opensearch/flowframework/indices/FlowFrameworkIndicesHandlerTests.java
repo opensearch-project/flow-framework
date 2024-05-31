@@ -72,6 +72,7 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+@SuppressWarnings("deprecation")
 public class FlowFrameworkIndicesHandlerTests extends OpenSearchTestCase {
     @Mock
     private Client client;
@@ -262,19 +263,10 @@ public class FlowFrameworkIndicesHandlerTests extends OpenSearchTestCase {
 
     public void testIsWorkflowProvisionedFailedParsing() {
         String documentId = randomAlphaOfLength(5);
+        @SuppressWarnings("unchecked")
         Consumer<Optional<ProvisioningProgress>> function = mock(Consumer.class);
+        @SuppressWarnings("unchecked")
         ActionListener<GetResponse> listener = mock(ActionListener.class);
-        WorkflowState workFlowState = new WorkflowState(
-            documentId,
-            "test",
-            "PROVISIONING",
-            "IN_PROGRESS",
-            Instant.now(),
-            Instant.now(),
-            TestHelpers.randomUser(),
-            Collections.emptyMap(),
-            Collections.emptyList()
-        );
         doAnswer(invocation -> {
             ActionListener<GetResponse> responseListener = invocation.getArgument(1);
 
@@ -318,7 +310,7 @@ public class FlowFrameworkIndicesHandlerTests extends OpenSearchTestCase {
             return null;
         }).when(client).get(any(GetRequest.class), any());
 
-        flowFrameworkIndicesHandler.canDeleteWorkflowStateDoc(documentId, canDelete -> { assertTrue(canDelete); }, listener);
+        flowFrameworkIndicesHandler.canDeleteWorkflowStateDoc(documentId, false, canDelete -> { assertTrue(canDelete); }, listener);
     }
 
     public void testCanNotDeleteWorkflowStateDocInProgress() {
@@ -347,10 +339,10 @@ public class FlowFrameworkIndicesHandlerTests extends OpenSearchTestCase {
             return null;
         }).when(client).get(any(GetRequest.class), any());
 
-        flowFrameworkIndicesHandler.canDeleteWorkflowStateDoc(documentId, canDelete -> { assertFalse(canDelete); }, listener);
+        flowFrameworkIndicesHandler.canDeleteWorkflowStateDoc(documentId, true, canDelete -> { assertFalse(canDelete); }, listener);
     }
 
-    public void testCanNotDeleteWorkflowStateDocResourcesExist() {
+    public void testDeleteWorkflowStateDocResourcesExist() {
         String documentId = randomAlphaOfLength(5);
         @SuppressWarnings("unchecked")
         ActionListener<GetResponse> listener = mock(ActionListener.class);
@@ -376,12 +368,18 @@ public class FlowFrameworkIndicesHandlerTests extends OpenSearchTestCase {
             return null;
         }).when(client).get(any(GetRequest.class), any());
 
-        flowFrameworkIndicesHandler.canDeleteWorkflowStateDoc(documentId, canDelete -> { assertFalse(canDelete); }, listener);
+        // Can't delete because resources exist
+        flowFrameworkIndicesHandler.canDeleteWorkflowStateDoc(documentId, false, canDelete -> { assertFalse(canDelete); }, listener);
+
+        // But can delete if clearStatus set true
+        flowFrameworkIndicesHandler.canDeleteWorkflowStateDoc(documentId, true, canDelete -> { assertTrue(canDelete); }, listener);
     }
 
     public void testDoesTemplateExist() {
         String documentId = randomAlphaOfLength(5);
+        @SuppressWarnings("unchecked")
         Consumer<Boolean> function = mock(Consumer.class);
+        @SuppressWarnings("unchecked")
         ActionListener<GetResponse> listener = mock(ActionListener.class);
         doAnswer(invocation -> {
             ActionListener<GetResponse> responseListener = invocation.getArgument(1);
