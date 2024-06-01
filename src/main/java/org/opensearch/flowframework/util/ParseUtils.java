@@ -477,9 +477,11 @@ public class ParseUtils {
     /**
      * Checks if the inputs map contains the specified key and parses the associated value to a generic class.
      *
+     * @param <T> the type to which the value should be parsed
      * @param inputs the map containing the input data
      * @param key the key to check in the map
      * @param type the class to parse the value to
+     * @throws IllegalArgumentException if the type is not supported
      * @return the generic type value associated with the key if present, or null if the key is not found
      */
     public static <T> T parseIfExists(Map<String, Object> inputs, String key, Class<T> type) {

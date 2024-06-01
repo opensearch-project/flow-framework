@@ -8,8 +8,6 @@
  */
 package org.opensearch.flowframework.util;
 
-import org.junit.Test;
-import org.junit.rules.ExpectedException;
 import org.opensearch.common.xcontent.XContentFactory;
 import org.opensearch.core.rest.RestStatus;
 import org.opensearch.core.xcontent.XContentBuilder;
