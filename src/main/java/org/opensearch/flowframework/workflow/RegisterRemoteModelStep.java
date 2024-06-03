@@ -13,7 +13,6 @@ import org.apache.logging.log4j.Logger;
 import org.opensearch.ExceptionsHelper;
 import org.opensearch.action.support.PlainActionFuture;
 import org.opensearch.action.update.UpdateResponse;
-import org.opensearch.common.Booleans;
 import org.opensearch.common.xcontent.XContentHelper;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.core.common.bytes.BytesArray;
@@ -100,7 +99,7 @@ public class RegisterRemoteModelStep implements WorkflowStep {
             String connectorId = (String) inputs.get(CONNECTOR_ID);
             Guardrails guardRails = (Guardrails) inputs.get(GUARDRAILS_FIELD);
             String modelInterface = (String) inputs.get(INTERFACE_FIELD);
-            final Boolean deploy = inputs.containsKey(DEPLOY_FIELD) ? Booleans.parseBoolean(inputs.get(DEPLOY_FIELD).toString()) : null;
+            final Boolean deploy = ParseUtils.parseIfExists(inputs, DEPLOY_FIELD, Boolean.class);
 
             MLRegisterModelInputBuilder builder = MLRegisterModelInput.builder()
                 .functionName(FunctionName.REMOTE)
