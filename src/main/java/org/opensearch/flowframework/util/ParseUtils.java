@@ -11,6 +11,7 @@ package org.opensearch.flowframework.util;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.opensearch.client.Client;
+import org.opensearch.common.Booleans;
 import org.opensearch.common.io.Streams;
 import org.opensearch.common.xcontent.LoggingDeprecationHandler;
 import org.opensearch.common.xcontent.XContentHelper;
@@ -470,6 +471,31 @@ public class ParseUtils {
                 }
             }
             return stringToStringMap;
+        }
+    }
+
+    /**
+     * Checks if the inputs map contains the specified key and parses the associated value to a generic class.
+     *
+     * @param <T> the type to which the value should be parsed
+     * @param inputs the map containing the input data
+     * @param key the key to check in the map
+     * @param type the class to parse the value to
+     * @throws IllegalArgumentException if the type is not supported
+     * @return the generic type value associated with the key if present, or null if the key is not found
+     */
+    public static <T> T parseIfExists(Map<String, Object> inputs, String key, Class<T> type) {
+        if (!inputs.containsKey(key)) {
+            return null;
+        }
+
+        Object value = inputs.get(key);
+        if (type == Boolean.class) {
+            return type.cast(Booleans.parseBoolean(value.toString()));
+        } else if (type == Float.class) {
+            return type.cast(Float.parseFloat(value.toString()));
+        } else {
+            throw new IllegalArgumentException("Unsupported type: " + type);
         }
     }
 }
