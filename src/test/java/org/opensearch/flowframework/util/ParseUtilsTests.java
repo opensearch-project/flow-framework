@@ -221,4 +221,36 @@ public class ParseUtilsTests extends OpenSearchTestCase {
         assertEquals("Missing required inputs [not-here] in workflow [workflowId] node [nodeId]", e.getMessage());
         assertEquals(RestStatus.BAD_REQUEST, e.getRestStatus());
     }
+
+    public void testParseIfExistsWithBooleanClass() {
+        Map<String, Object> inputs = new HashMap<>();
+        inputs.put("key1", "true");
+        inputs.put("key2", "false");
+        inputs.put("key3", "true");
+
+        assertEquals(Boolean.TRUE, ParseUtils.parseIfExists(inputs, "key1", Boolean.class));
+        assertEquals(Boolean.FALSE, ParseUtils.parseIfExists(inputs, "key2", Boolean.class));
+        assertNull(ParseUtils.parseIfExists(inputs, "keyThatDoesntExist", Boolean.class));
+
+    }
+
+    public void testParseIfExistsWithFloatClass() {
+        Map<String, Object> inputs = new HashMap<>();
+        inputs.put("key1", "3.14");
+        inputs.put("key2", "0.01");
+        inputs.put("key3", "90.22");
+
+        assertEquals(Float.valueOf("3.14"), ParseUtils.parseIfExists(inputs, "key1", Float.class));
+        assertEquals(Float.valueOf("0.01"), ParseUtils.parseIfExists(inputs, "key2", Float.class));
+        assertNull(ParseUtils.parseIfExists(inputs, "keyThatDoesntExist", Float.class));
+
+    }
+
+    public void testParseIfExistWhenWrongTypeIsPassed() {
+
+        Map<String, Object> inputs = new HashMap<>();
+        inputs.put("key1", "3.14");
+
+        assertThrows(IllegalArgumentException.class, () -> ParseUtils.parseIfExists(inputs, "key1", Integer.class));
+    }
 }

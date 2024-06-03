@@ -12,7 +12,6 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.opensearch.ExceptionsHelper;
 import org.opensearch.action.support.PlainActionFuture;
-import org.opensearch.common.Booleans;
 import org.opensearch.common.xcontent.XContentHelper;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.core.common.bytes.BytesArray;
@@ -123,7 +122,7 @@ public abstract class AbstractRegisterLocalModelStep extends AbstractRetryableWo
             String modelGroupId = (String) inputs.get(MODEL_GROUP_ID);
             String allConfig = (String) inputs.get(ALL_CONFIG);
             String modelInterface = (String) inputs.get(INTERFACE_FIELD);
-            final Boolean deploy = inputs.containsKey(DEPLOY_FIELD) ? Booleans.parseBoolean(inputs.get(DEPLOY_FIELD).toString()) : null;
+            final Boolean deploy = ParseUtils.parseIfExists(inputs, DEPLOY_FIELD, Boolean.class);
 
             // Build register model input
             MLRegisterModelInputBuilder mlInputBuilder = MLRegisterModelInput.builder()
