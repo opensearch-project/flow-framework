@@ -27,8 +27,9 @@ import org.opensearch.flowframework.workflow.RegisterLocalPretrainedModelStep;
 import org.opensearch.flowframework.workflow.RegisterLocalSparseEncodingModelStep;
 import org.opensearch.flowframework.workflow.RegisterModelGroupStep;
 import org.opensearch.flowframework.workflow.RegisterRemoteModelStep;
-import org.opensearch.flowframework.workflow.ReindexStep;
 import org.opensearch.flowframework.workflow.UndeployModelStep;
+import org.opensearch.flowframework.workflow.UpdateIngestPipelineStep;
+import org.opensearch.flowframework.workflow.UpdateSearchPipelineStep;
 
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -40,29 +41,36 @@ import java.util.stream.Stream;
 public enum WorkflowResources {
 
     /** Workflow steps for creating/deleting a connector and associated created resource */
-    CREATE_CONNECTOR(CreateConnectorStep.NAME, WorkflowResources.CONNECTOR_ID, DeleteConnectorStep.NAME),
+    CREATE_CONNECTOR(CreateConnectorStep.NAME, WorkflowResources.CONNECTOR_ID, DeleteConnectorStep.NAME, NoOpStep.NAME),
     /** Workflow steps for registering/deleting a remote model and associated created resource */
-    REGISTER_REMOTE_MODEL(RegisterRemoteModelStep.NAME, WorkflowResources.MODEL_ID, DeleteModelStep.NAME),
+    REGISTER_REMOTE_MODEL(RegisterRemoteModelStep.NAME, WorkflowResources.MODEL_ID, DeleteModelStep.NAME, NoOpStep.NAME),
     /** Workflow steps for registering/deleting a local model and associated created resource */
-    REGISTER_LOCAL_MODEL(RegisterLocalCustomModelStep.NAME, WorkflowResources.MODEL_ID, DeleteModelStep.NAME),
+    REGISTER_LOCAL_MODEL(RegisterLocalCustomModelStep.NAME, WorkflowResources.MODEL_ID, DeleteModelStep.NAME, NoOpStep.NAME),
     /** Workflow steps for registering/deleting a local sparse encoding model and associated created resource */
-    REGISTER_LOCAL_SPARSE_ENCODING_MODEL(RegisterLocalSparseEncodingModelStep.NAME, WorkflowResources.MODEL_ID, DeleteModelStep.NAME),
+    REGISTER_LOCAL_SPARSE_ENCODING_MODEL(
+        RegisterLocalSparseEncodingModelStep.NAME,
+        WorkflowResources.MODEL_ID,
+        DeleteModelStep.NAME,
+        NoOpStep.NAME
+    ),
     /** Workflow steps for registering/deleting a local OpenSearch provided pretrained model and associated created resource */
-    REGISTER_LOCAL_PRETRAINED_MODEL(RegisterLocalPretrainedModelStep.NAME, WorkflowResources.MODEL_ID, DeleteModelStep.NAME),
+    REGISTER_LOCAL_PRETRAINED_MODEL(RegisterLocalPretrainedModelStep.NAME, WorkflowResources.MODEL_ID, DeleteModelStep.NAME, NoOpStep.NAME),
     /** Workflow steps for registering/deleting a model group and associated created resource */
-    REGISTER_MODEL_GROUP(RegisterModelGroupStep.NAME, WorkflowResources.MODEL_GROUP_ID, NoOpStep.NAME),
+    REGISTER_MODEL_GROUP(RegisterModelGroupStep.NAME, WorkflowResources.MODEL_GROUP_ID, NoOpStep.NAME, NoOpStep.NAME),
     /** Workflow steps for deploying/undeploying a model and associated created resource */
-    DEPLOY_MODEL(DeployModelStep.NAME, WorkflowResources.MODEL_ID, UndeployModelStep.NAME),
+    DEPLOY_MODEL(DeployModelStep.NAME, WorkflowResources.MODEL_ID, UndeployModelStep.NAME, NoOpStep.NAME),
     /** Workflow steps for creating an ingest-pipeline and associated created resource */
-    CREATE_INGEST_PIPELINE(CreateIngestPipelineStep.NAME, WorkflowResources.PIPELINE_ID, null), // TODO delete step
+    CREATE_INGEST_PIPELINE(CreateIngestPipelineStep.NAME, WorkflowResources.PIPELINE_ID, null, UpdateIngestPipelineStep.NAME), // TODO
+                                                                                                                               // delete
+                                                                                                                               // step
     /** Workflow steps for creating an ingest-pipeline and associated created resource */
-    CREATE_SEARCH_PIPELINE(CreateSearchPipelineStep.NAME, WorkflowResources.PIPELINE_ID, null), // TODO delete step
+    CREATE_SEARCH_PIPELINE(CreateSearchPipelineStep.NAME, WorkflowResources.PIPELINE_ID, null, UpdateSearchPipelineStep.NAME), // TODO
+                                                                                                                               // delete
+                                                                                                                               // step
     /** Workflow steps for creating an index and associated created resource */
-    CREATE_INDEX(CreateIndexStep.NAME, WorkflowResources.INDEX_NAME, NoOpStep.NAME),
-    /** Workflow steps for reindex a source index to destination index and associated created resource */
-    REINDEX(ReindexStep.NAME, WorkflowResources.INDEX_NAME, NoOpStep.NAME),
+    CREATE_INDEX(CreateIndexStep.NAME, WorkflowResources.INDEX_NAME, NoOpStep.NAME, NoOpStep.NAME),
     /** Workflow steps for registering/deleting an agent and the associated created resource */
-    REGISTER_AGENT(RegisterAgentStep.NAME, WorkflowResources.AGENT_ID, DeleteAgentStep.NAME);
+    REGISTER_AGENT(RegisterAgentStep.NAME, WorkflowResources.AGENT_ID, DeleteAgentStep.NAME, NoOpStep.NAME);
 
     /** Connector Id for a remote model connector */
     public static final String CONNECTOR_ID = "connector_id";
@@ -80,15 +88,17 @@ public enum WorkflowResources {
     private final String workflowStep;
     private final String resourceCreated;
     private final String deprovisionStep;
+    private final String updateStep;
     private static final Logger logger = LogManager.getLogger(WorkflowResources.class);
     private static final Set<String> allResources = Stream.of(values())
         .map(WorkflowResources::getResourceCreated)
         .collect(Collectors.toSet());
 
-    WorkflowResources(String workflowStep, String resourceCreated, String deprovisionStep) {
+    WorkflowResources(String workflowStep, String resourceCreated, String deprovisionStep, String updateStep) {
         this.workflowStep = workflowStep;
         this.resourceCreated = resourceCreated;
         this.deprovisionStep = deprovisionStep;
+        this.updateStep = updateStep;
     }
 
     /**
@@ -116,6 +126,14 @@ public enum WorkflowResources {
     }
 
     /**
+     * Returns the updateStep for the given enum Constant
+     * @return the updateStep of this data.
+     */
+    public String getUpdateStep() {
+        return updateStep;
+    }
+
+    /**
      * Gets the resources created type based on the workflowStep.
      * @param workflowStep workflow step name
      * @return the resource that will be created
@@ -124,7 +142,9 @@ public enum WorkflowResources {
     public static String getResourceByWorkflowStep(String workflowStep) throws FlowFrameworkException {
         if (workflowStep != null && !workflowStep.isEmpty()) {
             for (WorkflowResources mapping : values()) {
-                if (workflowStep.equals(mapping.getWorkflowStep()) || workflowStep.equals(mapping.getDeprovisionStep())) {
+                if (workflowStep.equals(mapping.getWorkflowStep())
+                    || workflowStep.equals(mapping.getDeprovisionStep())
+                    || workflowStep.equals(mapping.getUpdateStep())) {
                     return mapping.getResourceCreated();
                 }
             }
@@ -149,6 +169,24 @@ public enum WorkflowResources {
         }
         logger.error("Unable to find deprovision step for step: {}", workflowStep);
         throw new FlowFrameworkException("Unable to find deprovision step for step: " + workflowStep, RestStatus.BAD_REQUEST);
+    }
+
+    /**
+     * Gets the update step type based on the workflowStep.
+     * @param workflowStep workflow step name
+     * @return the corresponding step to update
+     * @throws FlowFrameworkException if workflow step doesn't exist in enum
+     */
+    public static String getUpdateStepByWorkflowStep(String workflowStep) throws FlowFrameworkException {
+        if (workflowStep != null && !workflowStep.isEmpty()) {
+            for (WorkflowResources mapping : values()) {
+                if (mapping.getWorkflowStep().equals(workflowStep)) {
+                    return mapping.getUpdateStep();
+                }
+            }
+        }
+        logger.error("Unable to find update step for step: {}", workflowStep);
+        throw new FlowFrameworkException("Unable to find update step for step: " + workflowStep, RestStatus.BAD_REQUEST);
     }
 
     /**

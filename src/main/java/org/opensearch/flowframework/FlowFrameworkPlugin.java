@@ -50,6 +50,8 @@ import org.opensearch.flowframework.transport.GetWorkflowStepTransportAction;
 import org.opensearch.flowframework.transport.GetWorkflowTransportAction;
 import org.opensearch.flowframework.transport.ProvisionWorkflowAction;
 import org.opensearch.flowframework.transport.ProvisionWorkflowTransportAction;
+import org.opensearch.flowframework.transport.ReprovisionWorkflowAction;
+import org.opensearch.flowframework.transport.ReprovisionWorkflowTransportAction;
 import org.opensearch.flowframework.transport.SearchWorkflowAction;
 import org.opensearch.flowframework.transport.SearchWorkflowStateAction;
 import org.opensearch.flowframework.transport.SearchWorkflowStateTransportAction;
@@ -171,7 +173,8 @@ public class FlowFrameworkPlugin extends Plugin implements ActionPlugin {
             new ActionHandler<>(GetWorkflowStateAction.INSTANCE, GetWorkflowStateTransportAction.class),
             new ActionHandler<>(GetWorkflowAction.INSTANCE, GetWorkflowTransportAction.class),
             new ActionHandler<>(GetWorkflowStepAction.INSTANCE, GetWorkflowStepTransportAction.class),
-            new ActionHandler<>(SearchWorkflowStateAction.INSTANCE, SearchWorkflowStateTransportAction.class)
+            new ActionHandler<>(SearchWorkflowStateAction.INSTANCE, SearchWorkflowStateTransportAction.class),
+            new ActionHandler<>(ReprovisionWorkflowAction.INSTANCE, ReprovisionWorkflowTransportAction.class)
         );
     }
 

@@ -45,6 +45,11 @@ public class WorkflowRequest extends ActionRequest {
     private boolean provision;
 
     /**
+     * Reprovision flag
+     */
+    private boolean reprovision;
+
+    /**
      * Params map
      */
     private Map<String, String> params;
@@ -65,7 +70,7 @@ public class WorkflowRequest extends ActionRequest {
      * @param template the use case template which describes the workflow
      */
     public WorkflowRequest(@Nullable String workflowId, @Nullable Template template) {
-        this(workflowId, template, new String[] { "all" }, false, Collections.emptyMap(), null, Collections.emptyMap());
+        this(workflowId, template, new String[] { "all" }, false, Collections.emptyMap(), null, Collections.emptyMap(), false);
     }
 
     /**
@@ -75,7 +80,7 @@ public class WorkflowRequest extends ActionRequest {
      * @param params The parameters from the REST path
      */
     public WorkflowRequest(@Nullable String workflowId, @Nullable Template template, Map<String, String> params) {
-        this(workflowId, template, new String[] { "all" }, true, params, null, Collections.emptyMap());
+        this(workflowId, template, new String[] { "all" }, true, params, null, Collections.emptyMap(), false);
     }
 
     /**
@@ -86,7 +91,17 @@ public class WorkflowRequest extends ActionRequest {
      * @param defaultParams The parameters from the REST body when a use case is given
      */
     public WorkflowRequest(@Nullable String workflowId, @Nullable Template template, String useCase, Map<String, String> defaultParams) {
-        this(workflowId, template, new String[] { "all" }, false, Collections.emptyMap(), useCase, defaultParams);
+        this(workflowId, template, new String[] { "all" }, false, Collections.emptyMap(), useCase, defaultParams, false);
+    }
+
+    /**
+     * Instantiates a new WorkflowRequest, set validation to all, sets reprovision flag
+     * @param workflowId the documentId of the workflow
+     * @param template the updated template
+     * @param reprovision the reprovision flag
+     */
+    public WorkflowRequest(String workflowId, Template template, boolean reprovision) {
+        this(workflowId, template, new String[] { "all" }, false, Collections.emptyMap(), null, Collections.emptyMap(), reprovision);
     }
 
     /**
@@ -98,6 +113,7 @@ public class WorkflowRequest extends ActionRequest {
      * @param params map of REST path params. If provision is false, must be an empty map.
      * @param useCase default use case given
      * @param defaultParams the params to be used in the substitution based on the default use case.
+     * @param reprovision flag to indicate if request is to reprovision
      */
     public WorkflowRequest(
         @Nullable String workflowId,
@@ -106,7 +122,8 @@ public class WorkflowRequest extends ActionRequest {
         boolean provision,
         Map<String, String> params,
         String useCase,
-        Map<String, String> defaultParams
+        Map<String, String> defaultParams,
+        boolean reprovision
     ) {
         this.workflowId = workflowId;
         this.template = template;
@@ -118,6 +135,7 @@ public class WorkflowRequest extends ActionRequest {
         this.params = params;
         this.useCase = useCase;
         this.defaultParams = defaultParams;
+        this.reprovision = reprovision;
     }
 
     /**
@@ -133,6 +151,7 @@ public class WorkflowRequest extends ActionRequest {
         this.validation = in.readStringArray();
         this.provision = in.readBoolean();
         this.params = this.provision ? in.readMap(StreamInput::readString, StreamInput::readString) : Collections.emptyMap();
+        this.reprovision = in.readBoolean();
     }
 
     /**
@@ -193,6 +212,14 @@ public class WorkflowRequest extends ActionRequest {
         return Map.copyOf(this.defaultParams);
     }
 
+    /**
+     * Gets the reprovision flag
+     * @return the reprovision boolean
+     */
+    public boolean isReprovision() {
+        return this.reprovision;
+    }
+
     @Override
     public void writeTo(StreamOutput out) throws IOException {
         super.writeTo(out);
@@ -203,6 +230,7 @@ public class WorkflowRequest extends ActionRequest {
         if (provision) {
             out.writeMap(params, StreamOutput::writeString, StreamOutput::writeString);
         }
+        out.writeBoolean(reprovision);
     }
 
     @Override

@@ -74,6 +74,8 @@ public class CommonValue {
     public static final String WORKFLOW_STEP = "workflow_step";
     /** The param name for default use case, used by the create workflow API */
     public static final String USE_CASE = "use_case";
+    /** The param name for reprovisioning, used by the create workflow API */
+    public static final String REPROVISION_WORKFLOW = "reprovision";
 
     /*
      * Constants associated with plugin configuration

@@ -114,6 +114,9 @@ public class WorkflowStepFactory {
         stepMap.put(DeleteAgentStep.NAME, () -> new DeleteAgentStep(mlClient));
         stepMap.put(CreateIngestPipelineStep.NAME, () -> new CreateIngestPipelineStep(client, flowFrameworkIndicesHandler));
         stepMap.put(CreateSearchPipelineStep.NAME, () -> new CreateSearchPipelineStep(client, flowFrameworkIndicesHandler));
+        stepMap.put(UpdateIngestPipelineStep.NAME, () -> new UpdateIngestPipelineStep(client));
+        stepMap.put(UpdateSearchPipelineStep.NAME, () -> new UpdateSearchPipelineStep(client));
+
     }
 
     /**
@@ -228,6 +231,24 @@ public class WorkflowStepFactory {
         /** Create Search Pipeline Step */
         CREATE_SEARCH_PIPELINE(
             CreateSearchPipelineStep.NAME,
+            List.of(PIPELINE_ID, CONFIGURATIONS),
+            List.of(PIPELINE_ID),
+            Collections.emptyList(),
+            null
+        ),
+
+        /** Update Ingest Pipeline Step */
+        UPDATE_INGEST_PIPELINE(
+            UpdateIngestPipelineStep.NAME,
+            List.of(PIPELINE_ID, CONFIGURATIONS),
+            List.of(PIPELINE_ID),
+            Collections.emptyList(),
+            null
+        ),
+
+        /** Update Search Pipeline Step */
+        UPDATE_SEARCH_PIPELINE(
+            UpdateSearchPipelineStep.NAME,
             List.of(PIPELINE_ID, CONFIGURATIONS),
             List.of(PIPELINE_ID),
             Collections.emptyList(),

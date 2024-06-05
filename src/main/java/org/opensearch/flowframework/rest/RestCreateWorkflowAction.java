@@ -39,6 +39,7 @@ import java.util.stream.Collectors;
 
 import static org.opensearch.core.xcontent.XContentParserUtils.ensureExpectedToken;
 import static org.opensearch.flowframework.common.CommonValue.PROVISION_WORKFLOW;
+import static org.opensearch.flowframework.common.CommonValue.REPROVISION_WORKFLOW;
 import static org.opensearch.flowframework.common.CommonValue.USE_CASE;
 import static org.opensearch.flowframework.common.CommonValue.VALIDATION;
 import static org.opensearch.flowframework.common.CommonValue.WORKFLOW_ID;
@@ -73,7 +74,7 @@ public class RestCreateWorkflowAction extends BaseRestHandler {
         return List.of(
             // Create new workflow
             new Route(RestRequest.Method.POST, String.format(Locale.ROOT, "%s", WORKFLOW_URI)),
-            // Update use case template
+            // Update use case template/ reprovision existing workflow
             new Route(RestRequest.Method.PUT, String.format(Locale.ROOT, "%s/{%s}", WORKFLOW_URI, WORKFLOW_ID))
         );
     }
@@ -83,7 +84,9 @@ public class RestCreateWorkflowAction extends BaseRestHandler {
         String workflowId = request.param(WORKFLOW_ID);
         String[] validation = request.paramAsStringArray(VALIDATION, new String[] { "all" });
         boolean provision = request.paramAsBoolean(PROVISION_WORKFLOW, false);
+        boolean reprovision = request.paramAsBoolean(REPROVISION_WORKFLOW, false);
         String useCase = request.param(USE_CASE);
+
         // If provisioning, consume all other params and pass to provision transport action
         Map<String, String> params = provision
             ? request.params()
@@ -195,7 +198,8 @@ public class RestCreateWorkflowAction extends BaseRestHandler {
                 provision,
                 params,
                 useCase,
-                useCaseDefaultsMap
+                useCaseDefaultsMap,
+                reprovision
             );
 
             return channel -> client.execute(CreateWorkflowAction.INSTANCE, workflowRequest, ActionListener.wrap(response -> {
