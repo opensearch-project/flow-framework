@@ -24,12 +24,12 @@ See [OpenSearch requirements](https://github.com/opensearch-project/OpenSearch/b
 
 #### Java
 
-Flow Framework code currently maintains compatibility with JDK 11. Other plugins may require newer Java versions if used.
+The Flow Framework `main` branch targets JDK 21. To ease backporting to `2.x`, maintain compatibility with JDK 11 unless significant benefits can be gained. Other plugins may require newer Java versions if used.
 
 ### Setup
 
 1. Clone the repository (see [Forking and Cloning](#forking-and-cloning))
-2. Make sure `JAVA_HOME` is pointing to a Java 14 JDK (see [Install Prerequisites](#install-prerequisites))
+2. Make sure `JAVA_HOME` is pointing to a Java 21 or higher JDK (see [Install Prerequisites](#install-prerequisites))
 3. Launch Intellij IDEA, Choose Import Project and select the settings.gradle file in the root of this package.
 
 ### Build
