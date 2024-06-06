@@ -1,0 +1,23 @@
+{
+  "template.name": "hybrid-search",
+  "template.description": "Setting up hybrid search, ingest pipeline and index",
+  "register_local_pretrained_model.name": "huggingface/sentence-transformers/msmarco-distilbert-base-tas-b",
+  "register_local_pretrained_model.description": "This is a sentence transformer model",
+  "register_local_pretrained_model.model_format": "TORCH_SCRIPT",
+  "register_local_pretrained_model.deploy": "true",
+  "register_local_pretrained_model.version": "1.0.2",
+  "create_ingest_pipeline.pipeline_id": "nlp-ingest-pipeline",
+  "create_ingest_pipeline.description": "A text embedding pipeline",
+  "create_ingest_pipeline.model_id": "123",
+  "text_embedding.field_map.input": "passage_text",
+  "text_embedding.field_map.output": "passage_embedding",
+  "create_index.name": "my-nlp-index",
+  "create_index.settings.number_of_shards": "2",
+  "create_index.mappings.method.engine": "lucene",
+  "create_index.mappings.method.space_type": "l2",
+  "create_index.mappings.method.name": "hnsw",
+  "text_embedding.field_map.output.dimension": "768",
+  "create_search_pipeline.pipeline_id": "nlp-search-pipeline",
+  "normalization-processor.normalization.technique": "min_max",
+  "normalization-processor.combination.technique": "arithmetic_mean"
+}

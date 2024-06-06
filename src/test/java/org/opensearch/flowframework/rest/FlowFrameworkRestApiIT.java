@@ -34,6 +34,7 @@ import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.Collections;
 import java.util.EnumSet;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -429,7 +430,11 @@ public class FlowFrameworkRestApiIT extends FlowFrameworkRestTestCase {
     public void testDefaultCohereUseCase() throws Exception {
 
         // Hit Create Workflow API with original template
-        Response response = createWorkflowWithUseCase(client(), "cohere_embedding_model_deploy", List.of(CREATE_CONNECTOR_CREDENTIAL_KEY));
+        Response response = createWorkflowWithUseCaseWithNoValidation(
+            client(),
+            "cohere_embedding_model_deploy",
+            List.of(CREATE_CONNECTOR_CREDENTIAL_KEY)
+        );
         assertEquals(RestStatus.CREATED, TestHelpers.restStatus(response));
 
         Map<String, Object> responseMap = entityAsMap(response);
@@ -468,7 +473,7 @@ public class FlowFrameworkRestApiIT extends FlowFrameworkRestTestCase {
         // Hit Create Workflow API with original template without required params
         ResponseException exception = expectThrows(
             ResponseException.class,
-            () -> createWorkflowWithUseCase(client(), "semantic_search", Collections.emptyList())
+            () -> createWorkflowWithUseCaseWithNoValidation(client(), "semantic_search", Collections.emptyList())
         );
         assertTrue(
             exception.getMessage()
@@ -476,7 +481,11 @@ public class FlowFrameworkRestApiIT extends FlowFrameworkRestTestCase {
         );
 
         // Pass in required params
-        Response response = createWorkflowWithUseCase(client(), "semantic_search", List.of(CREATE_INGEST_PIPELINE_MODEL_ID));
+        Response response = createWorkflowWithUseCaseWithNoValidation(
+            client(),
+            "semantic_search",
+            List.of(CREATE_INGEST_PIPELINE_MODEL_ID)
+        );
         assertEquals(RestStatus.CREATED, TestHelpers.restStatus(response));
 
         Map<String, Object> responseMap = entityAsMap(response);
@@ -502,7 +511,7 @@ public class FlowFrameworkRestApiIT extends FlowFrameworkRestTestCase {
             .collect(Collectors.toSet());
 
         for (String useCaseName : allUseCaseNames) {
-            Response response = createWorkflowWithUseCase(
+            Response response = createWorkflowWithUseCaseWithNoValidation(
                 client(),
                 useCaseName,
                 DefaultUseCases.getRequiredParamsByUseCaseName(useCaseName)
@@ -513,5 +522,68 @@ public class FlowFrameworkRestApiIT extends FlowFrameworkRestTestCase {
             String workflowId = (String) responseMap.get(WORKFLOW_ID);
             getAndAssertWorkflowStatus(client(), workflowId, State.NOT_STARTED, ProvisioningProgress.NOT_STARTED);
         }
+    }
+
+    public void testSemanticSearchWithLocalModelEndToEnd() throws Exception {
+
+        Map<String, Object> defaults = new HashMap<>();
+        defaults.put("register_local_pretrained_model.name", "huggingface/sentence-transformers/all-MiniLM-L6-v2");
+        defaults.put("register_local_pretrained_model.version", "1.0.1");
+        defaults.put("text_embedding.field_map.output.dimension", 384);
+
+        Response response = createAndProvisionWorkflowWithUseCaseWithContent(client(), "semantic_search_with_local_model", defaults);
+        assertEquals(RestStatus.CREATED, TestHelpers.restStatus(response));
+
+        Map<String, Object> responseMap = entityAsMap(response);
+        String workflowId = (String) responseMap.get(WORKFLOW_ID);
+        getAndAssertWorkflowStatus(client(), workflowId, State.PROVISIONING, ProvisioningProgress.IN_PROGRESS);
+
+        // Wait until provisioning has completed successfully before attempting to retrieve created resources
+        List<ResourceCreated> resourcesCreated = getResourcesCreated(client(), workflowId, 45);
+
+        // This template should create 4 resources, registered model_id, deployed model_id, ingest pipeline, and index name
+        assertEquals(4, resourcesCreated.size());
+        String modelId = resourcesCreated.get(1).resourceId();
+        String indexName = resourcesCreated.get(3).resourceId();
+
+        // Short wait before ingesting data
+        Thread.sleep(30000);
+
+        String docContent = "{\"passage_text\": \"Hello planet\"\n}";
+        ingestSingleDoc(docContent, indexName);
+        // Short wait before neural search
+        Thread.sleep(500);
+        SearchResponse neuralSearchResponse = neuralSearchRequest(indexName, modelId);
+        assertEquals(neuralSearchResponse.getHits().getHits().length, 1);
+        Thread.sleep(500);
+        deleteIndex(indexName);
+
+        // Hit Deprovision API
+        // By design, this may not completely deprovision the first time if it takes >2s to process removals
+        Response deprovisionResponse = deprovisionWorkflow(client(), workflowId);
+        try {
+            assertBusy(
+                () -> { getAndAssertWorkflowStatus(client(), workflowId, State.NOT_STARTED, ProvisioningProgress.NOT_STARTED); },
+                30,
+                TimeUnit.SECONDS
+            );
+        } catch (ComparisonFailure e) {
+            // 202 return if still processing
+            assertEquals(RestStatus.ACCEPTED, TestHelpers.restStatus(deprovisionResponse));
+        }
+        if (TestHelpers.restStatus(deprovisionResponse) == RestStatus.ACCEPTED) {
+            // Short wait before we try again
+            Thread.sleep(10000);
+            deprovisionResponse = deprovisionWorkflow(client(), workflowId);
+            assertBusy(
+                () -> { getAndAssertWorkflowStatus(client(), workflowId, State.NOT_STARTED, ProvisioningProgress.NOT_STARTED); },
+                30,
+                TimeUnit.SECONDS
+            );
+        }
+        assertEquals(RestStatus.OK, TestHelpers.restStatus(deprovisionResponse));
+        // Hit Delete API
+        Response deleteResponse = deleteWorkflow(client(), workflowId);
+        assertEquals(RestStatus.OK, TestHelpers.restStatus(deleteResponse));
     }
 }

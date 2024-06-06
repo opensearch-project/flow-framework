@@ -132,6 +132,21 @@ public enum DefaultUseCases {
         "defaults/conversational-search-defaults.json",
         "substitutionTemplates/conversational-search-with-cohere-model-template.json",
         List.of(CREATE_CONNECTOR_CREDENTIAL_KEY)
+    ),
+    /** defaults file and substitution ready template for semantic search with a local pretrained model*/
+    SEMANTIC_SEARCH_WITH_LOCAL_MODEL(
+        "semantic_search_with_local_model",
+        "defaults/semantic-search-with-local-model-defaults.json",
+        "substitutionTemplates/semantic-search-with-local-model-template.json",
+        Collections.emptyList()
+
+    ),
+    /** defaults file and substitution ready template for hybrid search with a local pretrained model*/
+    HYBRID_SEARCH_WITH_LOCAL_MODEL(
+        "hybrid_search_with_local_model",
+        "defaults/hybrid-search-with-local-model-defaults.json",
+        "substitutionTemplates/hybrid-search-with-local-model-template.json",
+        Collections.emptyList()
     );
 
     private final String useCaseName;
