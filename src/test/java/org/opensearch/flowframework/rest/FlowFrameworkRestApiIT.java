@@ -525,7 +525,11 @@ public class FlowFrameworkRestApiIT extends FlowFrameworkRestTestCase {
     }
 
     public void testSemanticSearchWithLocalModelEndToEnd() throws Exception {
-
+        // Checking if plugins are part of the integration test cluster so we can continue with this test
+        List<String> plugins = catPlugins();
+        if (!plugins.contains("opensearch-knn") && plugins.contains("opensearch-neural-search")) {
+            return;
+        }
         Map<String, Object> defaults = new HashMap<>();
         defaults.put("register_local_pretrained_model.name", "huggingface/sentence-transformers/all-MiniLM-L6-v2");
         defaults.put("register_local_pretrained_model.version", "1.0.1");
