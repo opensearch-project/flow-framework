@@ -1,7 +1,7 @@
 {
   "name": "${{template.name}}",
   "description": "${{template.description}}",
-  "use_case": "SEMANTIC_SEARCH",
+  "use_case": "CONVERSATION_SEARCH",
   "version": {
     "template": "1.0.0",
     "compatibility": [
