@@ -22,6 +22,7 @@ import static org.opensearch.flowframework.common.CommonValue.CREATE_CONNECTOR_C
 import static org.opensearch.flowframework.common.CommonValue.CREATE_CONNECTOR_CREDENTIAL_SECRET_KEY;
 import static org.opensearch.flowframework.common.CommonValue.CREATE_CONNECTOR_CREDENTIAL_SESSION_TOKEN;
 import static org.opensearch.flowframework.common.CommonValue.CREATE_INGEST_PIPELINE_MODEL_ID;
+import static org.opensearch.flowframework.common.CommonValue.REINDEX_SOURCE_INDEX;
 
 /**
  * Enum encapsulating the different default use cases and templates we have stored
@@ -147,6 +148,13 @@ public enum DefaultUseCases {
         "defaults/hybrid-search-with-local-model-defaults.json",
         "substitutionTemplates/hybrid-search-with-local-model-template.json",
         Collections.emptyList()
+    ),
+    /** defaults file and substitution ready template for semantic search with reindex command*/
+    SEMANTIC_SEARCH_WITH_REINDEX(
+        "semantic_search_with_reindex",
+        "defaults/semantic-search-with-reindex-defaults.json",
+        "substitutionTemplates/semantic-search-with-reindex-template.json",
+        List.of(CREATE_CONNECTOR_CREDENTIAL_KEY, REINDEX_SOURCE_INDEX)
     );
 
     private final String useCaseName;

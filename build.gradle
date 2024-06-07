@@ -494,7 +494,7 @@ List<Provider<RegularFile>> plugins = [
                 return new RegularFile() {
                     @Override
                     File getAsFile() {
-                        return configurations.zipArchive.asFileTree.getSingleFile()
+                        return configurations.zipArchive.asFileTree.getFiles()
                     }
                 }
             }
