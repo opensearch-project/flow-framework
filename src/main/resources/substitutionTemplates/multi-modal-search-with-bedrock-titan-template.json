@@ -101,9 +101,6 @@
               "mappings": {
                 "_doc": {
                   "properties": {
-                    "id": {
-                      "type": "text"
-                    },
                     "${{text_image_embedding.embedding}}": {
                       "type": "knn_vector",
                       "dimension": "${{text_image_embedding.field_map.output.dimension}}",
@@ -114,10 +111,10 @@
                       }
                     },
                     "${{text_image_embedding.field_map.text}}": {
-                      "type": "text"
+                      "type": "${{text_image_embedding.field_map.text.type}}"
                     },
                     "${{text_image_embedding.field_map.image}}": {
-                      "type": "binary"
+                      "type": "${{text_image_embedding.field_map.image.type}}"
                     }
                   }
                 }

@@ -14,6 +14,5 @@
     "text_embedding.field_map.output.dimension": "1024",
     "create_search_pipeline.pipeline_id": "nlp-search-pipeline",
     "normalization-processor.normalization.technique": "min_max",
-    "normalization-processor.combination.technique": "arithmetic_mean",
-    "normalization-processor.combination.parameters.weights": "[0.3, 0.7]"
+    "normalization-processor.combination.technique": "arithmetic_mean"
 }

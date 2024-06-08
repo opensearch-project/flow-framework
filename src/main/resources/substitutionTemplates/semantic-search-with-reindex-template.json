@@ -49,7 +49,7 @@
           "id": "register_model",
           "type": "register_remote_model",
           "previous_node_inputs": {
-            "create_connector": "parameters"
+            "create_connector": "connector_id"
           },
           "user_inputs": {
             "name": "${{register_remote_model.name}}",
@@ -93,11 +93,9 @@
               "settings": {
                 "index.knn": true,
                 "default_pipeline": "${{create_ingest_pipeline.pipeline_id}}",
-                "number_of_shards": "${{create_index.settings.number_of_shards}}",
-                "index.search.default_pipeline": "${{create_search_pipeline.pipeline_id}}"
+                "number_of_shards": "${{create_index.settings.number_of_shards}}"
               },
               "mappings": {
-                "_doc": {
                   "properties": {
                     "${{text_embedding.field_map.output}}": {
                       "type": "knn_vector",
@@ -113,29 +111,22 @@
                       "type": "text"
                     }
                   }
-                }
               }
             }
           }
         },
         {
-          "id": "create_search_pipeline",
-          "type": "create_search_pipeline",
+          "id": "reindex",
+          "type": "reindex",
           "previous_node_inputs": {
-            "register_model": "model_id"
+            "create_index": "index_name"
           },
           "user_inputs": {
-            "pipeline_id": "${{create_search_pipeline.pipeline_id}}",
-            "configurations": {
-              "request_processors": [
-                {
-                  "neural_query_enricher" : {
-                    "description": "Sets the default model ID at index and field levels",
-                    "default_model_id": "${{register_model.model_id}}"
-                  }
-                }
-              ]
-            }
+            "source_index": "${{reindex.source_index}}",
+            "destination_index": "${{create_index.name}}",
+            "refresh":  false,
+            "requests_per_second": "${{reindex.requests_per_second}}",
+            "slices": "${{reindex.slices}}"
           }
         }
       ]
