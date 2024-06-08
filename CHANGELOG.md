@@ -17,6 +17,7 @@ Inspired from [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 ### Enhancements
 - Add Workflow Step for Reindex from source index to destination ([#718](https://github.com/opensearch-project/flow-framework/pull/718))
 - Add param to delete workflow API to clear status even if resources exist ([#719](https://github.com/opensearch-project/flow-framework/pull/719))
+- Add additional default use cases ([#731](https://github.com/opensearch-project/flow-framework/pull/731))
 ### Bug Fixes
 - Add user mapping to Workflow State index ([#705](https://github.com/opensearch-project/flow-framework/pull/705))
 

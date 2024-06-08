@@ -180,6 +180,8 @@ dependencies {
 
     // ZipArchive dependencies used for integration tests
     zipArchive group: 'org.opensearch.plugin', name:'opensearch-ml-plugin', version: "${opensearch_build}"
+    zipArchive group: 'org.opensearch.plugin', name:'opensearch-knn', version: "${opensearch_build}"
+    zipArchive group: 'org.opensearch.plugin', name:'neural-search', version: "${opensearch_build}"
     secureIntegTestPluginArchive group: 'org.opensearch.plugin', name:'opensearch-security', version: "${opensearch_build}"
 
     configurations.all {
@@ -491,7 +493,29 @@ List<Provider<RegularFile>> plugins = [
                 return new RegularFile() {
                     @Override
                     File getAsFile() {
-                        return configurations.zipArchive.asFileTree.getSingleFile()
+                        return configurations.zipArchive.asFileTree.matching{include "**/opensearch-ml-plugin-${opensearch_build}.zip"}.getSingleFile()
+                    }
+                }
+            }
+        }),
+        provider(new Callable<RegularFile>(){
+            @Override
+            RegularFile call() throws Exception {
+                return new RegularFile() {
+                    @Override
+                    File getAsFile() {
+                        return configurations.zipArchive.asFileTree.matching{include "**/opensearch-knn-${opensearch_build}.zip"}.getSingleFile()
+                    }
+                }
+            }
+        }),
+        provider(new Callable<RegularFile>(){
+            @Override
+            RegularFile call() throws Exception {
+                return new RegularFile() {
+                    @Override
+                    File getAsFile() {
+                        return configurations.zipArchive.asFileTree.matching{include "**/neural-search-${opensearch_build}.zip"}.getSingleFile()
                     }
                 }
             }

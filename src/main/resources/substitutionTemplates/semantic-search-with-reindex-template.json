@@ -1,7 +1,7 @@
 {
   "name": "${{template.name}}",
   "description": "${{template.description}}",
-  "use_case": "MULTIMODAL_SEARCH",
+  "use_case": "SEMANTIC_SEARCH",
   "version": {
     "template": "1.0.0",
     "compatibility": [
@@ -19,16 +19,15 @@
             "name": "${{create_connector.name}}",
             "description": "${{create_connector.description}}",
             "version": "1",
-            "protocol": "aws_sigv4",
+            "protocol": "${{create_connector.protocol}}",
             "parameters": {
-              "region": "${{create_connector.region}}",
-              "service_name": "bedrock",
-              "input_docs_processed_step_size": "${{create_connector.input_docs_processed_step_size}}"
+              "endpoint": "${{create_connector.endpoint}}",
+              "model": "${{create_connector.model}}",
+              "input_type": "search_document",
+              "truncate": "END"
             },
             "credential": {
-              "access_key": "${{create_connector.credential.access_key}}",
-              "secret_key": "${{create_connector.credential.secret_key}}",
-              "session_token": "${{create_connector.credential.session_token}}"
+              "key": "${{create_connector.credential.key}}"
             },
             "actions": [
               {
@@ -36,8 +35,8 @@
                 "method": "POST",
                 "url": "${{create_connector.actions.url}}",
                 "headers": {
-                  "content-type": "application/json",
-                  "x-amz-content-sha256": "required"
+                  "Authorization": "Bearer ${credential.key}",
+                  "Request-Source": "unspecified:opensearch"
                 },
                 "request_body": "${{create_connector.actions.request_body}}",
                 "pre_process_function": "${{create_connector.actions.pre_process_function}}",
@@ -50,13 +49,13 @@
           "id": "register_model",
           "type": "register_remote_model",
           "previous_node_inputs": {
-            "create_connector": "parameters"
+            "create_connector": "connector_id"
           },
           "user_inputs": {
             "name": "${{register_remote_model.name}}",
             "function_name": "remote",
             "description": "${{register_remote_model.description}}",
-            "deploy" : true
+            "deploy": true
           }
         },
         {
@@ -71,12 +70,10 @@
               "description": "${{create_ingest_pipeline.description}}",
               "processors": [
                 {
-                  "text_image_embedding": {
+                  "text_embedding": {
                     "model_id": "${{register_model.model_id}}",
-                    "embedding": "${{text_image_embedding.embedding}}",
                     "field_map": {
-                      "text": "${{text_image_embedding.field_map.text}}",
-                      "image": "${{text_image_embedding.field_map.image}}"
+                      "${{text_embedding.field_map.input}}": "${{text_embedding.field_map.output}}"
                     }
                   }
                 }
@@ -100,24 +97,36 @@
               },
               "mappings": {
                   "properties": {
-                    "${{text_image_embedding.embedding}}": {
+                    "${{text_embedding.field_map.output}}": {
                       "type": "knn_vector",
-                      "dimension": "${{text_image_embedding.field_map.output.dimension}}",
+                      "dimension": "${{text_embedding.field_map.output.dimension}}",
                       "method": {
                         "engine": "${{create_index.mappings.method.engine}}",
+                        "space_type": "${{create_index.mappings.method.space_type}}",
                         "name": "${{create_index.mappings.method.name}}",
                         "parameters": {}
                       }
                     },
-                    "${{text_image_embedding.field_map.text}}": {
-                      "type": "${{text_image_embedding.field_map.text.type}}"
-                    },
-                    "${{text_image_embedding.field_map.image}}": {
-                      "type": "${{text_image_embedding.field_map.image.type}}"
+                    "${{text_embedding.field_map.input}}": {
+                      "type": "text"
                     }
                   }
-                }
+              }
             }
+          }
+        },
+        {
+          "id": "reindex",
+          "type": "reindex",
+          "previous_node_inputs": {
+            "create_index": "index_name"
+          },
+          "user_inputs": {
+            "source_index": "${{reindex.source_index}}",
+            "destination_index": "${{create_index.name}}",
+            "refresh":  false,
+            "requests_per_second": "${{reindex.requests_per_second}}",
+            "slices": "${{reindex.slices}}"
           }
         }
       ]
