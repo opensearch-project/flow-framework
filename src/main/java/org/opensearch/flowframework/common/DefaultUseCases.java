@@ -155,6 +155,14 @@ public enum DefaultUseCases {
         "defaults/semantic-search-with-reindex-defaults.json",
         "substitutionTemplates/semantic-search-with-reindex-template.json",
         List.of(CREATE_CONNECTOR_CREDENTIAL_KEY, REINDEX_SOURCE_INDEX)
+    ),
+
+    /** defaults file and substitution ready template for conversational search with bedrock chat model*/
+    CONVERSATIONAL_SEARCH_WITH_BEDROCK_DEPLOY(
+        "conversational-search-with-bedrock-rag-tool",
+        "defaults/conversational-search-rag-tool-defaults.json",
+        "substitutionTemplates/conversational-search-with-bedrock-rag-tool-template.json",
+        List.of(CREATE_CONNECTOR_CREDENTIAL_ACCESS_KEY, CREATE_CONNECTOR_CREDENTIAL_SECRET_KEY, CREATE_CONNECTOR_CREDENTIAL_SESSION_TOKEN)
     );
 
     private final String useCaseName;
