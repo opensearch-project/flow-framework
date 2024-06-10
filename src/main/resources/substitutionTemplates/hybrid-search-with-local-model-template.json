@@ -13,8 +13,22 @@
     "provision": {
       "nodes": [
         {
+          "id": "register_local_pretrained_model",
+          "type": "register_local_pretrained_model",
+          "user_inputs": {
+            "name": "${{register_local_pretrained_model.name}}",
+            "version": "${{register_local_pretrained_model.version}}",
+            "description": "${{register_local_pretrained_model.description}}",
+            "model_format": "${{register_local_pretrained_model.model_format}}",
+            "deploy": true
+          }
+        },
+        {
           "id": "create_ingest_pipeline",
           "type": "create_ingest_pipeline",
+          "previous_node_inputs": {
+            "register_local_pretrained_model": "model_id"
+          },
           "user_inputs": {
             "pipeline_id": "${{create_ingest_pipeline.pipeline_id}}",
             "configurations": {
@@ -22,7 +36,7 @@
               "processors": [
                 {
                   "text_embedding": {
-                    "model_id": "${{create_ingest_pipeline.model_id}}",
+                    "model_id": "${{register_local_pretrained_model.model_id}}",
                     "field_map": {
                       "${{text_embedding.field_map.input}}": "${{text_embedding.field_map.output}}"
                     }
@@ -48,21 +62,21 @@
                 "index.search.default_pipeline": "${{create_search_pipeline.pipeline_id}}"
               },
               "mappings": {
-                  "properties": {
-                    "${{text_embedding.field_map.output}}": {
-                      "type": "knn_vector",
-                      "dimension": "${{text_embedding.field_map.output.dimension}}",
-                      "method": {
-                        "engine": "${{create_index.mappings.method.engine}}",
-                        "space_type": "${{create_index.mappings.method.space_type}}",
-                        "name": "${{create_index.mappings.method.name}}",
-                        "parameters": {}
-                      }
-                    },
-                    "${{text_embedding.field_map.input}}": {
-                      "type": "text"
+                "properties": {
+                  "${{text_embedding.field_map.output}}": {
+                    "type": "knn_vector",
+                    "dimension": "${{text_embedding.field_map.output.dimension}}",
+                    "method": {
+                      "engine": "${{create_index.mappings.method.engine}}",
+                      "space_type": "${{create_index.mappings.method.space_type}}",
+                      "name": "${{create_index.mappings.method.name}}",
+                      "parameters": {}
                     }
+                  },
+                  "${{text_embedding.field_map.input}}": {
+                    "type": "text"
                   }
+                }
               }
             }
           }

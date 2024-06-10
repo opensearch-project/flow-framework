@@ -225,4 +225,6 @@ public class CommonValue {
     public static final String CREATE_CONNECTOR_CREDENTIAL_SESSION_TOKEN = "create_connector.credential.session_token";
     /** The field name for ingest pipeline model ID substitution */
     public static final String CREATE_INGEST_PIPELINE_MODEL_ID = "create_ingest_pipeline.model_id";
+    /** The field name for reindex source index substitution */
+    public static final String REINDEX_SOURCE_INDEX = "reindex.source_index";
 }

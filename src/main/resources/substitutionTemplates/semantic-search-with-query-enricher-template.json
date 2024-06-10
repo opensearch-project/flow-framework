@@ -66,9 +66,6 @@
               },
               "mappings": {
                   "properties": {
-                    "id": {
-                      "type": "text"
-                    },
                     "${{text_embedding.field_map.output}}": {
                       "type": "knn_vector",
                       "dimension": "${{text_embedding.field_map.output.dimension}}",

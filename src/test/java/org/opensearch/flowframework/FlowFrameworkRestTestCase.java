@@ -43,6 +43,8 @@ import org.opensearch.flowframework.model.ResourceCreated;
 import org.opensearch.flowframework.model.State;
 import org.opensearch.flowframework.model.Template;
 import org.opensearch.flowframework.model.WorkflowState;
+import org.opensearch.flowframework.util.ParseUtils;
+import org.opensearch.ml.repackage.com.google.common.collect.ImmutableList;
 import org.opensearch.test.rest.OpenSearchRestTestCase;
 import org.junit.After;
 import org.junit.Before;
@@ -340,7 +342,7 @@ public abstract class FlowFrameworkRestTestCase extends OpenSearchRestTestCase {
      * @throws Exception if the request fails
      * @return a rest response
      */
-    protected Response createWorkflowWithUseCase(RestClient client, String useCase, List<String> params) throws Exception {
+    protected Response createWorkflowWithUseCaseWithNoValidation(RestClient client, String useCase, List<String> params) throws Exception {
 
         StringBuilder sb = new StringBuilder();
         for (String param : params) {
@@ -356,6 +358,28 @@ public abstract class FlowFrameworkRestTestCase extends OpenSearchRestTestCase {
             WORKFLOW_URI + "?validation=off&use_case=" + useCase,
             Collections.emptyMap(),
             "{" + sb.toString() + "}",
+            null
+        );
+    }
+
+    /**
+     * Helper method to invoke the create workflow API with a use case and also the provision param as true
+     * @param client the rest client
+     * @param useCase the usecase to create
+     * @param defaults the defaults to override given through the request payload
+     * @throws Exception if the request fails
+     * @return a rest response
+     */
+    protected Response createAndProvisionWorkflowWithUseCaseWithContent(RestClient client, String useCase, Map<String, Object> defaults)
+        throws Exception {
+        String payload = ParseUtils.parseArbitraryStringToObjectMapToString(defaults);
+
+        return TestHelpers.makeRequest(
+            client,
+            "POST",
+            WORKFLOW_URI + "?provision=true&use_case=" + useCase,
+            Collections.emptyMap(),
+            payload,
             null
         );
     }
@@ -714,6 +738,52 @@ public abstract class FlowFrameworkRestTestCase extends OpenSearchRestTestCase {
                 )
         ) {
             return GetPipelineResponse.fromXContent(parser);
+        }
+    }
+
+    protected void ingestSingleDoc(String payload, String indexName) throws IOException {
+        try {
+            TestHelpers.makeRequest(
+                client(),
+                "PUT",
+                indexName + "/_doc/1",
+                null,
+                payload,
+                ImmutableList.of(new BasicHeader(HttpHeaders.USER_AGENT, ""))
+            );
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    protected SearchResponse neuralSearchRequest(String indexName, String modelId) throws IOException {
+        String searchRequest =
+            "{\"_source\":{\"excludes\":[\"passage_embedding\"]},\"query\":{\"neural\":{\"passage_embedding\":{\"query_text\":\"world\",\"k\":5,\"model_id\":\""
+                + modelId
+                + "\"}}}}";
+        try {
+            Response restSearchResponse = TestHelpers.makeRequest(
+                client(),
+                "POST",
+                indexName + "/_search",
+                null,
+                searchRequest,
+                ImmutableList.of(new BasicHeader(HttpHeaders.USER_AGENT, ""))
+            );
+            // Parse entity content into SearchResponse
+            MediaType mediaType = MediaType.fromMediaType(restSearchResponse.getEntity().getContentType().getValue());
+            try (
+                XContentParser parser = mediaType.xContent()
+                    .createParser(
+                        NamedXContentRegistry.EMPTY,
+                        DeprecationHandler.THROW_UNSUPPORTED_OPERATION,
+                        restSearchResponse.getEntity().getContent()
+                    )
+            ) {
+                return SearchResponse.fromXContent(parser);
+            }
+        } catch (Exception e) {
+            throw new RuntimeException(e);
         }
     }
 
