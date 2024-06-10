@@ -61,9 +61,6 @@
               "mappings": {
                 "_doc": {
                   "properties": {
-                    "id": {
-                      "type": "text"
-                    },
                     "${{create_ingest_pipeline.text_embedding.field_map.output}}": {
                       "type": "rank_features"
                     },

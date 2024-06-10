@@ -11,5 +11,7 @@
     "create_index.settings.number_of_shards": "2",
     "text_image_embedding.field_map.output.dimension": "1024",
     "create_index.mappings.method.engine": "lucene",
-    "create_index.mappings.method.name": "hnsw"
+    "create_index.mappings.method.name": "hnsw",
+    "text_image_embedding.field_map.image.type": "text",
+    "text_image_embedding.field_map.text.type": "text"
 }
