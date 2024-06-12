@@ -116,6 +116,7 @@ public class WorkflowStepFactory {
         stepMap.put(CreateSearchPipelineStep.NAME, () -> new CreateSearchPipelineStep(client, flowFrameworkIndicesHandler));
         stepMap.put(UpdateIngestPipelineStep.NAME, () -> new UpdateIngestPipelineStep(client));
         stepMap.put(UpdateSearchPipelineStep.NAME, () -> new UpdateSearchPipelineStep(client));
+        stepMap.put(UpdateIndexStep.NAME, () -> new UpdateIndexStep(client));
 
     }
 
@@ -253,7 +254,10 @@ public class WorkflowStepFactory {
             List.of(PIPELINE_ID),
             Collections.emptyList(),
             null
-        );
+        ),
+
+        /** Update Index Step */
+        UPDATE_INDEX(UpdateIndexStep.NAME, List.of(INDEX_NAME, CONFIGURATIONS), List.of(INDEX_NAME), Collections.emptyList(), null);
 
         private final String workflowStepName;
         private final List<String> inputs;

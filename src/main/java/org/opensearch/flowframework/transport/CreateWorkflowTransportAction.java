@@ -239,46 +239,44 @@ public class CreateWorkflowTransportAction extends HandledTransportAction<Workfl
                 client.get(new GetRequest(GLOBAL_CONTEXT_INDEX, workflowId), ActionListener.wrap(getResponse -> {
                     context.restore();
                     if (getResponse.isExists()) {
+
                         Template existingTemplate = Template.parse(getResponse.getSourceAsString());
-                        // Update existing entry, full document replacement
                         Template template = new Template.Builder(templateWithUser).createdTime(existingTemplate.createdTime())
                             .lastUpdatedTime(Instant.now())
                             .lastProvisionedTime(existingTemplate.lastProvisionedTime())
                             .build();
-                        flowFrameworkIndicesHandler.updateTemplateInGlobalContext(
-                            request.getWorkflowId(),
-                            template,
-                            ActionListener.wrap(response -> {
-                                if (request.isReprovision()) {
 
-                                    // Reprovision request
-                                    ReprovisionWorkflowRequest reprovisionRequest = new ReprovisionWorkflowRequest(
-                                        getResponse.getId(),
-                                        existingTemplate,
-                                        template
-                                    );
-                                    logger.info(
-                                        "Reprovisioning parameter is set, continuing to reprovision workflow {}",
-                                        getResponse.getId()
-                                    );
-                                    client.execute(
-                                        ReprovisionWorkflowAction.INSTANCE,
-                                        reprovisionRequest,
-                                        ActionListener.wrap(reprovisionResponse -> {
-                                            listener.onResponse(new WorkflowResponse(reprovisionResponse.getWorkflowId()));
-                                        }, exception -> {
-                                            String errorMessage = "Reprovisioning failed.";
-                                            logger.error(errorMessage, exception);
-                                            if (exception instanceof FlowFrameworkException) {
-                                                listener.onFailure(exception);
-                                            } else {
-                                                listener.onFailure(
-                                                    new FlowFrameworkException(errorMessage, ExceptionsHelper.status(exception))
-                                                );
-                                            }
-                                        })
-                                    );
-                                } else {
+                        if (request.isReprovision()) {
+
+                            // Reprovision request
+                            ReprovisionWorkflowRequest reprovisionRequest = new ReprovisionWorkflowRequest(
+                                getResponse.getId(),
+                                existingTemplate,
+                                template
+                            );
+                            logger.info("Reprovisioning parameter is set, continuing to reprovision workflow {}", getResponse.getId());
+                            client.execute(
+                                ReprovisionWorkflowAction.INSTANCE,
+                                reprovisionRequest,
+                                ActionListener.wrap(reprovisionResponse -> {
+                                    listener.onResponse(new WorkflowResponse(reprovisionResponse.getWorkflowId()));
+                                }, exception -> {
+                                    String errorMessage = "Reprovisioning failed.";
+                                    logger.error(errorMessage, exception);
+                                    if (exception instanceof FlowFrameworkException) {
+                                        listener.onFailure(exception);
+                                    } else {
+                                        listener.onFailure(new FlowFrameworkException(errorMessage, ExceptionsHelper.status(exception)));
+                                    }
+                                })
+                            );
+                        } else {
+
+                            // Update existing entry, full document replacement
+                            flowFrameworkIndicesHandler.updateTemplateInGlobalContext(
+                                request.getWorkflowId(),
+                                template,
+                                ActionListener.wrap(response -> {
                                     // Regular update, reset provisioning status
                                     flowFrameworkIndicesHandler.updateFlowFrameworkSystemIndexDoc(
                                         request.getWorkflowId(),
@@ -307,18 +305,17 @@ public class CreateWorkflowTransportAction extends HandledTransportAction<Workfl
                                             }
                                         })
                                     );
-                                }
-                            }, exception -> {
-                                String errorMessage = "Failed to update use case template " + request.getWorkflowId();
-                                logger.error(errorMessage, exception);
-                                if (exception instanceof FlowFrameworkException) {
-                                    listener.onFailure(exception);
-                                } else {
-                                    listener.onFailure(new FlowFrameworkException(errorMessage, ExceptionsHelper.status(exception)));
-                                }
-                            }),
-                            request.isReprovision() // ignores NOT_STARTED state if request is to reprovision
-                        );
+                                }, exception -> {
+                                    String errorMessage = "Failed to update use case template " + request.getWorkflowId();
+                                    logger.error(errorMessage, exception);
+                                    if (exception instanceof FlowFrameworkException) {
+                                        listener.onFailure(exception);
+                                    } else {
+                                        listener.onFailure(new FlowFrameworkException(errorMessage, ExceptionsHelper.status(exception)));
+                                    }
+                                })
+                            );
+                        }
                     } else {
                         String errorMessage = "Failed to retrieve template (" + workflowId + ") from global context.";
                         logger.error(errorMessage);

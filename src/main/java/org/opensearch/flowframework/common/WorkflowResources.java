@@ -28,6 +28,7 @@ import org.opensearch.flowframework.workflow.RegisterLocalSparseEncodingModelSte
 import org.opensearch.flowframework.workflow.RegisterModelGroupStep;
 import org.opensearch.flowframework.workflow.RegisterRemoteModelStep;
 import org.opensearch.flowframework.workflow.UndeployModelStep;
+import org.opensearch.flowframework.workflow.UpdateIndexStep;
 import org.opensearch.flowframework.workflow.UpdateIngestPipelineStep;
 import org.opensearch.flowframework.workflow.UpdateSearchPipelineStep;
 
@@ -41,24 +42,19 @@ import java.util.stream.Stream;
 public enum WorkflowResources {
 
     /** Workflow steps for creating/deleting a connector and associated created resource */
-    CREATE_CONNECTOR(CreateConnectorStep.NAME, WorkflowResources.CONNECTOR_ID, DeleteConnectorStep.NAME, NoOpStep.NAME),
+    CREATE_CONNECTOR(CreateConnectorStep.NAME, WorkflowResources.CONNECTOR_ID, DeleteConnectorStep.NAME, null),
     /** Workflow steps for registering/deleting a remote model and associated created resource */
-    REGISTER_REMOTE_MODEL(RegisterRemoteModelStep.NAME, WorkflowResources.MODEL_ID, DeleteModelStep.NAME, NoOpStep.NAME),
+    REGISTER_REMOTE_MODEL(RegisterRemoteModelStep.NAME, WorkflowResources.MODEL_ID, DeleteModelStep.NAME, null),
     /** Workflow steps for registering/deleting a local model and associated created resource */
-    REGISTER_LOCAL_MODEL(RegisterLocalCustomModelStep.NAME, WorkflowResources.MODEL_ID, DeleteModelStep.NAME, NoOpStep.NAME),
+    REGISTER_LOCAL_MODEL(RegisterLocalCustomModelStep.NAME, WorkflowResources.MODEL_ID, DeleteModelStep.NAME, null),
     /** Workflow steps for registering/deleting a local sparse encoding model and associated created resource */
-    REGISTER_LOCAL_SPARSE_ENCODING_MODEL(
-        RegisterLocalSparseEncodingModelStep.NAME,
-        WorkflowResources.MODEL_ID,
-        DeleteModelStep.NAME,
-        NoOpStep.NAME
-    ),
+    REGISTER_LOCAL_SPARSE_ENCODING_MODEL(RegisterLocalSparseEncodingModelStep.NAME, WorkflowResources.MODEL_ID, DeleteModelStep.NAME, null),
     /** Workflow steps for registering/deleting a local OpenSearch provided pretrained model and associated created resource */
-    REGISTER_LOCAL_PRETRAINED_MODEL(RegisterLocalPretrainedModelStep.NAME, WorkflowResources.MODEL_ID, DeleteModelStep.NAME, NoOpStep.NAME),
+    REGISTER_LOCAL_PRETRAINED_MODEL(RegisterLocalPretrainedModelStep.NAME, WorkflowResources.MODEL_ID, DeleteModelStep.NAME, null),
     /** Workflow steps for registering/deleting a model group and associated created resource */
-    REGISTER_MODEL_GROUP(RegisterModelGroupStep.NAME, WorkflowResources.MODEL_GROUP_ID, NoOpStep.NAME, NoOpStep.NAME),
+    REGISTER_MODEL_GROUP(RegisterModelGroupStep.NAME, WorkflowResources.MODEL_GROUP_ID, NoOpStep.NAME, null),
     /** Workflow steps for deploying/undeploying a model and associated created resource */
-    DEPLOY_MODEL(DeployModelStep.NAME, WorkflowResources.MODEL_ID, UndeployModelStep.NAME, NoOpStep.NAME),
+    DEPLOY_MODEL(DeployModelStep.NAME, WorkflowResources.MODEL_ID, UndeployModelStep.NAME, null),
     /** Workflow steps for creating an ingest-pipeline and associated created resource */
     CREATE_INGEST_PIPELINE(CreateIngestPipelineStep.NAME, WorkflowResources.PIPELINE_ID, null, UpdateIngestPipelineStep.NAME), // TODO
                                                                                                                                // delete
@@ -68,9 +64,9 @@ public enum WorkflowResources {
                                                                                                                                // delete
                                                                                                                                // step
     /** Workflow steps for creating an index and associated created resource */
-    CREATE_INDEX(CreateIndexStep.NAME, WorkflowResources.INDEX_NAME, NoOpStep.NAME, NoOpStep.NAME),
+    CREATE_INDEX(CreateIndexStep.NAME, WorkflowResources.INDEX_NAME, NoOpStep.NAME, UpdateIndexStep.NAME),
     /** Workflow steps for registering/deleting an agent and the associated created resource */
-    REGISTER_AGENT(RegisterAgentStep.NAME, WorkflowResources.AGENT_ID, DeleteAgentStep.NAME, NoOpStep.NAME);
+    REGISTER_AGENT(RegisterAgentStep.NAME, WorkflowResources.AGENT_ID, DeleteAgentStep.NAME, null);
 
     /** Connector Id for a remote model connector */
     public static final String CONNECTOR_ID = "connector_id";

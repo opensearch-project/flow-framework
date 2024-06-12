@@ -104,7 +104,7 @@ public abstract class AbstractUpdatePipelineStep implements WorkflowStep {
 
             };
 
-            if (pipelineToBeCreated.equals(CreateSearchPipelineStep.NAME)) {
+            if (pipelineToBeCreated.equals(UpdateSearchPipelineStep.NAME)) {
                 PutSearchPipelineRequest putSearchPipelineRequest = new PutSearchPipelineRequest(
                     pipelineId,
                     configurationsBytes,
