@@ -57,9 +57,11 @@ import org.opensearch.flowframework.transport.SearchWorkflowTransportAction;
 import org.opensearch.flowframework.util.EncryptorUtils;
 import org.opensearch.flowframework.workflow.WorkflowProcessSorter;
 import org.opensearch.flowframework.workflow.WorkflowStepFactory;
+import org.opensearch.indices.SystemIndexDescriptor;
 import org.opensearch.ml.client.MachineLearningNodeClient;
 import org.opensearch.plugins.ActionPlugin;
 import org.opensearch.plugins.Plugin;
+import org.opensearch.plugins.SystemIndexPlugin;
 import org.opensearch.repositories.RepositoriesService;
 import org.opensearch.rest.RestController;
 import org.opensearch.rest.RestHandler;
@@ -69,13 +71,17 @@ import org.opensearch.threadpool.ScalingExecutorBuilder;
 import org.opensearch.threadpool.ThreadPool;
 import org.opensearch.watcher.ResourceWatcherService;
 
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.function.Supplier;
 
+import static org.opensearch.flowframework.common.CommonValue.CONFIG_INDEX;
 import static org.opensearch.flowframework.common.CommonValue.DEPROVISION_WORKFLOW_THREAD_POOL;
 import static org.opensearch.flowframework.common.CommonValue.FLOW_FRAMEWORK_THREAD_POOL_PREFIX;
+import static org.opensearch.flowframework.common.CommonValue.GLOBAL_CONTEXT_INDEX;
 import static org.opensearch.flowframework.common.CommonValue.PROVISION_WORKFLOW_THREAD_POOL;
+import static org.opensearch.flowframework.common.CommonValue.WORKFLOW_STATE_INDEX;
 import static org.opensearch.flowframework.common.CommonValue.WORKFLOW_THREAD_POOL;
 import static org.opensearch.flowframework.common.FlowFrameworkSettings.FLOW_FRAMEWORK_ENABLED;
 import static org.opensearch.flowframework.common.FlowFrameworkSettings.MAX_WORKFLOWS;
@@ -86,7 +92,7 @@ import static org.opensearch.flowframework.common.FlowFrameworkSettings.WORKFLOW
 /**
  * An OpenSearch plugin that enables builders to innovate AI apps on OpenSearch.
  */
-public class FlowFrameworkPlugin extends Plugin implements ActionPlugin {
+public class FlowFrameworkPlugin extends Plugin implements ActionPlugin, SystemIndexPlugin {
 
     private FlowFrameworkSettings flowFrameworkSettings;
 
@@ -205,6 +211,15 @@ public class FlowFrameworkPlugin extends Plugin implements ActionPlugin {
                 FLOW_FRAMEWORK_THREAD_POOL_PREFIX + DEPROVISION_WORKFLOW_THREAD_POOL
             )
         );
+    }
+
+    @Override
+    public Collection<SystemIndexDescriptor> getSystemIndexDescriptors(Settings settings) {
+        List<SystemIndexDescriptor> systemIndexDescriptors = new ArrayList<>();
+        systemIndexDescriptors.add(new SystemIndexDescriptor(CONFIG_INDEX, "Flow Framework Config index"));
+        systemIndexDescriptors.add(new SystemIndexDescriptor(GLOBAL_CONTEXT_INDEX, "Flow Framework Global Context index"));
+        systemIndexDescriptors.add(new SystemIndexDescriptor(WORKFLOW_STATE_INDEX, "Flow Framework Workflow State index"));
+        return systemIndexDescriptors;
     }
 
 }
