@@ -71,7 +71,6 @@ import org.opensearch.threadpool.ScalingExecutorBuilder;
 import org.opensearch.threadpool.ThreadPool;
 import org.opensearch.watcher.ResourceWatcherService;
 
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.function.Supplier;
@@ -215,11 +214,11 @@ public class FlowFrameworkPlugin extends Plugin implements ActionPlugin, SystemI
 
     @Override
     public Collection<SystemIndexDescriptor> getSystemIndexDescriptors(Settings settings) {
-        List<SystemIndexDescriptor> systemIndexDescriptors = new ArrayList<>();
-        systemIndexDescriptors.add(new SystemIndexDescriptor(CONFIG_INDEX, "Flow Framework Config index"));
-        systemIndexDescriptors.add(new SystemIndexDescriptor(GLOBAL_CONTEXT_INDEX, "Flow Framework Global Context index"));
-        systemIndexDescriptors.add(new SystemIndexDescriptor(WORKFLOW_STATE_INDEX, "Flow Framework Workflow State index"));
-        return systemIndexDescriptors;
+        return List.of(
+            new SystemIndexDescriptor(CONFIG_INDEX, "Flow Framework Config index"),
+            new SystemIndexDescriptor(GLOBAL_CONTEXT_INDEX, "Flow Framework Global Context index"),
+            new SystemIndexDescriptor(WORKFLOW_STATE_INDEX, "Flow Framework Workflow State index")
+        );
     }
 
 }
