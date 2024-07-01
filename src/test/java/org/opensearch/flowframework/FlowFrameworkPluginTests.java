@@ -16,11 +16,13 @@ import org.opensearch.common.settings.ClusterSettings;
 import org.opensearch.common.settings.Setting;
 import org.opensearch.common.settings.Settings;
 import org.opensearch.env.Environment;
+import org.opensearch.indices.SystemIndexDescriptor;
 import org.opensearch.test.OpenSearchTestCase;
 import org.opensearch.threadpool.TestThreadPool;
 import org.opensearch.threadpool.ThreadPool;
 
 import java.io.IOException;
+import java.util.Collection;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
@@ -86,6 +88,9 @@ public class FlowFrameworkPluginTests extends OpenSearchTestCase {
             assertEquals(9, ffp.getActions().size());
             assertEquals(3, ffp.getExecutorBuilders(settings).size());
             assertEquals(5, ffp.getSettings().size());
+
+            Collection<SystemIndexDescriptor> systemIndexDescriptors = ffp.getSystemIndexDescriptors(Settings.EMPTY);
+            assertEquals(3, systemIndexDescriptors.size());
         }
     }
 }
