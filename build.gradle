@@ -394,7 +394,7 @@ testClusters.integTest {
 
     }
 
-    // Install Flow Framwork Plugin on integTest cluster nodes
+    // Install Flow Framework Plugin on integTest cluster nodes
     plugin(project.tasks.bundlePlugin.archiveFile)
 
     // Cluster shrink exception thrown if we try to set numberOfNodes to 1, so only apply if > 1
