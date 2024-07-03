@@ -9,7 +9,11 @@
 package org.opensearch.flowframework.model;
 
 import org.opensearch.Version;
+import org.opensearch.common.xcontent.json.JsonXContent;
 import org.opensearch.core.rest.RestStatus;
+import org.opensearch.core.xcontent.DeprecationHandler;
+import org.opensearch.core.xcontent.NamedXContentRegistry;
+import org.opensearch.core.xcontent.XContentParser;
 import org.opensearch.flowframework.exception.FlowFrameworkException;
 import org.opensearch.test.OpenSearchTestCase;
 
@@ -18,6 +22,8 @@ import java.time.Instant;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+
+import static org.opensearch.core.xcontent.XContentParserUtils.ensureExpectedToken;
 
 public class TemplateTests extends OpenSearchTestCase {
 
@@ -84,6 +90,15 @@ public class TemplateTests extends OpenSearchTestCase {
         assertEquals(now, template.lastUpdatedTime());
         assertNull(template.lastProvisionedTime());
         assertEquals("Workflow [userParams={key=value}, nodes=[A, B], edges=[A->B]]", wfX.toString());
+
+        // Test invalid field if updating
+        XContentParser parser = JsonXContent.jsonXContent.createParser(
+            NamedXContentRegistry.EMPTY,
+            DeprecationHandler.IGNORE_DEPRECATIONS,
+            json
+        );
+        ensureExpectedToken(XContentParser.Token.START_OBJECT, parser.nextToken(), parser);
+        assertThrows(FlowFrameworkException.class, () -> Template.parse(parser, true));
     }
 
     public void testExceptions() throws IOException {

@@ -68,8 +68,10 @@ public class CommonValue {
     public static final String WORKFLOW_ID = "workflow_id";
     /** Field name for template validation, the flag to indicate if validation is necessary */
     public static final String VALIDATION = "validation";
-    /** The field name for provision workflow within a use case template*/
+    /** The param name for provision workflow in create API */
     public static final String PROVISION_WORKFLOW = "provision";
+    /** The param name for update workflow field in create API */
+    public static final String UPDATE_WORKFLOW_FIELDS = "update_fields";
     /** The field name for workflow steps. This field represents the name of the workflow steps to be fetched. */
     public static final String WORKFLOW_STEP = "workflow_step";
     /** The param name for default use case, used by the create workflow API */

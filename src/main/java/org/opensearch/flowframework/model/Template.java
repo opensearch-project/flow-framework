@@ -29,6 +29,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Set;
 
 import static org.opensearch.core.xcontent.XContentParserUtils.ensureExpectedToken;
 import static org.opensearch.flowframework.common.CommonValue.CREATED_TIME;
@@ -53,6 +54,14 @@ public class Template implements ToXContentObject {
     public static final String TEMPLATE_FIELD = "template";
     /** The template field name for template use case */
     public static final String USE_CASE_FIELD = "use_case";
+    /** Fields which may be updated in the template even if provisioned */
+    private static final Set<String> UPDATE_FIELD_ALLOWLIST = Set.of(
+        NAME_FIELD,
+        DESCRIPTION_FIELD,
+        USE_CASE_FIELD,
+        VERSION_FIELD,
+        UI_METADATA_FIELD
+    );
 
     private final String name;
     private final String description;
@@ -287,8 +296,8 @@ public class Template implements ToXContentObject {
     public XContentBuilder toXContent(XContentBuilder builder, Params params) throws IOException {
         XContentBuilder xContentBuilder = builder.startObject();
         xContentBuilder.field(NAME_FIELD, this.name);
-        xContentBuilder.field(DESCRIPTION_FIELD, this.description);
-        xContentBuilder.field(USE_CASE_FIELD, this.useCase);
+        xContentBuilder.field(DESCRIPTION_FIELD, this.description == null ? "" : this.description);
+        xContentBuilder.field(USE_CASE_FIELD, this.useCase == null ? "" : this.useCase);
 
         if (this.templateVersion != null || !this.compatibilityVersion.isEmpty()) {
             xContentBuilder.startObject(VERSION_FIELD);
@@ -342,9 +351,21 @@ public class Template implements ToXContentObject {
      * @throws IOException if content can't be parsed correctly
      */
     public static Template parse(XContentParser parser) throws IOException {
+        return parse(parser, false);
+    }
+
+    /**
+     * Parse raw xContent into a Template instance.
+     *
+     * @param parser xContent based content parser
+     * @param fieldUpdate if set true, will be used for updating an existing template
+     * @return an instance of the template
+     * @throws IOException if content can't be parsed correctly
+     */
+    public static Template parse(XContentParser parser, boolean fieldUpdate) throws IOException {
         String name = null;
-        String description = "";
-        String useCase = "";
+        String description = null;
+        String useCase = null;
         Version templateVersion = null;
         List<Version> compatibilityVersion = new ArrayList<>();
         Map<String, Workflow> workflows = new HashMap<>();
@@ -357,6 +378,12 @@ public class Template implements ToXContentObject {
         ensureExpectedToken(XContentParser.Token.START_OBJECT, parser.currentToken(), parser);
         while (parser.nextToken() != XContentParser.Token.END_OBJECT) {
             String fieldName = parser.currentName();
+            if (fieldUpdate && !UPDATE_FIELD_ALLOWLIST.contains(fieldName)) {
+                throw new FlowFrameworkException(
+                    "You can not update the field [" + fieldName + "] without updating the whole template.",
+                    RestStatus.BAD_REQUEST
+                );
+            }
             parser.nextToken();
             switch (fieldName) {
                 case NAME_FIELD:
@@ -421,8 +448,16 @@ public class Template implements ToXContentObject {
                     );
             }
         }
-        if (name == null) {
-            throw new FlowFrameworkException("A template object requires a name.", RestStatus.BAD_REQUEST);
+        if (!fieldUpdate) {
+            if (name == null) {
+                throw new FlowFrameworkException("A template object requires a name.", RestStatus.BAD_REQUEST);
+            }
+            if (description == null) {
+                description = "";
+            }
+            if (useCase == null) {
+                useCase = "";
+            }
         }
 
         return new Builder().name(name)
