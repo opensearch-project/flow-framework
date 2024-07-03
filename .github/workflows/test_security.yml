@@ -1,9 +1,11 @@
 name: Security test workflow for Flow Framework
 on:
+  workflow_dispatch:
   push:
     branches-ignore:
       - 'whitesource-remediate/**'
       - 'backport/**'
+      - 'create-pull-request/**'
   pull_request:
     types: [opened, synchronize, reopened]
 

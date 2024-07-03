@@ -1,11 +1,13 @@
 name: BWC
 on:
+  workflow_dispatch:
   push:
-    branches:
-      - "**"
+    branches-ignore:
+      - 'whitesource-remediate/**'
+      - 'backport/**'
+      - 'create-pull-request/**'
   pull_request:
-    branches:
-      - "**"
+    types: [opened, synchronize, reopened]
 
 jobs:
   Build-ff-linux:
