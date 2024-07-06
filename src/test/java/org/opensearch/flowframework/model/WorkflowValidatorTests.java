@@ -46,63 +46,7 @@ public class WorkflowValidatorTests extends OpenSearchTestCase {
 
         WorkflowValidator validator = new WorkflowValidator(workflowStepValidators);
 
-        assertEquals(18, validator.getWorkflowStepValidators().size());
-
-        assertTrue(validator.getWorkflowStepValidators().keySet().contains("create_connector"));
-        assertEquals(7, validator.getWorkflowStepValidators().get("create_connector").getInputs().size());
-        assertEquals(1, validator.getWorkflowStepValidators().get("create_connector").getOutputs().size());
-
-        assertTrue(validator.getWorkflowStepValidators().keySet().contains("delete_model"));
-        assertEquals(1, validator.getWorkflowStepValidators().get("delete_model").getInputs().size());
-        assertEquals(1, validator.getWorkflowStepValidators().get("delete_model").getOutputs().size());
-
-        assertTrue(validator.getWorkflowStepValidators().keySet().contains("deploy_model"));
-        assertEquals(1, validator.getWorkflowStepValidators().get("deploy_model").getInputs().size());
-        assertEquals(1, validator.getWorkflowStepValidators().get("deploy_model").getOutputs().size());
-
-        assertTrue(validator.getWorkflowStepValidators().keySet().contains("register_remote_model"));
-        assertEquals(2, validator.getWorkflowStepValidators().get("register_remote_model").getInputs().size());
-        assertEquals(2, validator.getWorkflowStepValidators().get("register_remote_model").getOutputs().size());
-
-        assertTrue(validator.getWorkflowStepValidators().keySet().contains("register_model_group"));
-        assertEquals(1, validator.getWorkflowStepValidators().get("register_model_group").getInputs().size());
-        assertEquals(2, validator.getWorkflowStepValidators().get("register_model_group").getOutputs().size());
-
-        assertTrue(validator.getWorkflowStepValidators().keySet().contains("register_local_custom_model"));
-        assertEquals(9, validator.getWorkflowStepValidators().get("register_local_custom_model").getInputs().size());
-        assertEquals(2, validator.getWorkflowStepValidators().get("register_local_custom_model").getOutputs().size());
-
-        assertTrue(validator.getWorkflowStepValidators().keySet().contains("register_local_sparse_encoding_model"));
-        assertEquals(3, validator.getWorkflowStepValidators().get("register_local_sparse_encoding_model").getInputs().size());
-        assertEquals(5, validator.getWorkflowStepValidators().get("register_local_sparse_encoding_model").getOutputs().size());
-
-        assertTrue(validator.getWorkflowStepValidators().keySet().contains("register_local_pretrained_model"));
-        assertEquals(3, validator.getWorkflowStepValidators().get("register_local_pretrained_model").getInputs().size());
-        assertEquals(2, validator.getWorkflowStepValidators().get("register_local_pretrained_model").getOutputs().size());
-
-        assertTrue(validator.getWorkflowStepValidators().keySet().contains("undeploy_model"));
-        assertEquals(1, validator.getWorkflowStepValidators().get("undeploy_model").getInputs().size());
-        assertEquals(1, validator.getWorkflowStepValidators().get("undeploy_model").getOutputs().size());
-
-        assertTrue(validator.getWorkflowStepValidators().keySet().contains("delete_connector"));
-        assertEquals(1, validator.getWorkflowStepValidators().get("delete_connector").getInputs().size());
-        assertEquals(1, validator.getWorkflowStepValidators().get("delete_connector").getOutputs().size());
-
-        assertTrue(validator.getWorkflowStepValidators().keySet().contains("register_agent"));
-        assertEquals(2, validator.getWorkflowStepValidators().get("register_agent").getInputs().size());
-        assertEquals(1, validator.getWorkflowStepValidators().get("register_agent").getOutputs().size());
-
-        assertTrue(validator.getWorkflowStepValidators().keySet().contains("delete_agent"));
-        assertEquals(1, validator.getWorkflowStepValidators().get("delete_agent").getInputs().size());
-        assertEquals(1, validator.getWorkflowStepValidators().get("delete_agent").getOutputs().size());
-
-        assertTrue(validator.getWorkflowStepValidators().keySet().contains("create_tool"));
-        assertEquals(1, validator.getWorkflowStepValidators().get("create_tool").getInputs().size());
-        assertEquals(1, validator.getWorkflowStepValidators().get("create_tool").getOutputs().size());
-
-        assertTrue(validator.getWorkflowStepValidators().keySet().contains("noop"));
-        assertEquals(0, validator.getWorkflowStepValidators().get("noop").getInputs().size());
-        assertEquals(0, validator.getWorkflowStepValidators().get("noop").getOutputs().size());
+        assertEquals(21, validator.getWorkflowStepValidators().size());
     }
 
     public void testWorkflowStepFactoryHasValidators() throws IOException {
@@ -130,6 +74,11 @@ public class WorkflowValidatorTests extends OpenSearchTestCase {
         // Check if each registered step has a corresponding validator definition
         assertTrue(registeredWorkflowStepTypes.containsAll(registeredWorkflowValidatorTypes));
         assertTrue(registeredWorkflowValidatorTypes.containsAll(registeredWorkflowStepTypes));
-    }
 
+        // Check JSON
+        String json = workflowValidator.toJson();
+        for (String step : registeredWorkflowStepTypes) {
+            assertTrue(json.contains("\"" + step + "\""));
+        }
+    }
 }

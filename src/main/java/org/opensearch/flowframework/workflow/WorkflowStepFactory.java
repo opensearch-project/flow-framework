@@ -22,6 +22,7 @@ import org.opensearch.flowframework.model.WorkflowValidator;
 import org.opensearch.ml.client.MachineLearningNodeClient;
 import org.opensearch.threadpool.ThreadPool;
 
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -86,6 +87,7 @@ public class WorkflowStepFactory {
     ) {
         stepMap.put(NoOpStep.NAME, NoOpStep::new);
         stepMap.put(CreateIndexStep.NAME, () -> new CreateIndexStep(client, flowFrameworkIndicesHandler));
+        stepMap.put(DeleteIndexStep.NAME, () -> new DeleteIndexStep(client));
         stepMap.put(ReindexStep.NAME, () -> new ReindexStep(client, flowFrameworkIndicesHandler));
         stepMap.put(
             RegisterLocalCustomModelStep.NAME,
@@ -113,20 +115,30 @@ public class WorkflowStepFactory {
         stepMap.put(RegisterAgentStep.NAME, () -> new RegisterAgentStep(mlClient, flowFrameworkIndicesHandler));
         stepMap.put(DeleteAgentStep.NAME, () -> new DeleteAgentStep(mlClient));
         stepMap.put(CreateIngestPipelineStep.NAME, () -> new CreateIngestPipelineStep(client, flowFrameworkIndicesHandler));
+        stepMap.put(DeleteIngestPipelineStep.NAME, () -> new DeleteIngestPipelineStep(client));
         stepMap.put(CreateSearchPipelineStep.NAME, () -> new CreateSearchPipelineStep(client, flowFrameworkIndicesHandler));
+        stepMap.put(DeleteSearchPipelineStep.NAME, () -> new DeleteSearchPipelineStep(client));
     }
 
     /**
      * Enum encapsulating the different step names, their inputs, outputs, required plugin and timeout of the step
      */
-
     public enum WorkflowSteps {
 
         /** Noop Step */
-        NOOP("noop", Collections.emptyList(), Collections.emptyList(), Collections.emptyList(), null),
+        NOOP(NoOpStep.NAME, Collections.emptyList(), Collections.emptyList(), Collections.emptyList(), null),
 
         /** Create Index Step */
         CREATE_INDEX(CreateIndexStep.NAME, List.of(INDEX_NAME, CONFIGURATIONS), List.of(INDEX_NAME), Collections.emptyList(), null),
+
+        /** Delete Index Step */
+        DELETE_INDEX(
+            DeleteIndexStep.NAME,
+            DeleteIndexStep.REQUIRED_INPUTS, // TODO: Copy this pattern to other steps, see
+            DeleteIndexStep.PROVIDED_OUTPUTS, // https://github.com/opensearch-project/flow-framework/issues/535
+            Collections.emptyList(),
+            null
+        ),
 
         /** Create ReIndex Step */
         REINDEX(ReindexStep.NAME, List.of(SOURCE_INDEX, DESTINATION_INDEX), List.of(ReindexStep.NAME), Collections.emptyList(), null),
@@ -225,11 +237,29 @@ public class WorkflowStepFactory {
             null
         ),
 
+        /** Delete Ingest Pipeline Step */
+        DELETE_INGEST_PIPELINE(
+            DeleteIngestPipelineStep.NAME,
+            DeleteIngestPipelineStep.REQUIRED_INPUTS,
+            DeleteIngestPipelineStep.PROVIDED_OUTPUTS,
+            Collections.emptyList(),
+            null
+        ),
+
         /** Create Search Pipeline Step */
         CREATE_SEARCH_PIPELINE(
             CreateSearchPipelineStep.NAME,
             List.of(PIPELINE_ID, CONFIGURATIONS),
             List.of(PIPELINE_ID),
+            Collections.emptyList(),
+            null
+        ),
+
+        /** Delete Search Pipeline Step */
+        DELETE_SEARCH_PIPELINE(
+            DeleteSearchPipelineStep.NAME,
+            DeleteSearchPipelineStep.REQUIRED_INPUTS,
+            DeleteSearchPipelineStep.PROVIDED_OUTPUTS,
             Collections.emptyList(),
             null
         );
@@ -240,7 +270,13 @@ public class WorkflowStepFactory {
         private final List<String> requiredPlugins;
         private final TimeValue timeout;
 
-        WorkflowSteps(String workflowStepName, List<String> inputs, List<String> outputs, List<String> requiredPlugins, TimeValue timeout) {
+        WorkflowSteps(
+            String workflowStepName,
+            Collection<String> inputs,
+            Collection<String> outputs,
+            List<String> requiredPlugins,
+            TimeValue timeout
+        ) {
             this.workflowStepName = workflowStepName;
             this.inputs = List.copyOf(inputs);
             this.outputs = List.copyOf(outputs);
