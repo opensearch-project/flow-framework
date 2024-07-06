@@ -1,4 +1,4 @@
-- [Contributing to OpenSearch AI Flow Framework](#contributing-to-flow-framework)
+- [Contributing to OpenSearch Flow Framework](#contributing-to-opensearch-flow-framework)
   - [First Things First](#first-things-first)
   - [Ways to Contribute](#ways-to-contribute)
     - [Bug Reports](#bug-reports)
@@ -100,7 +100,7 @@ Adding in the change is two step process -
 
 Any new functionality requires testing. Your PR will trigger an automatic assessment of the code coverage of the lines you've added. You should add unit and/or integration tests to exercise as much of your new code as possible.
 
-If you'd like to preview your coverage before submitting your PR, to identify lines of code which are not tested, you may run `./gradlew diffCoverage` and review the report available in the project build directory at `build/reports/jacoco/diffCoverage/html/index.html`.
+If you'd like to preview your coverage before submitting your PR, to identify lines of code which are not tested, you may run `./gradlew test deltaCoverage` and review the report available in the project build directory at `build/reports/coverage-reports/delta-coverage/html/index.html`.
 
 ## Review Process
 
