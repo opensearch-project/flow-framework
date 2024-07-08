@@ -295,9 +295,9 @@ public class Template implements ToXContentObject {
     @Override
     public XContentBuilder toXContent(XContentBuilder builder, Params params) throws IOException {
         XContentBuilder xContentBuilder = builder.startObject();
-        xContentBuilder.field(NAME_FIELD, this.name);
-        xContentBuilder.field(DESCRIPTION_FIELD, this.description == null ? "" : this.description);
-        xContentBuilder.field(USE_CASE_FIELD, this.useCase == null ? "" : this.useCase);
+        xContentBuilder.field(NAME_FIELD, this.name.trim());
+        xContentBuilder.field(DESCRIPTION_FIELD, this.description == null ? "" : this.description.trim());
+        xContentBuilder.field(USE_CASE_FIELD, this.useCase == null ? "" : this.useCase.trim());
 
         if (this.templateVersion != null || !this.compatibilityVersion.isEmpty()) {
             xContentBuilder.startObject(VERSION_FIELD);
