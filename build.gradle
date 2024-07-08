@@ -47,13 +47,13 @@ buildscript {
     dependencies {
         classpath "org.opensearch.gradle:build-tools:${opensearch_version}"
         classpath "com.diffplug.spotless:spotless-plugin-gradle:6.25.0"
-        classpath "com.github.form-com.diff-coverage-gradle:diff-coverage:0.9.5"
     }
 }
 
 plugins {
     id "de.undercouch.download" version "5.6.0"
     id "org.gradle.test-retry" version "1.5.9" apply false
+    id "io.github.surpsg.delta-coverage" version "2.1.0"
 }
 
 apply plugin: 'java'
@@ -66,9 +66,6 @@ apply plugin: 'com.diffplug.spotless'
 apply from: 'formatter/formatting.gradle'
 // for javadocs and checks spotless doesn't do
 apply plugin: 'checkstyle'
-// for coverage and diff
-apply plugin: 'jacoco'
-apply plugin: 'com.form.diff-coverage'
 
 def pluginName = 'opensearch-flow-framework'
 def pluginDescription = 'OpenSearch plugin that enables builders to innovate AI apps on OpenSearch'
@@ -684,37 +681,25 @@ task updateVersion {
     }
 }
 
-diffCoverageReport {
-    afterEvaluate {
-        // Get uncommitted files via git diff
-        // https://github.com/form-com/diff-coverage-gradle/issues/73
-        def file = Files.createTempFile(URLEncoder.encode(project.name, 'UTF-8'), '.diff').toFile()
-        def diffBase = 'refs/remotes/origin/main'
-        // Only run locally
-        if (!System.getenv('CI')) {
-            file.withOutputStream { out ->
-                exec {
-                    ignoreExitValue true
-                    commandLine 'git', 'diff', '--no-color', '--minimal', diffBase
-                    standardOutput = out
-                }
-            }
-        }
-        diffSource.file = file
-    }
-
-    // View report at build/reports/jacoco/diffCoverage/html/index.html
-    reports {
-        html = true
+deltaCoverageReport {
+    diffSource {
+        git.compareWith("refs/remotes/origin/main")
     }
 
     violationRules {
-        minBranches = 0.60
-        minLines = 0.75
-        failOnViolation = true
+        failOnViolation.set(true)
+        rule(io.github.surpsg.deltacoverage.gradle.CoverageEntity.LINE) {
+            minCoverageRatio.set(0.75d)
+        }
+        rule(io.github.surpsg.deltacoverage.gradle.CoverageEntity.BRANCH) {
+            minCoverageRatio.set(0.6d)
+        }
+    }
+
+    reports {
+        html.set(true)
     }
 }
-
 
 tasks.withType(AbstractPublishToMaven) {
     def predicate = provider {
