@@ -116,7 +116,45 @@ public class FlowFrameworkRestApiIT extends FlowFrameworkRestTestCase {
         assertTrue(
             exceptionProvisioned.getMessage().contains("The template can not be updated unless its provisioning state is NOT_STARTED")
         );
+    }
 
+    public void testUpdateWorkflowUsingFields() throws Exception {
+        Template template = TestHelpers.createTemplateFromFile("createconnector-registerremotemodel-deploymodel.json");
+        Response response = createWorkflow(client(), template);
+        assertEquals(RestStatus.CREATED, TestHelpers.restStatus(response));
+
+        Map<String, Object> responseMap = entityAsMap(response);
+        String workflowId = (String) responseMap.get(WORKFLOW_ID);
+
+        // Ensure Ml config index is initialized as creating a connector requires this, then hit Provision API and assert status
+        Response provisionResponse;
+        if (!indexExistsWithAdminClient(".plugins-ml-config")) {
+            assertBusy(() -> assertTrue(indexExistsWithAdminClient(".plugins-ml-config")), 40, TimeUnit.SECONDS);
+            provisionResponse = provisionWorkflow(client(), workflowId);
+        } else {
+            provisionResponse = provisionWorkflow(client(), workflowId);
+        }
+        assertEquals(RestStatus.OK, TestHelpers.restStatus(provisionResponse));
+        getAndAssertWorkflowStatus(client(), workflowId, State.PROVISIONING, ProvisioningProgress.IN_PROGRESS);
+
+        // Attempt to update with update_fields with illegal field
+        // Fails because contains workflow field
+        ResponseException exceptionProvisioned = expectThrows(
+            ResponseException.class,
+            () -> updateWorkflowWithFields(client(), workflowId, "{\"workflows\":{}}")
+        );
+        assertTrue(
+            exceptionProvisioned.getMessage().contains("You can not update the field [workflows] without updating the whole template.")
+        );
+        // Change just the name and description
+        response = updateWorkflowWithFields(client(), workflowId, "{\"name\":\"foo\",\"description\":\"bar\"}");
+        assertEquals(RestStatus.CREATED, TestHelpers.restStatus(response));
+        // Get the updated template
+        response = getWorkflow(client(), workflowId);
+        assertEquals(RestStatus.OK.getStatus(), response.getStatusLine().getStatusCode());
+        Template t = Template.parse(EntityUtils.toString(response.getEntity(), StandardCharsets.UTF_8));
+        assertEquals("foo", t.name());
+        assertEquals("bar", t.description());
     }
 
     public void testCreateAndProvisionLocalModelWorkflow() throws Exception {
