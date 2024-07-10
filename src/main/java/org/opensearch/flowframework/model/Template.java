@@ -8,6 +8,7 @@
  */
 package org.opensearch.flowframework.model;
 
+import org.apache.logging.log4j.util.Strings;
 import org.opensearch.Version;
 import org.opensearch.common.xcontent.LoggingDeprecationHandler;
 import org.opensearch.common.xcontent.json.JsonXContent;
@@ -19,6 +20,7 @@ import org.opensearch.core.xcontent.ToXContentObject;
 import org.opensearch.core.xcontent.XContentBuilder;
 import org.opensearch.core.xcontent.XContentParser;
 import org.opensearch.flowframework.exception.FlowFrameworkException;
+import org.opensearch.flowframework.model.Template.Builder;
 import org.opensearch.flowframework.util.ParseUtils;
 
 import java.io.IOException;
@@ -55,7 +57,7 @@ public class Template implements ToXContentObject {
     /** The template field name for template use case */
     public static final String USE_CASE_FIELD = "use_case";
     /** Fields which may be updated in the template even if provisioned */
-    private static final Set<String> UPDATE_FIELD_ALLOWLIST = Set.of(
+    public static final Set<String> UPDATE_FIELD_ALLOWLIST = Set.of(
         NAME_FIELD,
         DESCRIPTION_FIELD,
         USE_CASE_FIELD,
@@ -341,6 +343,35 @@ public class Template implements ToXContentObject {
         }
 
         return xContentBuilder.endObject();
+    }
+
+    /**
+     * Merges two templates by updating the fields from an existing template with the (non-null) fields of another one.
+     * @param existingTemplate An existing complete template.
+     * @param templateWithNewFields A template containing only fields to update. The fields must be included in {@link #UPDATE_FIELD_ALLOWLIST}.
+     * @return the updated template.
+     */
+    public static Template updateExistingTemplate(Template existingTemplate, Template templateWithNewFields) {
+        Builder builder = new Template.Builder(existingTemplate).lastUpdatedTime(Instant.now());
+        if (templateWithNewFields.name() != null) {
+            builder.name(templateWithNewFields.name());
+        }
+        if (!Strings.isBlank(templateWithNewFields.description())) {
+            builder.description(templateWithNewFields.description());
+        }
+        if (!Strings.isBlank(templateWithNewFields.useCase())) {
+            builder.useCase(templateWithNewFields.useCase());
+        }
+        if (templateWithNewFields.templateVersion() != null) {
+            builder.templateVersion(templateWithNewFields.templateVersion());
+        }
+        if (!templateWithNewFields.compatibilityVersion().isEmpty()) {
+            builder.compatibilityVersion(templateWithNewFields.compatibilityVersion());
+        }
+        if (templateWithNewFields.getUiMetadata() != null) {
+            builder.uiMetadata(templateWithNewFields.getUiMetadata());
+        }
+        return builder.build();
     }
 
     /**

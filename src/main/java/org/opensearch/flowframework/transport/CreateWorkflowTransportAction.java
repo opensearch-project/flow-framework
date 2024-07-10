@@ -10,7 +10,6 @@ package org.opensearch.flowframework.transport;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.apache.logging.log4j.util.Strings;
 import org.opensearch.ExceptionsHelper;
 import org.opensearch.action.get.GetRequest;
 import org.opensearch.action.search.SearchRequest;
@@ -30,7 +29,6 @@ import org.opensearch.flowframework.indices.FlowFrameworkIndicesHandler;
 import org.opensearch.flowframework.model.ProvisioningProgress;
 import org.opensearch.flowframework.model.State;
 import org.opensearch.flowframework.model.Template;
-import org.opensearch.flowframework.model.Template.Builder;
 import org.opensearch.flowframework.model.Workflow;
 import org.opensearch.flowframework.workflow.ProcessNode;
 import org.opensearch.flowframework.workflow.WorkflowProcessSorter;
@@ -243,36 +241,12 @@ public class CreateWorkflowTransportAction extends HandledTransportAction<Workfl
                     context.restore();
                     if (getResponse.isExists()) {
                         Template existingTemplate = Template.parse(getResponse.getSourceAsString());
-                        Template template;
-                        if (isFieldUpdate) {
-                            // Update only specified fields in existing
-                            Builder builder = new Template.Builder(existingTemplate).lastUpdatedTime(Instant.now());
-                            if (templateWithUser.name() != null) {
-                                builder.name(templateWithUser.name());
-                            }
-                            if (!Strings.isBlank(templateWithUser.description())) {
-                                builder.description(templateWithUser.description());
-                            }
-                            if (!Strings.isBlank(templateWithUser.useCase())) {
-                                builder.useCase(templateWithUser.useCase());
-                            }
-                            if (templateWithUser.templateVersion() != null) {
-                                builder.templateVersion(templateWithUser.templateVersion());
-                            }
-                            if (!templateWithUser.compatibilityVersion().isEmpty()) {
-                                builder.compatibilityVersion(templateWithUser.compatibilityVersion());
-                            }
-                            if (templateWithUser.getUiMetadata() != null) {
-                                builder.uiMetadata(templateWithUser.getUiMetadata());
-                            }
-                            template = builder.build();
-                        } else {
-                            // Update existing entry, full document replacement
-                            template = new Template.Builder(templateWithUser).createdTime(existingTemplate.createdTime())
+                        Template template = isFieldUpdate
+                            ? Template.updateExistingTemplate(existingTemplate, templateWithUser)
+                            : new Template.Builder(templateWithUser).createdTime(existingTemplate.createdTime())
                                 .lastUpdatedTime(Instant.now())
                                 .lastProvisionedTime(existingTemplate.lastProvisionedTime())
                                 .build();
-                        }
                         flowFrameworkIndicesHandler.updateTemplateInGlobalContext(
                             request.getWorkflowId(),
                             template,
