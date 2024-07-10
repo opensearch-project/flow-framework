@@ -88,9 +88,9 @@ public class Template implements ToXContentObject {
      * @param workflows Workflow graph definitions corresponding to the defined operations.
      * @param uiMetadata The UI metadata related to the given workflow
      * @param user The user extracted from the thread context from the request
-     * @param createdTime Created time in milliseconds since the epoch
-     * @param lastUpdatedTime Last Updated time in milliseconds since the epoch
-     * @param lastProvisionedTime Last Provisioned time in milliseconds since the epoch
+     * @param createdTime Created time as an Instant
+     * @param lastUpdatedTime Last Updated time as an Instant
+     * @param lastProvisionedTime Last Provisioned time as an Instant
      */
     public Template(
         String name,
@@ -348,7 +348,7 @@ public class Template implements ToXContentObject {
     /**
      * Merges two templates by updating the fields from an existing template with the (non-null) fields of another one.
      * @param existingTemplate An existing complete template.
-     * @param templateWithNewFields A template containing only fields to update. The fields must be included in {@link #UPDATE_FIELD_ALLOWLIST}.
+     * @param templateWithNewFields A template containing only fields to update. The fields must correspond to the field names in {@link #UPDATE_FIELD_ALLOWLIST}.
      * @return the updated template.
      */
     public static Template updateExistingTemplate(Template existingTemplate, Template templateWithNewFields) {

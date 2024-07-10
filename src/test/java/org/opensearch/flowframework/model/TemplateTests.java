@@ -102,7 +102,8 @@ public class TemplateTests extends OpenSearchTestCase {
     }
 
     public void testUpdateExistingTemplate() {
-        Instant now = Instant.now();
+        // Time travel to guarantee update increments
+        Instant now = Instant.now().minusMillis(100);
 
         Template original = new Template(
             "name one",
