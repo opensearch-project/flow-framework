@@ -39,6 +39,7 @@ import java.util.stream.Collectors;
 
 import static org.opensearch.core.xcontent.XContentParserUtils.ensureExpectedToken;
 import static org.opensearch.flowframework.common.CommonValue.PROVISION_WORKFLOW;
+import static org.opensearch.flowframework.common.CommonValue.UPDATE_WORKFLOW_FIELDS;
 import static org.opensearch.flowframework.common.CommonValue.USE_CASE;
 import static org.opensearch.flowframework.common.CommonValue.VALIDATION;
 import static org.opensearch.flowframework.common.CommonValue.WORKFLOW_ID;
@@ -83,6 +84,7 @@ public class RestCreateWorkflowAction extends BaseRestHandler {
         String workflowId = request.param(WORKFLOW_ID);
         String[] validation = request.paramAsStringArray(VALIDATION, new String[] { "all" });
         boolean provision = request.paramAsBoolean(PROVISION_WORKFLOW, false);
+        boolean updateFields = request.paramAsBoolean(UPDATE_WORKFLOW_FIELDS, false);
         String useCase = request.param(USE_CASE);
         // If provisioning, consume all other params and pass to provision transport action
         Map<String, String> params = provision
@@ -117,11 +119,23 @@ public class RestCreateWorkflowAction extends BaseRestHandler {
                 new BytesRestResponse(ffe.getRestStatus(), ffe.toXContent(channel.newErrorBuilder(), ToXContent.EMPTY_PARAMS))
             );
         }
+        if (provision && updateFields) {
+            // Consume params and content so custom exception is processed
+            params.keySet().stream().forEach(request::param);
+            request.content();
+            FlowFrameworkException ffe = new FlowFrameworkException(
+                "You can not use both the " + PROVISION_WORKFLOW + " and " + UPDATE_WORKFLOW_FIELDS + " parameters in the same request.",
+                RestStatus.BAD_REQUEST
+            );
+            return channel -> channel.sendResponse(
+                new BytesRestResponse(ffe.getRestStatus(), ffe.toXContent(channel.newErrorBuilder(), ToXContent.EMPTY_PARAMS))
+            );
+        }
         try {
-
             Template template;
             Map<String, String> useCaseDefaultsMap = Collections.emptyMap();
             if (useCase != null) {
+                // Reconstruct the template from a substitution-ready use case
                 String useCaseTemplateFileInStringFormat = ParseUtils.resourceToString(
                     "/" + DefaultUseCases.getSubstitutionReadyFileByUseCaseName(useCase)
                 );
@@ -178,21 +192,25 @@ public class RestCreateWorkflowAction extends BaseRestHandler {
                     null,
                     useCaseDefaultsMap
                 );
-                XContentParser parserTestJson = ParseUtils.jsonToParser(useCaseTemplateFileInStringFormat);
-                ensureExpectedToken(XContentParser.Token.START_OBJECT, parserTestJson.currentToken(), parserTestJson);
-                template = Template.parse(parserTestJson);
-
+                XContentParser useCaseParser = ParseUtils.jsonToParser(useCaseTemplateFileInStringFormat);
+                ensureExpectedToken(XContentParser.Token.START_OBJECT, useCaseParser.currentToken(), useCaseParser);
+                template = Template.parse(useCaseParser);
             } else {
                 XContentParser parser = request.contentParser();
                 ensureExpectedToken(XContentParser.Token.START_OBJECT, parser.nextToken(), parser);
-                template = Template.parse(parser);
+                template = Template.parse(parser, updateFields);
+            }
+
+            // If not provisioning, params map is empty. Use it to pass updateFields flag to WorkflowRequest
+            if (updateFields) {
+                params = Map.of(UPDATE_WORKFLOW_FIELDS, "true");
             }
 
             WorkflowRequest workflowRequest = new WorkflowRequest(
                 workflowId,
                 template,
                 validation,
-                provision,
+                provision || updateFields,
                 params,
                 useCase,
                 useCaseDefaultsMap

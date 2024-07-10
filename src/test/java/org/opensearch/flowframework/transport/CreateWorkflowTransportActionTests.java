@@ -48,6 +48,7 @@ import org.mockito.ArgumentCaptor;
 
 import static org.opensearch.action.DocWriteResponse.Result.UPDATED;
 import static org.opensearch.flowframework.common.CommonValue.GLOBAL_CONTEXT_INDEX;
+import static org.opensearch.flowframework.common.CommonValue.UPDATE_WORKFLOW_FIELDS;
 import static org.opensearch.flowframework.common.CommonValue.WORKFLOW_STATE_INDEX;
 import static org.opensearch.flowframework.common.WorkflowResources.CONNECTOR_ID;
 import static org.opensearch.flowframework.common.WorkflowResources.CREATE_CONNECTOR;
@@ -55,6 +56,7 @@ import static org.opensearch.flowframework.common.WorkflowResources.DEPLOY_MODEL
 import static org.opensearch.flowframework.common.WorkflowResources.MODEL_ID;
 import static org.opensearch.flowframework.common.WorkflowResources.REGISTER_REMOTE_MODEL;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
@@ -352,7 +354,7 @@ public class CreateWorkflowTransportActionTests extends OpenSearchTestCase {
             ActionListener<IndexResponse> responseListener = invocation.getArgument(2);
             responseListener.onFailure(new Exception("failed"));
             return null;
-        }).when(flowFrameworkIndicesHandler).updateTemplateInGlobalContext(any(), any(Template.class), any());
+        }).when(flowFrameworkIndicesHandler).updateTemplateInGlobalContext(anyString(), any(Template.class), any(), anyBoolean());
 
         createWorkflowTransportAction.doExecute(mock(Task.class), updateWorkflow, listener);
         ArgumentCaptor<Exception> exceptionCaptor = ArgumentCaptor.forClass(Exception.class);
@@ -403,7 +405,7 @@ public class CreateWorkflowTransportActionTests extends OpenSearchTestCase {
             ActionListener<IndexResponse> responseListener = invocation.getArgument(2);
             responseListener.onResponse(new IndexResponse(new ShardId(GLOBAL_CONTEXT_INDEX, "", 1), "1", 1L, 1L, 1L, true));
             return null;
-        }).when(flowFrameworkIndicesHandler).updateTemplateInGlobalContext(any(), any(Template.class), any());
+        }).when(flowFrameworkIndicesHandler).updateTemplateInGlobalContext(anyString(), any(Template.class), any(), anyBoolean());
 
         doAnswer(invocation -> {
             ActionListener<UpdateResponse> updateResponseListener = invocation.getArgument(2);
@@ -416,6 +418,81 @@ public class CreateWorkflowTransportActionTests extends OpenSearchTestCase {
         verify(listener, times(1)).onResponse(responseCaptor.capture());
 
         assertEquals("1", responseCaptor.getValue().getWorkflowId());
+    }
+
+    public void testUpdateWorkflowWithField() {
+        @SuppressWarnings("unchecked")
+        ActionListener<WorkflowResponse> listener = mock(ActionListener.class);
+        WorkflowRequest updateWorkflow = new WorkflowRequest(
+            "1",
+            new Template.Builder().name("new name").description("test").useCase(null).uiMetadata(Map.of("foo", "bar")).build(),
+            Map.of(UPDATE_WORKFLOW_FIELDS, "true")
+        );
+
+        doAnswer(invocation -> {
+            ActionListener<GetResponse> getListener = invocation.getArgument(1);
+            GetResponse getResponse = mock(GetResponse.class);
+            when(getResponse.isExists()).thenReturn(true);
+            when(getResponse.getSourceAsString()).thenReturn(template.toJson());
+            getListener.onResponse(getResponse);
+            return null;
+        }).when(client).get(any(GetRequest.class), any());
+
+        doAnswer(invocation -> {
+            ActionListener<IndexResponse> responseListener = invocation.getArgument(2);
+            responseListener.onResponse(new IndexResponse(new ShardId(GLOBAL_CONTEXT_INDEX, "", 1), "1", 1L, 1L, 1L, true));
+            return null;
+        }).when(flowFrameworkIndicesHandler).updateTemplateInGlobalContext(anyString(), any(Template.class), any(), anyBoolean());
+
+        createWorkflowTransportAction.doExecute(mock(Task.class), updateWorkflow, listener);
+        verify(listener, times(1)).onResponse(any());
+
+        ArgumentCaptor<Template> templateCaptor = ArgumentCaptor.forClass(Template.class);
+        verify(flowFrameworkIndicesHandler, times(1)).updateTemplateInGlobalContext(
+            anyString(),
+            templateCaptor.capture(),
+            any(),
+            anyBoolean()
+        );
+        assertEquals("new name", templateCaptor.getValue().name());
+        assertEquals("test", templateCaptor.getValue().description());
+        assertEquals(template.useCase(), templateCaptor.getValue().useCase());
+        assertEquals(template.templateVersion(), templateCaptor.getValue().templateVersion());
+        assertEquals(template.compatibilityVersion(), templateCaptor.getValue().compatibilityVersion());
+        assertEquals(Map.of("foo", "bar"), templateCaptor.getValue().getUiMetadata());
+
+        updateWorkflow = new WorkflowRequest(
+            "1",
+            new Template.Builder().useCase("foo")
+                .templateVersion(Version.CURRENT)
+                .compatibilityVersion(List.of(Version.V_2_0_0, Version.CURRENT))
+                .build(),
+            Map.of(UPDATE_WORKFLOW_FIELDS, "true")
+        );
+        doAnswer(invocation -> {
+            ActionListener<GetResponse> getListener = invocation.getArgument(1);
+            GetResponse getResponse = mock(GetResponse.class);
+            when(getResponse.isExists()).thenReturn(true);
+            when(getResponse.getSourceAsString()).thenReturn(templateCaptor.getValue().toJson());
+            getListener.onResponse(getResponse);
+            return null;
+        }).when(client).get(any(GetRequest.class), any());
+        createWorkflowTransportAction.doExecute(mock(Task.class), updateWorkflow, listener);
+        verify(listener, times(2)).onResponse(any());
+
+        ArgumentCaptor<Template> newTemplateCaptor = ArgumentCaptor.forClass(Template.class);
+        verify(flowFrameworkIndicesHandler, times(2)).updateTemplateInGlobalContext(
+            anyString(),
+            newTemplateCaptor.capture(),
+            any(),
+            anyBoolean()
+        );
+        assertEquals("new name", newTemplateCaptor.getValue().name());
+        assertEquals("test", newTemplateCaptor.getValue().description());
+        assertEquals("foo", newTemplateCaptor.getValue().useCase());
+        assertEquals(Version.CURRENT, newTemplateCaptor.getValue().templateVersion());
+        assertEquals(List.of(Version.V_2_0_0, Version.CURRENT), newTemplateCaptor.getValue().compatibilityVersion());
+        assertEquals(Map.of("foo", "bar"), newTemplateCaptor.getValue().getUiMetadata());
     }
 
     public void testCreateWorkflow_withValidation_withProvision_Success() throws Exception {

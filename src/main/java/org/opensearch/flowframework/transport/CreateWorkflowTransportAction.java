@@ -233,6 +233,7 @@ public class CreateWorkflowTransportAction extends HandledTransportAction<Workfl
             );
         } else {
             // This is an existing workflow (PUT)
+            final boolean isFieldUpdate = request.isUpdateFields();
             // Fetch existing entry for time stamps
             logger.info("Querying existing workflow from global context: {}", workflowId);
             try (ThreadContext.StoredContext context = client.threadPool().getThreadContext().stashContext()) {
@@ -240,36 +241,48 @@ public class CreateWorkflowTransportAction extends HandledTransportAction<Workfl
                     context.restore();
                     if (getResponse.isExists()) {
                         Template existingTemplate = Template.parse(getResponse.getSourceAsString());
-                        // Update existing entry, full document replacement
-                        Template template = new Template.Builder(templateWithUser).createdTime(existingTemplate.createdTime())
-                            .lastUpdatedTime(Instant.now())
-                            .lastProvisionedTime(existingTemplate.lastProvisionedTime())
-                            .build();
+                        Template template = isFieldUpdate
+                            ? Template.updateExistingTemplate(existingTemplate, templateWithUser)
+                            : new Template.Builder(templateWithUser).createdTime(existingTemplate.createdTime())
+                                .lastUpdatedTime(Instant.now())
+                                .lastProvisionedTime(existingTemplate.lastProvisionedTime())
+                                .build();
                         flowFrameworkIndicesHandler.updateTemplateInGlobalContext(
                             request.getWorkflowId(),
                             template,
                             ActionListener.wrap(response -> {
-                                flowFrameworkIndicesHandler.updateFlowFrameworkSystemIndexDoc(
-                                    request.getWorkflowId(),
-                                    Map.ofEntries(
-                                        Map.entry(STATE_FIELD, State.NOT_STARTED),
-                                        Map.entry(PROVISIONING_PROGRESS_FIELD, ProvisioningProgress.NOT_STARTED)
-                                    ),
-                                    ActionListener.wrap(updateResponse -> {
-                                        logger.info("updated workflow {} state to {}", request.getWorkflowId(), State.NOT_STARTED.name());
-                                        listener.onResponse(new WorkflowResponse(request.getWorkflowId()));
-                                    }, exception -> {
-                                        String errorMessage = "Failed to update workflow " + request.getWorkflowId() + " in template index";
-                                        logger.error(errorMessage, exception);
-                                        if (exception instanceof FlowFrameworkException) {
-                                            listener.onFailure(exception);
-                                        } else {
-                                            listener.onFailure(
-                                                new FlowFrameworkException(errorMessage, ExceptionsHelper.status(exception))
+                                // Ignore state index if updating fields
+                                if (!isFieldUpdate) {
+                                    flowFrameworkIndicesHandler.updateFlowFrameworkSystemIndexDoc(
+                                        request.getWorkflowId(),
+                                        Map.ofEntries(
+                                            Map.entry(STATE_FIELD, State.NOT_STARTED),
+                                            Map.entry(PROVISIONING_PROGRESS_FIELD, ProvisioningProgress.NOT_STARTED)
+                                        ),
+                                        ActionListener.wrap(updateResponse -> {
+                                            logger.info(
+                                                "updated workflow {} state to {}",
+                                                request.getWorkflowId(),
+                                                State.NOT_STARTED.name()
                                             );
-                                        }
-                                    })
-                                );
+                                            listener.onResponse(new WorkflowResponse(request.getWorkflowId()));
+                                        }, exception -> {
+                                            String errorMessage = "Failed to update workflow "
+                                                + request.getWorkflowId()
+                                                + " in template index";
+                                            logger.error(errorMessage, exception);
+                                            if (exception instanceof FlowFrameworkException) {
+                                                listener.onFailure(exception);
+                                            } else {
+                                                listener.onFailure(
+                                                    new FlowFrameworkException(errorMessage, ExceptionsHelper.status(exception))
+                                                );
+                                            }
+                                        })
+                                    );
+                                } else {
+                                    listener.onResponse(new WorkflowResponse(request.getWorkflowId()));
+                                }
                             }, exception -> {
                                 String errorMessage = "Failed to update use case template " + request.getWorkflowId();
                                 logger.error(errorMessage, exception);
@@ -278,7 +291,8 @@ public class CreateWorkflowTransportAction extends HandledTransportAction<Workfl
                                 } else {
                                     listener.onFailure(new FlowFrameworkException(errorMessage, ExceptionsHelper.status(exception)));
                                 }
-                            })
+                            }),
+                            isFieldUpdate
                         );
                     } else {
                         String errorMessage = "Failed to retrieve template (" + workflowId + ") from global context.";

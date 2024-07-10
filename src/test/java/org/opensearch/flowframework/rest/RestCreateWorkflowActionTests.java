@@ -36,6 +36,7 @@ import java.util.Map;
 
 import static org.opensearch.flowframework.common.CommonValue.CREATE_CONNECTOR_CREDENTIAL_KEY;
 import static org.opensearch.flowframework.common.CommonValue.PROVISION_WORKFLOW;
+import static org.opensearch.flowframework.common.CommonValue.UPDATE_WORKFLOW_FIELDS;
 import static org.opensearch.flowframework.common.CommonValue.USE_CASE;
 import static org.opensearch.flowframework.common.CommonValue.WORKFLOW_URI;
 import static org.mockito.ArgumentMatchers.any;
@@ -47,6 +48,7 @@ public class RestCreateWorkflowActionTests extends OpenSearchTestCase {
 
     private String validTemplate;
     private String invalidTemplate;
+    private String validUpdateTemplate;
     private RestCreateWorkflowAction createWorkflowRestAction;
     private String createWorkflowPath;
     private String updateWorkflowPath;
@@ -82,9 +84,11 @@ public class RestCreateWorkflowActionTests extends OpenSearchTestCase {
             null
         );
 
-        // Invalid template configuration, wrong field name
         this.validTemplate = template.toJson();
+        // Invalid template configuration, wrong field name
         this.invalidTemplate = this.validTemplate.replace("use_case", "invalid");
+        // Partial update of some fields
+        this.validUpdateTemplate = "{\"description\":\"new description\",\"ui_metadata\":{\"foo\":\"bar\"}}";
         this.createWorkflowRestAction = new RestCreateWorkflowAction(flowFrameworkFeatureEnabledSetting);
         this.createWorkflowPath = String.format(Locale.ROOT, "%s", WORKFLOW_URI);
         this.updateWorkflowPath = String.format(Locale.ROOT, "%s/{%s}", WORKFLOW_URI, "workflow_id");
@@ -135,6 +139,78 @@ public class RestCreateWorkflowActionTests extends OpenSearchTestCase {
         assertTrue(
             channel.capturedResponse().content().utf8ToString().contains("are permitted unless the provision parameter is set to true.")
         );
+    }
+
+    public void testCreateWorkflowRequestWithUpdateAndProvision() throws Exception {
+        RestRequest request = new FakeRestRequest.Builder(xContentRegistry()).withMethod(RestRequest.Method.POST)
+            .withPath(this.createWorkflowPath)
+            .withParams(Map.ofEntries(Map.entry(PROVISION_WORKFLOW, "true"), Map.entry(UPDATE_WORKFLOW_FIELDS, "true")))
+            .withContent(new BytesArray(validTemplate), MediaTypeRegistry.JSON)
+            .build();
+        FakeRestChannel channel = new FakeRestChannel(request, false, 1);
+        createWorkflowRestAction.handleRequest(request, channel, nodeClient);
+        assertEquals(RestStatus.BAD_REQUEST, channel.capturedResponse().status());
+        assertTrue(
+            channel.capturedResponse()
+                .content()
+                .utf8ToString()
+                .contains(
+                    "You can not use both the " + PROVISION_WORKFLOW + " and " + UPDATE_WORKFLOW_FIELDS + " parameters in the same request."
+                )
+        );
+    }
+
+    public void testCreateWorkflowRequestWithUpdateAndParams() throws Exception {
+        RestRequest request = new FakeRestRequest.Builder(xContentRegistry()).withMethod(RestRequest.Method.POST)
+            .withPath(this.createWorkflowPath)
+            .withParams(Map.ofEntries(Map.entry(UPDATE_WORKFLOW_FIELDS, "true"), Map.entry("foo", "bar")))
+            .withContent(new BytesArray(validTemplate), MediaTypeRegistry.JSON)
+            .build();
+        FakeRestChannel channel = new FakeRestChannel(request, false, 1);
+        createWorkflowRestAction.handleRequest(request, channel, nodeClient);
+        assertEquals(RestStatus.BAD_REQUEST, channel.capturedResponse().status());
+        assertTrue(
+            channel.capturedResponse().content().utf8ToString().contains("are permitted unless the provision parameter is set to true.")
+        );
+    }
+
+    public void testUpdateWorkflowRequestWithFullTemplateUpdateAndNoParams() throws Exception {
+        RestRequest request = new FakeRestRequest.Builder(xContentRegistry()).withMethod(RestRequest.Method.PUT)
+            .withPath(this.updateWorkflowPath)
+            .withParams(Map.of(UPDATE_WORKFLOW_FIELDS, "true"))
+            .withContent(new BytesArray(validTemplate), MediaTypeRegistry.JSON)
+            .build();
+        FakeRestChannel channel = new FakeRestChannel(request, false, 1);
+        doAnswer(invocation -> {
+            ActionListener<WorkflowResponse> actionListener = invocation.getArgument(2);
+            actionListener.onResponse(new WorkflowResponse("id-123"));
+            return null;
+        }).when(nodeClient).execute(any(), any(WorkflowRequest.class), any());
+        createWorkflowRestAction.handleRequest(request, channel, nodeClient);
+        assertEquals(RestStatus.BAD_REQUEST, channel.capturedResponse().status());
+        assertTrue(
+            channel.capturedResponse()
+                .content()
+                .utf8ToString()
+                .contains("You can not update the field [workflows] without updating the whole template.")
+        );
+    }
+
+    public void testUpdateWorkflowRequestWithUpdateTemplateUpdateAndNoParams() throws Exception {
+        RestRequest request = new FakeRestRequest.Builder(xContentRegistry()).withMethod(RestRequest.Method.PUT)
+            .withPath(this.updateWorkflowPath)
+            .withParams(Map.of(UPDATE_WORKFLOW_FIELDS, "true"))
+            .withContent(new BytesArray(validUpdateTemplate), MediaTypeRegistry.JSON)
+            .build();
+        FakeRestChannel channel = new FakeRestChannel(request, false, 1);
+        doAnswer(invocation -> {
+            ActionListener<WorkflowResponse> actionListener = invocation.getArgument(2);
+            actionListener.onResponse(new WorkflowResponse("id-123"));
+            return null;
+        }).when(nodeClient).execute(any(), any(WorkflowRequest.class), any());
+        createWorkflowRestAction.handleRequest(request, channel, nodeClient);
+        assertEquals(RestStatus.CREATED, channel.capturedResponse().status());
+        assertTrue(channel.capturedResponse().content().utf8ToString().contains("id-123"));
     }
 
     public void testCreateWorkflowRequestWithUseCaseButNoProvision() throws Exception {

@@ -9,7 +9,11 @@
 package org.opensearch.flowframework.model;
 
 import org.opensearch.Version;
+import org.opensearch.common.xcontent.json.JsonXContent;
 import org.opensearch.core.rest.RestStatus;
+import org.opensearch.core.xcontent.DeprecationHandler;
+import org.opensearch.core.xcontent.NamedXContentRegistry;
+import org.opensearch.core.xcontent.XContentParser;
 import org.opensearch.flowframework.exception.FlowFrameworkException;
 import org.opensearch.test.OpenSearchTestCase;
 
@@ -18,6 +22,8 @@ import java.time.Instant;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+
+import static org.opensearch.core.xcontent.XContentParserUtils.ensureExpectedToken;
 
 public class TemplateTests extends OpenSearchTestCase {
 
@@ -84,6 +90,58 @@ public class TemplateTests extends OpenSearchTestCase {
         assertEquals(now, template.lastUpdatedTime());
         assertNull(template.lastProvisionedTime());
         assertEquals("Workflow [userParams={key=value}, nodes=[A, B], edges=[A->B]]", wfX.toString());
+
+        // Test invalid field if updating
+        XContentParser parser = JsonXContent.jsonXContent.createParser(
+            NamedXContentRegistry.EMPTY,
+            DeprecationHandler.IGNORE_DEPRECATIONS,
+            json
+        );
+        ensureExpectedToken(XContentParser.Token.START_OBJECT, parser.nextToken(), parser);
+        assertThrows(FlowFrameworkException.class, () -> Template.parse(parser, true));
+    }
+
+    public void testUpdateExistingTemplate() {
+        // Time travel to guarantee update increments
+        Instant now = Instant.now().minusMillis(100);
+
+        Template original = new Template(
+            "name one",
+            "description one",
+            "use case one",
+            Version.fromString("1.1.1"),
+            List.of(Version.fromString("1.1.1"), Version.fromString("1.1.1")),
+            Collections.emptyMap(),
+            Map.of("uiMetadata", "one"),
+            null,
+            now,
+            now,
+            null
+        );
+        Template updated = new Template.Builder().name("name two").description("description two").useCase("use case two").build();
+        Template merged = Template.updateExistingTemplate(original, updated);
+        assertEquals("name two", merged.name());
+        assertEquals("description two", merged.description());
+        assertEquals("use case two", merged.useCase());
+        assertEquals("1.1.1", merged.templateVersion().toString());
+        assertEquals("1.1.1", merged.compatibilityVersion().get(0).toString());
+        assertEquals("1.1.1", merged.compatibilityVersion().get(1).toString());
+        assertEquals("one", merged.getUiMetadata().get("uiMetadata"));
+
+        updated = new Template.Builder().templateVersion(Version.fromString("2.2.2"))
+            .compatibilityVersion(List.of(Version.fromString("2.2.2"), Version.fromString("2.2.2")))
+            .uiMetadata(Map.of("uiMetadata", "two"))
+            .build();
+        merged = Template.updateExistingTemplate(original, updated);
+        assertEquals("name one", merged.name());
+        assertEquals("description one", merged.description());
+        assertEquals("use case one", merged.useCase());
+        assertEquals("2.2.2", merged.templateVersion().toString());
+        assertEquals("2.2.2", merged.compatibilityVersion().get(0).toString());
+        assertEquals("2.2.2", merged.compatibilityVersion().get(1).toString());
+        assertEquals("two", merged.getUiMetadata().get("uiMetadata"));
+
+        assertTrue(merged.lastUpdatedTime().isAfter(now));
     }
 
     public void testExceptions() throws IOException {
