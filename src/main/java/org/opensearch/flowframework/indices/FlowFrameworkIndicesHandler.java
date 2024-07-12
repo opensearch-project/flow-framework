@@ -357,7 +357,8 @@ public class FlowFrameworkIndicesHandler {
      * @param listener action listener
      */
     public void putInitialStateToWorkflowState(String workflowId, User user, ActionListener<IndexResponse> listener) {
-        WorkflowState state = new WorkflowState.Builder().workflowId(workflowId)
+        WorkflowState state = WorkflowState.builder()
+            .workflowId(workflowId)
             .state(State.NOT_STARTED.name())
             .provisioningProgress(ProvisioningProgress.NOT_STARTED.name())
             .user(user)

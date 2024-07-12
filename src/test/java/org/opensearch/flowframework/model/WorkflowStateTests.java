@@ -90,4 +90,77 @@ public class WorkflowStateTests extends OpenSearchTestCase {
         }
     }
 
+    public void testWorkflowStateUpdate() {
+        // Time travel to guarantee update increments
+        Instant now = Instant.now().minusMillis(100);
+
+        WorkflowState wfs = WorkflowState.builder()
+            .workflowId("1")
+            .error("error one")
+            .state("state one")
+            .provisioningProgress("progress one")
+            .provisionStartTime(now)
+            .provisionEndTime(now)
+            .user(new User("one", Collections.emptyList(), Collections.emptyList(), Collections.emptyList()))
+            .userOutputs(Map.of("output", "one"))
+            .resourcesCreated(List.of(new ResourceCreated("", "", "", "id one")))
+            .build();
+
+        assertEquals("1", wfs.getWorkflowId());
+        assertEquals("error one", wfs.getError());
+        assertEquals("state one", wfs.getState());
+        assertEquals("progress one", wfs.getProvisioningProgress());
+        assertEquals(now, wfs.getProvisionStartTime());
+        assertEquals(now, wfs.getProvisionEndTime());
+        assertEquals("one", wfs.getUser().getName());
+        assertEquals(1, wfs.userOutputs().size());
+        assertEquals("one", wfs.userOutputs().get("output"));
+        assertEquals(1, wfs.resourcesCreated().size());
+        ResourceCreated rc = wfs.resourcesCreated().get(0);
+        assertEquals("id one", rc.resourceId());
+
+        WorkflowState update = WorkflowState.builder()
+            .workflowId("2")
+            .error("error two")
+            .state("state two")
+            .provisioningProgress("progress two")
+            .user(new User("two", Collections.emptyList(), Collections.emptyList(), Collections.emptyList()))
+            .build();
+
+        wfs = WorkflowState.updateExistingWorkflowState(wfs, update);
+        assertEquals("2", wfs.getWorkflowId());
+        assertEquals("error two", wfs.getError());
+        assertEquals("state two", wfs.getState());
+        assertEquals("progress two", wfs.getProvisioningProgress());
+        assertEquals(now, wfs.getProvisionStartTime());
+        assertEquals(now, wfs.getProvisionEndTime());
+        assertEquals("two", wfs.getUser().getName());
+        assertEquals(1, wfs.userOutputs().size());
+        assertEquals("one", wfs.userOutputs().get("output"));
+        assertEquals(1, wfs.resourcesCreated().size());
+        rc = wfs.resourcesCreated().get(0);
+        assertEquals("id one", rc.resourceId());
+
+        now = Instant.now().minusMillis(100);
+        update = WorkflowState.builder()
+            .provisionStartTime(now)
+            .provisionEndTime(now)
+            .userOutputs(Map.of("output", "two"))
+            .resourcesCreated(List.of(wfs.resourcesCreated().get(0), new ResourceCreated("", "", "", "id two")))
+            .build();
+
+        wfs = WorkflowState.updateExistingWorkflowState(wfs, update);
+        assertEquals("2", wfs.getWorkflowId());
+        assertEquals("error two", wfs.getError());
+        assertEquals("state two", wfs.getState());
+        assertEquals("progress two", wfs.getProvisioningProgress());
+        assertEquals(now, wfs.getProvisionStartTime());
+        assertEquals(now, wfs.getProvisionEndTime());
+        assertEquals("two", wfs.getUser().getName());
+        assertEquals(1, wfs.userOutputs().size());
+        assertEquals("two", wfs.userOutputs().get("output"));
+        assertEquals(2, wfs.resourcesCreated().size());
+        rc = wfs.resourcesCreated().get(1);
+        assertEquals("id two", rc.resourceId());
+    }
 }
