@@ -118,7 +118,7 @@ public class TemplateTests extends OpenSearchTestCase {
             now,
             null
         );
-        Template updated = new Template.Builder().name("name two").description("description two").useCase("use case two").build();
+        Template updated = Template.builder().name("name two").description("description two").useCase("use case two").build();
         Template merged = Template.updateExistingTemplate(original, updated);
         assertEquals("name two", merged.name());
         assertEquals("description two", merged.description());
@@ -128,7 +128,8 @@ public class TemplateTests extends OpenSearchTestCase {
         assertEquals("1.1.1", merged.compatibilityVersion().get(1).toString());
         assertEquals("one", merged.getUiMetadata().get("uiMetadata"));
 
-        updated = new Template.Builder().templateVersion(Version.fromString("2.2.2"))
+        updated = Template.builder()
+            .templateVersion(Version.fromString("2.2.2"))
             .compatibilityVersion(List.of(Version.fromString("2.2.2"), Version.fromString("2.2.2")))
             .uiMetadata(Map.of("uiMetadata", "two"))
             .build();
@@ -163,5 +164,23 @@ public class TemplateTests extends OpenSearchTestCase {
         assertTrue(t.toJson().contains("a test template"));
         assertTrue(t.toYaml().contains("a test template"));
         assertTrue(t.toString().contains("a test template"));
+    }
+
+    public void testNullToEmptyString() throws IOException {
+        Template t = Template.parse("{\"name\":\"test\"}");
+        assertEquals("test", t.name());
+        assertEquals("", t.description());
+        assertEquals("", t.useCase());
+
+        XContentParser parser = JsonXContent.jsonXContent.createParser(
+            NamedXContentRegistry.EMPTY,
+            DeprecationHandler.IGNORE_DEPRECATIONS,
+            "{\"name\":\"test\"}"
+        );
+        t = Template.parse(parser, true);
+        String json = t.toJson();
+        assertTrue(json.contains("\"name\":\"test\""));
+        assertTrue(json.contains("\"description\":\"\""));
+        assertTrue(json.contains("\"use_case\":\"\""));
     }
 }
