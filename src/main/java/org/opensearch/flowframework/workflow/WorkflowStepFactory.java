@@ -25,11 +25,12 @@ import org.opensearch.threadpool.ThreadPool;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.Supplier;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import static org.opensearch.flowframework.common.CommonValue.ACTIONS_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.CONFIGURATIONS;
@@ -415,13 +416,11 @@ public class WorkflowStepFactory {
      * @return WorkflowValidator
      */
     public WorkflowValidator getWorkflowValidator() {
-        Map<String, WorkflowStepValidator> workflowStepValidators = new HashMap<>();
-
-        for (WorkflowSteps mapping : WorkflowSteps.values()) {
-            workflowStepValidators.put(mapping.getWorkflowStepName(), mapping.getWorkflowStepValidator());
-        }
-
-        return new WorkflowValidator(workflowStepValidators);
+        return new WorkflowValidator(
+            Stream.of(WorkflowSteps.values())
+                .filter(w -> !WorkflowProcessSorter.WORKFLOW_STEP_DENYLIST.contains(w.getWorkflowStepName()))
+                .collect(Collectors.toMap(WorkflowSteps::getWorkflowStepName, WorkflowSteps::getWorkflowStepValidator))
+        );
     }
 
     /**
@@ -430,22 +429,20 @@ public class WorkflowStepFactory {
      * @return WorkflowValidator
      */
     public WorkflowValidator getWorkflowValidatorByStep(List<String> steps) {
-        Map<String, WorkflowStepValidator> workflowStepValidators = new HashMap<>();
-        Set<String> invalidSteps = new HashSet<>(steps);
-
-        for (WorkflowSteps mapping : WorkflowSteps.values()) {
-            String step = mapping.getWorkflowStepName();
-            if (steps.contains(step)) {
-                workflowStepValidators.put(mapping.getWorkflowStepName(), mapping.getWorkflowStepValidator());
-                invalidSteps.remove(step);
-            }
-        }
-
+        Set<String> validSteps = Stream.of(WorkflowSteps.values())
+            .map(WorkflowSteps::getWorkflowStepName)
+            .filter(name -> !WorkflowProcessSorter.WORKFLOW_STEP_DENYLIST.contains(name))
+            .filter(steps::contains)
+            .collect(Collectors.toSet());
+        Set<String> invalidSteps = steps.stream().filter(name -> !validSteps.contains(name)).collect(Collectors.toSet());
         if (!invalidSteps.isEmpty()) {
             throw new FlowFrameworkException("Invalid step name: " + invalidSteps, RestStatus.BAD_REQUEST);
         }
-
-        return new WorkflowValidator(workflowStepValidators);
+        return new WorkflowValidator(
+            Stream.of(WorkflowSteps.values())
+                .filter(w -> validSteps.contains(w.getWorkflowStepName()))
+                .collect(Collectors.toMap(WorkflowSteps::getWorkflowStepName, WorkflowSteps::getWorkflowStepValidator))
+        );
     }
 
     /**

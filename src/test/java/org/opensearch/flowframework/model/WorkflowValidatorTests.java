@@ -11,6 +11,7 @@ package org.opensearch.flowframework.model;
 import org.opensearch.client.Client;
 import org.opensearch.flowframework.common.FlowFrameworkSettings;
 import org.opensearch.flowframework.indices.FlowFrameworkIndicesHandler;
+import org.opensearch.flowframework.workflow.WorkflowProcessSorter;
 import org.opensearch.flowframework.workflow.WorkflowStepFactory;
 import org.opensearch.flowframework.workflow.WorkflowStepFactory.WorkflowSteps;
 import org.opensearch.ml.client.MachineLearningNodeClient;
@@ -70,6 +71,7 @@ public class WorkflowValidatorTests extends OpenSearchTestCase {
 
         // Get all registered workflow step types in the workflow step factory
         List<String> registeredWorkflowStepTypes = new ArrayList<String>(workflowStepFactory.getStepMap().keySet());
+        registeredWorkflowStepTypes.removeAll(WorkflowProcessSorter.WORKFLOW_STEP_DENYLIST);
 
         // Check if each registered step has a corresponding validator definition
         assertTrue(registeredWorkflowStepTypes.containsAll(registeredWorkflowValidatorTypes));
