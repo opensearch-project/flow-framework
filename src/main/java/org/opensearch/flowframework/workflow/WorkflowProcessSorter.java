@@ -68,8 +68,6 @@ public class WorkflowProcessSorter {
      *
      * @param workflowStepFactory The factory which matches template step types to instances.
      * @param threadPool The OpenSearch Thread pool to pass to process nodes.
-     * @param clusterService The OpenSearch cluster service.
-     * @param client The OpenSearch Client
      * @param flowFrameworkSettings settings of the plugin
      */
     public WorkflowProcessSorter(
