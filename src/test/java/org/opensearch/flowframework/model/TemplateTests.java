@@ -177,6 +177,7 @@ public class TemplateTests extends OpenSearchTestCase {
             DeprecationHandler.IGNORE_DEPRECATIONS,
             "{\"name\":\"test\"}"
         );
+        ensureExpectedToken(XContentParser.Token.START_OBJECT, parser.nextToken(), parser);
         t = Template.parse(parser, true);
         String json = t.toJson();
         assertTrue(json.contains("\"name\":\"test\""));
