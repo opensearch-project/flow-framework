@@ -10,8 +10,6 @@ package org.opensearch.flowframework.workflow;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.opensearch.client.Client;
-import org.opensearch.cluster.service.ClusterService;
 import org.opensearch.common.unit.TimeValue;
 import org.opensearch.core.rest.RestStatus;
 import org.opensearch.flowframework.common.FlowFrameworkSettings;
@@ -54,11 +52,16 @@ public class WorkflowProcessSorter {
 
     private static final Logger logger = LogManager.getLogger(WorkflowProcessSorter.class);
 
+    /** Workflow step types which may not be used in a template */
+    public static final Set<String> WORKFLOW_STEP_DENYLIST = Set.of(
+        DeleteIndexStep.NAME,
+        DeleteIngestPipelineStep.NAME,
+        DeleteSearchPipelineStep.NAME
+    );
+
     private WorkflowStepFactory workflowStepFactory;
     private ThreadPool threadPool;
     private Integer maxWorkflowSteps;
-    private ClusterService clusterService;
-    private Client client;
 
     /**
      * Instantiate this class.
@@ -72,15 +75,11 @@ public class WorkflowProcessSorter {
     public WorkflowProcessSorter(
         WorkflowStepFactory workflowStepFactory,
         ThreadPool threadPool,
-        ClusterService clusterService,
-        Client client,
         FlowFrameworkSettings flowFrameworkSettings
     ) {
         this.workflowStepFactory = workflowStepFactory;
         this.threadPool = threadPool;
         this.maxWorkflowSteps = flowFrameworkSettings.getMaxWorkflowSteps();
-        this.clusterService = clusterService;
-        this.client = client;
     }
 
     /**
@@ -104,6 +103,15 @@ public class WorkflowProcessSorter {
                     + "] to increase this.",
                 RestStatus.BAD_REQUEST
             );
+        }
+        // Disallow some steps
+        for (WorkflowNode node : workflow.nodes()) {
+            if (WORKFLOW_STEP_DENYLIST.contains(node.type())) {
+                throw new FlowFrameworkException(
+                    "The step type [" + node.type() + "] for node [" + node.id() + "] can not be used in a workflow.",
+                    RestStatus.FORBIDDEN
+                );
+            }
         }
         List<WorkflowNode> sortedNodes = topologicalSort(workflow.nodes(), workflow.edges());
 
