@@ -9,8 +9,6 @@
 package org.opensearch.flowframework.rest;
 
 import org.apache.hc.core5.http.io.entity.EntityUtils;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import org.opensearch.action.ingest.GetPipelineResponse;
 import org.opensearch.action.search.SearchResponse;
 import org.opensearch.client.Response;
@@ -50,8 +48,6 @@ import static org.opensearch.flowframework.common.CommonValue.PROVISION_WORKFLOW
 import static org.opensearch.flowframework.common.CommonValue.WORKFLOW_ID;
 
 public class FlowFrameworkRestApiIT extends FlowFrameworkRestTestCase {
-    private static final Logger logger = LogManager.getLogger(FlowFrameworkRestApiIT.class);
-
     private static AtomicBoolean waitToStart = new AtomicBoolean(true);
 
     @Before
@@ -447,7 +443,7 @@ public class FlowFrameworkRestApiIT extends FlowFrameworkRestTestCase {
             "create_ingest_pipeline"
         );
 
-        List workflowStepNames = resourcesCreated.stream()
+        List<String> workflowStepNames = resourcesCreated.stream()
             .peek(resourceCreated -> assertNotNull(resourceCreated.resourceId()))
             .map(ResourceCreated::workflowStepName)
             .collect(Collectors.toList());
@@ -495,7 +491,7 @@ public class FlowFrameworkRestApiIT extends FlowFrameworkRestTestCase {
 
         List<String> expectedStepNames = List.of("create_connector", "register_remote_model", "deploy_model");
 
-        List workflowStepNames = resourcesCreated.stream()
+        List<String> workflowStepNames = resourcesCreated.stream()
             .peek(resourceCreated -> assertNotNull(resourceCreated.resourceId()))
             .map(ResourceCreated::workflowStepName)
             .collect(Collectors.toList());
@@ -586,6 +582,7 @@ public class FlowFrameworkRestApiIT extends FlowFrameworkRestTestCase {
         // This template should create 4 resources, registered model_id, deployed model_id, ingest pipeline, and index name
         assertEquals(4, resourcesCreated.size());
         String modelId = resourcesCreated.get(1).resourceId();
+        String pipelineId = resourcesCreated.get(2).resourceId();
         String indexName = resourcesCreated.get(3).resourceId();
 
         // Short wait before ingesting data
@@ -598,32 +595,45 @@ public class FlowFrameworkRestApiIT extends FlowFrameworkRestTestCase {
         SearchResponse neuralSearchResponse = neuralSearchRequest(indexName, modelId);
         assertNotNull(neuralSearchResponse);
         Thread.sleep(500);
-        deleteIndex(indexName);
 
-        // Hit Deprovision API
-        // By design, this may not completely deprovision the first time if it takes >2s to process removals
-        Response deprovisionResponse = deprovisionWorkflow(client(), workflowId);
+        // Hit Deprovision API using allow_delete but only for the pipeline
+        Response deprovisionResponse = null;
         try {
+            // By design, this may not completely deprovision the first time if it takes >2s to process removals
+            deprovisionResponse = deprovisionWorkflowWithAllowDelete(client(), workflowId, pipelineId);
             assertBusy(
                 () -> { getAndAssertWorkflowStatus(client(), workflowId, State.NOT_STARTED, ProvisioningProgress.NOT_STARTED); },
                 30,
                 TimeUnit.SECONDS
             );
+        } catch (ResponseException re) {
+            // 403 return if completed with only index remaining to delete
+            assertEquals(RestStatus.FORBIDDEN, TestHelpers.restStatus(re.getResponse()));
         } catch (ComparisonFailure e) {
             // 202 return if still processing
+            assertNotNull(deprovisionResponse);
             assertEquals(RestStatus.ACCEPTED, TestHelpers.restStatus(deprovisionResponse));
         }
-        if (TestHelpers.restStatus(deprovisionResponse) == RestStatus.ACCEPTED) {
+        if (deprovisionResponse != null && TestHelpers.restStatus(deprovisionResponse) == RestStatus.ACCEPTED) {
             // Short wait before we try again
             Thread.sleep(10000);
-            deprovisionResponse = deprovisionWorkflow(client(), workflowId);
-            assertBusy(
-                () -> { getAndAssertWorkflowStatus(client(), workflowId, State.NOT_STARTED, ProvisioningProgress.NOT_STARTED); },
-                30,
-                TimeUnit.SECONDS
-            );
+            // Expected failure since we haven't provided allow_delete param
+            try {
+                deprovisionResponse = deprovisionWorkflowWithAllowDelete(client(), workflowId, pipelineId);
+            } catch (ResponseException re) {
+                // Expected 403 return with only index remaining to delete
+                assertEquals(RestStatus.FORBIDDEN, TestHelpers.restStatus(re.getResponse()));
+            }
         }
+        // Now try again with allow_delete for the index
+        deprovisionResponse = deprovisionWorkflowWithAllowDelete(client(), workflowId, pipelineId + "," + indexName);
+        assertBusy(
+            () -> { getAndAssertWorkflowStatus(client(), workflowId, State.NOT_STARTED, ProvisioningProgress.NOT_STARTED); },
+            30,
+            TimeUnit.SECONDS
+        );
         assertEquals(RestStatus.OK, TestHelpers.restStatus(deprovisionResponse));
+
         // Hit Delete API
         Response deleteResponse = deleteWorkflow(client(), workflowId);
         assertEquals(RestStatus.OK, TestHelpers.restStatus(deleteResponse));

@@ -17,11 +17,16 @@ import org.opensearch.common.unit.TimeValue;
 import org.opensearch.common.util.concurrent.OpenSearchExecutors;
 import org.opensearch.common.util.concurrent.ThreadContext;
 import org.opensearch.core.action.ActionListener;
+import org.opensearch.core.rest.RestStatus;
 import org.opensearch.flowframework.common.FlowFrameworkSettings;
+import org.opensearch.flowframework.exception.FlowFrameworkException;
 import org.opensearch.flowframework.indices.FlowFrameworkIndicesHandler;
 import org.opensearch.flowframework.model.ResourceCreated;
 import org.opensearch.flowframework.model.WorkflowState;
 import org.opensearch.flowframework.workflow.DeleteConnectorStep;
+import org.opensearch.flowframework.workflow.DeleteIndexStep;
+import org.opensearch.flowframework.workflow.DeleteIngestPipelineStep;
+import org.opensearch.flowframework.workflow.UndeployModelStep;
 import org.opensearch.flowframework.workflow.WorkflowData;
 import org.opensearch.flowframework.workflow.WorkflowStepFactory;
 import org.opensearch.tasks.Task;
@@ -33,16 +38,20 @@ import org.opensearch.transport.TransportService;
 import org.junit.AfterClass;
 
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 
 import org.mockito.ArgumentCaptor;
 
+import static org.opensearch.flowframework.common.CommonValue.ALLOW_DELETE;
 import static org.opensearch.flowframework.common.CommonValue.DEPROVISION_WORKFLOW_THREAD_POOL;
 import static org.opensearch.flowframework.common.CommonValue.FLOW_FRAMEWORK_THREAD_POOL_PREFIX;
 import static org.opensearch.flowframework.common.WorkflowResources.CONNECTOR_ID;
+import static org.opensearch.flowframework.common.WorkflowResources.INDEX_NAME;
 import static org.opensearch.flowframework.common.WorkflowResources.MODEL_ID;
+import static org.opensearch.flowframework.common.WorkflowResources.PIPELINE_ID;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -68,6 +77,9 @@ public class DeprovisionWorkflowTransportActionTests extends OpenSearchTestCase 
     private Client client;
     private WorkflowStepFactory workflowStepFactory;
     private DeleteConnectorStep deleteConnectorStep;
+    private UndeployModelStep undeployModelStep;
+    private DeleteIndexStep deleteIndexStep;
+    private DeleteIngestPipelineStep deleteIngestPipelineStep;
     private DeprovisionWorkflowTransportAction deprovisionWorkflowTransportAction;
     private FlowFrameworkIndicesHandler flowFrameworkIndicesHandler;
     private FlowFrameworkSettings flowFrameworkSettings;
@@ -83,7 +95,15 @@ public class DeprovisionWorkflowTransportActionTests extends OpenSearchTestCase 
 
         this.workflowStepFactory = mock(WorkflowStepFactory.class);
         this.deleteConnectorStep = mock(DeleteConnectorStep.class);
-        when(this.workflowStepFactory.createStep("delete_connector")).thenReturn(deleteConnectorStep);
+        when(this.workflowStepFactory.createStep(DeleteConnectorStep.NAME)).thenReturn(deleteConnectorStep);
+        this.undeployModelStep = mock(UndeployModelStep.class);
+        when(this.workflowStepFactory.createStep(UndeployModelStep.NAME)).thenReturn(undeployModelStep);
+        this.deleteIndexStep = mock(DeleteIndexStep.class);
+        when(this.deleteIndexStep.allowDeleteRequired()).thenReturn(true);
+        when(this.workflowStepFactory.createStep(DeleteIndexStep.NAME)).thenReturn(deleteIndexStep);
+        this.deleteIngestPipelineStep = mock(DeleteIngestPipelineStep.class);
+        when(this.deleteIngestPipelineStep.allowDeleteRequired()).thenReturn(true);
+        when(this.workflowStepFactory.createStep(DeleteIngestPipelineStep.NAME)).thenReturn(deleteIngestPipelineStep);
 
         this.flowFrameworkIndicesHandler = mock(FlowFrameworkIndicesHandler.class);
         flowFrameworkSettings = mock(FlowFrameworkSettings.class);
@@ -108,9 +128,8 @@ public class DeprovisionWorkflowTransportActionTests extends OpenSearchTestCase 
     public void testDeprovisionWorkflow() throws Exception {
         String workflowId = "1";
 
-        CountDownLatch latch = new CountDownLatch(1);
         @SuppressWarnings("unchecked")
-        ActionListener<WorkflowResponse> listener = spy(new LatchedActionListener<WorkflowResponse>(mock(ActionListener.class), latch));
+        ActionListener<WorkflowResponse> listener = mock(ActionListener.class);
         WorkflowRequest workflowRequest = new WorkflowRequest(workflowId, null);
 
         doAnswer(invocation -> {
@@ -133,10 +152,12 @@ public class DeprovisionWorkflowTransportActionTests extends OpenSearchTestCase 
         future.onResponse(WorkflowData.EMPTY);
         when(this.deleteConnectorStep.execute(anyString(), any(WorkflowData.class), anyMap(), anyMap(), anyMap())).thenReturn(future);
 
-        deprovisionWorkflowTransportAction.doExecute(mock(Task.class), workflowRequest, listener);
-        ArgumentCaptor<WorkflowResponse> responseCaptor = ArgumentCaptor.forClass(WorkflowResponse.class);
-
+        CountDownLatch latch = new CountDownLatch(1);
+        LatchedActionListener<WorkflowResponse> latchedActionListener = new LatchedActionListener<>(listener, latch);
+        deprovisionWorkflowTransportAction.doExecute(mock(Task.class), workflowRequest, latchedActionListener);
         latch.await(5, TimeUnit.SECONDS);
+
+        ArgumentCaptor<WorkflowResponse> responseCaptor = ArgumentCaptor.forClass(WorkflowResponse.class);
         verify(listener, times(1)).onResponse(responseCaptor.capture());
         assertEquals(workflowId, responseCaptor.getValue().getWorkflowId());
     }
@@ -144,9 +165,8 @@ public class DeprovisionWorkflowTransportActionTests extends OpenSearchTestCase 
     public void testFailToDeprovision() throws Exception {
         String workflowId = "1";
 
-        CountDownLatch latch = new CountDownLatch(1);
         @SuppressWarnings("unchecked")
-        ActionListener<WorkflowResponse> listener = spy(new LatchedActionListener<WorkflowResponse>(mock(ActionListener.class), latch));
+        ActionListener<WorkflowResponse> listener = mock(ActionListener.class);
         WorkflowRequest workflowRequest = new WorkflowRequest(workflowId, null);
 
         doAnswer(invocation -> {
@@ -161,13 +181,132 @@ public class DeprovisionWorkflowTransportActionTests extends OpenSearchTestCase 
 
         PlainActionFuture<WorkflowData> future = PlainActionFuture.newFuture();
         future.onFailure(new RuntimeException("rte"));
-        when(this.deleteConnectorStep.execute(anyString(), any(WorkflowData.class), anyMap(), anyMap(), anyMap())).thenReturn(future);
+        when(this.undeployModelStep.execute(anyString(), any(WorkflowData.class), anyMap(), anyMap(), anyMap())).thenReturn(future);
 
-        deprovisionWorkflowTransportAction.doExecute(mock(Task.class), workflowRequest, listener);
-        ArgumentCaptor<Exception> exceptionCaptor = ArgumentCaptor.forClass(Exception.class);
-
+        CountDownLatch latch = new CountDownLatch(1);
+        LatchedActionListener<WorkflowResponse> latchedActionListener = new LatchedActionListener<>(listener, latch);
+        deprovisionWorkflowTransportAction.doExecute(mock(Task.class), workflowRequest, latchedActionListener);
         latch.await(5, TimeUnit.SECONDS);
+
+        ArgumentCaptor<FlowFrameworkException> exceptionCaptor = ArgumentCaptor.forClass(FlowFrameworkException.class);
+
         verify(listener, times(1)).onFailure(exceptionCaptor.capture());
+        assertEquals(RestStatus.ACCEPTED, exceptionCaptor.getValue().getRestStatus());
         assertEquals("Failed to deprovision some resources: [model_id modelId].", exceptionCaptor.getValue().getMessage());
+    }
+
+    public void testAllowDeleteRequired() throws Exception {
+        String workflowId = "1";
+
+        @SuppressWarnings("unchecked")
+        ActionListener<WorkflowResponse> listener = mock(ActionListener.class);
+
+        doAnswer(invocation -> {
+            ActionListener<GetWorkflowStateResponse> responseListener = invocation.getArgument(2);
+
+            WorkflowState state = WorkflowState.builder()
+                .resourcesCreated(List.of(new ResourceCreated("create_index", "step_1", INDEX_NAME, "test-index")))
+                .build();
+            responseListener.onResponse(new GetWorkflowStateResponse(state, true));
+            return null;
+        }).when(client).execute(any(GetWorkflowStateAction.class), any(GetWorkflowStateRequest.class), any());
+
+        doAnswer(invocation -> {
+            Consumer<Boolean> booleanConsumer = invocation.getArgument(1);
+            booleanConsumer.accept(Boolean.FALSE);
+            return null;
+        }).when(flowFrameworkIndicesHandler).doesTemplateExist(anyString(), any(), any());
+
+        // Test failure with no param
+        WorkflowRequest workflowRequest = new WorkflowRequest(workflowId, null);
+
+        CountDownLatch latch = new CountDownLatch(1);
+        LatchedActionListener<WorkflowResponse> latchedActionListener = new LatchedActionListener<>(listener, latch);
+        deprovisionWorkflowTransportAction.doExecute(mock(Task.class), workflowRequest, latchedActionListener);
+        latch.await(5, TimeUnit.SECONDS);
+
+        ArgumentCaptor<FlowFrameworkException> exceptionCaptor = ArgumentCaptor.forClass(FlowFrameworkException.class);
+
+        verify(listener, times(1)).onFailure(exceptionCaptor.capture());
+        assertEquals(RestStatus.FORBIDDEN, exceptionCaptor.getValue().getRestStatus());
+        assertEquals(
+            "These resources require the allow_delete parameter to deprovision: [index_name test-index].",
+            exceptionCaptor.getValue().getMessage()
+        );
+
+        // Test (2nd) failure with wrong allow_delete param
+        workflowRequest = new WorkflowRequest(workflowId, null, Map.of(ALLOW_DELETE, "wrong-index"));
+
+        latch = new CountDownLatch(1);
+        latchedActionListener = new LatchedActionListener<>(listener, latch);
+        deprovisionWorkflowTransportAction.doExecute(mock(Task.class), workflowRequest, latchedActionListener);
+        latch.await(5, TimeUnit.SECONDS);
+
+        exceptionCaptor = ArgumentCaptor.forClass(FlowFrameworkException.class);
+        verify(listener, times(2)).onFailure(exceptionCaptor.capture());
+        assertEquals(RestStatus.FORBIDDEN, exceptionCaptor.getValue().getRestStatus());
+        assertEquals(
+            "These resources require the allow_delete parameter to deprovision: [index_name test-index].",
+            exceptionCaptor.getValue().getMessage()
+        );
+
+        // Test success with correct allow_delete param
+        workflowRequest = new WorkflowRequest(workflowId, null, Map.of(ALLOW_DELETE, "wrong-index,test-index,other-index"));
+
+        PlainActionFuture<WorkflowData> future = PlainActionFuture.newFuture();
+        future.onResponse(WorkflowData.EMPTY);
+        when(this.deleteIndexStep.execute(anyString(), any(WorkflowData.class), anyMap(), anyMap(), anyMap())).thenReturn(future);
+
+        latch = new CountDownLatch(1);
+        latchedActionListener = new LatchedActionListener<>(listener, latch);
+        deprovisionWorkflowTransportAction.doExecute(mock(Task.class), workflowRequest, latchedActionListener);
+        latch.await(5, TimeUnit.SECONDS);
+
+        ArgumentCaptor<WorkflowResponse> responseCaptor = ArgumentCaptor.forClass(WorkflowResponse.class);
+        verify(listener, times(1)).onResponse(responseCaptor.capture());
+        assertEquals(workflowId, responseCaptor.getValue().getWorkflowId());
+    }
+
+    public void testFailToDeprovisionAndAllowDeleteRequired() throws Exception {
+        String workflowId = "1";
+
+        @SuppressWarnings("unchecked")
+        ActionListener<WorkflowResponse> listener = mock(ActionListener.class);
+        WorkflowRequest workflowRequest = new WorkflowRequest(workflowId, null, Map.of(ALLOW_DELETE, "wrong-index,test-pipeline"));
+
+        doAnswer(invocation -> {
+            ActionListener<GetWorkflowStateResponse> responseListener = invocation.getArgument(2);
+
+            WorkflowState state = WorkflowState.builder()
+                .resourcesCreated(
+                    List.of(
+                        new ResourceCreated("deploy_model", "step_1", MODEL_ID, "modelId"),
+                        new ResourceCreated("create_index", "step_2", INDEX_NAME, "test-index"),
+                        new ResourceCreated("create_ingest_pipeline", "step_3", PIPELINE_ID, "test-pipeline")
+                    )
+                )
+                .build();
+            responseListener.onResponse(new GetWorkflowStateResponse(state, true));
+            return null;
+        }).when(client).execute(any(GetWorkflowStateAction.class), any(GetWorkflowStateRequest.class), any());
+
+        PlainActionFuture<WorkflowData> future = PlainActionFuture.newFuture();
+        future.onFailure(new RuntimeException("rte"));
+        when(this.undeployModelStep.execute(anyString(), any(WorkflowData.class), anyMap(), anyMap(), anyMap())).thenReturn(future);
+
+        CountDownLatch latch = new CountDownLatch(1);
+        LatchedActionListener<WorkflowResponse> latchedActionListener = new LatchedActionListener<>(listener, latch);
+        deprovisionWorkflowTransportAction.doExecute(mock(Task.class), workflowRequest, latchedActionListener);
+        latch.await(5, TimeUnit.SECONDS);
+
+        ArgumentCaptor<FlowFrameworkException> exceptionCaptor = ArgumentCaptor.forClass(FlowFrameworkException.class);
+
+        verify(listener, times(1)).onFailure(exceptionCaptor.capture());
+        assertEquals(RestStatus.ACCEPTED, exceptionCaptor.getValue().getRestStatus());
+        assertEquals(
+            "Failed to deprovision some resources: [pipeline_id test-pipeline, model_id modelId]."
+                + " These resources require the allow_delete parameter to deprovision: [index_name test-index].",
+            exceptionCaptor.getValue().getMessage()
+        );
     }
 }

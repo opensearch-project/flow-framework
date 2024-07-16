@@ -490,6 +490,24 @@ public abstract class FlowFrameworkRestTestCase extends OpenSearchRestTestCase {
     }
 
     /**
+     * Helper method to invoke the Deprovision Workflow Rest Action
+     * @param client the rest client
+     * @param workflowId the workflow ID to deprovision
+     * @return a rest response
+     * @throws Exception if the request fails
+     */
+    protected Response deprovisionWorkflowWithAllowDelete(RestClient client, String workflowId, String allowedResource) throws Exception {
+        return TestHelpers.makeRequest(
+            client,
+            "POST",
+            String.format(Locale.ROOT, "%s/%s/%s%s", WORKFLOW_URI, workflowId, "_deprovision?allow_delete=", allowedResource),
+            Collections.emptyMap(),
+            "",
+            null
+        );
+    }
+
+    /**
      * Helper method to invoke the Delete Workflow Rest Action
      * @param client the rest client
      * @param workflowId the workflow ID to delete

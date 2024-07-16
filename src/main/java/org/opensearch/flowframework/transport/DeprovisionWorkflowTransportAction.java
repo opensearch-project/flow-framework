@@ -19,6 +19,7 @@ import org.opensearch.client.Client;
 import org.opensearch.common.inject.Inject;
 import org.opensearch.common.util.concurrent.ThreadContext;
 import org.opensearch.core.action.ActionListener;
+import org.opensearch.core.common.Strings;
 import org.opensearch.core.rest.RestStatus;
 import org.opensearch.flowframework.common.FlowFrameworkSettings;
 import org.opensearch.flowframework.exception.FlowFrameworkException;
@@ -28,6 +29,7 @@ import org.opensearch.flowframework.model.ResourceCreated;
 import org.opensearch.flowframework.model.State;
 import org.opensearch.flowframework.workflow.ProcessNode;
 import org.opensearch.flowframework.workflow.WorkflowData;
+import org.opensearch.flowframework.workflow.WorkflowStep;
 import org.opensearch.flowframework.workflow.WorkflowStepFactory;
 import org.opensearch.tasks.Task;
 import org.opensearch.threadpool.ThreadPool;
@@ -40,8 +42,10 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.stream.Collectors;
 
+import static org.opensearch.flowframework.common.CommonValue.ALLOW_DELETE;
 import static org.opensearch.flowframework.common.CommonValue.DEPROVISION_WORKFLOW_THREAD_POOL;
 import static org.opensearch.flowframework.common.CommonValue.PROVISIONING_PROGRESS_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.PROVISION_END_TIME_FIELD;
@@ -95,6 +99,7 @@ public class DeprovisionWorkflowTransportAction extends HandledTransportAction<W
     @Override
     protected void doExecute(Task task, WorkflowRequest request, ActionListener<WorkflowResponse> listener) {
         String workflowId = request.getWorkflowId();
+        String allowDelete = request.getParams().get(ALLOW_DELETE);
         GetWorkflowStateRequest getStateRequest = new GetWorkflowStateRequest(workflowId, true);
 
         // Stash thread context to interact with system index
@@ -103,9 +108,17 @@ public class DeprovisionWorkflowTransportAction extends HandledTransportAction<W
             client.execute(GetWorkflowStateAction.INSTANCE, getStateRequest, ActionListener.wrap(response -> {
                 context.restore();
 
+                Set<String> deleteAllowedResources = Strings.tokenizeByCommaToSet(allowDelete);
                 // Retrieve resources from workflow state and deprovision
                 threadPool.executor(DEPROVISION_WORKFLOW_THREAD_POOL)
-                    .execute(() -> executeDeprovisionSequence(workflowId, response.getWorkflowState().resourcesCreated(), listener));
+                    .execute(
+                        () -> executeDeprovisionSequence(
+                            workflowId,
+                            response.getWorkflowState().resourcesCreated(),
+                            deleteAllowedResources,
+                            listener
+                        )
+                    );
             }, exception -> {
                 String errorMessage = "Failed to get workflow state for workflow " + workflowId;
                 logger.error(errorMessage, exception);
@@ -121,18 +134,20 @@ public class DeprovisionWorkflowTransportAction extends HandledTransportAction<W
     private void executeDeprovisionSequence(
         String workflowId,
         List<ResourceCreated> resourcesCreated,
+        Set<String> deleteAllowedResources,
         ActionListener<WorkflowResponse> listener
     ) {
-
+        List<ResourceCreated> deleteNotAllowed = new ArrayList<>();
         // Create a list of ProcessNodes with the corresponding deprovision workflow steps
         List<ProcessNode> deprovisionProcessSequence = new ArrayList<>();
         for (ResourceCreated resource : resourcesCreated) {
             String workflowStepId = resource.workflowStepId();
 
             String stepName = resource.workflowStepName();
-            String deprovisionStep = getDeprovisionStepByWorkflowStep(stepName);
-            // Unimplemented steps presently return null, so skip
-            if (deprovisionStep == null) {
+            WorkflowStep deprovisionStep = workflowStepFactory.createStep(getDeprovisionStepByWorkflowStep(stepName));
+            // Skip if the step requires allow_delete but the resourceId isn't included
+            if (deprovisionStep.allowDeleteRequired() && !deleteAllowedResources.contains(resource.resourceId())) {
+                deleteNotAllowed.add(resource);
                 continue;
             }
             // New ID is old ID with (deprovision step type) prepended
@@ -140,7 +155,7 @@ public class DeprovisionWorkflowTransportAction extends HandledTransportAction<W
             deprovisionProcessSequence.add(
                 new ProcessNode(
                     deprovisionStepId,
-                    workflowStepFactory.createStep(deprovisionStep),
+                    deprovisionStep,
                     Collections.emptyMap(),
                     Collections.emptyMap(),
                     new WorkflowData(Map.of(getResourceByWorkflowStep(stepName), resource.resourceId()), workflowId, deprovisionStepId),
@@ -215,17 +230,21 @@ public class DeprovisionWorkflowTransportAction extends HandledTransportAction<W
         List<ResourceCreated> remainingResources = deprovisionProcessSequence.stream()
             .map(pn -> getResourceFromDeprovisionNode(pn, resourcesCreated))
             .collect(Collectors.toList());
-        logger.info("Resources remaining: {}", remainingResources);
-        updateWorkflowState(workflowId, remainingResources, listener);
+        logger.info("Resources remaining: {}.", remainingResources);
+        if (!deleteNotAllowed.isEmpty()) {
+            logger.info("Resources requiring allow_delete: {}.", deleteNotAllowed);
+        }
+        updateWorkflowState(workflowId, remainingResources, deleteNotAllowed, listener);
     }
 
     private void updateWorkflowState(
         String workflowId,
         List<ResourceCreated> remainingResources,
+        List<ResourceCreated> deleteNotAllowed,
         ActionListener<WorkflowResponse> listener
     ) {
-        if (remainingResources.isEmpty()) {
-            // Successful deprovision, reset state to initial
+        if (remainingResources.isEmpty() && deleteNotAllowed.isEmpty()) {
+            // Successful deprovision of all resources, reset state to initial
             flowFrameworkIndicesHandler.doesTemplateExist(workflowId, templateExists -> {
                 if (Boolean.TRUE.equals(templateExists)) {
                     flowFrameworkIndicesHandler.putInitialStateToWorkflowState(
@@ -244,32 +263,46 @@ public class DeprovisionWorkflowTransportAction extends HandledTransportAction<W
                 listener.onResponse(new WorkflowResponse(workflowId));
             }, listener);
         } else {
-            // Failed deprovision
+            // Remaining resources only includes ones we tried to delete
+            List<ResourceCreated> stateIndexResources = new ArrayList<>(remainingResources);
+            // Add in those we skipped
+            stateIndexResources.addAll(deleteNotAllowed);
             flowFrameworkIndicesHandler.updateFlowFrameworkSystemIndexDoc(
                 workflowId,
                 Map.ofEntries(
                     Map.entry(STATE_FIELD, State.COMPLETED),
                     Map.entry(PROVISIONING_PROGRESS_FIELD, ProvisioningProgress.DONE),
                     Map.entry(PROVISION_END_TIME_FIELD, Instant.now().toEpochMilli()),
-                    Map.entry(RESOURCES_CREATED_FIELD, remainingResources)
+                    Map.entry(RESOURCES_CREATED_FIELD, stateIndexResources)
                 ),
                 ActionListener.wrap(updateResponse -> {
                     logger.info("updated workflow {} state to COMPLETED", workflowId);
                 }, exception -> { logger.error("Failed to update workflow {} state", workflowId, exception); })
             );
             // give user list of remaining resources
+            StringBuilder message = new StringBuilder();
+            appendResourceInfo(message, "Failed to deprovision some resources: ", remainingResources);
+            appendResourceInfo(message, "These resources require the " + ALLOW_DELETE + " parameter to deprovision: ", deleteNotAllowed);
             listener.onFailure(
-                new FlowFrameworkException(
-                    "Failed to deprovision some resources: ["
-                        + remainingResources.stream()
-                            .map(DeprovisionWorkflowTransportAction::getResourceNameAndId)
-                            .filter(Objects::nonNull)
-                            .distinct()
-                            .collect(Collectors.joining(", "))
-                        + "].",
-                    RestStatus.ACCEPTED
-                )
+                new FlowFrameworkException(message.toString(), remainingResources.isEmpty() ? RestStatus.FORBIDDEN : RestStatus.ACCEPTED)
             );
+        }
+    }
+
+    private static void appendResourceInfo(StringBuilder message, String prefix, List<ResourceCreated> resources) {
+        if (!resources.isEmpty()) {
+            if (message.length() > 0) {
+                message.append(" ");
+            }
+            message.append(prefix)
+                .append(
+                    resources.stream()
+                        .map(DeprovisionWorkflowTransportAction::getResourceNameAndId)
+                        .filter(Objects::nonNull)
+                        .distinct()
+                        .collect(Collectors.joining(", ", "[", "]"))
+                )
+                .append(".");
         }
     }
 
