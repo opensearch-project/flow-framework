@@ -18,7 +18,10 @@ import org.opensearch.flowframework.workflow.CreateIngestPipelineStep;
 import org.opensearch.flowframework.workflow.CreateSearchPipelineStep;
 import org.opensearch.flowframework.workflow.DeleteAgentStep;
 import org.opensearch.flowframework.workflow.DeleteConnectorStep;
+import org.opensearch.flowframework.workflow.DeleteIndexStep;
+import org.opensearch.flowframework.workflow.DeleteIngestPipelineStep;
 import org.opensearch.flowframework.workflow.DeleteModelStep;
+import org.opensearch.flowframework.workflow.DeleteSearchPipelineStep;
 import org.opensearch.flowframework.workflow.DeployModelStep;
 import org.opensearch.flowframework.workflow.NoOpStep;
 import org.opensearch.flowframework.workflow.RegisterAgentStep;
@@ -54,11 +57,11 @@ public enum WorkflowResources {
     /** Workflow steps for deploying/undeploying a model and associated created resource */
     DEPLOY_MODEL(DeployModelStep.NAME, WorkflowResources.MODEL_ID, UndeployModelStep.NAME),
     /** Workflow steps for creating an ingest-pipeline and associated created resource */
-    CREATE_INGEST_PIPELINE(CreateIngestPipelineStep.NAME, WorkflowResources.PIPELINE_ID, null), // TODO delete step
+    CREATE_INGEST_PIPELINE(CreateIngestPipelineStep.NAME, WorkflowResources.PIPELINE_ID, DeleteIngestPipelineStep.NAME),
     /** Workflow steps for creating an ingest-pipeline and associated created resource */
-    CREATE_SEARCH_PIPELINE(CreateSearchPipelineStep.NAME, WorkflowResources.PIPELINE_ID, null), // TODO delete step
+    CREATE_SEARCH_PIPELINE(CreateSearchPipelineStep.NAME, WorkflowResources.PIPELINE_ID, DeleteSearchPipelineStep.NAME),
     /** Workflow steps for creating an index and associated created resource */
-    CREATE_INDEX(CreateIndexStep.NAME, WorkflowResources.INDEX_NAME, NoOpStep.NAME),
+    CREATE_INDEX(CreateIndexStep.NAME, WorkflowResources.INDEX_NAME, DeleteIndexStep.NAME),
     /** Workflow steps for reindex a source index to destination index and associated created resource */
     REINDEX(ReindexStep.NAME, WorkflowResources.INDEX_NAME, NoOpStep.NAME),
     /** Workflow steps for registering/deleting an agent and the associated created resource */

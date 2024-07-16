@@ -25,9 +25,12 @@ import org.opensearch.rest.BytesRestResponse;
 import org.opensearch.rest.RestRequest;
 
 import java.io.IOException;
+import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 
+import static org.opensearch.flowframework.common.CommonValue.ALLOW_DELETE;
 import static org.opensearch.flowframework.common.CommonValue.WORKFLOW_ID;
 import static org.opensearch.flowframework.common.CommonValue.WORKFLOW_URI;
 import static org.opensearch.flowframework.common.FlowFrameworkSettings.FLOW_FRAMEWORK_ENABLED;
@@ -57,6 +60,7 @@ public class RestDeprovisionWorkflowAction extends BaseRestHandler {
     @Override
     protected BaseRestHandler.RestChannelConsumer prepareRequest(RestRequest request, NodeClient client) throws IOException {
         String workflowId = request.param(WORKFLOW_ID);
+        String allowDelete = request.param(ALLOW_DELETE);
         try {
             if (!flowFrameworkFeatureEnabledSetting.isFlowFrameworkEnabled()) {
                 throw new FlowFrameworkException(
@@ -73,7 +77,11 @@ public class RestDeprovisionWorkflowAction extends BaseRestHandler {
             if (workflowId == null) {
                 throw new FlowFrameworkException("workflow_id cannot be null", RestStatus.BAD_REQUEST);
             }
-            WorkflowRequest workflowRequest = new WorkflowRequest(workflowId, null);
+            WorkflowRequest workflowRequest = new WorkflowRequest(
+                workflowId,
+                null,
+                allowDelete == null ? Collections.emptyMap() : Map.of(ALLOW_DELETE, allowDelete)
+            );
 
             return channel -> client.execute(DeprovisionWorkflowAction.INSTANCE, workflowRequest, ActionListener.wrap(response -> {
                 XContentBuilder builder = response.toXContent(channel.newBuilder(), ToXContent.EMPTY_PARAMS);

@@ -118,14 +118,8 @@ public class WorkflowProcessSorterTests extends OpenSearchTestCase {
                 FLOW_FRAMEWORK_THREAD_POOL_PREFIX + DEPROVISION_WORKFLOW_THREAD_POOL
             )
         );
-        WorkflowStepFactory factory = new WorkflowStepFactory(
-            testThreadPool,
-            mlClient,
-            flowFrameworkIndicesHandler,
-            flowFrameworkSettings,
-            client
-        );
-        workflowProcessSorter = new WorkflowProcessSorter(factory, testThreadPool, clusterService, client, flowFrameworkSettings);
+        workflowStepFactory = new WorkflowStepFactory(testThreadPool, mlClient, flowFrameworkIndicesHandler, flowFrameworkSettings, client);
+        workflowProcessSorter = new WorkflowProcessSorter(workflowStepFactory, testThreadPool, flowFrameworkSettings);
     }
 
     @AfterClass
@@ -411,6 +405,25 @@ public class WorkflowProcessSorterTests extends OpenSearchTestCase {
         );
         assertEquals("Invalid workflow, node [workflow_step_1] missing the following required inputs : [connector_id]", ex.getMessage());
         assertEquals(RestStatus.BAD_REQUEST, ex.getRestStatus());
+    }
+
+    public void testFailedDenyListValidation() throws IOException {
+
+        // Create Delete index workflow node
+        WorkflowNode deleteIndex = new WorkflowNode(
+            "workflow_step_1",
+            DeleteIndexStep.NAME,
+            Collections.emptyMap(),
+            Map.of("index_name", "undeletable")
+        );
+        Workflow workflow = new Workflow(Collections.emptyMap(), List.of(deleteIndex), Collections.emptyList());
+
+        FlowFrameworkException ex = expectThrows(
+            FlowFrameworkException.class,
+            () -> workflowProcessSorter.sortProcessNodes(workflow, "123", Collections.emptyMap())
+        );
+        assertEquals("The step type [delete_index] for node [workflow_step_1] can not be used in a workflow.", ex.getMessage());
+        assertEquals(RestStatus.FORBIDDEN, ex.getRestStatus());
     }
 
     public void testSuccessfulInstalledPluginValidation() throws Exception {
