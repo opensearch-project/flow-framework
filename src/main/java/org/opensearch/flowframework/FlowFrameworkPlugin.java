@@ -131,13 +131,7 @@ public class FlowFrameworkPlugin extends Plugin implements ActionPlugin, SystemI
             flowFrameworkSettings,
             client
         );
-        WorkflowProcessSorter workflowProcessSorter = new WorkflowProcessSorter(
-            workflowStepFactory,
-            threadPool,
-            clusterService,
-            client,
-            flowFrameworkSettings
-        );
+        WorkflowProcessSorter workflowProcessSorter = new WorkflowProcessSorter(workflowStepFactory, threadPool, flowFrameworkSettings);
 
         return List.of(workflowStepFactory, workflowProcessSorter, encryptorUtils, flowFrameworkIndicesHandler, flowFrameworkSettings);
     }
