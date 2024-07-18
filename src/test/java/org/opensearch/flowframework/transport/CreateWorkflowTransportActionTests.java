@@ -396,7 +396,7 @@ public class CreateWorkflowTransportActionTests extends OpenSearchTestCase {
             ActionListener<GetResponse> getListener = invocation.getArgument(1);
             GetResponse getResponse = mock(GetResponse.class);
             when(getResponse.isExists()).thenReturn(true);
-            when(getResponse.getSourceAsString()).thenReturn(new Template.Builder().name("test").build().toJson());
+            when(getResponse.getSourceAsString()).thenReturn(Template.builder().name("test").build().toJson());
             getListener.onResponse(getResponse);
             return null;
         }).when(client).get(any(GetRequest.class), any());
@@ -425,7 +425,7 @@ public class CreateWorkflowTransportActionTests extends OpenSearchTestCase {
         ActionListener<WorkflowResponse> listener = mock(ActionListener.class);
         WorkflowRequest updateWorkflow = new WorkflowRequest(
             "1",
-            new Template.Builder().name("new name").description("test").useCase(null).uiMetadata(Map.of("foo", "bar")).build(),
+            Template.builder().name("new name").description("test").useCase(null).uiMetadata(Map.of("foo", "bar")).build(),
             Map.of(UPDATE_WORKFLOW_FIELDS, "true")
         );
 
@@ -463,7 +463,8 @@ public class CreateWorkflowTransportActionTests extends OpenSearchTestCase {
 
         updateWorkflow = new WorkflowRequest(
             "1",
-            new Template.Builder().useCase("foo")
+            Template.builder()
+                .useCase("foo")
                 .templateVersion(Version.CURRENT)
                 .compatibilityVersion(List.of(Version.V_2_0_0, Version.CURRENT))
                 .build(),

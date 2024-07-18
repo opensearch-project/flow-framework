@@ -48,7 +48,8 @@ public class GetWorkflowStateResponse extends ActionResponse implements ToXConte
         if (allStatus) {
             this.workflowState = workflowState;
         } else {
-            this.workflowState = new WorkflowState.Builder().workflowId(workflowState.getWorkflowId())
+            this.workflowState = WorkflowState.builder()
+                .workflowId(workflowState.getWorkflowId())
                 .error(workflowState.getError())
                 .state(workflowState.getState())
                 .resourcesCreated(workflowState.resourcesCreated())

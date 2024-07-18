@@ -243,7 +243,8 @@ public class CreateWorkflowTransportAction extends HandledTransportAction<Workfl
                         Template existingTemplate = Template.parse(getResponse.getSourceAsString());
                         Template template = isFieldUpdate
                             ? Template.updateExistingTemplate(existingTemplate, templateWithUser)
-                            : new Template.Builder(templateWithUser).createdTime(existingTemplate.createdTime())
+                            : Template.builder(templateWithUser)
+                                .createdTime(existingTemplate.createdTime())
                                 .lastUpdatedTime(Instant.now())
                                 .lastProvisionedTime(existingTemplate.lastProvisionedTime())
                                 .build();
