@@ -20,7 +20,6 @@ import org.opensearch.core.xcontent.ToXContentObject;
 import org.opensearch.core.xcontent.XContentBuilder;
 import org.opensearch.core.xcontent.XContentParser;
 import org.opensearch.flowframework.exception.FlowFrameworkException;
-import org.opensearch.flowframework.model.Template.Builder;
 import org.opensearch.flowframework.util.ParseUtils;
 
 import java.io.IOException;
@@ -137,13 +136,13 @@ public class Template implements ToXContentObject {
         /**
          * Empty Constructor for the Builder object
          */
-        public Builder() {}
+        private Builder() {}
 
         /**
          * Construct a Builder from an existing template
          * @param t The existing template to copy
          */
-        public Builder(Template t) {
+        private Builder(Template t) {
             this.name = t.name();
             this.description = t.description();
             this.useCase = t.useCase();
@@ -294,6 +293,23 @@ public class Template implements ToXContentObject {
         }
     }
 
+    /**
+     * Instantiate a new Template builder
+     * @return a new builder instance
+     */
+    public static Builder builder() {
+        return new Builder();
+    }
+
+    /**
+     * Instantiate a new Template builder initialized from an existing template
+     * @param t The existing template to use as the source
+     * @return a new builder instance initialized from the existing template
+     */
+    public static Builder builder(Template t) {
+        return new Builder(t);
+    }
+
     @Override
     public XContentBuilder toXContent(XContentBuilder builder, Params params) throws IOException {
         XContentBuilder xContentBuilder = builder.startObject();
@@ -352,7 +368,7 @@ public class Template implements ToXContentObject {
      * @return the updated template.
      */
     public static Template updateExistingTemplate(Template existingTemplate, Template templateWithNewFields) {
-        Builder builder = new Template.Builder(existingTemplate).lastUpdatedTime(Instant.now());
+        Builder builder = Template.builder(existingTemplate).lastUpdatedTime(Instant.now());
         if (templateWithNewFields.name() != null) {
             builder.name(templateWithNewFields.name());
         }
