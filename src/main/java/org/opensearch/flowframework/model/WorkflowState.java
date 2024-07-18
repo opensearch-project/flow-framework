@@ -127,6 +127,15 @@ public class WorkflowState implements ToXContentObject, Writeable {
     }
 
     /**
+     * Constructs a builder object for workflowState from an existing state
+     * @param existingState a WorkflowState object to initialize the builder with
+     * @return Builder Object initialized with existing state
+     */
+    public static Builder builder(WorkflowState existingState) {
+        return new Builder(existingState);
+    }
+
+    /**
      * Class for constructing a Builder for WorkflowState
      */
     public static class Builder {
@@ -143,7 +152,23 @@ public class WorkflowState implements ToXContentObject, Writeable {
         /**
          * Empty Constructor for the Builder object
          */
-        public Builder() {}
+        private Builder() {}
+
+        /**
+         * Builder from existing state
+         * @param existingState a WorkflowState object to initialize the builder with
+         */
+        private Builder(WorkflowState existingState) {
+            this.workflowId = existingState.getWorkflowId();
+            this.error = existingState.getError();
+            this.state = existingState.getState();
+            this.provisioningProgress = existingState.getProvisioningProgress();
+            this.provisionStartTime = existingState.getProvisionStartTime();
+            this.provisionEndTime = existingState.getProvisionEndTime();
+            this.user = existingState.getUser();
+            this.userOutputs = existingState.userOutputs();
+            this.resourcesCreated = existingState.resourcesCreated();
+        }
 
         /**
          * Builder method for adding workflowID
@@ -252,6 +277,44 @@ public class WorkflowState implements ToXContentObject, Writeable {
             workflowState.resourcesCreated = this.resourcesCreated;
             return workflowState;
         }
+    }
+
+    /**
+     * Merges two workflow states by updating the fields from an existing state with the (non-null) fields of another one.
+     * @param existingState An existing Workflow state.
+     * @param stateWithNewFields A workflow state containing only fields to update.
+     * @return the updated workflow state.
+     */
+    public static WorkflowState updateExistingWorkflowState(WorkflowState existingState, WorkflowState stateWithNewFields) {
+        Builder builder = WorkflowState.builder(existingState);
+        if (stateWithNewFields.getWorkflowId() != null) {
+            builder.workflowId(stateWithNewFields.getWorkflowId());
+        }
+        if (stateWithNewFields.getError() != null) {
+            builder.error(stateWithNewFields.getError());
+        }
+        if (stateWithNewFields.getState() != null) {
+            builder.state(stateWithNewFields.getState());
+        }
+        if (stateWithNewFields.getProvisioningProgress() != null) {
+            builder.provisioningProgress(stateWithNewFields.getProvisioningProgress());
+        }
+        if (stateWithNewFields.getProvisionStartTime() != null) {
+            builder.provisionStartTime(stateWithNewFields.getProvisionStartTime());
+        }
+        if (stateWithNewFields.getProvisionEndTime() != null) {
+            builder.provisionEndTime(stateWithNewFields.getProvisionEndTime());
+        }
+        if (stateWithNewFields.getUser() != null) {
+            builder.user(stateWithNewFields.getUser());
+        }
+        if (stateWithNewFields.userOutputs() != null) {
+            builder.userOutputs(stateWithNewFields.userOutputs());
+        }
+        if (stateWithNewFields.resourcesCreated() != null) {
+            builder.resourcesCreated(stateWithNewFields.resourcesCreated());
+        }
+        return builder.build();
     }
 
     @Override
@@ -492,7 +555,7 @@ public class WorkflowState implements ToXContentObject, Writeable {
     }
 
     /**
-     * A map of all the resources created
+     * A list of all the resources created
      * @return the resources created
      */
     public List<ResourceCreated> resourcesCreated() {

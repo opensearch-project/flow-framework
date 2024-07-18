@@ -146,7 +146,7 @@ public class ProvisionWorkflowTransportAction extends HandledTransportAction<Wor
                                 logger.info("updated workflow {} state to {}", request.getWorkflowId(), State.PROVISIONING);
                                 executeWorkflowAsync(workflowId, provisionProcessSequence, listener);
                                 // update last provisioned field in template
-                                Template newTemplate = new Template.Builder(template).lastProvisionedTime(Instant.now()).build();
+                                Template newTemplate = Template.builder(template).lastProvisionedTime(Instant.now()).build();
                                 flowFrameworkIndicesHandler.updateTemplateInGlobalContext(
                                     request.getWorkflowId(),
                                     newTemplate,
