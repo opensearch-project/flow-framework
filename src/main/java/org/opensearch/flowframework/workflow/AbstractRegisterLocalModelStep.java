@@ -49,7 +49,6 @@ import static org.opensearch.flowframework.common.CommonValue.MODEL_CONTENT_HASH
 import static org.opensearch.flowframework.common.CommonValue.MODEL_FORMAT;
 import static org.opensearch.flowframework.common.CommonValue.MODEL_TYPE;
 import static org.opensearch.flowframework.common.CommonValue.NAME_FIELD;
-import static org.opensearch.flowframework.common.CommonValue.REGISTER_MODEL_STATUS;
 import static org.opensearch.flowframework.common.CommonValue.URL;
 import static org.opensearch.flowframework.common.CommonValue.VERSION_FIELD;
 import static org.opensearch.flowframework.common.WorkflowResources.MODEL_GROUP_ID;
@@ -189,58 +188,38 @@ public abstract class AbstractRegisterLocalModelStep extends AbstractRetryableWo
 
                 // Attempt to retrieve the model ID
                 retryableGetMlTask(
-                    currentNodeInputs.getWorkflowId(),
+                    currentNodeInputs,
                     currentNodeId,
                     registerLocalModelFuture,
                     taskId,
                     "Local model registration",
-                    ActionListener.wrap(mlTask -> {
-
+                    ActionListener.wrap(mlTaskWorkflowData -> {
                         // Registered Model Resource has been updated
                         String resourceName = getResourceByWorkflowStep(getName());
-                        String id = getResourceId(mlTask);
-
                         if (Boolean.TRUE.equals(deploy)) {
-
-                            // Simulate Model deployment step and update resources created
-                            flowFrameworkIndicesHandler.updateResourceInStateIndex(
-                                currentNodeInputs.getWorkflowId(),
-                                currentNodeId,
-                                DeployModelStep.NAME,
-                                id,
-                                ActionListener.wrap(deployUpdateResponse -> {
-                                    logger.info(
-                                        "successfully updated resources created in state index: {}",
-                                        deployUpdateResponse.getIndex()
-                                    );
-                                    registerLocalModelFuture.onResponse(
-                                        new WorkflowData(
-                                            Map.ofEntries(
-                                                Map.entry(resourceName, id),
-                                                Map.entry(REGISTER_MODEL_STATUS, mlTask.getState().name())
-                                            ),
-                                            currentNodeInputs.getWorkflowId(),
-                                            currentNodeId
-                                        )
-                                    );
-                                }, deployUpdateException -> {
+                            String id = (String) mlTaskWorkflowData.getContent().get(resourceName);
+                            ActionListener<WorkflowData> deployUpdateListener = ActionListener.wrap(
+                                deployUpdateResponse -> registerLocalModelFuture.onResponse(mlTaskWorkflowData),
+                                deployUpdateException -> {
                                     String errorMessage = "Failed to update simulated deploy step resource " + id;
                                     logger.error(errorMessage, deployUpdateException);
                                     registerLocalModelFuture.onFailure(
                                         new FlowFrameworkException(errorMessage, ExceptionsHelper.status(deployUpdateException))
                                     );
-                                })
+                                }
+                            );
+                            // Simulate Model deployment step and update resources created
+                            flowFrameworkIndicesHandler.addResourceToStateIndex(
+                                currentNodeInputs,
+                                currentNodeId,
+                                DeployModelStep.NAME,
+                                id,
+                                deployUpdateListener
                             );
                         } else {
-                            registerLocalModelFuture.onResponse(
-                                new WorkflowData(
-                                    Map.ofEntries(Map.entry(resourceName, id), Map.entry(REGISTER_MODEL_STATUS, mlTask.getState().name())),
-                                    currentNodeInputs.getWorkflowId(),
-                                    currentNodeId
-                                )
-                            );
+                            registerLocalModelFuture.onResponse(mlTaskWorkflowData);
                         }
-                    }, exception -> { registerLocalModelFuture.onFailure(exception); })
+                    }, registerLocalModelFuture::onFailure)
                 );
             }, exception -> {
                 Exception e = getSafeException(exception);

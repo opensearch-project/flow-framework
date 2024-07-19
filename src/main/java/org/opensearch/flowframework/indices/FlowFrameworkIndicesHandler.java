@@ -44,6 +44,7 @@ import org.opensearch.flowframework.model.Template;
 import org.opensearch.flowframework.model.WorkflowState;
 import org.opensearch.flowframework.util.EncryptorUtils;
 import org.opensearch.flowframework.util.ParseUtils;
+import org.opensearch.flowframework.workflow.WorkflowData;
 import org.opensearch.script.Script;
 import org.opensearch.script.ScriptType;
 
@@ -697,6 +698,44 @@ public class FlowFrameworkIndicesHandler {
         updateFlowFrameworkSystemIndexDocWithScript(WORKFLOW_STATE_INDEX, workflowId, script, ActionListener.wrap(updateResponse -> {
             logger.info("updated resources created of {}", workflowId);
             listener.onResponse(updateResponse);
-        }, exception -> { listener.onFailure(exception); }));
+        }, listener::onFailure));
+    }
+
+    /**
+     * Adds a resource to the state index, including common exception handling
+     * @param currentNodeInputs Inputs to the current node
+     * @param nodeId WorkflowData object with relevent step information
+     * @param workflowStepName the workflow step name that created the resource
+     * @param resourceId the id of the newly created resource
+     * @param listener the ActionListener for this step to handle completing the future after update
+     */
+    public void addResourceToStateIndex(
+        WorkflowData currentNodeInputs,
+        String nodeId,
+        String workflowStepName,
+        String resourceId,
+        ActionListener<WorkflowData> listener
+    ) {
+        String resourceName = getResourceByWorkflowStep(workflowStepName);
+        try {
+            updateResourceInStateIndex(
+                currentNodeInputs.getWorkflowId(),
+                nodeId,
+                workflowStepName,
+                resourceId,
+                ActionListener.wrap(updateResponse -> {
+                    logger.info("successfully updated resources created in state index: {}", updateResponse.getIndex());
+                    listener.onResponse(new WorkflowData(Map.of(resourceName, resourceId), currentNodeInputs.getWorkflowId(), nodeId));
+                }, exception -> {
+                    String errorMessage = "Failed to update new created " + nodeId + " resource " + workflowStepName + " id " + resourceId;
+                    logger.error(errorMessage, exception);
+                    listener.onFailure(new FlowFrameworkException(errorMessage, ExceptionsHelper.status(exception)));
+                })
+            );
+        } catch (Exception e) {
+            String errorMessage = "Failed to parse and update new created resource";
+            logger.error(errorMessage, e);
+            listener.onFailure(new FlowFrameworkException(errorMessage, ExceptionsHelper.status(e)));
+        }
     }
 }

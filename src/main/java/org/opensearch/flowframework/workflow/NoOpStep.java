@@ -62,6 +62,7 @@ public class NoOpStep implements WorkflowStep {
             throw new WorkflowStepException(iae.getMessage(), RestStatus.BAD_REQUEST);
         } catch (InterruptedException e) {
             FutureUtils.cancel(future);
+            Thread.currentThread().interrupt();
         }
 
         future.onResponse(WorkflowData.EMPTY);

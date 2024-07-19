@@ -74,7 +74,7 @@ public class WorkflowData {
      */
     public Map<String, String> getParams() {
         return this.params;
-    };
+    }
 
     /**
      * Returns the workflowId associated with this data.
@@ -83,7 +83,7 @@ public class WorkflowData {
     @Nullable
     public String getWorkflowId() {
         return this.workflowId;
-    };
+    }
 
     /**
      * Returns the nodeId associated with this data.
@@ -92,5 +92,5 @@ public class WorkflowData {
     @Nullable
     public String getNodeId() {
         return this.nodeId;
-    };
+    }
 }

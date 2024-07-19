@@ -38,8 +38,6 @@ public class ReindexStep implements WorkflowStep {
 
     private static final Logger logger = LogManager.getLogger(ReindexStep.class);
     private final Client client;
-    private final FlowFrameworkIndicesHandler flowFrameworkIndicesHandler;
-
     /** The name of this step, used as a key in the template and the {@link WorkflowStepFactory} */
     public static final String NAME = "reindex";
     /** The refresh field for reindex */
@@ -61,7 +59,6 @@ public class ReindexStep implements WorkflowStep {
      */
     public ReindexStep(Client client, FlowFrameworkIndicesHandler flowFrameworkIndicesHandler) {
         this.client = client;
-        this.flowFrameworkIndicesHandler = flowFrameworkIndicesHandler;
     }
 
     @Override

@@ -12,9 +12,7 @@ import com.carrotsearch.randomizedtesting.annotations.ThreadLeakScope;
 
 import org.opensearch.ResourceNotFoundException;
 import org.opensearch.action.support.PlainActionFuture;
-import org.opensearch.action.update.UpdateResponse;
 import org.opensearch.core.action.ActionListener;
-import org.opensearch.core.index.shard.ShardId;
 import org.opensearch.core.rest.RestStatus;
 import org.opensearch.flowframework.exception.FlowFrameworkException;
 import org.opensearch.flowframework.exception.WorkflowStepException;
@@ -34,11 +32,9 @@ import java.util.concurrent.ExecutionException;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
-import static org.opensearch.action.DocWriteResponse.Result.UPDATED;
 import static org.opensearch.flowframework.common.CommonValue.DEPLOY_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.INTERFACE_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.REGISTER_MODEL_STATUS;
-import static org.opensearch.flowframework.common.CommonValue.WORKFLOW_STATE_INDEX;
 import static org.opensearch.flowframework.common.WorkflowResources.CONNECTOR_ID;
 import static org.opensearch.flowframework.common.WorkflowResources.MODEL_ID;
 import static org.mockito.ArgumentMatchers.any;
@@ -94,10 +90,10 @@ public class RegisterRemoteModelStepTests extends OpenSearchTestCase {
         }).when(mlNodeClient).register(any(MLRegisterModelInput.class), any());
 
         doAnswer(invocation -> {
-            ActionListener<UpdateResponse> updateResponseListener = invocation.getArgument(4);
-            updateResponseListener.onResponse(new UpdateResponse(new ShardId(WORKFLOW_STATE_INDEX, "", 1), "id", -2, 0, 0, UPDATED));
+            ActionListener<WorkflowData> updateResponseListener = invocation.getArgument(4);
+            updateResponseListener.onResponse(new WorkflowData(Map.of(MODEL_ID, modelId), "test-id", "test-node-id"));
             return null;
-        }).when(flowFrameworkIndicesHandler).updateResourceInStateIndex(anyString(), anyString(), anyString(), anyString(), any());
+        }).when(flowFrameworkIndicesHandler).addResourceToStateIndex(any(WorkflowData.class), anyString(), anyString(), anyString(), any());
 
         PlainActionFuture<WorkflowData> future = this.registerRemoteModelStep.execute(
             workflowData.getNodeId(),
@@ -109,7 +105,13 @@ public class RegisterRemoteModelStepTests extends OpenSearchTestCase {
 
         verify(mlNodeClient, times(1)).register(any(MLRegisterModelInput.class), any());
         // only updates register resource
-        verify(flowFrameworkIndicesHandler, times(1)).updateResourceInStateIndex(anyString(), anyString(), anyString(), anyString(), any());
+        verify(flowFrameworkIndicesHandler, times(1)).addResourceToStateIndex(
+            any(WorkflowData.class),
+            anyString(),
+            anyString(),
+            anyString(),
+            any()
+        );
 
         assertTrue(future.isDone());
         assertEquals(modelId, future.get().getContent().get(MODEL_ID));
@@ -130,10 +132,10 @@ public class RegisterRemoteModelStepTests extends OpenSearchTestCase {
         }).when(mlNodeClient).register(any(MLRegisterModelInput.class), any());
 
         doAnswer(invocation -> {
-            ActionListener<UpdateResponse> updateResponseListener = invocation.getArgument(4);
-            updateResponseListener.onResponse(new UpdateResponse(new ShardId(WORKFLOW_STATE_INDEX, "", 1), "id", -2, 0, 0, UPDATED));
+            ActionListener<WorkflowData> updateResponseListener = invocation.getArgument(4);
+            updateResponseListener.onResponse(new WorkflowData(Map.of(MODEL_ID, modelId), "test-id", "test-node-id"));
             return null;
-        }).when(flowFrameworkIndicesHandler).updateResourceInStateIndex(anyString(), anyString(), anyString(), anyString(), any());
+        }).when(flowFrameworkIndicesHandler).addResourceToStateIndex(any(WorkflowData.class), anyString(), anyString(), anyString(), any());
 
         WorkflowData deployWorkflowData = new WorkflowData(
             Map.ofEntries(
@@ -156,7 +158,13 @@ public class RegisterRemoteModelStepTests extends OpenSearchTestCase {
 
         verify(mlNodeClient, times(1)).register(any(MLRegisterModelInput.class), any());
         // updates both register and deploy resources
-        verify(flowFrameworkIndicesHandler, times(2)).updateResourceInStateIndex(anyString(), anyString(), anyString(), anyString(), any());
+        verify(flowFrameworkIndicesHandler, times(2)).addResourceToStateIndex(
+            any(WorkflowData.class),
+            anyString(),
+            anyString(),
+            anyString(),
+            any()
+        );
 
         assertTrue(future.isDone());
         assertEquals(modelId, future.get().getContent().get(MODEL_ID));
@@ -182,7 +190,13 @@ public class RegisterRemoteModelStepTests extends OpenSearchTestCase {
 
         verify(mlNodeClient, times(2)).register(any(MLRegisterModelInput.class), any());
         // updates both register and deploy resources
-        verify(flowFrameworkIndicesHandler, times(4)).updateResourceInStateIndex(anyString(), anyString(), anyString(), anyString(), any());
+        verify(flowFrameworkIndicesHandler, times(4)).addResourceToStateIndex(
+            any(WorkflowData.class),
+            anyString(),
+            anyString(),
+            anyString(),
+            any()
+        );
 
         assertTrue(future.isDone());
         assertEquals(modelId, future.get().getContent().get(MODEL_ID));
