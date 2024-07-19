@@ -9,9 +9,7 @@
 package org.opensearch.flowframework.workflow;
 
 import org.opensearch.action.support.PlainActionFuture;
-import org.opensearch.action.update.UpdateResponse;
 import org.opensearch.core.action.ActionListener;
-import org.opensearch.core.index.shard.ShardId;
 import org.opensearch.core.rest.RestStatus;
 import org.opensearch.flowframework.exception.FlowFrameworkException;
 import org.opensearch.flowframework.exception.WorkflowStepException;
@@ -33,8 +31,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
-import static org.opensearch.action.DocWriteResponse.Result.UPDATED;
-import static org.opensearch.flowframework.common.CommonValue.WORKFLOW_STATE_INDEX;
+import static org.opensearch.flowframework.common.CommonValue.MODEL_GROUP_STATUS;
 import static org.opensearch.flowframework.common.WorkflowResources.MODEL_GROUP_ID;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -111,10 +108,10 @@ public class RegisterModelGroupStepTests extends OpenSearchTestCase {
         }).when(machineLearningNodeClient).registerModelGroup(any(MLRegisterModelGroupInput.class), actionListenerCaptor.capture());
 
         doAnswer(invocation -> {
-            ActionListener<UpdateResponse> updateResponseListener = invocation.getArgument(4);
-            updateResponseListener.onResponse(new UpdateResponse(new ShardId(WORKFLOW_STATE_INDEX, "", 1), "id", -2, 0, 0, UPDATED));
+            ActionListener<WorkflowData> updateResponseListener = invocation.getArgument(4);
+            updateResponseListener.onResponse(new WorkflowData(Map.of(MODEL_GROUP_ID, modelGroupId), "test-id", "test-node-id"));
             return null;
-        }).when(flowFrameworkIndicesHandler).updateResourceInStateIndex(anyString(), anyString(), anyString(), anyString(), any());
+        }).when(flowFrameworkIndicesHandler).addResourceToStateIndex(any(WorkflowData.class), anyString(), anyString(), anyString(), any());
 
         PlainActionFuture<WorkflowData> future = modelGroupStep.execute(
             inputData.getNodeId(),
@@ -140,7 +137,7 @@ public class RegisterModelGroupStepTests extends OpenSearchTestCase {
 
         assertTrue(future.isDone());
         assertEquals(modelGroupId, future.get().getContent().get(MODEL_GROUP_ID));
-        assertEquals(status, future.get().getContent().get("model_group_status"));
+        assertEquals(status, future.get().getContent().get(MODEL_GROUP_STATUS));
     }
 
     public void testRegisterModelGroupFailure() throws IOException {
