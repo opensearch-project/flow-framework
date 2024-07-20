@@ -28,6 +28,7 @@ import java.io.IOException;
 import java.util.Collections;
 import java.util.Map;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
@@ -222,6 +223,99 @@ public class RegisterRemoteModelStepTests extends OpenSearchTestCase {
         assertTrue(ex.getCause() instanceof FlowFrameworkException);
         assertEquals("Failed to register remote model", ex.getCause().getMessage());
 
+    }
+
+    public void testRegisterRemoteModelUpdateFailure() {
+        String taskId = "abcd";
+        String modelId = "efgh";
+        String status = MLTaskState.CREATED.name();
+
+        doAnswer(invocation -> {
+            ActionListener<MLRegisterModelResponse> actionListener = invocation.getArgument(1);
+            MLRegisterModelResponse output = new MLRegisterModelResponse(taskId, status, modelId);
+            actionListener.onResponse(output);
+            return null;
+        }).when(mlNodeClient).register(any(MLRegisterModelInput.class), any());
+
+        doAnswer(invocation -> {
+            ActionListener<WorkflowData> updateResponseListener = invocation.getArgument(4);
+            updateResponseListener.onFailure(new RuntimeException("Failed to update register resource"));
+            return null;
+        }).when(flowFrameworkIndicesHandler).addResourceToStateIndex(any(WorkflowData.class), anyString(), anyString(), anyString(), any());
+
+        WorkflowData deployWorkflowData = new WorkflowData(
+            Map.ofEntries(
+                Map.entry("name", "xyz"),
+                Map.entry("description", "description"),
+                Map.entry(CONNECTOR_ID, "abcdefg"),
+                Map.entry(DEPLOY_FIELD, true)
+            ),
+            "test-id",
+            "test-node-id"
+        );
+
+        PlainActionFuture<WorkflowData> future = this.registerRemoteModelStep.execute(
+            deployWorkflowData.getNodeId(),
+            deployWorkflowData,
+            Collections.emptyMap(),
+            Collections.emptyMap(),
+            Collections.emptyMap()
+        );
+
+        assertTrue(future.isDone());
+        ExecutionException ex = expectThrows(ExecutionException.class, () -> future.get().getClass());
+        assertTrue(ex.getCause() instanceof FlowFrameworkException);
+        assertEquals("Failed to update new created test-node-id resource register_remote_model id efgh", ex.getCause().getMessage());
+    }
+
+    public void testRegisterRemoteModelDeployUpdateFailure() {
+        String taskId = "abcd";
+        String modelId = "efgh";
+        String status = MLTaskState.CREATED.name();
+
+        doAnswer(invocation -> {
+            ActionListener<MLRegisterModelResponse> actionListener = invocation.getArgument(1);
+            MLRegisterModelResponse output = new MLRegisterModelResponse(taskId, status, modelId);
+            actionListener.onResponse(output);
+            return null;
+        }).when(mlNodeClient).register(any(MLRegisterModelInput.class), any());
+
+        AtomicInteger invocationCount = new AtomicInteger(0);
+        doAnswer(invocation -> {
+            ActionListener<WorkflowData> updateResponseListener = invocation.getArgument(4);
+            if (invocationCount.getAndIncrement() == 0) {
+                // succeed on first call (update register)
+                updateResponseListener.onResponse(new WorkflowData(Map.of(MODEL_ID, modelId), "test-id", "test-node-id"));
+            } else {
+                // fail on second call (update deploy)
+                updateResponseListener.onFailure(new RuntimeException("Failed to update deploy resource"));
+            }
+            return null;
+        }).when(flowFrameworkIndicesHandler).addResourceToStateIndex(any(WorkflowData.class), anyString(), anyString(), anyString(), any());
+
+        WorkflowData deployWorkflowData = new WorkflowData(
+            Map.ofEntries(
+                Map.entry("name", "xyz"),
+                Map.entry("description", "description"),
+                Map.entry(CONNECTOR_ID, "abcdefg"),
+                Map.entry(DEPLOY_FIELD, true)
+            ),
+            "test-id",
+            "test-node-id"
+        );
+
+        PlainActionFuture<WorkflowData> future = this.registerRemoteModelStep.execute(
+            deployWorkflowData.getNodeId(),
+            deployWorkflowData,
+            Collections.emptyMap(),
+            Collections.emptyMap(),
+            Collections.emptyMap()
+        );
+
+        assertTrue(future.isDone());
+        ExecutionException ex = expectThrows(ExecutionException.class, () -> future.get().getClass());
+        assertTrue(ex.getCause() instanceof FlowFrameworkException);
+        assertEquals("Failed to update simulated deploy step resource efgh", ex.getCause().getMessage());
     }
 
     public void testReisterRemoteModelInterfaceFailure() {

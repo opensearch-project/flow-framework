@@ -37,13 +37,16 @@ import org.opensearch.core.common.bytes.BytesReference;
 import org.opensearch.core.index.shard.ShardId;
 import org.opensearch.core.xcontent.XContentBuilder;
 import org.opensearch.flowframework.TestHelpers;
+import org.opensearch.flowframework.common.WorkflowResources;
 import org.opensearch.flowframework.model.ProvisioningProgress;
 import org.opensearch.flowframework.model.ResourceCreated;
 import org.opensearch.flowframework.model.Template;
 import org.opensearch.flowframework.model.Workflow;
 import org.opensearch.flowframework.model.WorkflowState;
 import org.opensearch.flowframework.util.EncryptorUtils;
+import org.opensearch.flowframework.workflow.CreateConnectorStep;
 import org.opensearch.flowframework.workflow.CreateIndexStep;
+import org.opensearch.flowframework.workflow.WorkflowData;
 import org.opensearch.index.get.GetResult;
 import org.opensearch.test.OpenSearchTestCase;
 import org.opensearch.threadpool.ThreadPool;
@@ -487,5 +490,53 @@ public class FlowFrameworkIndicesHandlerTests extends OpenSearchTestCase {
             "Failed to delete document 1 due to missing .plugins-flow-framework-state index",
             exceptionCaptor.getValue().getMessage()
         );
+    }
+
+    public void testAddResourceToStateIndex() throws IOException {
+        ClusterState mockClusterState = mock(ClusterState.class);
+        Metadata mockMetaData = mock(Metadata.class);
+        when(clusterService.state()).thenReturn(mockClusterState);
+        when(mockClusterState.metadata()).thenReturn(mockMetaData);
+        when(mockMetaData.hasIndex(WORKFLOW_STATE_INDEX)).thenReturn(true);
+
+        @SuppressWarnings("unchecked")
+        ActionListener<WorkflowData> listener = mock(ActionListener.class);
+        // test success
+        doAnswer(invocation -> {
+            ActionListener<UpdateResponse> responseListener = invocation.getArgument(1);
+            responseListener.onResponse(new UpdateResponse(new ShardId(WORKFLOW_STATE_INDEX, "", 1), "this_id", -2, 0, 0, Result.UPDATED));
+            return null;
+        }).when(client).update(any(UpdateRequest.class), any());
+
+        flowFrameworkIndicesHandler.addResourceToStateIndex(
+            new WorkflowData(Collections.emptyMap(), null, null),
+            "node_id",
+            CreateConnectorStep.NAME,
+            "this_id",
+            listener
+        );
+
+        ArgumentCaptor<WorkflowData> responseCaptor = ArgumentCaptor.forClass(WorkflowData.class);
+        verify(listener, times(1)).onResponse(responseCaptor.capture());
+        assertEquals("this_id", responseCaptor.getValue().getContent().get(WorkflowResources.CONNECTOR_ID));
+
+        // test failure
+        doAnswer(invocation -> {
+            ActionListener<UpdateResponse> responseListener = invocation.getArgument(1);
+            responseListener.onFailure(new Exception("Failed to update state"));
+            return null;
+        }).when(client).update(any(UpdateRequest.class), any());
+
+        flowFrameworkIndicesHandler.addResourceToStateIndex(
+            new WorkflowData(Collections.emptyMap(), null, null),
+            "node_id",
+            CreateConnectorStep.NAME,
+            "this_id",
+            listener
+        );
+
+        ArgumentCaptor<Exception> exceptionCaptor = ArgumentCaptor.forClass(Exception.class);
+        verify(listener, times(1)).onFailure(exceptionCaptor.capture());
+        assertEquals("Failed to update new created node_id resource create_connector id this_id", exceptionCaptor.getValue().getMessage());
     }
 }
