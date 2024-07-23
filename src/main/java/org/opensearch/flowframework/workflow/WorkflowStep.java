@@ -39,4 +39,12 @@ public interface WorkflowStep {
      * @return the name of this workflow step.
      */
     String getName();
+
+    /**
+     * For steps which delete data, override this method to require the resource ID to be specified on the rest path to deprovision it
+     * @return true if the resource ID must be specified for deprovisioning
+     */
+    default boolean allowDeleteRequired() {
+        return false;
+    }
 }

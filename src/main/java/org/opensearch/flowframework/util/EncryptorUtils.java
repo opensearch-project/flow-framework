@@ -169,7 +169,7 @@ public class EncryptorUtils {
             processedWorkflows.put(entry.getKey(), new Workflow(entry.getValue().userParams(), processedNodes, entry.getValue().edges()));
         }
 
-        return new Template.Builder(template).workflows(processedWorkflows).build();
+        return Template.builder(template).workflows(processedWorkflows).build();
     }
 
     /**
@@ -240,10 +240,10 @@ public class EncryptorUtils {
         }
 
         if (ParseUtils.isAdmin(user)) {
-            return new Template.Builder(template).workflows(processedWorkflows).build();
+            return Template.builder(template).workflows(processedWorkflows).build();
         }
 
-        return new Template.Builder(template).user(null).workflows(processedWorkflows).build();
+        return Template.builder(template).user(null).workflows(processedWorkflows).build();
     }
 
     /**

@@ -47,13 +47,13 @@ buildscript {
     dependencies {
         classpath "org.opensearch.gradle:build-tools:${opensearch_version}"
         classpath "com.diffplug.spotless:spotless-plugin-gradle:6.25.0"
-        classpath "com.github.form-com.diff-coverage-gradle:diff-coverage:0.9.5"
     }
 }
 
 plugins {
     id "de.undercouch.download" version "5.6.0"
-    id "org.gradle.test-retry" version "1.5.9" apply false
+    id "org.gradle.test-retry" version "1.5.10" apply false
+    id "io.github.surpsg.delta-coverage" version "2.3.0"
 }
 
 apply plugin: 'java'
@@ -66,9 +66,6 @@ apply plugin: 'com.diffplug.spotless'
 apply from: 'formatter/formatting.gradle'
 // for javadocs and checks spotless doesn't do
 apply plugin: 'checkstyle'
-// for coverage and diff
-apply plugin: 'jacoco'
-apply plugin: 'com.form.diff-coverage'
 
 def pluginName = 'opensearch-flow-framework'
 def pluginDescription = 'OpenSearch plugin that enables builders to innovate AI apps on OpenSearch'
@@ -167,14 +164,14 @@ configurations {
 
 dependencies {
     implementation "org.opensearch:opensearch:${opensearch_version}"
-    implementation 'org.junit.jupiter:junit-jupiter:5.10.2'
+    implementation 'org.junit.jupiter:junit-jupiter:5.10.3'
     api group: 'org.opensearch', name:'opensearch-ml-client', version: "${opensearch_build}"
     api group: 'org.opensearch.client', name: 'opensearch-rest-client', version: "${opensearch_version}"
-    implementation group: 'org.apache.commons', name: 'commons-lang3', version: '3.14.0'
+    implementation group: 'org.apache.commons', name: 'commons-lang3', version: '3.15.0'
     implementation "org.opensearch:common-utils:${common_utils_version}"
     implementation 'com.amazonaws:aws-encryption-sdk-java:2.4.1'
     implementation 'org.bouncycastle:bcprov-jdk18on:1.78.1'
-    api "org.apache.httpcomponents.core5:httpcore5:5.2.2"
+    api "org.apache.httpcomponents.core5:httpcore5:5.2.5"
     implementation "jakarta.json.bind:jakarta.json.bind-api:3.0.1"
     implementation "org.glassfish:jakarta.json:2.0.1"
     implementation "org.eclipse:yasson:3.0.3"
@@ -188,8 +185,8 @@ dependencies {
     configurations.all {
         resolutionStrategy {
             force("com.google.guava:guava:33.2.1-jre") // CVE for 31.1, keep to force transitive dependencies
-            force("org.eclipse.platform:org.eclipse.core.runtime:3.31.0") // CVE for < 3.29.0
-            force("com.fasterxml.jackson.core:jackson-core:2.17.1") // Dependency Jar Hell
+            force("com.fasterxml.jackson.core:jackson-core:2.17.2") // Dependency Jar Hell
+            force("org.apache.httpcomponents.core5:httpcore5:5.2.5") // Dependency Jar Hell
         }
     }
 }
@@ -394,7 +391,7 @@ testClusters.integTest {
 
     }
 
-    // Install Flow Framwork Plugin on integTest cluster nodes
+    // Install Flow Framework Plugin on integTest cluster nodes
     plugin(project.tasks.bundlePlugin.archiveFile)
 
     // Cluster shrink exception thrown if we try to set numberOfNodes to 1, so only apply if > 1
@@ -683,37 +680,25 @@ task updateVersion {
     }
 }
 
-diffCoverageReport {
-    afterEvaluate {
-        // Get uncommitted files via git diff
-        // https://github.com/form-com/diff-coverage-gradle/issues/73
-        def file = Files.createTempFile(URLEncoder.encode(project.name, 'UTF-8'), '.diff').toFile()
-        def diffBase = 'refs/remotes/origin/main'
-        // Only run locally
-        if (!System.getenv('CI')) {
-            file.withOutputStream { out ->
-                exec {
-                    ignoreExitValue true
-                    commandLine 'git', 'diff', '--no-color', '--minimal', diffBase
-                    standardOutput = out
-                }
-            }
-        }
-        diffSource.file = file
-    }
-
-    // View report at build/reports/jacoco/diffCoverage/html/index.html
-    reports {
-        html = true
+deltaCoverageReport {
+    diffSource {
+        git.compareWith("refs/remotes/origin/main")
     }
 
     violationRules {
-        minBranches = 0.60
-        minLines = 0.75
-        failOnViolation = true
+        failOnViolation.set(true)
+        rule(io.github.surpsg.deltacoverage.gradle.CoverageEntity.LINE) {
+            minCoverageRatio.set(0.75d)
+        }
+        rule(io.github.surpsg.deltacoverage.gradle.CoverageEntity.BRANCH) {
+            minCoverageRatio.set(0.6d)
+        }
+    }
+
+    reports {
+        html.set(true)
     }
 }
-
 
 tasks.withType(AbstractPublishToMaven) {
     def predicate = provider {

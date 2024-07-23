@@ -435,6 +435,25 @@ public abstract class FlowFrameworkRestTestCase extends OpenSearchRestTestCase {
     }
 
     /**
+     * Helper method to invoke the Update Workflow API
+     * @param client the rest client
+     * @param workflowId the document id
+     * @param templateFields the JSON containing some template fields
+     * @throws Exception if the request fails
+     * @return a rest response
+     */
+    protected Response updateWorkflowWithFields(RestClient client, String workflowId, String templateFields) throws Exception {
+        return TestHelpers.makeRequest(
+            client,
+            "PUT",
+            String.format(Locale.ROOT, "%s/%s?update_fields=true", WORKFLOW_URI, workflowId),
+            Collections.emptyMap(),
+            templateFields,
+            null
+        );
+    }
+
+    /**
      * Helper method to invoke the Provision Workflow Rest Action
      * @param client the rest client
      * @param workflowId the workflow ID to provision
@@ -464,6 +483,24 @@ public abstract class FlowFrameworkRestTestCase extends OpenSearchRestTestCase {
             client,
             "POST",
             String.format(Locale.ROOT, "%s/%s/%s", WORKFLOW_URI, workflowId, "_deprovision"),
+            Collections.emptyMap(),
+            "",
+            null
+        );
+    }
+
+    /**
+     * Helper method to invoke the Deprovision Workflow Rest Action
+     * @param client the rest client
+     * @param workflowId the workflow ID to deprovision
+     * @return a rest response
+     * @throws Exception if the request fails
+     */
+    protected Response deprovisionWorkflowWithAllowDelete(RestClient client, String workflowId, String allowedResource) throws Exception {
+        return TestHelpers.makeRequest(
+            client,
+            "POST",
+            String.format(Locale.ROOT, "%s/%s/%s%s", WORKFLOW_URI, workflowId, "_deprovision?allow_delete=", allowedResource),
             Collections.emptyMap(),
             "",
             null

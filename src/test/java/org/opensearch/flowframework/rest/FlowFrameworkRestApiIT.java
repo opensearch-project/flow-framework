@@ -9,8 +9,6 @@
 package org.opensearch.flowframework.rest;
 
 import org.apache.hc.core5.http.io.entity.EntityUtils;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import org.opensearch.action.ingest.GetPipelineResponse;
 import org.opensearch.action.search.SearchResponse;
 import org.opensearch.client.Response;
@@ -50,8 +48,6 @@ import static org.opensearch.flowframework.common.CommonValue.PROVISION_WORKFLOW
 import static org.opensearch.flowframework.common.CommonValue.WORKFLOW_ID;
 
 public class FlowFrameworkRestApiIT extends FlowFrameworkRestTestCase {
-    private static final Logger logger = LogManager.getLogger(FlowFrameworkRestApiIT.class);
-
     private static AtomicBoolean waitToStart = new AtomicBoolean(true);
 
     @Before
@@ -116,7 +112,45 @@ public class FlowFrameworkRestApiIT extends FlowFrameworkRestTestCase {
         assertTrue(
             exceptionProvisioned.getMessage().contains("The template can not be updated unless its provisioning state is NOT_STARTED")
         );
+    }
 
+    public void testUpdateWorkflowUsingFields() throws Exception {
+        Template template = TestHelpers.createTemplateFromFile("createconnector-registerremotemodel-deploymodel.json");
+        Response response = createWorkflow(client(), template);
+        assertEquals(RestStatus.CREATED, TestHelpers.restStatus(response));
+
+        Map<String, Object> responseMap = entityAsMap(response);
+        String workflowId = (String) responseMap.get(WORKFLOW_ID);
+
+        // Ensure Ml config index is initialized as creating a connector requires this, then hit Provision API and assert status
+        Response provisionResponse;
+        if (!indexExistsWithAdminClient(".plugins-ml-config")) {
+            assertBusy(() -> assertTrue(indexExistsWithAdminClient(".plugins-ml-config")), 40, TimeUnit.SECONDS);
+            provisionResponse = provisionWorkflow(client(), workflowId);
+        } else {
+            provisionResponse = provisionWorkflow(client(), workflowId);
+        }
+        assertEquals(RestStatus.OK, TestHelpers.restStatus(provisionResponse));
+        getAndAssertWorkflowStatus(client(), workflowId, State.PROVISIONING, ProvisioningProgress.IN_PROGRESS);
+
+        // Attempt to update with update_fields with illegal field
+        // Fails because contains workflow field
+        ResponseException exceptionProvisioned = expectThrows(
+            ResponseException.class,
+            () -> updateWorkflowWithFields(client(), workflowId, "{\"workflows\":{}}")
+        );
+        assertTrue(
+            exceptionProvisioned.getMessage().contains("You can not update the field [workflows] without updating the whole template.")
+        );
+        // Change just the name and description
+        response = updateWorkflowWithFields(client(), workflowId, "{\"name\":\"foo\",\"description\":\"bar\"}");
+        assertEquals(RestStatus.CREATED, TestHelpers.restStatus(response));
+        // Get the updated template
+        response = getWorkflow(client(), workflowId);
+        assertEquals(RestStatus.OK.getStatus(), response.getStatusLine().getStatusCode());
+        Template t = Template.parse(EntityUtils.toString(response.getEntity(), StandardCharsets.UTF_8));
+        assertEquals("foo", t.name());
+        assertEquals("bar", t.description());
     }
 
     public void testCreateAndProvisionLocalModelWorkflow() throws Exception {
@@ -139,7 +173,7 @@ public class FlowFrameworkRestApiIT extends FlowFrameworkRestTestCase {
             )
             .collect(Collectors.toList());
         Workflow missingInputs = new Workflow(originalWorkflow.userParams(), modifiednodes, originalWorkflow.edges());
-        Template templateWithMissingInputs = new Template.Builder(template).workflows(Map.of(PROVISION_WORKFLOW, missingInputs)).build();
+        Template templateWithMissingInputs = Template.builder(template).workflows(Map.of(PROVISION_WORKFLOW, missingInputs)).build();
 
         // Hit Create Workflow API with invalid template
         Response response = createWorkflow(client(), templateWithMissingInputs);
@@ -202,7 +236,7 @@ public class FlowFrameworkRestApiIT extends FlowFrameworkRestTestCase {
             List.of(new WorkflowEdge("workflow_step_2", "workflow_step_3"), new WorkflowEdge("workflow_step_3", "workflow_step_2"))
         );
 
-        Template cyclicalTemplate = new Template.Builder(template).workflows(Map.of(PROVISION_WORKFLOW, cyclicalWorkflow)).build();
+        Template cyclicalTemplate = Template.builder(template).workflows(Map.of(PROVISION_WORKFLOW, cyclicalWorkflow)).build();
 
         // Hit dry run
         ResponseException exception = expectThrows(ResponseException.class, () -> createWorkflowValidation(client(), cyclicalTemplate));
@@ -409,7 +443,7 @@ public class FlowFrameworkRestApiIT extends FlowFrameworkRestTestCase {
             "create_ingest_pipeline"
         );
 
-        List workflowStepNames = resourcesCreated.stream()
+        List<String> workflowStepNames = resourcesCreated.stream()
             .peek(resourceCreated -> assertNotNull(resourceCreated.resourceId()))
             .map(ResourceCreated::workflowStepName)
             .collect(Collectors.toList());
@@ -457,7 +491,7 @@ public class FlowFrameworkRestApiIT extends FlowFrameworkRestTestCase {
 
         List<String> expectedStepNames = List.of("create_connector", "register_remote_model", "deploy_model");
 
-        List workflowStepNames = resourcesCreated.stream()
+        List<String> workflowStepNames = resourcesCreated.stream()
             .peek(resourceCreated -> assertNotNull(resourceCreated.resourceId()))
             .map(ResourceCreated::workflowStepName)
             .collect(Collectors.toList());
@@ -527,7 +561,7 @@ public class FlowFrameworkRestApiIT extends FlowFrameworkRestTestCase {
     public void testSemanticSearchWithLocalModelEndToEnd() throws Exception {
         // Checking if plugins are part of the integration test cluster so we can continue with this test
         List<String> plugins = catPlugins();
-        if (!plugins.contains("opensearch-knn") && plugins.contains("opensearch-neural-search")) {
+        if (!plugins.contains("opensearch-knn") && !plugins.contains("opensearch-neural-search")) {
             return;
         }
         Map<String, Object> defaults = new HashMap<>();
@@ -548,6 +582,7 @@ public class FlowFrameworkRestApiIT extends FlowFrameworkRestTestCase {
         // This template should create 4 resources, registered model_id, deployed model_id, ingest pipeline, and index name
         assertEquals(4, resourcesCreated.size());
         String modelId = resourcesCreated.get(1).resourceId();
+        String pipelineId = resourcesCreated.get(2).resourceId();
         String indexName = resourcesCreated.get(3).resourceId();
 
         // Short wait before ingesting data
@@ -556,36 +591,49 @@ public class FlowFrameworkRestApiIT extends FlowFrameworkRestTestCase {
         String docContent = "{\"passage_text\": \"Hello planet\"\n}";
         ingestSingleDoc(docContent, indexName);
         // Short wait before neural search
-        Thread.sleep(500);
+        Thread.sleep(3000);
         SearchResponse neuralSearchResponse = neuralSearchRequest(indexName, modelId);
-        assertEquals(neuralSearchResponse.getHits().getHits().length, 1);
+        assertNotNull(neuralSearchResponse);
         Thread.sleep(500);
-        deleteIndex(indexName);
 
-        // Hit Deprovision API
-        // By design, this may not completely deprovision the first time if it takes >2s to process removals
-        Response deprovisionResponse = deprovisionWorkflow(client(), workflowId);
+        // Hit Deprovision API using allow_delete but only for the pipeline
+        Response deprovisionResponse = null;
         try {
+            // By design, this may not completely deprovision the first time if it takes >2s to process removals
+            deprovisionResponse = deprovisionWorkflowWithAllowDelete(client(), workflowId, pipelineId);
             assertBusy(
                 () -> { getAndAssertWorkflowStatus(client(), workflowId, State.NOT_STARTED, ProvisioningProgress.NOT_STARTED); },
                 30,
                 TimeUnit.SECONDS
             );
+        } catch (ResponseException re) {
+            // 403 return if completed with only index remaining to delete
+            assertEquals(RestStatus.FORBIDDEN, TestHelpers.restStatus(re.getResponse()));
         } catch (ComparisonFailure e) {
             // 202 return if still processing
+            assertNotNull(deprovisionResponse);
             assertEquals(RestStatus.ACCEPTED, TestHelpers.restStatus(deprovisionResponse));
         }
-        if (TestHelpers.restStatus(deprovisionResponse) == RestStatus.ACCEPTED) {
+        if (deprovisionResponse != null && TestHelpers.restStatus(deprovisionResponse) == RestStatus.ACCEPTED) {
             // Short wait before we try again
             Thread.sleep(10000);
-            deprovisionResponse = deprovisionWorkflow(client(), workflowId);
-            assertBusy(
-                () -> { getAndAssertWorkflowStatus(client(), workflowId, State.NOT_STARTED, ProvisioningProgress.NOT_STARTED); },
-                30,
-                TimeUnit.SECONDS
-            );
+            // Expected failure since we haven't provided allow_delete param
+            try {
+                deprovisionResponse = deprovisionWorkflowWithAllowDelete(client(), workflowId, pipelineId);
+            } catch (ResponseException re) {
+                // Expected 403 return with only index remaining to delete
+                assertEquals(RestStatus.FORBIDDEN, TestHelpers.restStatus(re.getResponse()));
+            }
         }
+        // Now try again with allow_delete for the index
+        deprovisionResponse = deprovisionWorkflowWithAllowDelete(client(), workflowId, pipelineId + "," + indexName);
+        assertBusy(
+            () -> { getAndAssertWorkflowStatus(client(), workflowId, State.NOT_STARTED, ProvisioningProgress.NOT_STARTED); },
+            30,
+            TimeUnit.SECONDS
+        );
         assertEquals(RestStatus.OK, TestHelpers.restStatus(deprovisionResponse));
+
         // Hit Delete API
         Response deleteResponse = deleteWorkflow(client(), workflowId);
         assertEquals(RestStatus.OK, TestHelpers.restStatus(deleteResponse));

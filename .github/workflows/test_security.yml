@@ -1,11 +1,16 @@
 name: Security test workflow for Flow Framework
 on:
+  workflow_dispatch:
   push:
     branches-ignore:
       - 'whitesource-remediate/**'
       - 'backport/**'
+      - 'create-pull-request/**'
   pull_request:
     types: [opened, synchronize, reopened]
+
+env:
+  ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION: true
 
 jobs:
   Get-CI-Image-Tag:

@@ -19,6 +19,8 @@ import java.io.IOException;
 import java.util.Collections;
 import java.util.Map;
 
+import static org.opensearch.flowframework.common.CommonValue.UPDATE_WORKFLOW_FIELDS;
+
 /**
  * Transport Request to create, provision, and deprovision a workflow
  */
@@ -48,6 +50,11 @@ public class WorkflowRequest extends ActionRequest {
      * Reprovision flag
      */
     private boolean reprovision;
+
+    /**
+     * Update Fields flag
+     */
+    private boolean updateFields;
 
     /**
      * Params map
@@ -109,8 +116,8 @@ public class WorkflowRequest extends ActionRequest {
      * @param workflowId the documentId of the workflow
      * @param template the use case template which describes the workflow
      * @param validation flag to indicate if validation is necessary
-     * @param provision flag to indicate if provision is necessary
-     * @param params map of REST path params. If provision is false, must be an empty map.
+     * @param provisionOrUpdate provision or updateFields flag. Only one may be true, the presence of update_fields key in map indicates if updating fields, otherwise true means it's provisioning.
+     * @param params map of REST path params. If provisionOrUpdate is false, must be an empty map. If update_fields key is present, must be only key.
      * @param useCase default use case given
      * @param defaultParams the params to be used in the substitution based on the default use case.
      * @param reprovision flag to indicate if request is to reprovision
@@ -119,7 +126,7 @@ public class WorkflowRequest extends ActionRequest {
         @Nullable String workflowId,
         @Nullable Template template,
         String[] validation,
-        boolean provision,
+        boolean provisionOrUpdate,
         Map<String, String> params,
         String useCase,
         Map<String, String> defaultParams,
@@ -128,11 +135,12 @@ public class WorkflowRequest extends ActionRequest {
         this.workflowId = workflowId;
         this.template = template;
         this.validation = validation;
-        this.provision = provision;
-        if (!provision && !params.isEmpty()) {
+        this.provision = provisionOrUpdate && !params.containsKey(UPDATE_WORKFLOW_FIELDS);
+        this.updateFields = !provision && Boolean.parseBoolean(params.get(UPDATE_WORKFLOW_FIELDS));
+        if (!this.provision && params.keySet().stream().anyMatch(k -> !UPDATE_WORKFLOW_FIELDS.equals(k))) {
             throw new IllegalArgumentException("Params may only be included when provisioning.");
         }
-        this.params = params;
+        this.params = this.updateFields ? Collections.emptyMap() : params;
         this.useCase = useCase;
         this.defaultParams = defaultParams;
         this.reprovision = reprovision;
@@ -149,8 +157,13 @@ public class WorkflowRequest extends ActionRequest {
         String templateJson = in.readOptionalString();
         this.template = templateJson == null ? null : Template.parse(templateJson);
         this.validation = in.readStringArray();
-        this.provision = in.readBoolean();
-        this.params = this.provision ? in.readMap(StreamInput::readString, StreamInput::readString) : Collections.emptyMap();
+        boolean provisionOrUpdate = in.readBoolean();
+        this.params = provisionOrUpdate ? in.readMap(StreamInput::readString, StreamInput::readString) : Collections.emptyMap();
+        this.provision = provisionOrUpdate && !params.containsKey(UPDATE_WORKFLOW_FIELDS);
+        this.updateFields = !provision && Boolean.parseBoolean(params.get(UPDATE_WORKFLOW_FIELDS));
+        if (this.updateFields) {
+            this.params = Collections.emptyMap();
+        }
         this.reprovision = in.readBoolean();
     }
 
@@ -186,6 +199,14 @@ public class WorkflowRequest extends ActionRequest {
      */
     public boolean isProvision() {
         return this.provision;
+    }
+
+    /**
+     * Gets the update fields flag
+     * @return the update fields boolean
+     */
+    public boolean isUpdateFields() {
+        return this.updateFields;
     }
 
     /**
@@ -226,9 +247,11 @@ public class WorkflowRequest extends ActionRequest {
         out.writeOptionalString(workflowId);
         out.writeOptionalString(template == null ? null : template.toJson());
         out.writeStringArray(validation);
-        out.writeBoolean(provision);
+        out.writeBoolean(provision || updateFields);
         if (provision) {
             out.writeMap(params, StreamOutput::writeString, StreamOutput::writeString);
+        } else if (updateFields) {
+            out.writeMap(Map.of(UPDATE_WORKFLOW_FIELDS, "true"), StreamOutput::writeString, StreamOutput::writeString);
         }
         out.writeBoolean(reprovision);
     }
