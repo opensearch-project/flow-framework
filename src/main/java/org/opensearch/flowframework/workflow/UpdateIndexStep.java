@@ -11,9 +11,11 @@ package org.opensearch.flowframework.workflow;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.opensearch.ExceptionsHelper;
+import org.opensearch.action.admin.indices.settings.get.GetSettingsRequest;
 import org.opensearch.action.admin.indices.settings.put.UpdateSettingsRequest;
 import org.opensearch.action.support.PlainActionFuture;
 import org.opensearch.client.Client;
+import org.opensearch.common.settings.Settings;
 import org.opensearch.common.xcontent.XContentHelper;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.core.common.bytes.BytesArray;
@@ -26,6 +28,7 @@ import org.opensearch.flowframework.util.ParseUtils;
 
 import java.nio.charset.StandardCharsets;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 
@@ -99,9 +102,42 @@ public class UpdateIndexStep implements WorkflowStep {
                         + ", settings are not found in the index configuration";
                     throw new FlowFrameworkException(errorMessage, RestStatus.BAD_REQUEST);
                 } else {
+
                     @SuppressWarnings("unchecked")
-                    Map<String, Object> indexSettings = (Map<String, Object>) sourceAsMap.get("settings");
-                    updateSettingsRequest.settings(indexSettings);
+                    Map<String, Object> updatedSettings = (Map<String, Object>) sourceAsMap.get("settings");
+
+                    // check if settings are flattened or expanded
+                    Map<String, Object> flattenedSettings = new HashMap<>();
+                    if (updatedSettings.containsKey("index")) {
+                        flattenSettings("", updatedSettings, flattenedSettings);
+                    } else {
+                        flattenedSettings.putAll(updatedSettings);
+                    }
+
+                    Map<String, Object> filteredSettings = new HashMap<>();
+
+                    // Retrieve current Index Settings
+                    GetSettingsRequest getSettingsRequest = new GetSettingsRequest();
+                    getSettingsRequest.indices(indexName);
+                    getSettingsRequest.includeDefaults(true);
+                    client.admin().indices().getSettings(getSettingsRequest, ActionListener.wrap(response -> {
+                        Map<String, Settings> indexToSettings = new HashMap<String, Settings>(response.getIndexToSettings());
+
+                        // Include in the update request only settings with updated values
+                        Settings currentIndexSettings = indexToSettings.get(indexName);
+                        for (Map.Entry<String, Object> e : flattenedSettings.entrySet()) {
+                            String val = e.getValue().toString();
+                            if (!val.equals(currentIndexSettings.get(e.getKey()))) {
+                                filteredSettings.put(e.getKey(), e.getValue());
+                            }
+                        }
+                    }, ex -> {
+                        Exception e = getSafeException(ex);
+                        String errorMessage = (e == null ? "Failed to update the index settings for index " + indexName : e.getMessage());
+                        updateIndexFuture.onFailure(new WorkflowStepException(errorMessage, ExceptionsHelper.status(e)));
+                    }));
+
+                    updateSettingsRequest.settings(filteredSettings);
                 }
             }
 
@@ -124,6 +160,24 @@ public class UpdateIndexStep implements WorkflowStep {
 
         return updateIndexFuture;
 
+    }
+
+    /**
+     * Flattens a nested map of settings, delimitted by a period
+     * @param prefix the setting prefix
+     * @param settings the nested setting map
+     * @param flattenedSettings the final flattend map of settings
+     */
+    public static void flattenSettings(String prefix, Map<String, Object> settings, Map<String, Object> flattenedSettings) {
+        for (Map.Entry<String, Object> entry : settings.entrySet()) {
+            String key = prefix.isEmpty() ? entry.getKey() : prefix + "." + entry.getKey();
+            Object value = entry.getValue();
+            if (value instanceof Map) {
+                flattenSettings(key, (Map<String, Object>) value, flattenedSettings);
+            } else {
+                flattenedSettings.put(key, value.toString());
+            }
+        }
     }
 
     @Override

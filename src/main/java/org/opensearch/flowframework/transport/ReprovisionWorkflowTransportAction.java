@@ -141,9 +141,9 @@ public class ReprovisionWorkflowTransportAction extends HandledTransportAction<R
                         logger.info("Updated workflow {} state to {}", request.getWorkflowId(), State.PROVISIONING);
 
                         // Attach last provisioned time to updated template and execute reprovisioning
-                        Template updatedTemplateWithProvisionedTime = new Template.Builder(updatedTemplate).lastProvisionedTime(
-                            Instant.now()
-                        ).build();
+                        Template updatedTemplateWithProvisionedTime = Template.builder(updatedTemplate)
+                            .lastProvisionedTime(Instant.now())
+                            .build();
                         executeWorkflowAsync(workflowId, updatedTemplateWithProvisionedTime, reprovisionProcessSequence, listener);
 
                         listener.onResponse(new WorkflowResponse(workflowId));

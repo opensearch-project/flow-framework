@@ -29,6 +29,7 @@ import org.opensearch.flowframework.workflow.RegisterLocalPretrainedModelStep;
 import org.opensearch.flowframework.workflow.RegisterLocalSparseEncodingModelStep;
 import org.opensearch.flowframework.workflow.RegisterModelGroupStep;
 import org.opensearch.flowframework.workflow.RegisterRemoteModelStep;
+import org.opensearch.flowframework.workflow.ReindexStep;
 import org.opensearch.flowframework.workflow.UndeployModelStep;
 import org.opensearch.flowframework.workflow.UpdateIndexStep;
 import org.opensearch.flowframework.workflow.UpdateIngestPipelineStep;
