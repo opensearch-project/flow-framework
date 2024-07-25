@@ -95,6 +95,8 @@ public class UpdateIndexStep implements WorkflowStep {
 
                 Map<String, Object> sourceAsMap = XContentHelper.convertToMap(configurationsBytes, false, MediaTypeRegistry.JSON).v2();
 
+                // TODO : Add support to update index mappings
+
                 // extract index settings from configuration
                 if (!sourceAsMap.containsKey("settings")) {
                     String errorMessage = "Failed to update index settings for index "

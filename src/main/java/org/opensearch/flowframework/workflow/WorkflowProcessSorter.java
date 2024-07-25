@@ -20,6 +20,7 @@ import org.opensearch.flowframework.model.Template;
 import org.opensearch.flowframework.model.Workflow;
 import org.opensearch.flowframework.model.WorkflowEdge;
 import org.opensearch.flowframework.model.WorkflowNode;
+import org.opensearch.flowframework.util.ParseUtils;
 import org.opensearch.plugins.PluginInfo;
 import org.opensearch.plugins.PluginsService;
 import org.opensearch.threadpool.ThreadPool;
@@ -32,7 +33,6 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.Queue;
 import java.util.Set;
@@ -161,7 +161,7 @@ public class WorkflowProcessSorter {
         Template originalTemplate,
         Template updatedTemplate,
         List<ResourceCreated> resourcesCreated
-    ) {
+    ) throws Exception {
 
         Workflow updatedWorkflow = updatedTemplate.workflows().get(PROVISION_WORKFLOW);
         if (updatedWorkflow.nodes().size() > this.maxWorkflowSteps) {
@@ -215,8 +215,6 @@ public class WorkflowProcessSorter {
 
             if (!originalTemplateMap.containsKey(node.id())) {
 
-                logger.info("TESTING : Node : " + node.id() + " is an additive modification!");
-
                 // Case 1 : Additive modification, create new node
 
                 WorkflowStep step = workflowStepFactory.createStep(node.type());
@@ -237,27 +235,11 @@ public class WorkflowProcessSorter {
 
             } else {
 
-                logger.info("TESTING : Node : " + node.id() + " is an existing modification!");
-
                 // Case 2 : Existing Modification, compare previous node inputs and user inputs
                 WorkflowNode originalNode = originalTemplateMap.get(node.id());
 
-                Map<String, Object> updatedNodeUserInputs = node.userInputs();
-                Map<String, Object> originalNodeUserInputs = originalNode.userInputs();
-
-                boolean userInputsIsUpdated = false;
-                for (String key : updatedNodeUserInputs.keySet()) {
-                    Object updatedValue = updatedNodeUserInputs.get(key);
-                    Object originalValue = originalNodeUserInputs.get(key);
-                    if (!Objects.equals(updatedValue, originalValue)) {
-                        userInputsIsUpdated = true;
-                        break;
-                    }
-                }
-
-                if (!node.previousNodeInputs().equals(originalNode.previousNodeInputs()) || userInputsIsUpdated) {
-
-                    logger.info("TESTING : Node : " + node.id() + " needs to be updated");
+                if (!node.previousNodeInputs().equals(originalNode.previousNodeInputs())
+                    || !ParseUtils.userInputsEquals(originalNode.userInputs(), node.userInputs())) {
 
                     // Create Update Step (if one is available)
                     String updateStepName = WorkflowResources.getUpdateStepByWorkflowStep(node.type());
@@ -279,7 +261,6 @@ public class WorkflowProcessSorter {
                     } else {
 
                         // Case 3 : Cannot update step (not supported)
-                        logger.info("TESTING : Node : " + node.id() + "has changed inputs and does not support updates");
                         throw new FlowFrameworkException(
                             "Workflow Step " + node.id() + " does not support updates when reprovisioning.",
                             RestStatus.BAD_REQUEST
@@ -289,15 +270,10 @@ public class WorkflowProcessSorter {
                 } else {
 
                     // Case 4 : No modification to existing node, create proxy step to pass down required input to dependent nodes
-                    logger.info("TESTING : Node : " + node.id() + "needs to get resources");
-
                     // Node ID should give us resources created
                     ResourceCreated nodeResource = null;
                     for (ResourceCreated resourceCreated : resourcesCreated) {
                         if (resourceCreated.workflowStepId().equals(node.id())) {
-                            logger.info(
-                                "TESTING : FOUND RESOURCE : Resource Created workflow Step ID : " + resourceCreated.workflowStepId()
-                            );
                             nodeResource = resourceCreated;
                         }
                     }

@@ -27,6 +27,7 @@ import org.opensearch.flowframework.model.ResourceCreated;
 import org.opensearch.flowframework.model.State;
 import org.opensearch.flowframework.model.Template;
 import org.opensearch.flowframework.model.Workflow;
+import org.opensearch.flowframework.util.EncryptorUtils;
 import org.opensearch.flowframework.workflow.ProcessNode;
 import org.opensearch.flowframework.workflow.WorkflowProcessSorter;
 import org.opensearch.flowframework.workflow.WorkflowStepFactory;
@@ -66,6 +67,7 @@ public class ReprovisionWorkflowTransportAction extends HandledTransportAction<R
     private final FlowFrameworkIndicesHandler flowFrameworkIndicesHandler;
     private final FlowFrameworkSettings flowFrameworkSettings;
     private final PluginsService pluginsService;
+    private final EncryptorUtils encryptorUtils;
 
     @Inject
     public ReprovisionWorkflowTransportAction(
@@ -77,6 +79,7 @@ public class ReprovisionWorkflowTransportAction extends HandledTransportAction<R
         WorkflowProcessSorter workflowProcessSorter,
         FlowFrameworkIndicesHandler flowFrameworkIndicesHandler,
         FlowFrameworkSettings flowFrameworkSettings,
+        EncryptorUtils encryptorUtils,
         PluginsService pluginsService
     ) {
         super(ReprovisionWorkflowAction.NAME, transportService, actionFilters, ReprovisionWorkflowRequest::new);
@@ -86,6 +89,7 @@ public class ReprovisionWorkflowTransportAction extends HandledTransportAction<R
         this.workflowProcessSorter = workflowProcessSorter;
         this.flowFrameworkIndicesHandler = flowFrameworkIndicesHandler;
         this.flowFrameworkSettings = flowFrameworkSettings;
+        this.encryptorUtils = encryptorUtils;
         this.pluginsService = pluginsService;
     }
 
@@ -93,7 +97,7 @@ public class ReprovisionWorkflowTransportAction extends HandledTransportAction<R
     protected void doExecute(Task task, ReprovisionWorkflowRequest request, ActionListener<WorkflowResponse> listener) {
 
         String workflowId = request.getWorkflowId();
-        Template originalTemplate = request.getOriginalTemplate();
+        Template originalTemplate = encryptorUtils.decryptTemplateCredentials(request.getOriginalTemplate());
         Template updatedTemplate = request.getUpdatedTemplate();
 
         // Validate updated template prior to execution

@@ -8,6 +8,8 @@
  */
 package org.opensearch.flowframework.util;
 
+import com.google.gson.JsonElement;
+import com.google.gson.JsonParser;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.opensearch.client.Client;
@@ -497,5 +499,20 @@ public class ParseUtils {
         } else {
             throw new IllegalArgumentException("Unsupported type: " + type);
         }
+    }
+
+    /**
+     * Compares workflow node user inputs
+     * @param originalInputs the original node user inputs
+     * @param updatedInputs the updated node user inputs
+     * @throws Exception for issues processing map
+     * @return boolean if equivalent
+     */
+    public static boolean userInputsEquals(Map<String, Object> originalInputs, Map<String, Object> updatedInputs) throws Exception {
+        String originalInputsJson = parseArbitraryStringToObjectMapToString(originalInputs);
+        String updatedInputsJson = parseArbitraryStringToObjectMapToString(updatedInputs);
+        JsonElement elem1 = JsonParser.parseString(originalInputsJson);
+        JsonElement elem2 = JsonParser.parseString(updatedInputsJson);
+        return elem1.equals(elem2);
     }
 }
