@@ -8,6 +8,7 @@
  */
 package org.opensearch.flowframework.workflow;
 
+import org.opensearch.OpenSearchStatusException;
 import org.opensearch.action.delete.DeleteResponse;
 import org.opensearch.action.support.PlainActionFuture;
 import org.opensearch.core.action.ActionListener;
@@ -57,6 +58,30 @@ public class DeleteModelStepTests extends OpenSearchTestCase {
             ShardId shardId = new ShardId(new Index("indexName", "uuid"), 1);
             DeleteResponse output = new DeleteResponse(shardId, modelIdArg, 1, 1, 1, true);
             actionListener.onResponse(output);
+            return null;
+        }).when(machineLearningNodeClient).deleteModel(any(String.class), any());
+
+        PlainActionFuture<WorkflowData> future = deleteModelStep.execute(
+            inputData.getNodeId(),
+            inputData,
+            Map.of("step_1", new WorkflowData(Map.of(MODEL_ID, modelId), "workflowId", "nodeId")),
+            Map.of("step_1", MODEL_ID),
+            Collections.emptyMap()
+        );
+        verify(machineLearningNodeClient).deleteModel(any(String.class), any());
+
+        assertTrue(future.isDone());
+        assertEquals(modelId, future.get().getContent().get(MODEL_ID));
+    }
+
+    public void testDeleteModelNotFound() throws IOException, ExecutionException, InterruptedException {
+
+        String modelId = randomAlphaOfLength(5);
+        DeleteModelStep deleteModelStep = new DeleteModelStep(machineLearningNodeClient);
+
+        doAnswer(invocation -> {
+            ActionListener<DeleteResponse> actionListener = invocation.getArgument(1);
+            actionListener.onFailure(new OpenSearchStatusException("No model found with that id", RestStatus.NOT_FOUND));
             return null;
         }).when(machineLearningNodeClient).deleteModel(any(String.class), any());
 

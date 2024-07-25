@@ -8,6 +8,7 @@
  */
 package org.opensearch.flowframework.workflow;
 
+import org.opensearch.OpenSearchStatusException;
 import org.opensearch.action.delete.DeleteResponse;
 import org.opensearch.action.support.PlainActionFuture;
 import org.opensearch.core.action.ActionListener;
@@ -57,6 +58,30 @@ public class DeleteAgentStepTests extends OpenSearchTestCase {
             ShardId shardId = new ShardId(new Index("indexName", "uuid"), 1);
             DeleteResponse output = new DeleteResponse(shardId, agentIdArg, 1, 1, 1, true);
             actionListener.onResponse(output);
+            return null;
+        }).when(machineLearningNodeClient).deleteAgent(any(String.class), any());
+
+        PlainActionFuture<WorkflowData> future = deleteAgentStep.execute(
+            inputData.getNodeId(),
+            inputData,
+            Map.of("step_1", new WorkflowData(Map.of(AGENT_ID, agentId), "workflowId", "nodeId")),
+            Map.of("step_1", AGENT_ID),
+            Collections.emptyMap()
+        );
+        verify(machineLearningNodeClient).deleteAgent(any(String.class), any());
+
+        assertTrue(future.isDone());
+        assertEquals(agentId, future.get().getContent().get(AGENT_ID));
+    }
+
+    public void testDeleteAgentNotFound() throws IOException, ExecutionException, InterruptedException {
+
+        String agentId = randomAlphaOfLength(5);
+        DeleteAgentStep deleteAgentStep = new DeleteAgentStep(machineLearningNodeClient);
+
+        doAnswer(invocation -> {
+            ActionListener<DeleteResponse> actionListener = invocation.getArgument(1);
+            actionListener.onFailure(new OpenSearchStatusException("No agent found with that id", RestStatus.NOT_FOUND));
             return null;
         }).when(machineLearningNodeClient).deleteAgent(any(String.class), any());
 
