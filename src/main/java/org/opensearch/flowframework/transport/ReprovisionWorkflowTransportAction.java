@@ -97,6 +97,8 @@ public class ReprovisionWorkflowTransportAction extends HandledTransportAction<R
     protected void doExecute(Task task, ReprovisionWorkflowRequest request, ActionListener<WorkflowResponse> listener) {
 
         String workflowId = request.getWorkflowId();
+
+        // Original template is retrieved from index, attempt to decrypt any exisiting credentials before processing
         Template originalTemplate = encryptorUtils.decryptTemplateCredentials(request.getOriginalTemplate());
         Template updatedTemplate = request.getUpdatedTemplate();
 
