@@ -8,6 +8,9 @@ Compatible with OpenSearch 2.16.0
 - Add allow_delete parameter to Deprovision API ([#763](https://github.com/opensearch-project/flow-framework/pull/763))
 - Improve Template and WorkflowState builders ([#778](https://github.com/opensearch-project/flow-framework/pull/778))
 
+### Bug Fixes
+- Handle Not Found deprovision exceptions as successful deletions ([#805](https://github.com/opensearch-project/flow-framework/pull/805))
+
 ### Infrastructure
 - Update dependency com.fasterxml.jackson.core:jackson-core to v2.17.2 ([#760](https://github.com/opensearch-project/flow-framework/pull/760))
 - Update dependency gradle to v8.8 ([#725](https://github.com/opensearch-project/flow-framework/pull/725))
