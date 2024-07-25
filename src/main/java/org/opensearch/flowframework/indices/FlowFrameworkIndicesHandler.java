@@ -20,6 +20,7 @@ import org.opensearch.action.delete.DeleteResponse;
 import org.opensearch.action.get.GetRequest;
 import org.opensearch.action.index.IndexRequest;
 import org.opensearch.action.index.IndexResponse;
+import org.opensearch.action.support.ActiveShardCount;
 import org.opensearch.action.support.WriteRequest;
 import org.opensearch.action.update.UpdateRequest;
 import org.opensearch.action.update.UpdateResponse;
@@ -193,7 +194,9 @@ public class FlowFrameworkIndicesHandler {
                     logger.error(errorMessage, e);
                     internalListener.onFailure(new FlowFrameworkException(errorMessage, ExceptionsHelper.status(e)));
                 });
-                CreateIndexRequest request = new CreateIndexRequest(indexName).mapping(mapping).settings(indexSettings);
+                CreateIndexRequest request = new CreateIndexRequest(indexName).mapping(mapping)
+                    .settings(indexSettings)
+                    .waitForActiveShards(ActiveShardCount.ALL);
                 client.admin().indices().create(request, actionListener);
             } else {
                 logger.debug("index: {} is already created", indexName);

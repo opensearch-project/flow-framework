@@ -23,6 +23,8 @@ Inspired from [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 - Register system index descriptors through SystemIndexPlugin.getSystemIndexDescriptors ([#750](https://github.com/opensearch-project/flow-framework/pull/750))
 
 ### Bug Fixes
+- Initialize all shards on index creation to avoid mapping conflicts ([#799](https://github.com/opensearch-project/flow-framework/pull/799))
+
 
 ### Infrastructure
 ### Documentation
