@@ -11,9 +11,11 @@ package org.opensearch.flowframework.workflow;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.opensearch.ExceptionsHelper;
+import org.opensearch.OpenSearchStatusException;
 import org.opensearch.action.delete.DeleteResponse;
 import org.opensearch.action.support.PlainActionFuture;
 import org.opensearch.core.action.ActionListener;
+import org.opensearch.core.rest.RestStatus;
 import org.opensearch.flowframework.exception.FlowFrameworkException;
 import org.opensearch.flowframework.exception.WorkflowStepException;
 import org.opensearch.flowframework.util.ParseUtils;
@@ -86,9 +88,21 @@ public class DeleteModelStep implements WorkflowStep {
                 @Override
                 public void onFailure(Exception ex) {
                     Exception e = getSafeException(ex);
-                    String errorMessage = (e == null ? "Failed to delete model " + modelId : e.getMessage());
-                    logger.error(errorMessage, e);
-                    deleteModelFuture.onFailure(new WorkflowStepException(errorMessage, ExceptionsHelper.status(e)));
+                    // NOT_FOUND exception should be treated as successful deletion
+                    // https://github.com/opensearch-project/ml-commons/issues/2751
+                    if (e instanceof OpenSearchStatusException && ((OpenSearchStatusException) e).status().equals(RestStatus.NOT_FOUND)) {
+                        deleteModelFuture.onResponse(
+                            new WorkflowData(
+                                Map.ofEntries(Map.entry(MODEL_ID, modelId)),
+                                currentNodeInputs.getWorkflowId(),
+                                currentNodeInputs.getNodeId()
+                            )
+                        );
+                    } else {
+                        String errorMessage = (e == null ? "Failed to delete model " + modelId : e.getMessage());
+                        logger.error(errorMessage, e);
+                        deleteModelFuture.onFailure(new WorkflowStepException(errorMessage, ExceptionsHelper.status(e)));
+                    }
                 }
             });
         } catch (FlowFrameworkException e) {
