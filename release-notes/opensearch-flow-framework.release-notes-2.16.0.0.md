@@ -10,6 +10,7 @@ Compatible with OpenSearch 2.16.0
 
 ### Bug Fixes
 - Handle Not Found deprovision exceptions as successful deletions ([#805](https://github.com/opensearch-project/flow-framework/pull/805))
+- Wrap CreateIndexRequest mappings in _doc key as required ([#809](https://github.com/opensearch-project/flow-framework/pull/809))
 
 ### Infrastructure
 - Update dependency com.fasterxml.jackson.core:jackson-core to v2.17.2 ([#760](https://github.com/opensearch-project/flow-framework/pull/760))
