@@ -10,6 +10,7 @@ Compatible with OpenSearch 2.16.0
 
 ### Bug Fixes
 - Handle Not Found deprovision exceptions as successful deletions ([#805](https://github.com/opensearch-project/flow-framework/pull/805))
+- Have FlowFrameworkException status recognized by ExceptionsHelper ([#811](https://github.com/opensearch-project/flow-framework/pull/811))
 
 ### Infrastructure
 - Update dependency com.fasterxml.jackson.core:jackson-core to v2.17.2 ([#760](https://github.com/opensearch-project/flow-framework/pull/760))
