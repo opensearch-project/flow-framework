@@ -8,6 +8,9 @@
  */
 package org.opensearch.flowframework.exception;
 
+import org.opensearch.OpenSearchException;
+import org.opensearch.core.common.io.stream.StreamInput;
+import org.opensearch.core.common.io.stream.StreamOutput;
 import org.opensearch.core.rest.RestStatus;
 import org.opensearch.core.xcontent.ToXContentObject;
 import org.opensearch.core.xcontent.XContentBuilder;
@@ -17,7 +20,7 @@ import java.io.IOException;
 /**
  * Representation of Flow Framework Exceptions
  */
-public class FlowFrameworkException extends RuntimeException implements ToXContentObject {
+public class FlowFrameworkException extends OpenSearchException implements ToXContentObject {
 
     private static final long serialVersionUID = 1L;
 
@@ -57,6 +60,16 @@ public class FlowFrameworkException extends RuntimeException implements ToXConte
     }
 
     /**
+     * Read from a stream.
+     * @param in THe input stream
+     * @throws IOException on stream reading failure
+     */
+    public FlowFrameworkException(StreamInput in) throws IOException {
+        super(in);
+        restStatus = RestStatus.readFrom(in);
+    }
+
+    /**
      * Getter for restStatus.
      *
      * @return the HTTP status code associated with the exception
@@ -65,8 +78,26 @@ public class FlowFrameworkException extends RuntimeException implements ToXConte
         return restStatus;
     }
 
+    // Same getter but for superclass
+    @Override
+    public final RestStatus status() {
+        return restStatus;
+    }
+
     @Override
     public XContentBuilder toXContent(XContentBuilder builder, Params params) throws IOException {
         return builder.startObject().field("error", this.getMessage()).endObject();
+    }
+
+    @Override
+    public void writeTo(StreamOutput out) throws IOException {
+        super.writeTo(out);
+        RestStatus.writeTo(out, restStatus);
+    }
+
+    // Keeping toXContentObject for backwards compatibility but this is needed for overriding superclass fragment
+    @Override
+    public boolean isFragment() {
+        return false;
     }
 }
