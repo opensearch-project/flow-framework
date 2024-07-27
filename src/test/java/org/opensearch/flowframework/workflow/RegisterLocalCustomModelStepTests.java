@@ -11,12 +11,10 @@ package org.opensearch.flowframework.workflow;
 import com.carrotsearch.randomizedtesting.annotations.ThreadLeakScope;
 
 import org.opensearch.action.support.PlainActionFuture;
-import org.opensearch.action.update.UpdateResponse;
 import org.opensearch.common.settings.Settings;
 import org.opensearch.common.unit.TimeValue;
 import org.opensearch.common.util.concurrent.OpenSearchExecutors;
 import org.opensearch.core.action.ActionListener;
-import org.opensearch.core.index.shard.ShardId;
 import org.opensearch.core.rest.RestStatus;
 import org.opensearch.flowframework.common.FlowFrameworkSettings;
 import org.opensearch.flowframework.exception.FlowFrameworkException;
@@ -38,16 +36,15 @@ import java.util.Collections;
 import java.util.Map;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
-import static org.opensearch.action.DocWriteResponse.Result.UPDATED;
 import static org.opensearch.flowframework.common.CommonValue.DEPLOY_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.FLOW_FRAMEWORK_THREAD_POOL_PREFIX;
 import static org.opensearch.flowframework.common.CommonValue.PROVISION_WORKFLOW_THREAD_POOL;
 import static org.opensearch.flowframework.common.CommonValue.REGISTER_MODEL_STATUS;
-import static org.opensearch.flowframework.common.CommonValue.WORKFLOW_STATE_INDEX;
 import static org.opensearch.flowframework.common.CommonValue.WORKFLOW_THREAD_POOL;
 import static org.opensearch.flowframework.common.WorkflowResources.MODEL_GROUP_ID;
 import static org.opensearch.flowframework.common.WorkflowResources.MODEL_ID;
@@ -168,10 +165,10 @@ public class RegisterLocalCustomModelStepTests extends OpenSearchTestCase {
         }).when(machineLearningNodeClient).getTask(any(), any());
 
         doAnswer(invocation -> {
-            ActionListener<UpdateResponse> updateResponseListener = invocation.getArgument(4);
-            updateResponseListener.onResponse(new UpdateResponse(new ShardId(WORKFLOW_STATE_INDEX, "", 1), "id", -2, 0, 0, UPDATED));
+            ActionListener<WorkflowData> updateResponseListener = invocation.getArgument(4);
+            updateResponseListener.onResponse(new WorkflowData(Map.of(MODEL_ID, modelId), "test-id", "test-node-id"));
             return null;
-        }).when(flowFrameworkIndicesHandler).updateResourceInStateIndex(anyString(), anyString(), anyString(), anyString(), any());
+        }).when(flowFrameworkIndicesHandler).addResourceToStateIndex(any(WorkflowData.class), anyString(), anyString(), anyString(), any());
 
         PlainActionFuture<WorkflowData> future = registerLocalModelStep.execute(
             workflowData.getNodeId(),
@@ -223,6 +220,88 @@ public class RegisterLocalCustomModelStepTests extends OpenSearchTestCase {
 
         assertEquals(modelId, future.get().getContent().get(MODEL_ID));
         assertEquals(status, future.get().getContent().get(REGISTER_MODEL_STATUS));
+    }
+
+    // This method tests code in the abstract parent
+    public void testRegisterLocalCustomModelDeployStateUpdateFail() throws Exception {
+        String taskId = "abcd";
+        String modelId = "model-id";
+        String status = MLTaskState.COMPLETED.name();
+
+        // Stub register for success case
+        doAnswer(invocation -> {
+            ActionListener<MLRegisterModelResponse> actionListener = invocation.getArgument(1);
+            MLRegisterModelResponse output = new MLRegisterModelResponse(taskId, status, null);
+            actionListener.onResponse(output);
+            return null;
+        }).when(machineLearningNodeClient).register(any(MLRegisterModelInput.class), any());
+
+        // Stub getTask for success case
+        doAnswer(invocation -> {
+            ActionListener<MLTask> actionListener = invocation.getArgument(1);
+            MLTask output = new MLTask(
+                taskId,
+                modelId,
+                null,
+                null,
+                MLTaskState.COMPLETED,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                false
+            );
+            actionListener.onResponse(output);
+            return null;
+        }).when(machineLearningNodeClient).getTask(any(), any());
+
+        AtomicInteger invocationCount = new AtomicInteger(0);
+        doAnswer(invocation -> {
+            ActionListener<WorkflowData> updateResponseListener = invocation.getArgument(4);
+            if (invocationCount.getAndIncrement() == 0) {
+                // succeed on first call (update register)
+                updateResponseListener.onResponse(new WorkflowData(Map.of(MODEL_ID, modelId), "test-id", "test-node-id"));
+            } else {
+                // fail on second call (update deploy)
+                updateResponseListener.onFailure(new RuntimeException("Failed to update deploy resource"));
+            }
+            return null;
+        }).when(flowFrameworkIndicesHandler).addResourceToStateIndex(any(WorkflowData.class), anyString(), anyString(), anyString(), any());
+
+        WorkflowData boolStringWorkflowData = new WorkflowData(
+            Map.ofEntries(
+                Map.entry("name", "xyz"),
+                Map.entry("version", "1.0.0"),
+                Map.entry("description", "description"),
+                Map.entry("function_name", "SPARSE_TOKENIZE"),
+                Map.entry("model_format", "TORCH_SCRIPT"),
+                Map.entry(MODEL_GROUP_ID, "abcdefg"),
+                Map.entry("model_content_hash_value", "aiwoeifjoaijeofiwe"),
+                Map.entry("model_type", "bert"),
+                Map.entry("embedding_dimension", "384"),
+                Map.entry("framework_type", "sentence_transformers"),
+                Map.entry("url", "something.com"),
+                Map.entry(DEPLOY_FIELD, "true")
+            ),
+            "test-id",
+            "test-node-id"
+        );
+
+        PlainActionFuture<WorkflowData> future = registerLocalModelStep.execute(
+            boolStringWorkflowData.getNodeId(),
+            boolStringWorkflowData,
+            Collections.emptyMap(),
+            Collections.emptyMap(),
+            Collections.emptyMap()
+        );
+
+        ExecutionException ex = expectThrows(ExecutionException.class, () -> future.get().getClass());
+        assertTrue(ex.getCause() instanceof FlowFrameworkException);
+        assertEquals("Failed to update simulated deploy step resource model-id", ex.getCause().getMessage());
     }
 
     public void testRegisterLocalCustomModelFailure() {

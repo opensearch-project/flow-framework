@@ -43,7 +43,6 @@ import static org.opensearch.flowframework.common.CommonValue.NAME_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.PARAMETERS_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.PROTOCOL_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.VERSION_FIELD;
-import static org.opensearch.flowframework.common.WorkflowResources.getResourceByWorkflowStep;
 import static org.opensearch.flowframework.exception.WorkflowStepException.getSafeException;
 import static org.opensearch.flowframework.util.ParseUtils.getStringToStringMap;
 
@@ -85,40 +84,14 @@ public class CreateConnectorStep implements WorkflowStep {
 
             @Override
             public void onResponse(MLCreateConnectorResponse mlCreateConnectorResponse) {
-                String resourceName = getResourceByWorkflowStep(getName());
-                try {
-                    logger.info("Created connector successfully");
-                    flowFrameworkIndicesHandler.updateResourceInStateIndex(
-                        currentNodeInputs.getWorkflowId(),
-                        currentNodeId,
-                        getName(),
-                        mlCreateConnectorResponse.getConnectorId(),
-                        ActionListener.wrap(response -> {
-                            logger.info("successfully updated resources created in state index: {}", response.getIndex());
-                            createConnectorFuture.onResponse(
-                                new WorkflowData(
-                                    Map.ofEntries(Map.entry(resourceName, mlCreateConnectorResponse.getConnectorId())),
-                                    currentNodeInputs.getWorkflowId(),
-                                    currentNodeId
-                                )
-                            );
-                        }, exception -> {
-                            String errorMessage = "Failed to update new created "
-                                + currentNodeId
-                                + " resource "
-                                + getName()
-                                + " id "
-                                + mlCreateConnectorResponse.getConnectorId();
-                            logger.error(errorMessage, exception);
-                            createConnectorFuture.onFailure(new FlowFrameworkException(errorMessage, ExceptionsHelper.status(exception)));
-                        })
-                    );
-
-                } catch (Exception e) {
-                    String errorMessage = "Failed to parse and update new created resource";
-                    logger.error(errorMessage, e);
-                    createConnectorFuture.onFailure(new FlowFrameworkException(errorMessage, ExceptionsHelper.status(e)));
-                }
+                logger.info("Created connector successfully");
+                flowFrameworkIndicesHandler.addResourceToStateIndex(
+                    currentNodeInputs,
+                    currentNodeId,
+                    getName(),
+                    mlCreateConnectorResponse.getConnectorId(),
+                    createConnectorFuture
+                );
             }
 
             @Override

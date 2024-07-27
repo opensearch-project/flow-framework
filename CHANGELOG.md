@@ -32,3 +32,4 @@ Inspired from [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 ### Maintenance
 ### Refactoring
 - Improve Template and WorkflowState builders ([#778](https://github.com/opensearch-project/flow-framework/pull/778))
+- Refactor workflow step resource updates to eliminate duplication ([#796](https://github.com/opensearch-project/flow-framework/pull/796))

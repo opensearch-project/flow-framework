@@ -11,12 +11,10 @@ package org.opensearch.flowframework.workflow;
 import org.apache.lucene.tests.util.LuceneTestCase;
 import org.opensearch.OpenSearchException;
 import org.opensearch.action.support.PlainActionFuture;
-import org.opensearch.action.update.UpdateResponse;
 import org.opensearch.client.Client;
 import org.opensearch.common.Randomness;
 import org.opensearch.common.unit.TimeValue;
 import org.opensearch.core.action.ActionListener;
-import org.opensearch.core.index.shard.ShardId;
 import org.opensearch.flowframework.indices.FlowFrameworkIndicesHandler;
 import org.opensearch.index.reindex.BulkByScrollResponse;
 import org.opensearch.index.reindex.BulkByScrollTask;
@@ -36,16 +34,12 @@ import org.mockito.MockitoAnnotations;
 
 import static java.lang.Math.abs;
 import static java.util.stream.Collectors.toList;
-import static org.opensearch.action.DocWriteResponse.Result.UPDATED;
 import static org.opensearch.common.unit.TimeValue.timeValueMillis;
 import static org.opensearch.flowframework.common.CommonValue.DESTINATION_INDEX;
 import static org.opensearch.flowframework.common.CommonValue.SOURCE_INDEX;
-import static org.opensearch.flowframework.common.CommonValue.WORKFLOW_STATE_INDEX;
 import static org.opensearch.flowframework.workflow.ReindexStep.NAME;
 import static org.apache.lucene.tests.util.TestUtil.randomSimpleString;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -95,12 +89,6 @@ public class ReindexStepTests extends OpenSearchTestCase {
 
         @SuppressWarnings({ "unchecked" })
         ArgumentCaptor<ActionListener<BulkByScrollResponse>> actionListenerCaptor = ArgumentCaptor.forClass(ActionListener.class);
-
-        doAnswer(invocation -> {
-            ActionListener<UpdateResponse> updateResponseListener = invocation.getArgument(4);
-            updateResponseListener.onResponse(new UpdateResponse(new ShardId(WORKFLOW_STATE_INDEX, "", 1), "id", -2, 0, 0, UPDATED));
-            return null;
-        }).when(flowFrameworkIndicesHandler).updateResourceInStateIndex(anyString(), anyString(), anyString(), anyString(), any());
 
         PlainActionFuture<WorkflowData> future = reIndexStep.execute(
             inputData.getNodeId(),
