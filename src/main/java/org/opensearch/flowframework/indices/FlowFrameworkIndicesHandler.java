@@ -193,7 +193,8 @@ public class FlowFrameworkIndicesHandler {
                     logger.error(errorMessage, e);
                     internalListener.onFailure(new FlowFrameworkException(errorMessage, ExceptionsHelper.status(e)));
                 });
-                CreateIndexRequest request = new CreateIndexRequest(indexName).mapping(mapping).settings(indexSettings);
+                CreateIndexRequest request = new CreateIndexRequest(indexName).mapping("{\"_doc\":" + mapping + "}")
+                    .settings(indexSettings);
                 client.admin().indices().create(request, actionListener);
             } else {
                 logger.debug("index: {} is already created", indexName);
