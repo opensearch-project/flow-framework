@@ -154,7 +154,8 @@ public class WorkflowProcessSorter {
      * @param originalTemplate the original template currently indexed
      * @param updatedTemplate the updated template to be executed
      * @param resourcesCreated the resources previously created for the workflow
-     * @return
+     * @throws Exception for issues creating the reprovision sequence
+     * @return A list of ProcessNode
      */
     public List<ProcessNode> createReprovisionSequence(
         String workflowId,

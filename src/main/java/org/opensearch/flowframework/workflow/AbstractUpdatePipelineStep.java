@@ -35,12 +35,19 @@ import static org.opensearch.flowframework.common.WorkflowResources.PIPELINE_ID;
 import static org.opensearch.flowframework.common.WorkflowResources.getResourceByWorkflowStep;
 import static org.opensearch.flowframework.exception.WorkflowStepException.getSafeException;
 
+/**
+ * Step to update either a search or ingest pipeline
+ */
 public abstract class AbstractUpdatePipelineStep implements WorkflowStep {
     private static final Logger logger = LogManager.getLogger(AbstractUpdatePipelineStep.class);
 
     // Client to store a pipeline in the cluster state
     private final ClusterAdminClient clusterAdminClient;
 
+    /**
+     * Instantiate this class
+     * @param client client to access cluster admin client
+     */
     protected AbstractUpdatePipelineStep(Client client) {
         this.clusterAdminClient = client.admin().cluster();
     }

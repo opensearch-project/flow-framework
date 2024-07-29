@@ -18,6 +18,7 @@ import org.opensearch.flowframework.workflow.CreateIngestPipelineStep;
 import org.opensearch.flowframework.workflow.CreateSearchPipelineStep;
 import org.opensearch.flowframework.workflow.DeleteAgentStep;
 import org.opensearch.flowframework.workflow.DeleteConnectorStep;
+import org.opensearch.flowframework.workflow.DeleteIndexStep;
 import org.opensearch.flowframework.workflow.DeleteIngestPipelineStep;
 import org.opensearch.flowframework.workflow.DeleteModelStep;
 import org.opensearch.flowframework.workflow.DeleteSearchPipelineStep;
@@ -73,7 +74,7 @@ public enum WorkflowResources {
         UpdateSearchPipelineStep.NAME
     ),
     /** Workflow steps for creating an index and associated created resource */
-    CREATE_INDEX(CreateIndexStep.NAME, WorkflowResources.INDEX_NAME, NoOpStep.NAME, UpdateIndexStep.NAME),
+    CREATE_INDEX(CreateIndexStep.NAME, WorkflowResources.INDEX_NAME, DeleteIndexStep.NAME, UpdateIndexStep.NAME),
     /** Workflow steps for reindex a source index to destination index and associated created resource */
     REINDEX(ReindexStep.NAME, WorkflowResources.INDEX_NAME, NoOpStep.NAME, null),
     /** Workflow steps for registering/deleting an agent and the associated created resource */

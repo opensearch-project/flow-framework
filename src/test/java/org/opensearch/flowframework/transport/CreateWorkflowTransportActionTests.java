@@ -213,7 +213,7 @@ public class CreateWorkflowTransportActionTests extends OpenSearchTestCase {
 
         @SuppressWarnings("unchecked")
         ActionListener<WorkflowResponse> listener = mock(ActionListener.class);
-        WorkflowRequest workflowRequest = new WorkflowRequest(null, template, new String[] { "off" }, false, Collections.emptyMap(), null, Collections.emptyMap());
+        WorkflowRequest workflowRequest = new WorkflowRequest(null, template, new String[] { "off" }, false, Collections.emptyMap(), null, Collections.emptyMap(), false);
 
         doAnswer(invocation -> {
             ActionListener<SearchResponse> searchListener = invocation.getArgument(1);
@@ -257,7 +257,8 @@ public class CreateWorkflowTransportActionTests extends OpenSearchTestCase {
             false,
             Collections.emptyMap(),
             null,
-            Collections.emptyMap()
+            Collections.emptyMap(),
+            false
         );
 
         // Bypass checkMaxWorkflows and force onResponse
@@ -296,7 +297,8 @@ public class CreateWorkflowTransportActionTests extends OpenSearchTestCase {
             false,
             Collections.emptyMap(),
             null,
-            Collections.emptyMap()
+            Collections.emptyMap(),
+            false
         );
 
         // Bypass checkMaxWorkflows and force onResponse
@@ -511,7 +513,8 @@ public class CreateWorkflowTransportActionTests extends OpenSearchTestCase {
             true,
             Collections.emptyMap(),
             null,
-            Collections.emptyMap()
+            Collections.emptyMap(),
+            false
         );
 
         // Bypass checkMaxWorkflows and force onResponse
@@ -572,7 +575,8 @@ public class CreateWorkflowTransportActionTests extends OpenSearchTestCase {
             true,
             Collections.emptyMap(),
             null,
-            Collections.emptyMap()
+            Collections.emptyMap(),
+            false
         );
 
         // Bypass checkMaxWorkflows and force onResponse

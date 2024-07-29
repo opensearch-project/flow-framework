@@ -26,6 +26,10 @@ public class GetResourceStep implements WorkflowStep {
     /** The name of this step */
     public static final String NAME = "get_resource";
 
+    /**
+     * Instantiate this class
+     * @param resourceCreated the created resource
+     */
     public GetResourceStep(ResourceCreated resourceCreated) {
         this.resourceCreated = resourceCreated;
     }
