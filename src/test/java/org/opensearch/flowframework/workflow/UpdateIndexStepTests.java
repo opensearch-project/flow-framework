@@ -102,6 +102,7 @@ public class UpdateIndexStepTests extends OpenSearchTestCase {
         verify(indicesAdminClient, times(1)).updateSettings(updateSettingsRequestCaptor.capture(), any());
 
         Settings settingsToUpdate = updateSettingsRequestCaptor.getValue().settings();
+        assertEquals(2, settingsToUpdate.size());
         assertEquals("_none", settingsToUpdate.get("index.default_pipeline"));
         assertEquals("_none", settingsToUpdate.get("index.search.default_pipeline"));
     }
