@@ -338,6 +338,78 @@ public class CreateWorkflowTransportActionTests extends OpenSearchTestCase {
         assertEquals("1", workflowResponseCaptor.getValue().getWorkflowId());
     }
 
+    public void testUpdateWorkflowWithReprovision() {
+        @SuppressWarnings("unchecked")
+        ActionListener<WorkflowResponse> listener = mock(ActionListener.class);
+        WorkflowRequest workflowRequest = new WorkflowRequest(
+            "1",
+            template,
+            new String[] { "off" },
+            false,
+            Collections.emptyMap(),
+            null,
+            Collections.emptyMap(),
+            true
+        );
+
+        doAnswer(invocation -> {
+            ActionListener<GetResponse> getListener = invocation.getArgument(1);
+            GetResponse getResponse = mock(GetResponse.class);
+            when(getResponse.isExists()).thenReturn(true);
+            when(getResponse.getSourceAsString()).thenReturn(template.toJson());
+            getListener.onResponse(getResponse);
+            return null;
+        }).when(client).get(any(GetRequest.class), any());
+
+        doAnswer(invocation -> {
+            ActionListener<WorkflowResponse> responseListener = invocation.getArgument(2);
+            responseListener.onResponse(new WorkflowResponse("1"));
+            return null;
+        }).when(client).execute(any(), any(), any());
+
+        createWorkflowTransportAction.doExecute(mock(Task.class), workflowRequest, listener);
+        ArgumentCaptor<WorkflowResponse> responseCaptor = ArgumentCaptor.forClass(WorkflowResponse.class);
+        verify(listener, times(1)).onResponse(responseCaptor.capture());
+
+        assertEquals("1", responseCaptor.getValue().getWorkflowId());
+    }
+
+    public void testFailedToUpdateWorkflowWithReprovision() {
+        @SuppressWarnings("unchecked")
+        ActionListener<WorkflowResponse> listener = mock(ActionListener.class);
+        WorkflowRequest workflowRequest = new WorkflowRequest(
+            "1",
+            template,
+            new String[] { "off" },
+            false,
+            Collections.emptyMap(),
+            null,
+            Collections.emptyMap(),
+            true
+        );
+
+        doAnswer(invocation -> {
+            ActionListener<GetResponse> getListener = invocation.getArgument(1);
+            GetResponse getResponse = mock(GetResponse.class);
+            when(getResponse.isExists()).thenReturn(true);
+            when(getResponse.getSourceAsString()).thenReturn(template.toJson());
+            getListener.onResponse(getResponse);
+            return null;
+        }).when(client).get(any(GetRequest.class), any());
+
+        doAnswer(invocation -> {
+            ActionListener<WorkflowResponse> responseListener = invocation.getArgument(2);
+            responseListener.onFailure(new Exception("failed"));
+            return null;
+        }).when(client).execute(any(), any(), any());
+
+        createWorkflowTransportAction.doExecute(mock(Task.class), workflowRequest, listener);
+        ArgumentCaptor<Exception> responseCaptor = ArgumentCaptor.forClass(Exception.class);
+        verify(listener, times(1)).onFailure(responseCaptor.capture());
+
+        assertEquals("Reprovisioning failed.", responseCaptor.getValue().getMessage());
+    }
+
     public void testFailedToUpdateWorkflow() {
         @SuppressWarnings("unchecked")
         ActionListener<WorkflowResponse> listener = mock(ActionListener.class);

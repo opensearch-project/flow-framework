@@ -13,8 +13,10 @@ import org.opensearch.core.rest.RestStatus;
 import org.opensearch.core.xcontent.XContentBuilder;
 import org.opensearch.core.xcontent.XContentParser;
 import org.opensearch.core.xcontent.XContentParser.Token;
+import org.opensearch.flowframework.common.CommonValue;
 import org.opensearch.flowframework.exception.FlowFrameworkException;
 import org.opensearch.flowframework.workflow.WorkflowData;
+import org.opensearch.ml.common.connector.ConnectorAction;
 import org.opensearch.test.OpenSearchTestCase;
 
 import java.io.IOException;
@@ -24,6 +26,9 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 
 public class ParseUtilsTests extends OpenSearchTestCase {
     public void testResourceToStringToJson() throws IOException {
@@ -252,5 +257,55 @@ public class ParseUtilsTests extends OpenSearchTestCase {
         inputs.put("key1", "3.14");
 
         assertThrows(IllegalArgumentException.class, () -> ParseUtils.parseIfExists(inputs, "key1", Integer.class));
+    }
+
+    public void testUserInputsEquals() throws Exception {
+
+        Map<String, String> params = Map.ofEntries(Map.entry("endpoint", "endpoint"), Map.entry("temp", "7"));
+        Map<String, String> credentials = Map.ofEntries(Map.entry("key1", "value1"), Map.entry("key2", "value2"));
+        Map<?, ?>[] originalActions = new Map<?, ?>[] {
+            Map.ofEntries(
+                Map.entry(ConnectorAction.ACTION_TYPE_FIELD, ConnectorAction.ActionType.PREDICT.name()),
+                Map.entry(ConnectorAction.METHOD_FIELD, "post"),
+                Map.entry(ConnectorAction.URL_FIELD, "foo.test"),
+                Map.entry(
+                    ConnectorAction.REQUEST_BODY_FIELD,
+                    "{ \"model\": \"${parameters.model1}\", \"messages\": ${parameters.messages1} }"
+                )
+            ) };
+
+        Map<?, ?>[] updatedActions = new Map<?, ?>[] {
+            Map.ofEntries(
+                Map.entry(ConnectorAction.ACTION_TYPE_FIELD, ConnectorAction.ActionType.PREDICT.name()),
+                Map.entry(ConnectorAction.METHOD_FIELD, "put"),
+                Map.entry(ConnectorAction.URL_FIELD, "bar.test"),
+                Map.entry(
+                    ConnectorAction.REQUEST_BODY_FIELD,
+                    "{ \"model\": \"${parameters.model2}\", \"messages\": ${parameters.messages2} }"
+                )
+            ) };
+
+        Map<String, Object> originalInputs = Map.ofEntries(
+            Map.entry(CommonValue.NAME_FIELD, "test"),
+            Map.entry(CommonValue.DESCRIPTION_FIELD, "description"),
+            Map.entry(CommonValue.VERSION_FIELD, "1"),
+            Map.entry(CommonValue.PROTOCOL_FIELD, "test"),
+            Map.entry(CommonValue.PARAMETERS_FIELD, params),
+            Map.entry(CommonValue.CREDENTIAL_FIELD, credentials),
+            Map.entry(CommonValue.ACTIONS_FIELD, originalActions)
+        );
+
+        Map<String, Object> updatedInputs = Map.ofEntries(
+            Map.entry(CommonValue.NAME_FIELD, "test"),
+            Map.entry(CommonValue.DESCRIPTION_FIELD, "description"),
+            Map.entry(CommonValue.VERSION_FIELD, "1"),
+            Map.entry(CommonValue.PROTOCOL_FIELD, "test"),
+            Map.entry(CommonValue.PARAMETERS_FIELD, params),
+            Map.entry(CommonValue.CREDENTIAL_FIELD, credentials),
+            Map.entry(CommonValue.ACTIONS_FIELD, updatedActions)
+        );
+
+        assertFalse(ParseUtils.userInputsEquals(originalInputs, updatedInputs));
+
     }
 }

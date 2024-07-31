@@ -134,6 +134,18 @@ public class RestCreateWorkflowAction extends BaseRestHandler {
                 new BytesRestResponse(ffe.getRestStatus(), ffe.toXContent(channel.newErrorBuilder(), ToXContent.EMPTY_PARAMS))
             );
         }
+        if (reprovision && workflowId == null) {
+            // Consume params and content so custom exception is processed
+            params.keySet().stream().forEach(request::param);
+            request.content();
+            FlowFrameworkException ffe = new FlowFrameworkException(
+                "You can not use the " + REPROVISION_WORKFLOW + " parameter to create a new template.",
+                RestStatus.BAD_REQUEST
+            );
+            return channel -> channel.sendResponse(
+                new BytesRestResponse(ffe.getRestStatus(), ffe.toXContent(channel.newErrorBuilder(), ToXContent.EMPTY_PARAMS))
+            );
+        }
         try {
             Template template;
             Map<String, String> useCaseDefaultsMap = Collections.emptyMap();
