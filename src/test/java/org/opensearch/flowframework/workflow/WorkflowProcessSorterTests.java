@@ -8,6 +8,7 @@
  */
 package org.opensearch.flowframework.workflow;
 
+import org.opensearch.Version;
 import org.opensearch.client.AdminClient;
 import org.opensearch.client.Client;
 import org.opensearch.cluster.service.ClusterService;
@@ -20,6 +21,8 @@ import org.opensearch.core.rest.RestStatus;
 import org.opensearch.flowframework.common.FlowFrameworkSettings;
 import org.opensearch.flowframework.exception.FlowFrameworkException;
 import org.opensearch.flowframework.indices.FlowFrameworkIndicesHandler;
+import org.opensearch.flowframework.model.ResourceCreated;
+import org.opensearch.flowframework.model.Template;
 import org.opensearch.flowframework.model.TemplateTestJsonUtil;
 import org.opensearch.flowframework.model.Workflow;
 import org.opensearch.flowframework.model.WorkflowEdge;
@@ -33,6 +36,7 @@ import org.junit.AfterClass;
 import org.junit.BeforeClass;
 
 import java.io.IOException;
+import java.time.Instant;
 import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
@@ -42,14 +46,17 @@ import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import static org.opensearch.flowframework.common.CommonValue.CONFIGURATIONS;
 import static org.opensearch.flowframework.common.CommonValue.DEPROVISION_WORKFLOW_THREAD_POOL;
 import static org.opensearch.flowframework.common.CommonValue.FLOW_FRAMEWORK_THREAD_POOL_PREFIX;
+import static org.opensearch.flowframework.common.CommonValue.PIPELINE_ID;
 import static org.opensearch.flowframework.common.FlowFrameworkSettings.FLOW_FRAMEWORK_ENABLED;
 import static org.opensearch.flowframework.common.FlowFrameworkSettings.MAX_WORKFLOWS;
 import static org.opensearch.flowframework.common.FlowFrameworkSettings.MAX_WORKFLOW_STEPS;
 import static org.opensearch.flowframework.common.FlowFrameworkSettings.TASK_REQUEST_RETRY_DURATION;
 import static org.opensearch.flowframework.common.FlowFrameworkSettings.WORKFLOW_REQUEST_TIMEOUT;
 import static org.opensearch.flowframework.common.WorkflowResources.CONNECTOR_ID;
+import static org.opensearch.flowframework.common.WorkflowResources.INDEX_NAME;
 import static org.opensearch.flowframework.common.WorkflowResources.MODEL_ID;
 import static org.opensearch.flowframework.model.TemplateTestJsonUtil.edge;
 import static org.opensearch.flowframework.model.TemplateTestJsonUtil.node;
@@ -57,6 +64,7 @@ import static org.opensearch.flowframework.model.TemplateTestJsonUtil.nodeWithTy
 import static org.opensearch.flowframework.model.TemplateTestJsonUtil.nodeWithTypeAndPreviousNodes;
 import static org.opensearch.flowframework.model.TemplateTestJsonUtil.nodeWithTypeAndTimeout;
 import static org.opensearch.flowframework.model.TemplateTestJsonUtil.workflow;
+import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -87,6 +95,12 @@ public class WorkflowProcessSorterTests extends OpenSearchTestCase {
     private static ClusterService clusterService = mock(ClusterService.class);
     private static FlowFrameworkSettings flowFrameworkSettings;
     private static WorkflowStepFactory workflowStepFactory;
+
+    private static Version templateVersion;
+    private static List<Version> compatibilityVersions;
+    private static Template reprovisionTemplate;
+    private static ResourceCreated pipelineResource;
+    private static ResourceCreated indexResource;
 
     @BeforeClass
     public static void setup() throws IOException {
@@ -120,6 +134,53 @@ public class WorkflowProcessSorterTests extends OpenSearchTestCase {
         );
         workflowStepFactory = new WorkflowStepFactory(testThreadPool, mlClient, flowFrameworkIndicesHandler, flowFrameworkSettings, client);
         workflowProcessSorter = new WorkflowProcessSorter(workflowStepFactory, testThreadPool, flowFrameworkSettings);
+
+        templateVersion = Version.fromString("1.0.0");
+        compatibilityVersions = List.of(Version.fromString("2.1.6"), Version.fromString("3.0.0"));
+
+        // Register Search Pipeline Step
+        String pipelineId = "pipelineId";
+        String pipelineConfigurations =
+            "{“description”:“An neural ingest pipeline”,“processors”:[{“text_embedding”:{“field_map”:{“text”:“analyzed_text”},“model_id”:“sdsadsadasd”}}]}";
+        WorkflowNode createSearchPipeline = new WorkflowNode(
+            "workflow_step_1",
+            CreateSearchPipelineStep.NAME,
+            Map.of(),
+            Map.ofEntries(Map.entry(CONFIGURATIONS, pipelineConfigurations), Map.entry(PIPELINE_ID, pipelineId))
+        );
+
+        // Create Index Step
+        String indexName = "indexName";
+        String configurations =
+            "{\"settings\":{\"index\":{\"knn\":true,\"number_of_shards\":2,\"number_of_replicas\":1,\"default_pipeline\":\"_none\",\"search\":{\"default_pipeline\":\"${{workflow_step_1.pipeline_id}}\"}}},\"mappings\":{\"properties\":{\"age\":{\"type\":\"integer\"}}},\"aliases\":{\"sample-alias1\":{}}}";
+        WorkflowNode createIndex = new WorkflowNode(
+            "workflow_step_2",
+            CreateIndexStep.NAME,
+            Map.ofEntries(Map.entry("workflow_step_1", PIPELINE_ID)),
+            Map.ofEntries(Map.entry(INDEX_NAME, indexName), Map.entry(CONFIGURATIONS, configurations))
+        );
+        List<WorkflowNode> nodes = List.of(createSearchPipeline, createIndex);
+        List<WorkflowEdge> edges = List.of(new WorkflowEdge("workflow_step_1", "workflow_step_2"));
+        Workflow workflow = new Workflow(Map.of(), nodes, edges);
+        Map<String, Object> uiMetadata = null;
+
+        Instant now = Instant.now();
+        reprovisionTemplate = new Template(
+            "test",
+            "a test template",
+            "test use case",
+            templateVersion,
+            compatibilityVersions,
+            Map.of("provision", workflow),
+            uiMetadata,
+            null,
+            now,
+            now,
+            null
+        );
+
+        pipelineResource = new ResourceCreated(CreateSearchPipelineStep.NAME, "workflow_step_1", PIPELINE_ID, pipelineId);
+        indexResource = new ResourceCreated(CreateIndexStep.NAME, "workflow_step_2", INDEX_NAME, indexName);
     }
 
     @AfterClass
@@ -559,4 +620,204 @@ public class WorkflowProcessSorterTests extends OpenSearchTestCase {
         TimeValue registerRemoteModelTimeout = workflowProcessSorter.parseTimeout(registerModel);
         assertEquals(10, registerRemoteModelTimeout.getSeconds());
     }
+
+    public void testCreateReprovisionSequenceWithNoChange() {
+        FlowFrameworkException ex = expectThrows(
+            FlowFrameworkException.class,
+            () -> workflowProcessSorter.createReprovisionSequence(
+                "1",
+                reprovisionTemplate,
+                reprovisionTemplate,
+                List.of(pipelineResource, indexResource)
+            )
+        );
+
+        assertEquals("Template does not contain any modifications", ex.getMessage());
+        assertEquals(RestStatus.BAD_REQUEST, ex.getRestStatus());
+
+    }
+
+    public void testCreateReprovisionSequenceWithDeletion() {
+        // Register Search Pipeline Step
+        String pipelineId = "pipelineId";
+        String pipelineConfigurations =
+            "{“description”:“An neural ingest pipeline”,“processors”:[{“text_embedding”:{“field_map”:{“text”:“analyzed_text”},“model_id”:“sdsadsadasd”}}]}";
+        WorkflowNode createSearchPipeline = new WorkflowNode(
+            "workflow_step_1",
+            CreateSearchPipelineStep.NAME,
+            Map.of(),
+            Map.ofEntries(Map.entry(CONFIGURATIONS, pipelineConfigurations), Map.entry(PIPELINE_ID, pipelineId))
+        );
+        List<WorkflowNode> nodes = List.of(createSearchPipeline);
+        Workflow workflow = new Workflow(Map.of(), nodes, List.of());
+        Map<String, Object> uiMetadata = null;
+
+        Instant now = Instant.now();
+        Template templateWithNoCreateIndex = new Template(
+            "test",
+            "a test template",
+            "test use case",
+            templateVersion,
+            compatibilityVersions,
+            Map.of("provision", workflow),
+            uiMetadata,
+            null,
+            now,
+            now,
+            null
+        );
+
+        FlowFrameworkException ex = expectThrows(
+            FlowFrameworkException.class,
+            () -> workflowProcessSorter.createReprovisionSequence(
+                "1",
+                reprovisionTemplate,
+                templateWithNoCreateIndex,
+                List.of(pipelineResource, indexResource)
+            )
+        );
+
+        assertEquals("Workflow Step deletion is not supported when reprovisioning a template.", ex.getMessage());
+        assertEquals(RestStatus.BAD_REQUEST, ex.getRestStatus());
+
+    }
+
+    public void testCreateReprovisionSequenceWithAdditiveModification() throws Exception {
+
+        // Register Search Pipeline Step
+        String pipelineId = "pipelineId";
+        String pipelineConfigurations =
+            "{“description”:“An neural ingest pipeline”,“processors”:[{“text_embedding”:{“field_map”:{“text”:“analyzed_text”},“model_id”:“sdsadsadasd”}}]}";
+        WorkflowNode createSearchPipeline = new WorkflowNode(
+            "workflow_step_1",
+            CreateSearchPipelineStep.NAME,
+            Map.of(),
+            Map.ofEntries(Map.entry(CONFIGURATIONS, pipelineConfigurations), Map.entry(PIPELINE_ID, pipelineId))
+        );
+
+        // Create Index Step
+        String indexName = "indexName";
+        String configurations =
+            "{\"settings\":{\"index\":{\"knn\":true,\"number_of_shards\":2,\"number_of_replicas\":1,\"default_pipeline\":\"_none\",\"search\":{\"default_pipeline\":\"${{workflow_step_1.pipeline_id}}\"}}},\"mappings\":{\"properties\":{\"age\":{\"type\":\"integer\"}}},\"aliases\":{\"sample-alias1\":{}}}";
+        WorkflowNode createIndex = new WorkflowNode(
+            "workflow_step_2",
+            CreateIndexStep.NAME,
+            Map.ofEntries(Map.entry("workflow_step_1", PIPELINE_ID)),
+            Map.ofEntries(Map.entry(INDEX_NAME, indexName), Map.entry(CONFIGURATIONS, configurations))
+        );
+
+        // Register ingest pipeline step
+        String ingestPipelineId = "pipelineId";
+        String ingestPipelineConfigurations =
+            "{“description”:“An neural ingest pipeline”,“processors”:[{“text_embedding”:{“field_map”:{“text”:“analyzed_text”},“model_id”:“sdsadsadasd”}}]}";
+        WorkflowNode createIngestPipeline = new WorkflowNode(
+            "workflow_step_3",
+            CreateIngestPipelineStep.NAME,
+            Map.of(),
+            Map.ofEntries(Map.entry(CONFIGURATIONS, ingestPipelineConfigurations), Map.entry(PIPELINE_ID, ingestPipelineId))
+        );
+
+        List<WorkflowNode> nodes = List.of(createSearchPipeline, createIndex, createIngestPipeline);
+        List<WorkflowEdge> edges = List.of(new WorkflowEdge("workflow_step_1", "workflow_step_2"));
+        Workflow workflow = new Workflow(Map.of(), nodes, edges);
+        Map<String, Object> uiMetadata = null;
+
+        Instant now = Instant.now();
+        Template templateWithAdditiveModification = new Template(
+            "test",
+            "a test template",
+            "test use case",
+            templateVersion,
+            compatibilityVersions,
+            Map.of("provision", workflow),
+            uiMetadata,
+            null,
+            now,
+            now,
+            null
+        );
+
+        List<ProcessNode> reprovisionSequence = workflowProcessSorter.createReprovisionSequence(
+            "1",
+            reprovisionTemplate,
+            templateWithAdditiveModification,
+            List.of(pipelineResource, indexResource)
+        );
+
+        // Should result in a 3 step sequence
+        assertTrue(reprovisionSequence.size() == 3);
+        List<String> reprovisionWorkflowStepNames = reprovisionSequence.stream()
+            .map(ProcessNode::workflowStep)
+            .map(WorkflowStep::getName)
+            .collect(Collectors.toList());
+        // Assert 1 create ingest pipeline step in the sequence
+        assertTrue(reprovisionWorkflowStepNames.contains(CreateIngestPipelineStep.NAME));
+        // Assert 2 get resource steps in the sequence
+        assertTrue(
+            reprovisionWorkflowStepNames.stream().filter(x -> x.equals(GetResourceStep.NAME)).collect(Collectors.toList()).size() == 2
+        );
+    }
+
+    public void testCreateReprovisionSequenceWithUpdates() throws Exception {
+        // Register Search Pipeline Step with modified model ID
+        String pipelineId = "pipelineId";
+        String pipelineConfigurations =
+            "{“description”:“An neural ingest pipeline”,“processors”:[{“text_embedding”:{“field_map”:{“text”:“analyzed_text”},“model_id”:“abcdefgg”}}]}";
+        WorkflowNode createSearchPipeline = new WorkflowNode(
+            "workflow_step_1",
+            CreateSearchPipelineStep.NAME,
+            Map.of(),
+            Map.ofEntries(Map.entry(CONFIGURATIONS, pipelineConfigurations), Map.entry(PIPELINE_ID, pipelineId))
+        );
+
+        // Create Index Step with modifies index settings
+        String indexName = "indexName";
+        String configurations =
+            "{\"settings\":{\"index\":{\"knn\":true,\"number_of_shards\":2,\"number_of_replicas\":1,\"default_pipeline\":\"test_pipeline_id\",\"search\":{\"default_pipeline\":\"${{workflow_step_1.pipeline_id}}\"}}},\"mappings\":{\"properties\":{\"age\":{\"type\":\"integer\"}}},\"aliases\":{\"sample-alias1\":{}}}";
+        WorkflowNode createIndex = new WorkflowNode(
+            "workflow_step_2",
+            CreateIndexStep.NAME,
+            Map.ofEntries(Map.entry("workflow_step_1", PIPELINE_ID)),
+            Map.ofEntries(Map.entry(INDEX_NAME, indexName), Map.entry(CONFIGURATIONS, configurations))
+        );
+
+        List<WorkflowNode> nodes = List.of(createSearchPipeline, createIndex);
+        List<WorkflowEdge> edges = List.of(new WorkflowEdge("workflow_step_1", "workflow_step_2"));
+        Workflow workflow = new Workflow(Map.of(), nodes, edges);
+        Map<String, Object> uiMetadata = null;
+
+        Instant now = Instant.now();
+        Template templateWithModifiedNodes = new Template(
+            "test",
+            "a test template",
+            "test use case",
+            templateVersion,
+            compatibilityVersions,
+            Map.of("provision", workflow),
+            uiMetadata,
+            null,
+            now,
+            now,
+            null
+        );
+
+        List<ProcessNode> reprovisionSequence = workflowProcessSorter.createReprovisionSequence(
+            "1",
+            reprovisionTemplate,
+            templateWithModifiedNodes,
+            List.of(pipelineResource, indexResource)
+        );
+
+        // Should result in a 2 step sequence
+        assertTrue(reprovisionSequence.size() == 2);
+        List<String> reprovisionWorkflowStepNames = reprovisionSequence.stream()
+            .map(ProcessNode::workflowStep)
+            .map(WorkflowStep::getName)
+            .collect(Collectors.toList());
+        // Assert 1 update search pipeline step in the sequence
+        assertTrue(reprovisionWorkflowStepNames.contains(UpdateSearchPipelineStep.NAME));
+        // Assert update index step in the sequence
+        assertTrue(reprovisionWorkflowStepNames.contains(UpdateIndexStep.NAME));
+    }
+
 }
