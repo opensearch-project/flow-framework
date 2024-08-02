@@ -111,52 +111,32 @@ public class RestCreateWorkflowAction extends BaseRestHandler {
             );
         }
         if (!provision && !params.isEmpty()) {
-            // Consume params and content so custom exception is processed
-            params.keySet().stream().forEach(request::param);
-            request.content();
             FlowFrameworkException ffe = new FlowFrameworkException(
                 "Only the parameters " + request.consumedParams() + " are permitted unless the provision parameter is set to true.",
                 RestStatus.BAD_REQUEST
             );
-            return channel -> channel.sendResponse(
-                new BytesRestResponse(ffe.getRestStatus(), ffe.toXContent(channel.newErrorBuilder(), ToXContent.EMPTY_PARAMS))
-            );
+            return processError(ffe, params, request);
         }
         if (provision && updateFields) {
-            // Consume params and content so custom exception is processed
-            params.keySet().stream().forEach(request::param);
-            request.content();
             FlowFrameworkException ffe = new FlowFrameworkException(
                 "You can not use both the " + PROVISION_WORKFLOW + " and " + UPDATE_WORKFLOW_FIELDS + " parameters in the same request.",
                 RestStatus.BAD_REQUEST
             );
-            return channel -> channel.sendResponse(
-                new BytesRestResponse(ffe.getRestStatus(), ffe.toXContent(channel.newErrorBuilder(), ToXContent.EMPTY_PARAMS))
-            );
+            return processError(ffe, params, request);
         }
         if (reprovision && workflowId == null) {
-            // Consume params and content so custom exception is processed
-            params.keySet().stream().forEach(request::param);
-            request.content();
             FlowFrameworkException ffe = new FlowFrameworkException(
                 "You can not use the " + REPROVISION_WORKFLOW + " parameter to create a new template.",
                 RestStatus.BAD_REQUEST
             );
-            return channel -> channel.sendResponse(
-                new BytesRestResponse(ffe.getRestStatus(), ffe.toXContent(channel.newErrorBuilder(), ToXContent.EMPTY_PARAMS))
-            );
+            return processError(ffe, params, request);
         }
         if (reprovision && useCase != null) {
-            // Consume params and content so custom exception is processed
-            params.keySet().stream().forEach(request::param);
-            request.content();
             FlowFrameworkException ffe = new FlowFrameworkException(
                 "You cannot use the " + REPROVISION_WORKFLOW + " and " + USE_CASE + " parameters in the same request.",
                 RestStatus.BAD_REQUEST
             );
-            return channel -> channel.sendResponse(
-                new BytesRestResponse(ffe.getRestStatus(), ffe.toXContent(channel.newErrorBuilder(), ToXContent.EMPTY_PARAMS))
-            );
+            return processError(ffe, params, request);
         }
         try {
             Template template;
@@ -276,5 +256,14 @@ public class RestCreateWorkflowAction extends BaseRestHandler {
                 new BytesRestResponse(ex.getRestStatus(), ex.toXContent(channel.newErrorBuilder(), ToXContent.EMPTY_PARAMS))
             );
         }
+    }
+
+    private RestChannelConsumer processError(FlowFrameworkException ffe, Map<String, String> params, RestRequest request) {
+        // Consume params and content so custom exception is processed
+        params.keySet().stream().forEach(request::param);
+        request.content();
+        return channel -> channel.sendResponse(
+            new BytesRestResponse(ffe.getRestStatus(), ffe.toXContent(channel.newErrorBuilder(), ToXContent.EMPTY_PARAMS))
+        );
     }
 }

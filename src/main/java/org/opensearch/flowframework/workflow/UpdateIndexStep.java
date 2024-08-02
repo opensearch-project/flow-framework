@@ -135,7 +135,8 @@ public class UpdateIndexStep implements WorkflowStep {
                         }
                     }, ex -> {
                         Exception e = getSafeException(ex);
-                        String errorMessage = (e == null ? "Failed to update the index settings for index " + indexName : e.getMessage());
+                        String errorMessage = (e == null ? "Failed to retrieve the index settings for index " + indexName : e.getMessage());
+                        logger.error(errorMessage, e);
                         updateIndexFuture.onFailure(new WorkflowStepException(errorMessage, ExceptionsHelper.status(e)));
                     }));
 
