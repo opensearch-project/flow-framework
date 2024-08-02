@@ -265,7 +265,7 @@ public class CreateWorkflowTransportAction extends HandledTransportAction<Workfl
                                 ActionListener.wrap(reprovisionResponse -> {
                                     listener.onResponse(new WorkflowResponse(reprovisionResponse.getWorkflowId()));
                                 }, exception -> {
-                                    String errorMessage = "Reprovisioning failed.";
+                                    String errorMessage = "Reprovisioning failed for workflow " + workflowId;
                                     logger.error(errorMessage, exception);
                                     if (exception instanceof FlowFrameworkException) {
                                         listener.onFailure(exception);

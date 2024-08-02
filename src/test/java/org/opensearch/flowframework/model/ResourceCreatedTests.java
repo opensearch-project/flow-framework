@@ -23,7 +23,7 @@ public class ResourceCreatedTests extends OpenSearchTestCase {
     }
 
     public void testParseFeature() throws IOException {
-        String workflowStepName = CREATE_CONNECTOR.getWorkflowStep();
+        String workflowStepName = CREATE_CONNECTOR.getCreateStep();
         String resourceType = getResourceByWorkflowStep(workflowStepName);
         ResourceCreated resourceCreated = new ResourceCreated(workflowStepName, "workflow_step_1", resourceType, "L85p1IsBbfF");
         assertEquals(workflowStepName, resourceCreated.workflowStepName());

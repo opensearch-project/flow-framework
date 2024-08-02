@@ -111,34 +111,40 @@ public class ReprovisionWorkflowTransportAction extends HandledTransportAction<R
 
         String workflowId = request.getWorkflowId();
 
-        // Original template is retrieved from index, attempt to decrypt any exisiting credentials before processing
-        Template originalTemplate = encryptorUtils.decryptTemplateCredentials(request.getOriginalTemplate());
-        Template updatedTemplate = request.getUpdatedTemplate();
-
-        // Validate updated template prior to execution
-        Workflow provisionWorkflow = updatedTemplate.workflows().get(PROVISION_WORKFLOW);
-        List<ProcessNode> updatedProcessSequence = workflowProcessSorter.sortProcessNodes(
-            provisionWorkflow,
-            request.getWorkflowId(),
-            Collections.emptyMap() // TODO : Add suport to reprovision substitution templates
-        );
-
-        try {
-            workflowProcessSorter.validate(updatedProcessSequence, pluginsService);
-        } catch (Exception e) {
-            String errormessage = "Workflow validation failed for workflow " + request.getWorkflowId();
-            listener.onFailure(new FlowFrameworkException(errormessage, RestStatus.BAD_REQUEST));
-        }
-
-        // Retrieve resources created
+        // Retrieve state and resources created
         GetWorkflowStateRequest getStateRequest = new GetWorkflowStateRequest(workflowId, true);
         try (ThreadContext.StoredContext context = client.threadPool().getThreadContext().stashContext()) {
             logger.info("Querying state for workflow: {}", workflowId);
             client.execute(GetWorkflowStateAction.INSTANCE, getStateRequest, ActionListener.wrap(response -> {
                 context.restore();
 
+                if (!ProvisioningProgress.DONE.equals(ProvisioningProgress.valueOf(response.getWorkflowState().getState()))) {
+                    String errorMessage = "The template can not be reprovisioned unless its provisioning state is DONE: " + workflowId;
+                    throw new FlowFrameworkException(errorMessage, RestStatus.BAD_REQUEST);
+                }
+
                 // Generate reprovision sequence
                 List<ResourceCreated> resourceCreated = response.getWorkflowState().resourcesCreated();
+
+                // Original template is retrieved from index, attempt to decrypt any exisiting credentials before processing
+                Template originalTemplate = encryptorUtils.decryptTemplateCredentials(request.getOriginalTemplate());
+                Template updatedTemplate = request.getUpdatedTemplate();
+
+                // Validate updated template prior to execution
+                Workflow provisionWorkflow = updatedTemplate.workflows().get(PROVISION_WORKFLOW);
+                List<ProcessNode> updatedProcessSequence = workflowProcessSorter.sortProcessNodes(
+                    provisionWorkflow,
+                    request.getWorkflowId(),
+                    Collections.emptyMap() // TODO : Add suport to reprovision substitution templates
+                );
+
+                try {
+                    workflowProcessSorter.validate(updatedProcessSequence, pluginsService);
+                } catch (Exception e) {
+                    String errormessage = "Workflow validation failed for workflow " + request.getWorkflowId();
+                    logger.error(errormessage, e);
+                    listener.onFailure(new FlowFrameworkException(errormessage, RestStatus.BAD_REQUEST));
+                }
                 List<ProcessNode> reprovisionProcessSequence = workflowProcessSorter.createReprovisionSequence(
                     workflowId,
                     originalTemplate,

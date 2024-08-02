@@ -51,7 +51,7 @@ public class UpdateIndexStep implements WorkflowStep {
     /**
      * Instantiate this class
      *
-     * @param client Client to create an index
+     * @param client Client to update an index
      */
     public UpdateIndexStep(Client client) {
         this.client = client;

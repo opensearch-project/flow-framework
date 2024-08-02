@@ -407,7 +407,7 @@ public class CreateWorkflowTransportActionTests extends OpenSearchTestCase {
         ArgumentCaptor<Exception> responseCaptor = ArgumentCaptor.forClass(Exception.class);
         verify(listener, times(1)).onFailure(responseCaptor.capture());
 
-        assertEquals("Reprovisioning failed.", responseCaptor.getValue().getMessage());
+        assertEquals("Reprovisioning failed for workflow 1", responseCaptor.getValue().getMessage());
     }
 
     public void testFailedToUpdateWorkflow() {
@@ -696,7 +696,7 @@ public class CreateWorkflowTransportActionTests extends OpenSearchTestCase {
     private Template generateValidTemplate() {
         WorkflowNode createConnector = new WorkflowNode(
             "workflow_step_1",
-            CREATE_CONNECTOR.getWorkflowStep(),
+            CREATE_CONNECTOR.getCreateStep(),
             Collections.emptyMap(),
             Map.ofEntries(
                 Map.entry("name", ""),
@@ -710,13 +710,13 @@ public class CreateWorkflowTransportActionTests extends OpenSearchTestCase {
         );
         WorkflowNode registerModel = new WorkflowNode(
             "workflow_step_2",
-            REGISTER_REMOTE_MODEL.getWorkflowStep(),
+            REGISTER_REMOTE_MODEL.getCreateStep(),
             Map.ofEntries(Map.entry("workflow_step_1", CONNECTOR_ID)),
             Map.ofEntries(Map.entry("name", "name"), Map.entry("function_name", "remote"), Map.entry("description", "description"))
         );
         WorkflowNode deployModel = new WorkflowNode(
             "workflow_step_3",
-            DEPLOY_MODEL.getWorkflowStep(),
+            DEPLOY_MODEL.getCreateStep(),
             Map.ofEntries(Map.entry("workflow_step_2", MODEL_ID)),
             Collections.emptyMap()
         );

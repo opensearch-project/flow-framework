@@ -16,6 +16,7 @@ import org.opensearch.common.util.concurrent.ThreadContext;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.flowframework.common.FlowFrameworkSettings;
 import org.opensearch.flowframework.indices.FlowFrameworkIndicesHandler;
+import org.opensearch.flowframework.model.ProvisioningProgress;
 import org.opensearch.flowframework.model.ResourceCreated;
 import org.opensearch.flowframework.model.Template;
 import org.opensearch.flowframework.model.Workflow;
@@ -109,13 +110,14 @@ public class ReprovisionWorkflowTransportActionTests extends OpenSearchTestCase 
         doNothing().when(workflowProcessSorter).validate(any(), any());
         when(encryptorUtils.decryptTemplateCredentials(any())).thenReturn(mockTemplate);
 
-        // Stub resources created
+        // Stub state and resources created
         doAnswer(invocation -> {
 
             ActionListener<GetWorkflowStateResponse> listener = invocation.getArgument(2);
 
             WorkflowState state = mock(WorkflowState.class);
             ResourceCreated resourceCreated = new ResourceCreated("stepName", workflowId, "resourceType", "resourceId");
+            when(state.getState()).thenReturn(ProvisioningProgress.DONE.toString());
             when(state.resourcesCreated()).thenReturn(List.of(resourceCreated));
             listener.onResponse(new GetWorkflowStateResponse(state, true));
             return null;
@@ -141,6 +143,86 @@ public class ReprovisionWorkflowTransportActionTests extends OpenSearchTestCase 
         assertEquals(workflowId, responseCaptor.getValue().getWorkflowId());
     }
 
+    public void testReprovisionInProgressWorkflow() throws Exception {
+        String workflowId = "1";
+
+        Template mockTemplate = mock(Template.class);
+        Workflow mockWorkflow = mock(Workflow.class);
+        Map<String, Workflow> mockWorkflows = new HashMap<>();
+        mockWorkflows.put(PROVISION_WORKFLOW, mockWorkflow);
+
+        // Stub validations
+        when(mockTemplate.workflows()).thenReturn(mockWorkflows);
+        when(workflowProcessSorter.sortProcessNodes(any(), any(), any())).thenReturn(List.of());
+        doNothing().when(workflowProcessSorter).validate(any(), any());
+        when(encryptorUtils.decryptTemplateCredentials(any())).thenReturn(mockTemplate);
+
+        // Stub state and resources created
+        doAnswer(invocation -> {
+
+            ActionListener<GetWorkflowStateResponse> listener = invocation.getArgument(2);
+
+            WorkflowState state = mock(WorkflowState.class);
+            ResourceCreated resourceCreated = new ResourceCreated("stepName", workflowId, "resourceType", "resourceId");
+            when(state.getState()).thenReturn(ProvisioningProgress.IN_PROGRESS.toString());
+            when(state.resourcesCreated()).thenReturn(List.of(resourceCreated));
+            listener.onResponse(new GetWorkflowStateResponse(state, true));
+            return null;
+        }).when(client).execute(any(), any(GetWorkflowStateRequest.class), any());
+
+        @SuppressWarnings("unchecked")
+        ActionListener<WorkflowResponse> listener = mock(ActionListener.class);
+        ReprovisionWorkflowRequest request = new ReprovisionWorkflowRequest(workflowId, mockTemplate, mockTemplate);
+
+        reprovisionWorkflowTransportAction.doExecute(mock(Task.class), request, listener);
+        ArgumentCaptor<Exception> exceptionCaptor = ArgumentCaptor.forClass(Exception.class);
+        verify(listener, times(1)).onFailure(exceptionCaptor.capture());
+        assertEquals(
+            "The template can not be reprovisioned unless its provisioning state is DONE: 1",
+            exceptionCaptor.getValue().getMessage()
+        );
+    }
+
+    public void testReprovisionNotStartedWorkflow() throws Exception {
+        String workflowId = "1";
+
+        Template mockTemplate = mock(Template.class);
+        Workflow mockWorkflow = mock(Workflow.class);
+        Map<String, Workflow> mockWorkflows = new HashMap<>();
+        mockWorkflows.put(PROVISION_WORKFLOW, mockWorkflow);
+
+        // Stub validations
+        when(mockTemplate.workflows()).thenReturn(mockWorkflows);
+        when(workflowProcessSorter.sortProcessNodes(any(), any(), any())).thenReturn(List.of());
+        doNothing().when(workflowProcessSorter).validate(any(), any());
+        when(encryptorUtils.decryptTemplateCredentials(any())).thenReturn(mockTemplate);
+
+        // Stub state and resources created
+        doAnswer(invocation -> {
+
+            ActionListener<GetWorkflowStateResponse> listener = invocation.getArgument(2);
+
+            WorkflowState state = mock(WorkflowState.class);
+            ResourceCreated resourceCreated = new ResourceCreated("stepName", workflowId, "resourceType", "resourceId");
+            when(state.getState()).thenReturn(ProvisioningProgress.NOT_STARTED.toString());
+            when(state.resourcesCreated()).thenReturn(List.of(resourceCreated));
+            listener.onResponse(new GetWorkflowStateResponse(state, true));
+            return null;
+        }).when(client).execute(any(), any(GetWorkflowStateRequest.class), any());
+
+        @SuppressWarnings("unchecked")
+        ActionListener<WorkflowResponse> listener = mock(ActionListener.class);
+        ReprovisionWorkflowRequest request = new ReprovisionWorkflowRequest(workflowId, mockTemplate, mockTemplate);
+
+        reprovisionWorkflowTransportAction.doExecute(mock(Task.class), request, listener);
+        ArgumentCaptor<Exception> exceptionCaptor = ArgumentCaptor.forClass(Exception.class);
+        verify(listener, times(1)).onFailure(exceptionCaptor.capture());
+        assertEquals(
+            "The template can not be reprovisioned unless its provisioning state is DONE: 1",
+            exceptionCaptor.getValue().getMessage()
+        );
+    }
+
     public void testFailedStateUpdate() throws Exception {
         String workflowId = "1";
 
@@ -155,13 +237,14 @@ public class ReprovisionWorkflowTransportActionTests extends OpenSearchTestCase 
         doNothing().when(workflowProcessSorter).validate(any(), any());
         when(encryptorUtils.decryptTemplateCredentials(any())).thenReturn(mockTemplate);
 
-        // Stub resources created
+        // Stub state and resources created
         doAnswer(invocation -> {
 
             ActionListener<GetWorkflowStateResponse> listener = invocation.getArgument(2);
 
             WorkflowState state = mock(WorkflowState.class);
             ResourceCreated resourceCreated = new ResourceCreated("stepName", workflowId, "resourceType", "resourceId");
+            when(state.getState()).thenReturn(ProvisioningProgress.DONE.toString());
             when(state.resourcesCreated()).thenReturn(List.of(resourceCreated));
             listener.onResponse(new GetWorkflowStateResponse(state, true));
             return null;

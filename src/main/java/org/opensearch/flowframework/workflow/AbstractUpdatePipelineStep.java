@@ -11,13 +11,10 @@ package org.opensearch.flowframework.workflow;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.opensearch.ExceptionsHelper;
-import org.opensearch.action.ingest.PutPipelineRequest;
-import org.opensearch.action.search.PutSearchPipelineRequest;
 import org.opensearch.action.support.PlainActionFuture;
 import org.opensearch.action.support.master.AcknowledgedResponse;
 import org.opensearch.client.Client;
 import org.opensearch.client.ClusterAdminClient;
-import org.opensearch.common.xcontent.XContentType;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.core.common.bytes.BytesArray;
 import org.opensearch.core.common.bytes.BytesReference;
@@ -51,6 +48,20 @@ public abstract class AbstractUpdatePipelineStep implements WorkflowStep {
     protected AbstractUpdatePipelineStep(Client client) {
         this.clusterAdminClient = client.admin().cluster();
     }
+
+    /**
+     * Executes a put search or ingest pipeline request
+     * @param pipelineId the pipeline id
+     * @param configuration the pipeline configuration bytes
+     * @param clusterAdminClient the cluster admin client
+     * @param listener listener
+     */
+    public abstract void executePutPipelineRequest(
+        String pipelineId,
+        BytesReference configuration,
+        ClusterAdminClient clusterAdminClient,
+        ActionListener<AcknowledgedResponse> listener
+    );
 
     @Override
     public PlainActionFuture<WorkflowData> execute(
@@ -111,17 +122,7 @@ public abstract class AbstractUpdatePipelineStep implements WorkflowStep {
 
             };
 
-            if (pipelineToBeCreated.equals(UpdateSearchPipelineStep.NAME)) {
-                PutSearchPipelineRequest putSearchPipelineRequest = new PutSearchPipelineRequest(
-                    pipelineId,
-                    configurationsBytes,
-                    XContentType.JSON
-                );
-                clusterAdminClient.putSearchPipeline(putSearchPipelineRequest, putPipelineActionListener);
-            } else {
-                PutPipelineRequest putPipelineRequest = new PutPipelineRequest(pipelineId, configurationsBytes, XContentType.JSON);
-                clusterAdminClient.putPipeline(putPipelineRequest, putPipelineActionListener);
-            }
+            executePutPipelineRequest(pipelineId, configurationsBytes, clusterAdminClient, putPipelineActionListener);
 
         } catch (FlowFrameworkException e) {
             createPipelineFuture.onFailure(e);
