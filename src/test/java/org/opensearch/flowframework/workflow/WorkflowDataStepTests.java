@@ -18,9 +18,9 @@ import java.util.concurrent.ExecutionException;
 
 import static org.junit.Assert.assertTrue;
 
-public class GetResourceStepTests extends OpenSearchTestCase {
+public class WorkflowDataStepTests extends OpenSearchTestCase {
 
-    private GetResourceStep getResourceStep;
+    private WorkflowDataStep workflowDataStep;
     private WorkflowData inputData;
     private WorkflowData outputData;
 
@@ -34,15 +34,15 @@ public class GetResourceStepTests extends OpenSearchTestCase {
         super.setUp();
 
         ResourceCreated resourceCreated = new ResourceCreated("step_name", workflowStepId, resourceType, resourceId);
-        this.getResourceStep = new GetResourceStep(resourceCreated);
+        this.workflowDataStep = new WorkflowDataStep(resourceCreated);
         this.inputData = new WorkflowData(Map.of(), workflowId, workflowStepId);
         this.outputData = new WorkflowData(Map.ofEntries(Map.entry(resourceType, resourceId)), workflowId, workflowStepId);
     }
 
-    public void testExecuteGetResource() throws ExecutionException, InterruptedException {
+    public void testExecuteWorkflowDataStep() throws ExecutionException, InterruptedException {
 
         @SuppressWarnings("unchecked")
-        PlainActionFuture<WorkflowData> future = getResourceStep.execute(
+        PlainActionFuture<WorkflowData> future = workflowDataStep.execute(
             inputData.getNodeId(),
             inputData,
             Collections.emptyMap(),

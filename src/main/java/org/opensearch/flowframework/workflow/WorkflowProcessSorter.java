@@ -283,7 +283,7 @@ public class WorkflowProcessSorter {
                         // create process node
                         ProcessNode processNode = new ProcessNode(
                             node.id(),
-                            new GetResourceStep(nodeResource),
+                            new WorkflowDataStep(nodeResource),
                             node.previousNodeInputs(),
                             Collections.emptyMap(),
                             data,
@@ -303,8 +303,8 @@ public class WorkflowProcessSorter {
 
         }
 
-        // If the reprovision sequence consists entirely of GetResourceSteps, then no modifications were made to the exisiting template.
-        if (reprovisionSequence.stream().allMatch(n -> n.workflowStep().getName().equals(GetResourceStep.NAME))) {
+        // If the reprovision sequence consists entirely of WorkflowDataSteps, then no modifications were made to the exisiting template.
+        if (reprovisionSequence.stream().allMatch(n -> n.workflowStep().getName().equals(WorkflowDataStep.NAME))) {
             throw new FlowFrameworkException("Template does not contain any modifications", RestStatus.BAD_REQUEST);
         }
 

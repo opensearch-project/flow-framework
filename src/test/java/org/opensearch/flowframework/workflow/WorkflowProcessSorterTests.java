@@ -754,7 +754,7 @@ public class WorkflowProcessSorterTests extends OpenSearchTestCase {
         assertTrue(reprovisionWorkflowStepNames.contains(CreateIngestPipelineStep.NAME));
         // Assert 2 get resource steps in the sequence
         assertTrue(
-            reprovisionWorkflowStepNames.stream().filter(x -> x.equals(GetResourceStep.NAME)).collect(Collectors.toList()).size() == 2
+            reprovisionWorkflowStepNames.stream().filter(x -> x.equals(WorkflowDataStep.NAME)).collect(Collectors.toList()).size() == 2
         );
     }
 
