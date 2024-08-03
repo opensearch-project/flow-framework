@@ -32,6 +32,8 @@ import org.opensearch.flowframework.workflow.ProcessNode;
 import org.opensearch.flowframework.workflow.WorkflowProcessSorter;
 import org.opensearch.flowframework.workflow.WorkflowStepFactory;
 import org.opensearch.plugins.PluginsService;
+import org.opensearch.script.Script;
+import org.opensearch.script.ScriptType;
 import org.opensearch.tasks.Task;
 import org.opensearch.threadpool.ThreadPool;
 import org.opensearch.transport.TransportService;
@@ -52,6 +54,7 @@ import static org.opensearch.flowframework.common.CommonValue.PROVISION_WORKFLOW
 import static org.opensearch.flowframework.common.CommonValue.PROVISION_WORKFLOW_THREAD_POOL;
 import static org.opensearch.flowframework.common.CommonValue.RESOURCES_CREATED_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.STATE_FIELD;
+import static org.opensearch.flowframework.common.CommonValue.WORKFLOW_STATE_INDEX;
 
 /**
  * Transport Action to reprovision a provisioned template
@@ -153,6 +156,28 @@ public class ReprovisionWorkflowTransportAction extends HandledTransportAction<R
                     updatedTemplate,
                     resourceCreated
                 );
+
+                // Remove error field if any prior to subsequent execution
+                if (response.getWorkflowState().getError() != null) {
+                    Script script = new Script(
+                        ScriptType.INLINE,
+                        "painless",
+                        "if(ctx._source.containsKey('error')){ctx._source.remove('error')}",
+                        Collections.emptyMap()
+                    );
+                    flowFrameworkIndicesHandler.updateFlowFrameworkSystemIndexDocWithScript(
+                        WORKFLOW_STATE_INDEX,
+                        workflowId,
+                        script,
+                        ActionListener.wrap(updateResponse -> {
+
+                        }, exception -> {
+                            String errorMessage = "Failed to update workflow state: " + workflowId;
+                            logger.error(errorMessage, exception);
+                            listener.onFailure(new FlowFrameworkException(errorMessage, ExceptionsHelper.status(exception)));
+                        })
+                    );
+                }
 
                 // Update State Index, maintain resources created for subsequent execution
                 flowFrameworkIndicesHandler.updateFlowFrameworkSystemIndexDoc(

@@ -119,6 +119,7 @@ public class ReprovisionWorkflowTransportActionTests extends OpenSearchTestCase 
             ResourceCreated resourceCreated = new ResourceCreated("stepName", workflowId, "resourceType", "resourceId");
             when(state.getState()).thenReturn(State.COMPLETED.toString());
             when(state.resourcesCreated()).thenReturn(List.of(resourceCreated));
+            when(state.getError()).thenReturn(null);
             listener.onResponse(new GetWorkflowStateResponse(state, true));
             return null;
         }).when(client).execute(any(), any(GetWorkflowStateRequest.class), any());
@@ -246,6 +247,7 @@ public class ReprovisionWorkflowTransportActionTests extends OpenSearchTestCase 
             ResourceCreated resourceCreated = new ResourceCreated("stepName", workflowId, "resourceType", "resourceId");
             when(state.getState()).thenReturn(State.COMPLETED.toString());
             when(state.resourcesCreated()).thenReturn(List.of(resourceCreated));
+            when(state.getError()).thenReturn(null);
             listener.onResponse(new GetWorkflowStateResponse(state, true));
             return null;
         }).when(client).execute(any(), any(GetWorkflowStateRequest.class), any());
