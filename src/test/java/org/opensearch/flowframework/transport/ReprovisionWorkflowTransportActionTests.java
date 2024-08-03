@@ -16,8 +16,8 @@ import org.opensearch.common.util.concurrent.ThreadContext;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.flowframework.common.FlowFrameworkSettings;
 import org.opensearch.flowframework.indices.FlowFrameworkIndicesHandler;
-import org.opensearch.flowframework.model.ProvisioningProgress;
 import org.opensearch.flowframework.model.ResourceCreated;
+import org.opensearch.flowframework.model.State;
 import org.opensearch.flowframework.model.Template;
 import org.opensearch.flowframework.model.Workflow;
 import org.opensearch.flowframework.model.WorkflowState;
@@ -117,7 +117,7 @@ public class ReprovisionWorkflowTransportActionTests extends OpenSearchTestCase 
 
             WorkflowState state = mock(WorkflowState.class);
             ResourceCreated resourceCreated = new ResourceCreated("stepName", workflowId, "resourceType", "resourceId");
-            when(state.getState()).thenReturn(ProvisioningProgress.DONE.toString());
+            when(state.getState()).thenReturn(State.COMPLETED.toString());
             when(state.resourcesCreated()).thenReturn(List.of(resourceCreated));
             listener.onResponse(new GetWorkflowStateResponse(state, true));
             return null;
@@ -143,7 +143,7 @@ public class ReprovisionWorkflowTransportActionTests extends OpenSearchTestCase 
         assertEquals(workflowId, responseCaptor.getValue().getWorkflowId());
     }
 
-    public void testReprovisionInProgressWorkflow() throws Exception {
+    public void testReprovisionProvisioningWorkflow() throws Exception {
         String workflowId = "1";
 
         Template mockTemplate = mock(Template.class);
@@ -164,7 +164,7 @@ public class ReprovisionWorkflowTransportActionTests extends OpenSearchTestCase 
 
             WorkflowState state = mock(WorkflowState.class);
             ResourceCreated resourceCreated = new ResourceCreated("stepName", workflowId, "resourceType", "resourceId");
-            when(state.getState()).thenReturn(ProvisioningProgress.IN_PROGRESS.toString());
+            when(state.getState()).thenReturn(State.PROVISIONING.toString());
             when(state.resourcesCreated()).thenReturn(List.of(resourceCreated));
             listener.onResponse(new GetWorkflowStateResponse(state, true));
             return null;
@@ -178,7 +178,7 @@ public class ReprovisionWorkflowTransportActionTests extends OpenSearchTestCase 
         ArgumentCaptor<Exception> exceptionCaptor = ArgumentCaptor.forClass(Exception.class);
         verify(listener, times(1)).onFailure(exceptionCaptor.capture());
         assertEquals(
-            "The template can not be reprovisioned unless its provisioning state is DONE: 1",
+            "The template can not be reprovisioned unless its provisioning state is DONE or FAILED: 1",
             exceptionCaptor.getValue().getMessage()
         );
     }
@@ -204,7 +204,7 @@ public class ReprovisionWorkflowTransportActionTests extends OpenSearchTestCase 
 
             WorkflowState state = mock(WorkflowState.class);
             ResourceCreated resourceCreated = new ResourceCreated("stepName", workflowId, "resourceType", "resourceId");
-            when(state.getState()).thenReturn(ProvisioningProgress.NOT_STARTED.toString());
+            when(state.getState()).thenReturn(State.NOT_STARTED.toString());
             when(state.resourcesCreated()).thenReturn(List.of(resourceCreated));
             listener.onResponse(new GetWorkflowStateResponse(state, true));
             return null;
@@ -218,7 +218,7 @@ public class ReprovisionWorkflowTransportActionTests extends OpenSearchTestCase 
         ArgumentCaptor<Exception> exceptionCaptor = ArgumentCaptor.forClass(Exception.class);
         verify(listener, times(1)).onFailure(exceptionCaptor.capture());
         assertEquals(
-            "The template can not be reprovisioned unless its provisioning state is DONE: 1",
+            "The template can not be reprovisioned unless its provisioning state is DONE or FAILED: 1",
             exceptionCaptor.getValue().getMessage()
         );
     }
@@ -244,7 +244,7 @@ public class ReprovisionWorkflowTransportActionTests extends OpenSearchTestCase 
 
             WorkflowState state = mock(WorkflowState.class);
             ResourceCreated resourceCreated = new ResourceCreated("stepName", workflowId, "resourceType", "resourceId");
-            when(state.getState()).thenReturn(ProvisioningProgress.DONE.toString());
+            when(state.getState()).thenReturn(State.COMPLETED.toString());
             when(state.resourcesCreated()).thenReturn(List.of(resourceCreated));
             listener.onResponse(new GetWorkflowStateResponse(state, true));
             return null;

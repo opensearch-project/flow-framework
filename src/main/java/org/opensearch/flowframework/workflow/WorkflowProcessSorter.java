@@ -272,12 +272,10 @@ public class WorkflowProcessSorter {
 
                     // Case 4 : No modification to existing node, create proxy step to pass down required input to dependent nodes
                     // Node ID should give us resources created
-                    ResourceCreated nodeResource = null;
-                    for (ResourceCreated resourceCreated : resourcesCreated) {
-                        if (resourceCreated.workflowStepId().equals(node.id())) {
-                            nodeResource = resourceCreated;
-                        }
-                    }
+                    ResourceCreated nodeResource = resourcesCreated.stream()
+                        .filter(rc -> rc.workflowStepId().equals(node.id()))
+                        .findFirst()
+                        .orElse(null);
 
                     if (nodeResource != null) {
                         // create process node

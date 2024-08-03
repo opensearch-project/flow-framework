@@ -118,8 +118,10 @@ public class ReprovisionWorkflowTransportAction extends HandledTransportAction<R
             client.execute(GetWorkflowStateAction.INSTANCE, getStateRequest, ActionListener.wrap(response -> {
                 context.restore();
 
-                if (!ProvisioningProgress.DONE.equals(ProvisioningProgress.valueOf(response.getWorkflowState().getState()))) {
-                    String errorMessage = "The template can not be reprovisioned unless its provisioning state is DONE: " + workflowId;
+                State currentState = State.valueOf(response.getWorkflowState().getState());
+                if (State.PROVISIONING.equals(currentState) || State.NOT_STARTED.equals(currentState)) {
+                    String errorMessage = "The template can not be reprovisioned unless its provisioning state is DONE or FAILED: "
+                        + workflowId;
                     throw new FlowFrameworkException(errorMessage, RestStatus.BAD_REQUEST);
                 }
 
