@@ -189,4 +189,54 @@ public class UpdateIndexStepTests extends OpenSearchTestCase {
 
     }
 
+    public void testNoSettingsChanged() throws InterruptedException {
+        UpdateIndexStep updateIndexStep = new UpdateIndexStep(client);
+
+        String indexName = "test-index";
+
+        // Create existing settings for default pipelines
+        Settings.Builder builder = Settings.builder();
+        builder.put("index.number_of_shards", 2);
+        builder.put("index.number_of_replicas", 1);
+        builder.put("index.knn", true);
+        builder.put("index.default_pipeline", "ingest_pipeline_id");
+        builder.put("index.search.default_pipeline", "search_pipeline_id");
+        Map<String, Settings> indexToSettings = new HashMap<>();
+        indexToSettings.put(indexName, builder.build());
+
+        // Stub get index settings request/response
+        doAnswer(invocation -> {
+            ActionListener<GetSettingsResponse> getSettingsResponseListener = invocation.getArgument(1);
+            getSettingsResponseListener.onResponse(new GetSettingsResponse(indexToSettings, indexToSettings));
+            return null;
+        }).when(indicesAdminClient).getSettings(any(), any());
+
+        // validate update settings request content
+        @SuppressWarnings({ "unchecked" })
+        ArgumentCaptor<UpdateSettingsRequest> updateSettingsRequestCaptor = ArgumentCaptor.forClass(UpdateSettingsRequest.class);
+
+        // Configurations have no change
+        String configurations =
+            "{\"settings\":{\"index\":{\"knn\":true,\"number_of_shards\":2,\"number_of_replicas\":1,\"default_pipeline\":\"ingest_pipeline_id\",\"search\":{\"default_pipeline\":\"search_pipeline_id\"}}},\"mappings\":{\"properties\":{\"age\":{\"type\":\"integer\"}}},\"aliases\":{\"sample-alias1\":{}}}";
+        WorkflowData data = new WorkflowData(
+            Map.ofEntries(Map.entry(INDEX_NAME, indexName), Map.entry(CONFIGURATIONS, configurations)),
+            "test-id",
+            "test-node-id"
+        );
+        PlainActionFuture future = updateIndexStep.execute(
+            data.getNodeId(),
+            data,
+            Collections.emptyMap(),
+            Collections.emptyMap(),
+            Collections.emptyMap()
+        );
+
+        ExecutionException exception = assertThrows(ExecutionException.class, () -> future.get());
+        assertTrue(exception.getCause() instanceof Exception);
+        assertEquals(
+            "Failed to update index settings for index test-index, no settings have been updated",
+            exception.getCause().getMessage()
+        );
+    }
+
 }

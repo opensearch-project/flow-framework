@@ -144,6 +144,11 @@ public class UpdateIndexStep implements WorkflowStep {
                 }
             }
 
+            if (updateSettingsRequest.settings().size() == 0) {
+                String errorMessage = "Failed to update index settings for index " + indexName + ", no settings have been updated";
+                throw new FlowFrameworkException(errorMessage, RestStatus.BAD_REQUEST);
+            }
+
             client.admin().indices().updateSettings(updateSettingsRequest, ActionListener.wrap(acknowledgedResponse -> {
                 String resourceName = getResourceByWorkflowStep(getName());
                 logger.info("Updated index settings for index {}", indexName);
@@ -158,7 +163,7 @@ public class UpdateIndexStep implements WorkflowStep {
                 updateIndexFuture.onFailure(new WorkflowStepException(errorMessage, ExceptionsHelper.status(e)));
             }));
         } catch (Exception e) {
-            updateIndexFuture.onFailure(e);
+            updateIndexFuture.onFailure(new WorkflowStepException(e.getMessage(), ExceptionsHelper.status(e)));
         }
 
         return updateIndexFuture;
