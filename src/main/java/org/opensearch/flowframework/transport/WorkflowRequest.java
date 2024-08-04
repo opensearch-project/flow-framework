@@ -19,6 +19,7 @@ import java.io.IOException;
 import java.util.Collections;
 import java.util.Map;
 
+import static org.opensearch.flowframework.common.CommonValue.REPROVISION_WORKFLOW;
 import static org.opensearch.flowframework.common.CommonValue.UPDATE_WORKFLOW_FIELDS;
 
 /**
@@ -157,14 +158,16 @@ public class WorkflowRequest extends ActionRequest {
         String templateJson = in.readOptionalString();
         this.template = templateJson == null ? null : Template.parse(templateJson);
         this.validation = in.readStringArray();
-        boolean provisionOrUpdate = in.readBoolean();
-        this.params = provisionOrUpdate ? in.readMap(StreamInput::readString, StreamInput::readString) : Collections.emptyMap();
-        this.provision = provisionOrUpdate && !params.containsKey(UPDATE_WORKFLOW_FIELDS);
+        boolean provisionOrUpdateOrReprovision = in.readBoolean();
+        this.params = provisionOrUpdateOrReprovision
+            ? in.readMap(StreamInput::readString, StreamInput::readString)
+            : Collections.emptyMap();
+        this.provision = provisionOrUpdateOrReprovision && !params.containsKey(UPDATE_WORKFLOW_FIELDS);
         this.updateFields = !provision && Boolean.parseBoolean(params.get(UPDATE_WORKFLOW_FIELDS));
         if (this.updateFields) {
             this.params = Collections.emptyMap();
         }
-        this.reprovision = in.readBoolean();
+        this.reprovision = !provision && Boolean.parseBoolean(params.get(REPROVISION_WORKFLOW));
     }
 
     /**
@@ -247,13 +250,14 @@ public class WorkflowRequest extends ActionRequest {
         out.writeOptionalString(workflowId);
         out.writeOptionalString(template == null ? null : template.toJson());
         out.writeStringArray(validation);
-        out.writeBoolean(provision || updateFields);
+        out.writeBoolean(provision || updateFields || reprovision);
         if (provision) {
             out.writeMap(params, StreamOutput::writeString, StreamOutput::writeString);
         } else if (updateFields) {
             out.writeMap(Map.of(UPDATE_WORKFLOW_FIELDS, "true"), StreamOutput::writeString, StreamOutput::writeString);
+        } else if (reprovision) {
+            out.writeMap(Map.of(REPROVISION_WORKFLOW, "true"), StreamOutput::writeString, StreamOutput::writeString);
         }
-        out.writeBoolean(reprovision);
     }
 
     @Override
