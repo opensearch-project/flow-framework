@@ -111,7 +111,7 @@ public class UpdateIndexStep implements WorkflowStep {
                     // check if settings are flattened or expanded
                     Map<String, Object> flattenedSettings = new HashMap<>();
                     if (updatedSettings.containsKey("index")) {
-                        flattenSettings("", updatedSettings, flattenedSettings);
+                        ParseUtils.flattenSettings("", updatedSettings, flattenedSettings);
                     } else {
                         flattenedSettings.putAll(updatedSettings);
                     }
@@ -168,24 +168,6 @@ public class UpdateIndexStep implements WorkflowStep {
 
         return updateIndexFuture;
 
-    }
-
-    /**
-     * Flattens a nested map of settings, delimitted by a period
-     * @param prefix the setting prefix
-     * @param settings the nested setting map
-     * @param flattenedSettings the final flattend map of settings
-     */
-    public static void flattenSettings(String prefix, Map<String, Object> settings, Map<String, Object> flattenedSettings) {
-        for (Map.Entry<String, Object> entry : settings.entrySet()) {
-            String key = prefix.isEmpty() ? entry.getKey() : prefix + "." + entry.getKey();
-            Object value = entry.getValue();
-            if (value instanceof Map) {
-                flattenSettings(key, (Map<String, Object>) value, flattenedSettings);
-            } else {
-                flattenedSettings.put(key, value.toString());
-            }
-        }
     }
 
     @Override
