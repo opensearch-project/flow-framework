@@ -213,7 +213,7 @@ public class CreateWorkflowTransportActionTests extends OpenSearchTestCase {
 
         @SuppressWarnings("unchecked")
         ActionListener<WorkflowResponse> listener = mock(ActionListener.class);
-        WorkflowRequest workflowRequest = new WorkflowRequest(null, template, new String[] { "off" }, false, Collections.emptyMap(), null, Collections.emptyMap());
+        WorkflowRequest workflowRequest = new WorkflowRequest(null, template, new String[] { "off" }, false, Collections.emptyMap(), null, Collections.emptyMap(), false);
 
         doAnswer(invocation -> {
             ActionListener<SearchResponse> searchListener = invocation.getArgument(1);
@@ -257,7 +257,8 @@ public class CreateWorkflowTransportActionTests extends OpenSearchTestCase {
             false,
             Collections.emptyMap(),
             null,
-            Collections.emptyMap()
+            Collections.emptyMap(),
+            false
         );
 
         // Bypass checkMaxWorkflows and force onResponse
@@ -296,7 +297,8 @@ public class CreateWorkflowTransportActionTests extends OpenSearchTestCase {
             false,
             Collections.emptyMap(),
             null,
-            Collections.emptyMap()
+            Collections.emptyMap(),
+            false
         );
 
         // Bypass checkMaxWorkflows and force onResponse
@@ -334,6 +336,78 @@ public class CreateWorkflowTransportActionTests extends OpenSearchTestCase {
         verify(listener, times(1)).onResponse(workflowResponseCaptor.capture());
 
         assertEquals("1", workflowResponseCaptor.getValue().getWorkflowId());
+    }
+
+    public void testUpdateWorkflowWithReprovision() {
+        @SuppressWarnings("unchecked")
+        ActionListener<WorkflowResponse> listener = mock(ActionListener.class);
+        WorkflowRequest workflowRequest = new WorkflowRequest(
+            "1",
+            template,
+            new String[] { "off" },
+            false,
+            Collections.emptyMap(),
+            null,
+            Collections.emptyMap(),
+            true
+        );
+
+        doAnswer(invocation -> {
+            ActionListener<GetResponse> getListener = invocation.getArgument(1);
+            GetResponse getResponse = mock(GetResponse.class);
+            when(getResponse.isExists()).thenReturn(true);
+            when(getResponse.getSourceAsString()).thenReturn(template.toJson());
+            getListener.onResponse(getResponse);
+            return null;
+        }).when(client).get(any(GetRequest.class), any());
+
+        doAnswer(invocation -> {
+            ActionListener<WorkflowResponse> responseListener = invocation.getArgument(2);
+            responseListener.onResponse(new WorkflowResponse("1"));
+            return null;
+        }).when(client).execute(any(), any(), any());
+
+        createWorkflowTransportAction.doExecute(mock(Task.class), workflowRequest, listener);
+        ArgumentCaptor<WorkflowResponse> responseCaptor = ArgumentCaptor.forClass(WorkflowResponse.class);
+        verify(listener, times(1)).onResponse(responseCaptor.capture());
+
+        assertEquals("1", responseCaptor.getValue().getWorkflowId());
+    }
+
+    public void testFailedToUpdateWorkflowWithReprovision() {
+        @SuppressWarnings("unchecked")
+        ActionListener<WorkflowResponse> listener = mock(ActionListener.class);
+        WorkflowRequest workflowRequest = new WorkflowRequest(
+            "1",
+            template,
+            new String[] { "off" },
+            false,
+            Collections.emptyMap(),
+            null,
+            Collections.emptyMap(),
+            true
+        );
+
+        doAnswer(invocation -> {
+            ActionListener<GetResponse> getListener = invocation.getArgument(1);
+            GetResponse getResponse = mock(GetResponse.class);
+            when(getResponse.isExists()).thenReturn(true);
+            when(getResponse.getSourceAsString()).thenReturn(template.toJson());
+            getListener.onResponse(getResponse);
+            return null;
+        }).when(client).get(any(GetRequest.class), any());
+
+        doAnswer(invocation -> {
+            ActionListener<WorkflowResponse> responseListener = invocation.getArgument(2);
+            responseListener.onFailure(new Exception("failed"));
+            return null;
+        }).when(client).execute(any(), any(), any());
+
+        createWorkflowTransportAction.doExecute(mock(Task.class), workflowRequest, listener);
+        ArgumentCaptor<Exception> responseCaptor = ArgumentCaptor.forClass(Exception.class);
+        verify(listener, times(1)).onFailure(responseCaptor.capture());
+
+        assertEquals("Reprovisioning failed for workflow 1", responseCaptor.getValue().getMessage());
     }
 
     public void testFailedToUpdateWorkflow() {
@@ -511,7 +585,8 @@ public class CreateWorkflowTransportActionTests extends OpenSearchTestCase {
             true,
             Collections.emptyMap(),
             null,
-            Collections.emptyMap()
+            Collections.emptyMap(),
+            false
         );
 
         // Bypass checkMaxWorkflows and force onResponse
@@ -572,7 +647,8 @@ public class CreateWorkflowTransportActionTests extends OpenSearchTestCase {
             true,
             Collections.emptyMap(),
             null,
-            Collections.emptyMap()
+            Collections.emptyMap(),
+            false
         );
 
         // Bypass checkMaxWorkflows and force onResponse
@@ -620,7 +696,7 @@ public class CreateWorkflowTransportActionTests extends OpenSearchTestCase {
     private Template generateValidTemplate() {
         WorkflowNode createConnector = new WorkflowNode(
             "workflow_step_1",
-            CREATE_CONNECTOR.getWorkflowStep(),
+            CREATE_CONNECTOR.getCreateStep(),
             Collections.emptyMap(),
             Map.ofEntries(
                 Map.entry("name", ""),
@@ -634,13 +710,13 @@ public class CreateWorkflowTransportActionTests extends OpenSearchTestCase {
         );
         WorkflowNode registerModel = new WorkflowNode(
             "workflow_step_2",
-            REGISTER_REMOTE_MODEL.getWorkflowStep(),
+            REGISTER_REMOTE_MODEL.getCreateStep(),
             Map.ofEntries(Map.entry("workflow_step_1", CONNECTOR_ID)),
             Map.ofEntries(Map.entry("name", "name"), Map.entry("function_name", "remote"), Map.entry("description", "description"))
         );
         WorkflowNode deployModel = new WorkflowNode(
             "workflow_step_3",
-            DEPLOY_MODEL.getWorkflowStep(),
+            DEPLOY_MODEL.getCreateStep(),
             Map.ofEntries(Map.entry("workflow_step_2", MODEL_ID)),
             Collections.emptyMap()
         );

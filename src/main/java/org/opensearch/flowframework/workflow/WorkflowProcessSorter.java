@@ -13,10 +13,14 @@ import org.apache.logging.log4j.Logger;
 import org.opensearch.common.unit.TimeValue;
 import org.opensearch.core.rest.RestStatus;
 import org.opensearch.flowframework.common.FlowFrameworkSettings;
+import org.opensearch.flowframework.common.WorkflowResources;
 import org.opensearch.flowframework.exception.FlowFrameworkException;
+import org.opensearch.flowframework.model.ResourceCreated;
+import org.opensearch.flowframework.model.Template;
 import org.opensearch.flowframework.model.Workflow;
 import org.opensearch.flowframework.model.WorkflowEdge;
 import org.opensearch.flowframework.model.WorkflowNode;
+import org.opensearch.flowframework.util.ParseUtils;
 import org.opensearch.plugins.PluginInfo;
 import org.opensearch.plugins.PluginsService;
 import org.opensearch.threadpool.ThreadPool;
@@ -35,6 +39,7 @@ import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import static org.opensearch.flowframework.common.CommonValue.PROVISION_WORKFLOW;
 import static org.opensearch.flowframework.common.CommonValue.PROVISION_WORKFLOW_THREAD_POOL;
 import static org.opensearch.flowframework.common.FlowFrameworkSettings.MAX_WORKFLOW_STEPS;
 import static org.opensearch.flowframework.model.WorkflowNode.NODE_TIMEOUT_DEFAULT_VALUE;
@@ -141,6 +146,262 @@ public class WorkflowProcessSorter {
             nodes.add(processNode);
         }
         return nodes;
+    }
+
+    /**
+     * Sort an updated workflow into a topologically sorted list of create/update process nodes
+     * @param workflowId the workflow ID associated with the template
+     * @param originalTemplate the original template currently indexed
+     * @param updatedTemplate the updated template to be executed
+     * @param resourcesCreated the resources previously created for the workflow
+     * @throws Exception for issues creating the reprovision sequence
+     * @return A list of ProcessNode
+     */
+    public List<ProcessNode> createReprovisionSequence(
+        String workflowId,
+        Template originalTemplate,
+        Template updatedTemplate,
+        List<ResourceCreated> resourcesCreated
+    ) throws Exception {
+
+        Workflow updatedWorkflow = updatedTemplate.workflows().get(PROVISION_WORKFLOW);
+        if (updatedWorkflow.nodes().size() > this.maxWorkflowSteps) {
+            throw new FlowFrameworkException(
+                "Workflow "
+                    + workflowId
+                    + " has "
+                    + updatedWorkflow.nodes().size()
+                    + " nodes, which exceeds the maximum of "
+                    + this.maxWorkflowSteps
+                    + ". Change the setting ["
+                    + MAX_WORKFLOW_STEPS.getKey()
+                    + "] to increase this.",
+                RestStatus.BAD_REQUEST
+            );
+        }
+
+        // Topologically sort the updated workflow
+        List<WorkflowNode> sortedUpdatedNodes = topologicalSort(updatedWorkflow.nodes(), updatedWorkflow.edges());
+
+        // Convert original template into node id map
+        Map<String, WorkflowNode> originalTemplateMap = originalTemplate.workflows()
+            .get(PROVISION_WORKFLOW)
+            .nodes()
+            .stream()
+            .collect(Collectors.toMap(WorkflowNode::id, node -> node));
+
+        // Temporarily block node deletions until fine-grained deprovisioning is implemented
+        if (!originalTemplateMap.values().stream().allMatch(sortedUpdatedNodes::contains)) {
+            throw new FlowFrameworkException(
+                "Workflow Step deletion is not supported when reprovisioning a template.",
+                RestStatus.BAD_REQUEST
+            );
+        }
+
+        List<ProcessNode> reprovisionSequence = createReprovisionSequence(
+            workflowId,
+            updatedWorkflow,
+            sortedUpdatedNodes,
+            originalTemplateMap,
+            resourcesCreated
+        );
+
+        // If the reprovision sequence consists entirely of WorkflowDataSteps, then no modifications were made to the exisiting template.
+        if (reprovisionSequence.stream().allMatch(n -> n.workflowStep().getName().equals(WorkflowDataStep.NAME))) {
+            throw new FlowFrameworkException("Template does not contain any modifications", RestStatus.BAD_REQUEST);
+        }
+
+        return reprovisionSequence;
+    }
+
+    /**
+     * Compares an original and upated template and creates a list of update, create or workflowdatastep nodes
+     * @param workflowId the workflow ID associated with the template
+     * @param updatedWorkflow the updated workflow to be processed
+     * @param sortedUpdatedNodes the topologically sorted updated template nodes
+     * @param originalTemplateMap a map of node Id to workflow node of the original template
+     * @param resourcesCreated a list of resources created for this template
+     * @return a list of process node representing the reprovision sequence
+     * @throws Exception for issues creating the reprovision sequence
+     */
+    private List<ProcessNode> createReprovisionSequence(
+        String workflowId,
+        Workflow updatedWorkflow,
+        List<WorkflowNode> sortedUpdatedNodes,
+        Map<String, WorkflowNode> originalTemplateMap,
+        List<ResourceCreated> resourcesCreated
+    ) throws Exception {
+        Map<String, ProcessNode> idToNodeMap = new HashMap<>();
+        List<ProcessNode> reprovisionSequence = new ArrayList<>();
+
+        for (WorkflowNode node : sortedUpdatedNodes) {
+            ProcessNode processNode = createProcessNode(
+                updatedWorkflow,
+                node,
+                originalTemplateMap,
+                resourcesCreated,
+                workflowId,
+                idToNodeMap
+            );
+            if (processNode != null) {
+                idToNodeMap.put(processNode.id(), processNode);
+                reprovisionSequence.add(processNode);
+            }
+        }
+
+        return reprovisionSequence;
+    }
+
+    /**
+     * Determines which type of process node to create for a reprovision sequence
+     * @param updatedWorkflow the updated workflow to be processed
+     * @param node the current workflow node
+     * @param originalTemplateMap a map of node Id to workflow node of the original template
+     * @param resourcesCreated a list of resources created for this template
+     * @param workflowId the workflow ID associated with the template
+     * @param idToNodeMap a map of the current reprovision sequence
+     * @return a ProcessNode
+     * @throws Exception for issues creating the process node
+     */
+    private ProcessNode createProcessNode(
+        Workflow updatedWorkflow,
+        WorkflowNode node,
+        Map<String, WorkflowNode> originalTemplateMap,
+        List<ResourceCreated> resourcesCreated,
+        String workflowId,
+        Map<String, ProcessNode> idToNodeMap
+    ) throws Exception {
+        WorkflowData data = new WorkflowData(node.userInputs(), updatedWorkflow.userParams(), workflowId, node.id());
+        List<ProcessNode> predecessorNodes = updatedWorkflow.edges()
+            .stream()
+            .filter(e -> e.destination().equals(node.id()))
+            // since we are iterating in topological order we know all predecessors will be in the map
+            .map(e -> idToNodeMap.get(e.source()))
+            .collect(Collectors.toList());
+        TimeValue nodeTimeout = parseTimeout(node);
+
+        if (!originalTemplateMap.containsKey(node.id())) {
+            // Case 1: Additive modification, create new node
+            return createNewProcessNode(node, data, predecessorNodes, nodeTimeout);
+        } else {
+            WorkflowNode originalNode = originalTemplateMap.get(node.id());
+            if (shouldUpdateNode(node, originalNode)) {
+                // Case 2: Existing modification, create update step
+                return createUpdateProcessNode(node, data, predecessorNodes, nodeTimeout);
+            } else {
+                // Case 4: No modification to existing node, create proxy step
+                return createWorkflowDataStepNode(node, data, predecessorNodes, nodeTimeout, resourcesCreated);
+            }
+        }
+    }
+
+    /**
+     * Creates a process node to create a new resource
+     * @param node the current node
+     * @param data the current node data
+     * @param predecessorNodes the current node predecessors
+     * @param nodeTimeout the current node timeout
+     * @return a Process Node
+     */
+    private ProcessNode createNewProcessNode(
+        WorkflowNode node,
+        WorkflowData data,
+        List<ProcessNode> predecessorNodes,
+        TimeValue nodeTimeout
+    ) {
+        WorkflowStep step = workflowStepFactory.createStep(node.type());
+        return new ProcessNode(
+            node.id(),
+            step,
+            node.previousNodeInputs(),
+            Collections.emptyMap(), // TODO Add support to reprovision substitution templates
+            data,
+            predecessorNodes,
+            threadPool,
+            PROVISION_WORKFLOW_THREAD_POOL,
+            nodeTimeout
+        );
+    }
+
+    /**
+     * Creates a process node to update an existing resource
+     * @param node the current node
+     * @param data the current node data
+     * @param predecessorNodes the current node predecessors
+     * @param nodeTimeout the current node timeout
+     * @return a ProcessNode
+     * @throws FlowFrameworkException if the current node does not support updates
+     */
+    private ProcessNode createUpdateProcessNode(
+        WorkflowNode node,
+        WorkflowData data,
+        List<ProcessNode> predecessorNodes,
+        TimeValue nodeTimeout
+    ) throws FlowFrameworkException {
+        String updateStepName = WorkflowResources.getUpdateStepByWorkflowStep(node.type());
+        if (updateStepName != null) {
+            WorkflowStep step = workflowStepFactory.createStep(updateStepName);
+            return new ProcessNode(
+                node.id(),
+                step,
+                node.previousNodeInputs(),
+                Collections.emptyMap(), // TODO Add support to reprovision substitution templates
+                data,
+                predecessorNodes,
+                threadPool,
+                PROVISION_WORKFLOW_THREAD_POOL,
+                nodeTimeout
+            );
+        } else {
+            // Case 3 : Cannot update step (not supported)
+            throw new FlowFrameworkException(
+                "Workflow Step " + node.id() + " does not support updates when reprovisioning.",
+                RestStatus.BAD_REQUEST
+            );
+        }
+    }
+
+    /**
+     * Creates a process node to pass workflow data to the next step in the reprovision sequence
+     * @param node the current node
+     * @param data the current node data
+     * @param predecessorNodes the current node predecessors
+     * @param nodeTimeout the current node timeout
+     * @param resourcesCreated the list of resources created for the template assoicated with this node
+     * @return a Process node
+     */
+    private ProcessNode createWorkflowDataStepNode(
+        WorkflowNode node,
+        WorkflowData data,
+        List<ProcessNode> predecessorNodes,
+        TimeValue nodeTimeout,
+        List<ResourceCreated> resourcesCreated
+    ) {
+        ResourceCreated nodeResource = resourcesCreated.stream()
+            .filter(rc -> rc.workflowStepId().equals(node.id()))
+            .findFirst()
+            .orElse(null);
+
+        if (nodeResource != null) {
+            return new ProcessNode(
+                node.id(),
+                new WorkflowDataStep(nodeResource),
+                node.previousNodeInputs(),
+                Collections.emptyMap(),
+                data,
+                predecessorNodes,
+                threadPool,
+                PROVISION_WORKFLOW_THREAD_POOL,
+                nodeTimeout
+            );
+        } else {
+            return null;
+        }
+    }
+
+    private boolean shouldUpdateNode(WorkflowNode node, WorkflowNode originalNode) throws Exception {
+        return !node.previousNodeInputs().equals(originalNode.previousNodeInputs())
+            || !ParseUtils.userInputsEquals(originalNode.userInputs(), node.userInputs());
     }
 
     /**

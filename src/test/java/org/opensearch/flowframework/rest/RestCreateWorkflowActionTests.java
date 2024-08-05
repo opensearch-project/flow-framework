@@ -36,6 +36,7 @@ import java.util.Map;
 
 import static org.opensearch.flowframework.common.CommonValue.CREATE_CONNECTOR_CREDENTIAL_KEY;
 import static org.opensearch.flowframework.common.CommonValue.PROVISION_WORKFLOW;
+import static org.opensearch.flowframework.common.CommonValue.REPROVISION_WORKFLOW;
 import static org.opensearch.flowframework.common.CommonValue.UPDATE_WORKFLOW_FIELDS;
 import static org.opensearch.flowframework.common.CommonValue.USE_CASE;
 import static org.opensearch.flowframework.common.CommonValue.WORKFLOW_URI;
@@ -157,6 +158,23 @@ public class RestCreateWorkflowActionTests extends OpenSearchTestCase {
                 .contains(
                     "You can not use both the " + PROVISION_WORKFLOW + " and " + UPDATE_WORKFLOW_FIELDS + " parameters in the same request."
                 )
+        );
+    }
+
+    public void testCreateWorkflowRequestWithCreateAndReprovision() throws Exception {
+        RestRequest request = new FakeRestRequest.Builder(xContentRegistry()).withMethod(RestRequest.Method.POST)
+            .withPath(this.createWorkflowPath)
+            .withParams(Map.ofEntries(Map.entry(REPROVISION_WORKFLOW, "true")))
+            .withContent(new BytesArray(validTemplate), MediaTypeRegistry.JSON)
+            .build();
+        FakeRestChannel channel = new FakeRestChannel(request, false, 1);
+        createWorkflowRestAction.handleRequest(request, channel, nodeClient);
+        assertEquals(RestStatus.BAD_REQUEST, channel.capturedResponse().status());
+        assertTrue(
+            channel.capturedResponse()
+                .content()
+                .utf8ToString()
+                .contains("You can not use the " + REPROVISION_WORKFLOW + " parameter to create a new template.")
         );
     }
 
