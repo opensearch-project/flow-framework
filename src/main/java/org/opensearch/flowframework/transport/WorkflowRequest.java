@@ -162,7 +162,7 @@ public class WorkflowRequest extends ActionRequest {
         this.params = provisionOrUpdateOrReprovision
             ? in.readMap(StreamInput::readString, StreamInput::readString)
             : Collections.emptyMap();
-        this.provision = provisionOrUpdateOrReprovision && !params.containsKey(UPDATE_WORKFLOW_FIELDS);
+        this.provision = provisionOrUpdateOrReprovision && params.isEmpty();
         this.updateFields = !provision && Boolean.parseBoolean(params.get(UPDATE_WORKFLOW_FIELDS));
         if (this.updateFields) {
             this.params = Collections.emptyMap();
