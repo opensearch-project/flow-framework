@@ -118,6 +118,10 @@ public class WorkflowStepFactory {
         stepMap.put(CreateIngestPipelineStep.NAME, () -> new CreateIngestPipelineStep(client, flowFrameworkIndicesHandler));
         stepMap.put(DeleteIngestPipelineStep.NAME, () -> new DeleteIngestPipelineStep(client));
         stepMap.put(CreateSearchPipelineStep.NAME, () -> new CreateSearchPipelineStep(client, flowFrameworkIndicesHandler));
+        stepMap.put(UpdateIngestPipelineStep.NAME, () -> new UpdateIngestPipelineStep(client));
+        stepMap.put(UpdateSearchPipelineStep.NAME, () -> new UpdateSearchPipelineStep(client));
+        stepMap.put(UpdateIndexStep.NAME, () -> new UpdateIndexStep(client));
+
         stepMap.put(DeleteSearchPipelineStep.NAME, () -> new DeleteSearchPipelineStep(client));
     }
 
@@ -255,6 +259,27 @@ public class WorkflowStepFactory {
             Collections.emptyList(),
             null
         ),
+
+        /** Update Ingest Pipeline Step */
+        UPDATE_INGEST_PIPELINE(
+            UpdateIngestPipelineStep.NAME,
+            List.of(PIPELINE_ID, CONFIGURATIONS),
+            List.of(PIPELINE_ID),
+            Collections.emptyList(),
+            null
+        ),
+
+        /** Update Search Pipeline Step */
+        UPDATE_SEARCH_PIPELINE(
+            UpdateSearchPipelineStep.NAME,
+            List.of(PIPELINE_ID, CONFIGURATIONS),
+            List.of(PIPELINE_ID),
+            Collections.emptyList(),
+            null
+        ),
+
+        /** Update Index Step */
+        UPDATE_INDEX(UpdateIndexStep.NAME, List.of(INDEX_NAME, CONFIGURATIONS), List.of(INDEX_NAME), Collections.emptyList(), null),
 
         /** Delete Search Pipeline Step */
         DELETE_SEARCH_PIPELINE(

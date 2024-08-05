@@ -85,7 +85,7 @@ public class FlowFrameworkPluginTests extends OpenSearchTestCase {
                 ffp.createComponents(client, clusterService, threadPool, null, null, null, environment, null, null, null, null).size()
             );
             assertEquals(9, ffp.getRestHandlers(settings, null, null, null, null, null, null).size());
-            assertEquals(9, ffp.getActions().size());
+            assertEquals(10, ffp.getActions().size());
             assertEquals(3, ffp.getExecutorBuilders(settings).size());
             assertEquals(5, ffp.getSettings().size());
 

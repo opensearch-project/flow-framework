@@ -19,6 +19,7 @@ import java.io.IOException;
 import java.util.Collections;
 import java.util.Map;
 
+import static org.opensearch.flowframework.common.CommonValue.REPROVISION_WORKFLOW;
 import static org.opensearch.flowframework.common.CommonValue.UPDATE_WORKFLOW_FIELDS;
 
 /**
@@ -47,6 +48,11 @@ public class WorkflowRequest extends ActionRequest {
     private boolean provision;
 
     /**
+     * Reprovision flag
+     */
+    private boolean reprovision;
+
+    /**
      * Update Fields flag
      */
     private boolean updateFields;
@@ -72,7 +78,7 @@ public class WorkflowRequest extends ActionRequest {
      * @param template the use case template which describes the workflow
      */
     public WorkflowRequest(@Nullable String workflowId, @Nullable Template template) {
-        this(workflowId, template, new String[] { "all" }, false, Collections.emptyMap(), null, Collections.emptyMap());
+        this(workflowId, template, new String[] { "all" }, false, Collections.emptyMap(), null, Collections.emptyMap(), false);
     }
 
     /**
@@ -82,7 +88,7 @@ public class WorkflowRequest extends ActionRequest {
      * @param params The parameters from the REST path
      */
     public WorkflowRequest(@Nullable String workflowId, @Nullable Template template, Map<String, String> params) {
-        this(workflowId, template, new String[] { "all" }, true, params, null, Collections.emptyMap());
+        this(workflowId, template, new String[] { "all" }, true, params, null, Collections.emptyMap(), false);
     }
 
     /**
@@ -93,7 +99,17 @@ public class WorkflowRequest extends ActionRequest {
      * @param defaultParams The parameters from the REST body when a use case is given
      */
     public WorkflowRequest(@Nullable String workflowId, @Nullable Template template, String useCase, Map<String, String> defaultParams) {
-        this(workflowId, template, new String[] { "all" }, false, Collections.emptyMap(), useCase, defaultParams);
+        this(workflowId, template, new String[] { "all" }, false, Collections.emptyMap(), useCase, defaultParams, false);
+    }
+
+    /**
+     * Instantiates a new WorkflowRequest, set validation to all, sets reprovision flag
+     * @param workflowId the documentId of the workflow
+     * @param template the updated template
+     * @param reprovision the reprovision flag
+     */
+    public WorkflowRequest(String workflowId, Template template, boolean reprovision) {
+        this(workflowId, template, new String[] { "all" }, false, Collections.emptyMap(), null, Collections.emptyMap(), reprovision);
     }
 
     /**
@@ -105,6 +121,7 @@ public class WorkflowRequest extends ActionRequest {
      * @param params map of REST path params. If provisionOrUpdate is false, must be an empty map. If update_fields key is present, must be only key.
      * @param useCase default use case given
      * @param defaultParams the params to be used in the substitution based on the default use case.
+     * @param reprovision flag to indicate if request is to reprovision
      */
     public WorkflowRequest(
         @Nullable String workflowId,
@@ -113,7 +130,8 @@ public class WorkflowRequest extends ActionRequest {
         boolean provisionOrUpdate,
         Map<String, String> params,
         String useCase,
-        Map<String, String> defaultParams
+        Map<String, String> defaultParams,
+        boolean reprovision
     ) {
         this.workflowId = workflowId;
         this.template = template;
@@ -126,6 +144,7 @@ public class WorkflowRequest extends ActionRequest {
         this.params = this.updateFields ? Collections.emptyMap() : params;
         this.useCase = useCase;
         this.defaultParams = defaultParams;
+        this.reprovision = reprovision;
     }
 
     /**
@@ -139,13 +158,18 @@ public class WorkflowRequest extends ActionRequest {
         String templateJson = in.readOptionalString();
         this.template = templateJson == null ? null : Template.parse(templateJson);
         this.validation = in.readStringArray();
-        boolean provisionOrUpdate = in.readBoolean();
-        this.params = provisionOrUpdate ? in.readMap(StreamInput::readString, StreamInput::readString) : Collections.emptyMap();
-        this.provision = provisionOrUpdate && !params.containsKey(UPDATE_WORKFLOW_FIELDS);
+        boolean provisionOrUpdateOrReprovision = in.readBoolean();
+        this.params = provisionOrUpdateOrReprovision
+            ? in.readMap(StreamInput::readString, StreamInput::readString)
+            : Collections.emptyMap();
+        this.provision = provisionOrUpdateOrReprovision
+            && !params.containsKey(UPDATE_WORKFLOW_FIELDS)
+            && !params.containsKey(REPROVISION_WORKFLOW);
         this.updateFields = !provision && Boolean.parseBoolean(params.get(UPDATE_WORKFLOW_FIELDS));
         if (this.updateFields) {
             this.params = Collections.emptyMap();
         }
+        this.reprovision = !provision && Boolean.parseBoolean(params.get(REPROVISION_WORKFLOW));
     }
 
     /**
@@ -214,17 +238,27 @@ public class WorkflowRequest extends ActionRequest {
         return Map.copyOf(this.defaultParams);
     }
 
+    /**
+     * Gets the reprovision flag
+     * @return the reprovision boolean
+     */
+    public boolean isReprovision() {
+        return this.reprovision;
+    }
+
     @Override
     public void writeTo(StreamOutput out) throws IOException {
         super.writeTo(out);
         out.writeOptionalString(workflowId);
         out.writeOptionalString(template == null ? null : template.toJson());
         out.writeStringArray(validation);
-        out.writeBoolean(provision || updateFields);
+        out.writeBoolean(provision || updateFields || reprovision);
         if (provision) {
             out.writeMap(params, StreamOutput::writeString, StreamOutput::writeString);
         } else if (updateFields) {
             out.writeMap(Map.of(UPDATE_WORKFLOW_FIELDS, "true"), StreamOutput::writeString, StreamOutput::writeString);
+        } else if (reprovision) {
+            out.writeMap(Map.of(REPROVISION_WORKFLOW, "true"), StreamOutput::writeString, StreamOutput::writeString);
         }
     }
 

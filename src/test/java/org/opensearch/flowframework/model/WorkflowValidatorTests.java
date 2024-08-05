@@ -47,7 +47,7 @@ public class WorkflowValidatorTests extends OpenSearchTestCase {
 
         WorkflowValidator validator = new WorkflowValidator(workflowStepValidators);
 
-        assertEquals(21, validator.getWorkflowStepValidators().size());
+        assertEquals(24, validator.getWorkflowStepValidators().size());
     }
 
     public void testWorkflowStepFactoryHasValidators() throws IOException {

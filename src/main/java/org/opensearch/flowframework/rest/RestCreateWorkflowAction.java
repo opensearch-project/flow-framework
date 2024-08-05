@@ -39,6 +39,7 @@ import java.util.stream.Collectors;
 
 import static org.opensearch.core.xcontent.XContentParserUtils.ensureExpectedToken;
 import static org.opensearch.flowframework.common.CommonValue.PROVISION_WORKFLOW;
+import static org.opensearch.flowframework.common.CommonValue.REPROVISION_WORKFLOW;
 import static org.opensearch.flowframework.common.CommonValue.UPDATE_WORKFLOW_FIELDS;
 import static org.opensearch.flowframework.common.CommonValue.USE_CASE;
 import static org.opensearch.flowframework.common.CommonValue.VALIDATION;
@@ -74,7 +75,7 @@ public class RestCreateWorkflowAction extends BaseRestHandler {
         return List.of(
             // Create new workflow
             new Route(RestRequest.Method.POST, String.format(Locale.ROOT, "%s", WORKFLOW_URI)),
-            // Update use case template
+            // Update use case template/ reprovision existing workflow
             new Route(RestRequest.Method.PUT, String.format(Locale.ROOT, "%s/{%s}", WORKFLOW_URI, WORKFLOW_ID))
         );
     }
@@ -84,8 +85,10 @@ public class RestCreateWorkflowAction extends BaseRestHandler {
         String workflowId = request.param(WORKFLOW_ID);
         String[] validation = request.paramAsStringArray(VALIDATION, new String[] { "all" });
         boolean provision = request.paramAsBoolean(PROVISION_WORKFLOW, false);
+        boolean reprovision = request.paramAsBoolean(REPROVISION_WORKFLOW, false);
         boolean updateFields = request.paramAsBoolean(UPDATE_WORKFLOW_FIELDS, false);
         String useCase = request.param(USE_CASE);
+
         // If provisioning, consume all other params and pass to provision transport action
         Map<String, String> params = provision
             ? request.params()
@@ -108,28 +111,32 @@ public class RestCreateWorkflowAction extends BaseRestHandler {
             );
         }
         if (!provision && !params.isEmpty()) {
-            // Consume params and content so custom exception is processed
-            params.keySet().stream().forEach(request::param);
-            request.content();
             FlowFrameworkException ffe = new FlowFrameworkException(
                 "Only the parameters " + request.consumedParams() + " are permitted unless the provision parameter is set to true.",
                 RestStatus.BAD_REQUEST
             );
-            return channel -> channel.sendResponse(
-                new BytesRestResponse(ffe.getRestStatus(), ffe.toXContent(channel.newErrorBuilder(), ToXContent.EMPTY_PARAMS))
-            );
+            return processError(ffe, params, request);
         }
         if (provision && updateFields) {
-            // Consume params and content so custom exception is processed
-            params.keySet().stream().forEach(request::param);
-            request.content();
             FlowFrameworkException ffe = new FlowFrameworkException(
                 "You can not use both the " + PROVISION_WORKFLOW + " and " + UPDATE_WORKFLOW_FIELDS + " parameters in the same request.",
                 RestStatus.BAD_REQUEST
             );
-            return channel -> channel.sendResponse(
-                new BytesRestResponse(ffe.getRestStatus(), ffe.toXContent(channel.newErrorBuilder(), ToXContent.EMPTY_PARAMS))
+            return processError(ffe, params, request);
+        }
+        if (reprovision && workflowId == null) {
+            FlowFrameworkException ffe = new FlowFrameworkException(
+                "You can not use the " + REPROVISION_WORKFLOW + " parameter to create a new template.",
+                RestStatus.BAD_REQUEST
             );
+            return processError(ffe, params, request);
+        }
+        if (reprovision && useCase != null) {
+            FlowFrameworkException ffe = new FlowFrameworkException(
+                "You cannot use the " + REPROVISION_WORKFLOW + " and " + USE_CASE + " parameters in the same request.",
+                RestStatus.BAD_REQUEST
+            );
+            return processError(ffe, params, request);
         }
         try {
             Template template;
@@ -213,7 +220,8 @@ public class RestCreateWorkflowAction extends BaseRestHandler {
                 provision || updateFields,
                 params,
                 useCase,
-                useCaseDefaultsMap
+                useCaseDefaultsMap,
+                reprovision
             );
 
             return channel -> client.execute(CreateWorkflowAction.INSTANCE, workflowRequest, ActionListener.wrap(response -> {
@@ -248,5 +256,14 @@ public class RestCreateWorkflowAction extends BaseRestHandler {
                 new BytesRestResponse(ex.getRestStatus(), ex.toXContent(channel.newErrorBuilder(), ToXContent.EMPTY_PARAMS))
             );
         }
+    }
+
+    private RestChannelConsumer processError(FlowFrameworkException ffe, Map<String, String> params, RestRequest request) {
+        // Consume params and content so custom exception is processed
+        params.keySet().stream().forEach(request::param);
+        request.content();
+        return channel -> channel.sendResponse(
+            new BytesRestResponse(ffe.getRestStatus(), ffe.toXContent(channel.newErrorBuilder(), ToXContent.EMPTY_PARAMS))
+        );
     }
 }

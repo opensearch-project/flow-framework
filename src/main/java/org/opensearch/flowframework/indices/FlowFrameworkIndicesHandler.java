@@ -690,7 +690,7 @@ public class FlowFrameworkIndicesHandler {
         Script script = new Script(
             ScriptType.INLINE,
             "painless",
-            "ctx._source.resources_created.add(params.newResource)",
+            "ctx._source.resources_created.add(params.newResource);",
             Collections.singletonMap("newResource", newResource.resourceMap())
         );
 
