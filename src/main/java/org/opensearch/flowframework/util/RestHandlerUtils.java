@@ -9,11 +9,19 @@
 package org.opensearch.flowframework.util;
 
 import org.apache.commons.lang3.ArrayUtils;
+import org.opensearch.common.xcontent.LoggingDeprecationHandler;
+import org.opensearch.common.xcontent.XContentHelper;
+import org.opensearch.common.xcontent.XContentType;
 import org.opensearch.commons.authuser.User;
 import org.opensearch.core.common.Strings;
+import org.opensearch.core.common.bytes.BytesReference;
+import org.opensearch.core.xcontent.NamedXContentRegistry;
+import org.opensearch.core.xcontent.XContentParser;
 import org.opensearch.flowframework.common.CommonValue;
 import org.opensearch.search.builder.SearchSourceBuilder;
 import org.opensearch.search.fetch.subphase.FetchSourceContext;
+
+import java.io.IOException;
 
 /**
  * Utility methods for Rest Handlers
@@ -51,5 +59,10 @@ public class RestHandlerUtils {
             }
             return new FetchSourceContext(true, Strings.EMPTY_ARRAY, EXCLUDES);
         }
+    }
+
+    public static XContentParser createXContentParserFromRegistry(NamedXContentRegistry xContentRegistry, BytesReference bytesReference)
+        throws IOException {
+        return XContentHelper.createParser(xContentRegistry, LoggingDeprecationHandler.INSTANCE, bytesReference, XContentType.JSON);
     }
 }

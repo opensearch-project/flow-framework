@@ -15,7 +15,9 @@ import org.opensearch.action.get.GetRequest;
 import org.opensearch.action.support.ActionFilters;
 import org.opensearch.action.support.HandledTransportAction;
 import org.opensearch.client.Client;
+import org.opensearch.cluster.service.ClusterService;
 import org.opensearch.common.inject.Inject;
+import org.opensearch.common.settings.Settings;
 import org.opensearch.common.util.concurrent.ThreadContext;
 import org.opensearch.commons.authuser.User;
 import org.opensearch.core.action.ActionListener;
@@ -31,6 +33,8 @@ import org.opensearch.transport.TransportService;
 
 import static org.opensearch.core.xcontent.XContentParserUtils.ensureExpectedToken;
 import static org.opensearch.flowframework.common.CommonValue.WORKFLOW_STATE_INDEX;
+import static org.opensearch.flowframework.common.FlowFrameworkSettings.FILTER_BY_BACKEND_ROLES;
+import static org.opensearch.flowframework.util.ParseUtils.resolveUserAndExecute;
 
 //TODO: Currently we only get the workflow status but we should change to be able to get the
 // full template as well
@@ -44,6 +48,8 @@ public class GetWorkflowStateTransportAction extends HandledTransportAction<GetW
 
     private final Client client;
     private final NamedXContentRegistry xContentRegistry;
+    private volatile Boolean filterByEnabled;
+    private final ClusterService clusterService;
 
     /**
      * Instantiates a new GetWorkflowStateTransportAction
@@ -57,47 +63,73 @@ public class GetWorkflowStateTransportAction extends HandledTransportAction<GetW
         TransportService transportService,
         ActionFilters actionFilters,
         Client client,
-        NamedXContentRegistry xContentRegistry
+        NamedXContentRegistry xContentRegistry,
+        ClusterService clusterService,
+        Settings settings
     ) {
         super(GetWorkflowStateAction.NAME, transportService, actionFilters, GetWorkflowStateRequest::new);
         this.client = client;
         this.xContentRegistry = xContentRegistry;
+        filterByEnabled = FILTER_BY_BACKEND_ROLES.get(settings);
+        this.clusterService = clusterService;
+        clusterService.getClusterSettings().addSettingsUpdateConsumer(FILTER_BY_BACKEND_ROLES, it -> filterByEnabled = it);
     }
 
     @Override
     protected void doExecute(Task task, GetWorkflowStateRequest request, ActionListener<GetWorkflowStateResponse> listener) {
         String workflowId = request.getWorkflowId();
         User user = ParseUtils.getUserContext(client);
-        GetRequest getRequest = new GetRequest(WORKFLOW_STATE_INDEX).id(workflowId);
+
         try (ThreadContext.StoredContext context = client.threadPool().getThreadContext().stashContext()) {
-            logger.info("Querying state workflow doc: {}", workflowId);
-            client.get(getRequest, ActionListener.runBefore(ActionListener.wrap(r -> {
-                if (r != null && r.isExists()) {
-                    try (XContentParser parser = ParseUtils.createXContentParserFromRegistry(xContentRegistry, r.getSourceAsBytesRef())) {
-                        ensureExpectedToken(XContentParser.Token.START_OBJECT, parser.nextToken(), parser);
-                        WorkflowState workflowState = WorkflowState.parse(parser);
-                        listener.onResponse(new GetWorkflowStateResponse(workflowState, request.getAll()));
-                    } catch (Exception e) {
-                        String errorMessage = "Failed to parse workflowState: " + r.getId();
-                        logger.error(errorMessage, e);
-                        listener.onFailure(new FlowFrameworkException(errorMessage, RestStatus.BAD_REQUEST));
-                    }
-                } else {
-                    listener.onFailure(new FlowFrameworkException("Fail to find workflow status of " + workflowId, RestStatus.NOT_FOUND));
-                }
-            }, e -> {
-                if (e instanceof IndexNotFoundException) {
-                    listener.onFailure(new FlowFrameworkException("Fail to find workflow status of " + workflowId, RestStatus.NOT_FOUND));
-                } else {
-                    String errorMessage = "Failed to get workflow status of: " + workflowId;
-                    logger.error(errorMessage, e);
-                    listener.onFailure(new FlowFrameworkException(errorMessage, RestStatus.NOT_FOUND));
-                }
-            }), context::restore));
+
+            resolveUserAndExecute(
+                user,
+                workflowId,
+                filterByEnabled,
+                listener,
+                () -> executeGetWorkflowStateRequest(request, listener, context),
+                client,
+                clusterService,
+                xContentRegistry
+            );
+
         } catch (Exception e) {
             String errorMessage = "Failed to get workflow: " + workflowId;
             logger.error(errorMessage, e);
             listener.onFailure(new FlowFrameworkException(errorMessage, ExceptionsHelper.status(e)));
         }
+    }
+
+    private void executeGetWorkflowStateRequest(
+        GetWorkflowStateRequest request,
+        ActionListener<GetWorkflowStateResponse> listener,
+        ThreadContext.StoredContext context
+    ) {
+        String workflowId = request.getWorkflowId();
+        GetRequest getRequest = new GetRequest(WORKFLOW_STATE_INDEX).id(workflowId);
+        logger.info("Querying state workflow doc: {}", workflowId);
+        client.get(getRequest, ActionListener.runBefore(ActionListener.wrap(r -> {
+            if (r != null && r.isExists()) {
+                try (XContentParser parser = ParseUtils.createXContentParserFromRegistry(xContentRegistry, r.getSourceAsBytesRef())) {
+                    ensureExpectedToken(XContentParser.Token.START_OBJECT, parser.nextToken(), parser);
+                    WorkflowState workflowState = WorkflowState.parse(parser);
+                    listener.onResponse(new GetWorkflowStateResponse(workflowState, request.getAll()));
+                } catch (Exception e) {
+                    String errorMessage = "Failed to parse workflowState: " + r.getId();
+                    logger.error(errorMessage, e);
+                    listener.onFailure(new FlowFrameworkException(errorMessage, RestStatus.BAD_REQUEST));
+                }
+            } else {
+                listener.onFailure(new FlowFrameworkException("Fail to find workflow status of " + workflowId, RestStatus.NOT_FOUND));
+            }
+        }, e -> {
+            if (e instanceof IndexNotFoundException) {
+                listener.onFailure(new FlowFrameworkException("Fail to find workflow status of " + workflowId, RestStatus.NOT_FOUND));
+            } else {
+                String errorMessage = "Failed to get workflow status of: " + workflowId;
+                logger.error(errorMessage, e);
+                listener.onFailure(new FlowFrameworkException(errorMessage, RestStatus.NOT_FOUND));
+            }
+        }), context::restore));
     }
 }

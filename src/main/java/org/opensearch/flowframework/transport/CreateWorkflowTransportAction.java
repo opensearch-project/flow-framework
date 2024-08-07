@@ -16,12 +16,15 @@ import org.opensearch.action.search.SearchRequest;
 import org.opensearch.action.support.ActionFilters;
 import org.opensearch.action.support.HandledTransportAction;
 import org.opensearch.client.Client;
+import org.opensearch.cluster.service.ClusterService;
 import org.opensearch.common.inject.Inject;
+import org.opensearch.common.settings.Settings;
 import org.opensearch.common.unit.TimeValue;
 import org.opensearch.common.util.concurrent.ThreadContext;
 import org.opensearch.commons.authuser.User;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.core.rest.RestStatus;
+import org.opensearch.core.xcontent.NamedXContentRegistry;
 import org.opensearch.flowframework.common.CommonValue;
 import org.opensearch.flowframework.common.FlowFrameworkSettings;
 import org.opensearch.flowframework.exception.FlowFrameworkException;
@@ -30,6 +33,7 @@ import org.opensearch.flowframework.model.ProvisioningProgress;
 import org.opensearch.flowframework.model.State;
 import org.opensearch.flowframework.model.Template;
 import org.opensearch.flowframework.model.Workflow;
+import org.opensearch.flowframework.transport.handler.WorkflowFunction;
 import org.opensearch.flowframework.workflow.ProcessNode;
 import org.opensearch.flowframework.workflow.WorkflowProcessSorter;
 import org.opensearch.index.query.QueryBuilder;
@@ -49,7 +53,8 @@ import static java.lang.Boolean.FALSE;
 import static org.opensearch.flowframework.common.CommonValue.GLOBAL_CONTEXT_INDEX;
 import static org.opensearch.flowframework.common.CommonValue.PROVISIONING_PROGRESS_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.STATE_FIELD;
-import static org.opensearch.flowframework.util.ParseUtils.getUserContext;
+import static org.opensearch.flowframework.common.FlowFrameworkSettings.FILTER_BY_BACKEND_ROLES;
+import static org.opensearch.flowframework.util.ParseUtils.*;
 
 /**
  * Transport Action to index or update a use case template within the Global Context
@@ -63,6 +68,10 @@ public class CreateWorkflowTransportAction extends HandledTransportAction<Workfl
     private final Client client;
     private final FlowFrameworkSettings flowFrameworkSettings;
     private final PluginsService pluginsService;
+    private volatile Boolean filterByEnabled;
+    private final Settings settings;
+    private final ClusterService clusterService;
+    private final NamedXContentRegistry xContentRegistry;
 
     /**
      * Instantiates a new CreateWorkflowTransportAction
@@ -82,7 +91,10 @@ public class CreateWorkflowTransportAction extends HandledTransportAction<Workfl
         FlowFrameworkIndicesHandler flowFrameworkIndicesHandler,
         FlowFrameworkSettings flowFrameworkSettings,
         Client client,
-        PluginsService pluginsService
+        PluginsService pluginsService,
+        ClusterService clusterService,
+        NamedXContentRegistry xContentRegistry,
+        Settings settings
     ) {
         super(CreateWorkflowAction.NAME, transportService, actionFilters, WorkflowRequest::new);
         this.workflowProcessSorter = workflowProcessSorter;
@@ -90,12 +102,59 @@ public class CreateWorkflowTransportAction extends HandledTransportAction<Workfl
         this.flowFrameworkSettings = flowFrameworkSettings;
         this.client = client;
         this.pluginsService = pluginsService;
+        filterByEnabled = FILTER_BY_BACKEND_ROLES.get(settings);
+        this.clusterService = clusterService;
+        clusterService.getClusterSettings().addSettingsUpdateConsumer(FILTER_BY_BACKEND_ROLES, it -> filterByEnabled = it);
+        this.xContentRegistry = xContentRegistry;
+        this.settings = settings;
     }
 
     @Override
     protected void doExecute(Task task, WorkflowRequest request, ActionListener<WorkflowResponse> listener) {
-
         User user = getUserContext(client);
+        String workflowId = request.getWorkflowId();
+        try {
+            resolveUserAndExecute(user, workflowId, listener, () -> createExecute(request, user, listener));
+        } catch (Exception e) {
+            logger.error(e);
+            listener.onFailure(e);
+        }
+    }
+
+    private void resolveUserAndExecute(
+        User requestedUser,
+        String workflowId,
+        ActionListener<WorkflowResponse> listener,
+        WorkflowFunction function
+    ) {
+        try {
+            // Check if user has backend roles
+            // When filter by is enabled, block users creating/updating workflows who do not have backend roles.
+            if (filterByEnabled) {
+                String error = checkFilterByBackendRoles(requestedUser);
+                if (error != null) {
+                    listener.onFailure(new FlowFrameworkException(error, RestStatus.BAD_REQUEST));
+                    return;
+                }
+            }
+            if (workflowId != null) {
+                // requestedUser == null means security is disabled or user is superadmin. In this case we don't need to
+                // check if request user have access to the workflow or not. But we still need to get current workflow for
+                // this case, so we can keep current workflow's user data.
+                boolean filterByBackendRole = requestedUser != null && filterByEnabled;
+                // Update workflow request, check if user has permissions to update the workflow
+                // Get workflow and verify backend roles
+                getWorkflow(requestedUser, workflowId, filterByEnabled, listener, function, client, clusterService, xContentRegistry);
+            } else {
+                // Create Workflow. No need to get current workflow.
+                function.execute();
+            }
+        } catch (Exception e) {
+            listener.onFailure(e);
+        }
+    }
+
+    protected void createExecute(WorkflowRequest request, User user, ActionListener<WorkflowResponse> listener) {
         Instant creationTime = Instant.now();
         Template templateWithUser = new Template(
             request.getTemplate().name(),

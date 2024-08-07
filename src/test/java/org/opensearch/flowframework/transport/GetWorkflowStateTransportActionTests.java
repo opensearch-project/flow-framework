@@ -10,7 +10,9 @@ package org.opensearch.flowframework.transport;
 
 import org.opensearch.action.support.ActionFilters;
 import org.opensearch.client.Client;
+import org.opensearch.cluster.service.ClusterService;
 import org.opensearch.common.io.stream.BytesStreamOutput;
+import org.opensearch.common.settings.ClusterSettings;
 import org.opensearch.common.settings.Settings;
 import org.opensearch.common.util.concurrent.ThreadContext;
 import org.opensearch.core.action.ActionListener;
@@ -19,6 +21,7 @@ import org.opensearch.core.common.io.stream.StreamInput;
 import org.opensearch.core.xcontent.ToXContent;
 import org.opensearch.core.xcontent.XContentBuilder;
 import org.opensearch.flowframework.TestHelpers;
+import org.opensearch.flowframework.common.FlowFrameworkSettings;
 import org.opensearch.flowframework.indices.FlowFrameworkIndicesHandler;
 import org.opensearch.flowframework.model.WorkflowState;
 import org.opensearch.tasks.Task;
@@ -29,7 +32,9 @@ import org.junit.Assert;
 
 import java.io.IOException;
 import java.time.Instant;
+import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.Map;
 
 import org.mockito.Mockito;
@@ -52,11 +57,20 @@ public class GetWorkflowStateTransportActionTests extends OpenSearchTestCase {
         super.setUp();
         this.client = mock(Client.class);
         this.threadPool = mock(ThreadPool.class);
+        ClusterService clusterService = mock(ClusterService.class);
+        ClusterSettings clusterSettings = new ClusterSettings(
+            Settings.EMPTY,
+            Collections.unmodifiableSet(new HashSet<>(Arrays.asList(FlowFrameworkSettings.FILTER_BY_BACKEND_ROLES)))
+        );
+        when(clusterService.getClusterSettings()).thenReturn(clusterSettings);
+
         this.getWorkflowStateTransportAction = new GetWorkflowStateTransportAction(
             mock(TransportService.class),
             mock(ActionFilters.class),
             client,
-            xContentRegistry()
+            xContentRegistry(),
+            clusterService,
+            Settings.EMPTY
         );
         task = Mockito.mock(Task.class);
         ThreadPool clientThreadPool = mock(ThreadPool.class);

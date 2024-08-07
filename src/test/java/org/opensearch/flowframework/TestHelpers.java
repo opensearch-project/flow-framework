@@ -11,6 +11,8 @@ package org.opensearch.flowframework;
 import org.apache.hc.core5.http.Header;
 import org.apache.hc.core5.http.HttpEntity;
 import org.apache.hc.core5.http.io.entity.StringEntity;
+import org.apache.logging.log4j.util.Strings;
+import org.opensearch.action.get.GetResponse;
 import org.opensearch.client.Request;
 import org.opensearch.client.RequestOptions;
 import org.opensearch.client.Response;
@@ -34,6 +36,7 @@ import org.opensearch.flowframework.model.Workflow;
 import org.opensearch.flowframework.model.WorkflowEdge;
 import org.opensearch.flowframework.model.WorkflowNode;
 import org.opensearch.flowframework.util.ParseUtils;
+import org.opensearch.index.get.GetResult;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -47,6 +50,7 @@ import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import static org.opensearch.index.seqno.SequenceNumbers.UNASSIGNED_SEQ_NO;
 import static org.opensearch.test.OpenSearchTestCase.randomAlphaOfLength;
 import static org.apache.hc.core5.http.ContentType.APPLICATION_JSON;
 
@@ -175,6 +179,23 @@ public class TestHelpers {
         List<WorkflowEdge> edges = List.of(edgeAB);
         Workflow workflow = new Workflow(Map.of("key", "value"), nodes, edges);
         return workflow;
+    }
+
+    public static GetResponse createGetResponse(ToXContentObject o, String id, String indexName) throws IOException {
+        XContentBuilder content = o.toXContent(XContentFactory.jsonBuilder(), ToXContent.EMPTY_PARAMS);
+        return new GetResponse(
+            new GetResult(
+                indexName,
+                id,
+                UNASSIGNED_SEQ_NO,
+                0,
+                -1,
+                true,
+                BytesReference.bytes(content),
+                Collections.emptyMap(),
+                Collections.emptyMap()
+            )
+        );
     }
 
 }

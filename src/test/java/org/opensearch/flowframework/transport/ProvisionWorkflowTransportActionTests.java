@@ -15,6 +15,8 @@ import org.opensearch.action.index.IndexResponse;
 import org.opensearch.action.support.ActionFilters;
 import org.opensearch.action.update.UpdateResponse;
 import org.opensearch.client.Client;
+import org.opensearch.cluster.service.ClusterService;
+import org.opensearch.common.settings.ClusterSettings;
 import org.opensearch.common.settings.Settings;
 import org.opensearch.common.util.concurrent.ThreadContext;
 import org.opensearch.common.xcontent.XContentFactory;
@@ -23,6 +25,7 @@ import org.opensearch.core.common.bytes.BytesReference;
 import org.opensearch.core.index.shard.ShardId;
 import org.opensearch.core.xcontent.XContentBuilder;
 import org.opensearch.flowframework.TestHelpers;
+import org.opensearch.flowframework.common.FlowFrameworkSettings;
 import org.opensearch.flowframework.indices.FlowFrameworkIndicesHandler;
 import org.opensearch.flowframework.model.ProvisioningProgress;
 import org.opensearch.flowframework.model.Template;
@@ -38,10 +41,7 @@ import org.opensearch.test.OpenSearchTestCase;
 import org.opensearch.threadpool.ThreadPool;
 import org.opensearch.transport.TransportService;
 
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
 import java.util.function.Consumer;
 
 import org.mockito.ArgumentCaptor;
@@ -75,6 +75,12 @@ public class ProvisionWorkflowTransportActionTests extends OpenSearchTestCase {
         this.flowFrameworkIndicesHandler = mock(FlowFrameworkIndicesHandler.class);
         this.encryptorUtils = mock(EncryptorUtils.class);
         this.pluginsService = mock(PluginsService.class);
+        ClusterService clusterService = mock(ClusterService.class);
+        ClusterSettings clusterSettings = new ClusterSettings(
+            Settings.EMPTY,
+            Collections.unmodifiableSet(new HashSet<>(Arrays.asList(FlowFrameworkSettings.FILTER_BY_BACKEND_ROLES)))
+        );
+        when(clusterService.getClusterSettings()).thenReturn(clusterSettings);
 
         this.provisionWorkflowTransportAction = new ProvisionWorkflowTransportAction(
             mock(TransportService.class),
@@ -84,7 +90,10 @@ public class ProvisionWorkflowTransportActionTests extends OpenSearchTestCase {
             workflowProcessSorter,
             flowFrameworkIndicesHandler,
             encryptorUtils,
-            pluginsService
+            pluginsService,
+            clusterService,
+            xContentRegistry(),
+            Settings.EMPTY
         );
 
         Version templateVersion = Version.fromString("1.0.0");
