@@ -8,6 +8,7 @@
  */
 package org.opensearch.flowframework;
 
+import com.google.gson.JsonArray;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.hc.client5.http.auth.AuthScope;
 import org.apache.hc.client5.http.auth.UsernamePasswordCredentials;
@@ -36,7 +37,6 @@ import org.opensearch.common.unit.TimeValue;
 import org.opensearch.common.util.concurrent.ThreadContext;
 import org.opensearch.common.xcontent.LoggingDeprecationHandler;
 import org.opensearch.common.xcontent.json.JsonXContent;
-import org.opensearch.commons.rest.SecureRestClientBuilder;
 import org.opensearch.core.rest.RestStatus;
 import org.opensearch.core.xcontent.DeprecationHandler;
 import org.opensearch.core.xcontent.MediaType;
@@ -55,11 +55,7 @@ import org.junit.After;
 import org.junit.Before;
 
 import java.io.IOException;
-import java.util.Collections;
-import java.util.List;
-import java.util.Locale;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
@@ -70,14 +66,6 @@ import static org.opensearch.flowframework.common.CommonValue.WORKFLOW_URI;
  * Base rest integration test class, supports security enabled/disabled cluster
  */
 public abstract class FlowFrameworkRestTestCase extends OpenSearchRestTestCase {
-
-    private static String FLOW_FRAMEWORK_FULL_ACCESS_ROLE = "flow_framework_full_access";
-    private static String ML_COMMONS_FULL_ACCESS_ROLE = "ml_full_access";
-    private static String READ_ACCESS_ROLE = "flow_framework_read_access";
-    public static String FULL_ACCESS_USER = "fullAccessUser";
-    public static String READ_ACCESS_USER = "readAccessUser";
-    private static RestClient readAccessClient;
-    private static RestClient fullAccessClient;
 
     @Before
     protected void setUpSettings() throws Exception {
@@ -137,42 +125,6 @@ public abstract class FlowFrameworkRestTestCase extends OpenSearchRestTestCase {
         );
         assertEquals(200, response.getStatusLine().getStatusCode());
 
-        // Set up clients if running in security enabled cluster
-        if (isHttps()) {
-            String fullAccessUserPassword = generatePassword(FULL_ACCESS_USER);
-            String readAccessUserPassword = generatePassword(READ_ACCESS_USER);
-
-            // Configure full access user and client, needs ML Full Access role as well
-            response = createUser(
-                FULL_ACCESS_USER,
-                fullAccessUserPassword,
-                List.of(FLOW_FRAMEWORK_FULL_ACCESS_ROLE, ML_COMMONS_FULL_ACCESS_ROLE)
-            );
-            fullAccessClient = new SecureRestClientBuilder(
-                getClusterHosts().toArray(new HttpHost[0]),
-                isHttps(),
-                FULL_ACCESS_USER,
-                fullAccessUserPassword
-            ).setSocketTimeout(60000).build();
-
-            // Configure read access user and client
-            response = createUser(READ_ACCESS_USER, readAccessUserPassword, List.of(READ_ACCESS_ROLE));
-            readAccessClient = new SecureRestClientBuilder(
-                getClusterHosts().toArray(new HttpHost[0]),
-                isHttps(),
-                READ_ACCESS_USER,
-                readAccessUserPassword
-            ).setSocketTimeout(60000).build();
-        }
-
-    }
-
-    protected static RestClient fullAccessClient() {
-        return fullAccessClient;
-    }
-
-    protected static RestClient readAccessClient() {
-        return readAccessClient;
     }
 
     protected boolean isHttps() {
@@ -347,7 +299,7 @@ public abstract class FlowFrameworkRestTestCase extends OpenSearchRestTestCase {
      * Helper method to invoke the Create Workflow Rest Action without validation
      * @param client the rest client
      * @param useCase the usecase to create
-     * @param the required params
+     * @param params the required params
      * @throws Exception if the request fails
      * @return a rest response
      */
@@ -369,6 +321,130 @@ public abstract class FlowFrameworkRestTestCase extends OpenSearchRestTestCase {
             "{" + sb.toString() + "}",
             null
         );
+    }
+
+    public Response createIndexRole(String role, String index) throws IOException {
+        return TestHelpers.makeRequest(
+            client(),
+            "PUT",
+            "/_plugins/_security/api/roles/" + role,
+            null,
+            TestHelpers.toHttpEntity(
+                "{\n"
+                    + "\"cluster_permissions\": [\n"
+                    + "],\n"
+                    + "\"index_permissions\": [\n"
+                    + "{\n"
+                    + "\"index_patterns\": [\n"
+                    + "\""
+                    + index
+                    + "\"\n"
+                    + "],\n"
+                    + "\"dls\": \"\",\n"
+                    + "\"fls\": [],\n"
+                    + "\"masked_fields\": [],\n"
+                    + "\"allowed_actions\": [\n"
+                    + "\"crud\",\n"
+                    + "\"indices:admin/create\",\n"
+                    + "\"indices:admin/aliases\"\n"
+                    + "]\n"
+                    + "}\n"
+                    + "],\n"
+                    + "\"tenant_permissions\": []\n"
+                    + "}"
+            ),
+            ImmutableList.of(new BasicHeader(HttpHeaders.USER_AGENT, "Kibana"))
+        );
+    }
+
+    public Response createSearchRole(String role, String index) throws IOException {
+        return TestHelpers.makeRequest(
+            client(),
+            "PUT",
+            "/_plugins/_security/api/roles/" + role,
+            null,
+            TestHelpers.toHttpEntity(
+                "{\n"
+                    + "\"cluster_permissions\": [\n"
+                    + "],\n"
+                    + "\"index_permissions\": [\n"
+                    + "{\n"
+                    + "\"index_patterns\": [\n"
+                    + "\""
+                    + index
+                    + "\"\n"
+                    + "],\n"
+                    + "\"dls\": \"\",\n"
+                    + "\"fls\": [],\n"
+                    + "\"masked_fields\": [],\n"
+                    + "\"allowed_actions\": [\n"
+                    + "\"indices:data/read/search\",\n"
+                    + "\"indices:data/read/get\"\n"
+                    + "]\n"
+                    + "}\n"
+                    + "],\n"
+                    + "\"tenant_permissions\": []\n"
+                    + "}"
+            ),
+            ImmutableList.of(new BasicHeader(HttpHeaders.USER_AGENT, "Kibana"))
+        );
+    }
+
+    public Response createRoleMapping(String role, List<String> users) throws IOException {
+        JsonArray usersString = new JsonArray();
+        for (int i = 0; i < users.size(); i++) {
+            usersString.add(users.get(i));
+        }
+        return TestHelpers.makeRequest(
+            client(),
+            "PUT",
+            "/_plugins/_security/api/rolesmapping/" + role,
+            null,
+            TestHelpers.toHttpEntity(
+                "{\n" + "  \"backend_roles\" : [  ],\n" + "  \"hosts\" : [  ],\n" + "  \"users\" : " + usersString + "\n" + "}"
+            ),
+            ImmutableList.of(new BasicHeader(HttpHeaders.USER_AGENT, "Kibana"))
+        );
+    }
+
+    public Response enableFilterBy() throws IOException {
+        return TestHelpers.makeRequest(
+            client(),
+            "PUT",
+            "_cluster/settings",
+            null,
+            TestHelpers.toHttpEntity(
+                "{\n" + "  \"persistent\": {\n" + "       \"plugins.flow_framework.filter_by_backend_roles\" : \"true\"\n" + "   }\n" + "}"
+            ),
+            ImmutableList.of(new BasicHeader(HttpHeaders.USER_AGENT, "Kibana"))
+        );
+    }
+
+    public Response disableFilterBy() throws IOException {
+        return TestHelpers.makeRequest(
+            client(),
+            "PUT",
+            "_cluster/settings",
+            null,
+            TestHelpers.toHttpEntity(
+                "{\n" + "  \"persistent\": {\n" + "       \"plugins.flow_framework.filter_by_backend_roles\" : \"false\"\n" + "   }\n" + "}"
+            ),
+            ImmutableList.of(new BasicHeader(HttpHeaders.USER_AGENT, "Kibana"))
+        );
+    }
+
+    public void confirmingClientIsAdmin() throws IOException {
+        Response resp = TestHelpers.makeRequest(
+            client(),
+            "GET",
+            "_plugins/_security/api/account",
+            null,
+            "",
+            ImmutableList.of(new BasicHeader(HttpHeaders.USER_AGENT, "admin"))
+        );
+        Map<String, Object> responseMap = entityAsMap(resp);
+        ArrayList<String> roles = (ArrayList<String>) responseMap.get("roles");
+        assertTrue(roles.contains("all_access"));
     }
 
     /**
@@ -769,20 +845,28 @@ public abstract class FlowFrameworkRestTestCase extends OpenSearchRestTestCase {
         }
     }
 
-    protected Response createUser(String name, String password, List<String> backendRoles) throws IOException {
-        String backendRolesString = backendRoles.stream().map(item -> "\"" + item + "\"").collect(Collectors.joining(","));
-        String json = "{\"password\": \""
-            + password
-            + "\",\"opendistro_security_roles\": ["
-            + backendRolesString
-            + "],\"backend_roles\": [],\"attributes\": {}}";
+    public Response createUser(String name, String password, List<String> backendRoles) throws IOException {
+        JsonArray backendRolesString = new JsonArray();
+        for (int i = 0; i < backendRoles.size(); i++) {
+            backendRolesString.add(backendRoles.get(i));
+        }
         return TestHelpers.makeRequest(
             client(),
             "PUT",
-            "/_opendistro/_security/api/internalusers/" + name,
+            "/_plugins/_security/api/internalusers/" + name,
             null,
-            TestHelpers.toHttpEntity(json),
-            List.of(new BasicHeader(HttpHeaders.USER_AGENT, "Kibana"))
+            TestHelpers.toHttpEntity(
+                " {\n"
+                    + "\"password\": \""
+                    + password
+                    + "\",\n"
+                    + "\"backend_roles\": "
+                    + backendRolesString
+                    + ",\n"
+                    + "\"attributes\": {\n"
+                    + "}} "
+            ),
+            ImmutableList.of(new BasicHeader(HttpHeaders.USER_AGENT, "Kibana"))
         );
     }
 
@@ -790,7 +874,7 @@ public abstract class FlowFrameworkRestTestCase extends OpenSearchRestTestCase {
         return TestHelpers.makeRequest(
             client(),
             "DELETE",
-            "/_opendistro/_security/api/internalusers/" + user,
+            "/_plugins/_security/api/internalusers/" + user,
             null,
             "",
             List.of(new BasicHeader(HttpHeaders.USER_AGENT, "Kibana"))

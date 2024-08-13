@@ -141,10 +141,10 @@ public class CreateWorkflowTransportAction extends HandledTransportAction<Workfl
                 // requestedUser == null means security is disabled or user is superadmin. In this case we don't need to
                 // check if request user have access to the workflow or not. But we still need to get current workflow for
                 // this case, so we can keep current workflow's user data.
-                boolean filterByBackendRole = requestedUser != null && filterByEnabled;
+                boolean filterByBackendRole = requestedUser == null ? false : filterByEnabled;
                 // Update workflow request, check if user has permissions to update the workflow
                 // Get workflow and verify backend roles
-                getWorkflow(requestedUser, workflowId, filterByEnabled, listener, function, client, clusterService, xContentRegistry);
+                getWorkflow(requestedUser, workflowId, filterByBackendRole, listener, function, client, clusterService, xContentRegistry);
             } else {
                 // Create Workflow. No need to get current workflow.
                 function.execute();

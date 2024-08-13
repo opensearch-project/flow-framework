@@ -20,6 +20,7 @@ import org.opensearch.client.Client;
 import org.opensearch.cluster.service.ClusterService;
 import org.opensearch.common.Booleans;
 import org.opensearch.common.io.Streams;
+import org.opensearch.common.util.concurrent.ThreadContext;
 import org.opensearch.common.xcontent.LoggingDeprecationHandler;
 import org.opensearch.common.xcontent.XContentHelper;
 import org.opensearch.common.xcontent.XContentType;
@@ -331,25 +332,27 @@ public class ParseUtils {
         NamedXContentRegistry xContentRegistry
     ) {
         if (clusterService.state().metadata().hasIndex(GLOBAL_CONTEXT_INDEX)) {
-            GetRequest request = new GetRequest(GLOBAL_CONTEXT_INDEX, workflowId);
-            client.get(
-                request,
-                ActionListener.wrap(
-                    response -> onGetWorkflowResponse(
-                        response,
-                        requestUser,
-                        workflowId,
-                        filterByEnabled,
-                        listener,
-                        function,
-                        xContentRegistry
-                    ),
-                    exception -> {
-                        logger.error("Failed to get workflow: {}", workflowId, exception);
-                        listener.onFailure(exception);
-                    }
-                )
-            );
+//            try (ThreadContext.StoredContext context = client.threadPool().getThreadContext().stashContext()) {
+                GetRequest request = new GetRequest(GLOBAL_CONTEXT_INDEX, workflowId);
+                client.get(
+                        request,
+                        ActionListener.wrap(
+                                response -> onGetWorkflowResponse(
+                                        response,
+                                        requestUser,
+                                        workflowId,
+                                        filterByEnabled,
+                                        listener,
+                                        function,
+                                        xContentRegistry
+                                ),
+                                exception -> {
+                                    logger.error("Failed to get workflow: {}", workflowId, exception);
+                                    listener.onFailure(exception);
+                                }
+                        )
+                );
+            //}
         } else {
             listener.onFailure(new IndexNotFoundException(GLOBAL_CONTEXT_INDEX));
         }

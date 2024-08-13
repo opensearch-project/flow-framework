@@ -13,6 +13,7 @@ import org.apache.hc.core5.http.HttpEntity;
 import org.apache.hc.core5.http.io.entity.StringEntity;
 import org.apache.logging.log4j.util.Strings;
 import org.opensearch.action.get.GetResponse;
+import org.opensearch.action.search.SearchRequest;
 import org.opensearch.client.Request;
 import org.opensearch.client.RequestOptions;
 import org.opensearch.client.Response;
@@ -37,6 +38,9 @@ import org.opensearch.flowframework.model.WorkflowEdge;
 import org.opensearch.flowframework.model.WorkflowNode;
 import org.opensearch.flowframework.util.ParseUtils;
 import org.opensearch.index.get.GetResult;
+import org.opensearch.index.query.BoolQueryBuilder;
+import org.opensearch.index.query.MatchAllQueryBuilder;
+import org.opensearch.search.builder.SearchSourceBuilder;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -179,6 +183,12 @@ public class TestHelpers {
         List<WorkflowEdge> edges = List.of(edgeAB);
         Workflow workflow = new Workflow(Map.of("key", "value"), nodes, edges);
         return workflow;
+    }
+
+    public static SearchRequest matchAllRequest() {
+        BoolQueryBuilder query = new BoolQueryBuilder().filter(new MatchAllQueryBuilder());
+        SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder().query(query);
+        return new SearchRequest().source(searchSourceBuilder);
     }
 
     public static GetResponse createGetResponse(ToXContentObject o, String id, String indexName) throws IOException {
