@@ -363,6 +363,212 @@ public class FlowFrameworkRestApiIT extends FlowFrameworkRestTestCase {
         assertBusy(() -> { getAndAssertWorkflowStatusNotFound(client(), workflowId); }, 30, TimeUnit.SECONDS);
     }
 
+    public void testReprovisionWorkflow() throws Exception {
+        // Begin with a template to register a local pretrained model
+        Template template = TestHelpers.createTemplateFromFile("registerlocalmodel.json");
+
+        // Hit Create Workflow API to create agent-framework template, with template validation check and provision parameter
+        Response response;
+        if (!indexExistsWithAdminClient(".plugins-ml-config")) {
+            assertBusy(() -> assertTrue(indexExistsWithAdminClient(".plugins-ml-config")), 40, TimeUnit.SECONDS);
+            response = createWorkflowWithProvision(client(), template);
+        } else {
+            response = createWorkflowWithProvision(client(), template);
+        }
+        assertEquals(RestStatus.CREATED, TestHelpers.restStatus(response));
+        Map<String, Object> responseMap = entityAsMap(response);
+        String workflowId = (String) responseMap.get(WORKFLOW_ID);
+        // wait and ensure state is completed/done
+        assertBusy(
+            () -> { getAndAssertWorkflowStatus(client(), workflowId, State.COMPLETED, ProvisioningProgress.DONE); },
+            120,
+            TimeUnit.SECONDS
+        );
+
+        // Wait until provisioning has completed successfully before attempting to retrieve created resources
+        List<ResourceCreated> resourcesCreated = getResourcesCreated(client(), workflowId, 30);
+        assertEquals(2, resourcesCreated.size());
+        assertEquals("register_local_pretrained_model", resourcesCreated.get(0).workflowStepName());
+
+        // Reprovision template to add ingest pipeline which uses the model ID
+        template = TestHelpers.createTemplateFromFile("registerlocalmodel-ingestpipeline.json");
+        response = reprovisionWorkflow(client(), workflowId, template);
+        assertEquals(RestStatus.CREATED, TestHelpers.restStatus(response));
+
+        resourcesCreated = getResourcesCreated(client(), workflowId, 10);
+        assertEquals(3, resourcesCreated.size());
+        List<String> resourceIds = resourcesCreated.stream().map(x -> x.workflowStepName()).collect(Collectors.toList());
+        assertTrue(resourceIds.contains("register_local_pretrained_model"));
+        assertTrue(resourceIds.contains("create_ingest_pipeline"));
+
+        // Retrieve pipeline by ID to ensure model ID is set correctly
+        String modelId = resourcesCreated.stream()
+            .filter(x -> x.workflowStepName().equals("register_local_pretrained_model"))
+            .findFirst()
+            .get()
+            .resourceId();
+        String pipelineId = resourcesCreated.stream()
+            .filter(x -> x.workflowStepName().equals("create_ingest_pipeline"))
+            .findFirst()
+            .get()
+            .resourceId();
+        GetPipelineResponse getPipelineResponse = getPipelines(pipelineId);
+        assertEquals(1, getPipelineResponse.pipelines().size());
+        assertTrue(getPipelineResponse.pipelines().get(0).getConfigAsMap().toString().contains(modelId));
+
+        // Reprovision template to add index which uses default ingest pipeline
+        template = TestHelpers.createTemplateFromFile("registerlocalmodel-ingestpipeline-createindex.json");
+        response = reprovisionWorkflow(client(), workflowId, template);
+        assertEquals(RestStatus.CREATED, TestHelpers.restStatus(response));
+
+        resourcesCreated = getResourcesCreated(client(), workflowId, 10);
+        assertEquals(4, resourcesCreated.size());
+        resourceIds = resourcesCreated.stream().map(x -> x.workflowStepName()).collect(Collectors.toList());
+        assertTrue(resourceIds.contains("register_local_pretrained_model"));
+        assertTrue(resourceIds.contains("create_ingest_pipeline"));
+        assertTrue(resourceIds.contains("create_index"));
+
+        // Retrieve index settings to ensure pipeline ID is set correctly
+        String indexName = resourcesCreated.stream()
+            .filter(x -> x.workflowStepName().equals("create_index"))
+            .findFirst()
+            .get()
+            .resourceId();
+        Map<String, Object> indexSettings = getIndexSettingsAsMap(indexName);
+        assertEquals(pipelineId, indexSettings.get("index.default_pipeline"));
+
+        // Reprovision template to remove default ingest pipeline
+        template = TestHelpers.createTemplateFromFile("registerlocalmodel-ingestpipeline-updateindex.json");
+        response = reprovisionWorkflow(client(), workflowId, template);
+        assertEquals(RestStatus.CREATED, TestHelpers.restStatus(response));
+
+        resourcesCreated = getResourcesCreated(client(), workflowId, 10);
+        // resource count should remain unchanged when updating an existing node
+        assertEquals(4, resourcesCreated.size());
+
+        // Retrieve index settings to ensure default pipeline has been updated correctly
+        indexSettings = getIndexSettingsAsMap(indexName);
+        assertEquals("_none", indexSettings.get("index.default_pipeline"));
+    }
+
+    public void testReprovisionWorkflowMidNodeAddition() throws Exception {
+        // Begin with a template to register a local pretrained model and create an index, no edges
+        Template template = TestHelpers.createTemplateFromFile("registerlocalmodel-createindex.json");
+
+        // Hit Create Workflow API to create agent-framework template, with template validation check and provision parameter
+        Response response;
+        if (!indexExistsWithAdminClient(".plugins-ml-config")) {
+            assertBusy(() -> assertTrue(indexExistsWithAdminClient(".plugins-ml-config")), 40, TimeUnit.SECONDS);
+            response = createWorkflowWithProvision(client(), template);
+        } else {
+            response = createWorkflowWithProvision(client(), template);
+        }
+        assertEquals(RestStatus.CREATED, TestHelpers.restStatus(response));
+        Map<String, Object> responseMap = entityAsMap(response);
+        String workflowId = (String) responseMap.get(WORKFLOW_ID);
+        // wait and ensure state is completed/done
+        assertBusy(
+            () -> { getAndAssertWorkflowStatus(client(), workflowId, State.COMPLETED, ProvisioningProgress.DONE); },
+            120,
+            TimeUnit.SECONDS
+        );
+
+        // Wait until provisioning has completed successfully before attempting to retrieve created resources
+        List<ResourceCreated> resourcesCreated = getResourcesCreated(client(), workflowId, 30);
+        assertEquals(3, resourcesCreated.size());
+        List<String> resourceIds = resourcesCreated.stream().map(x -> x.workflowStepName()).collect(Collectors.toList());
+        assertTrue(resourceIds.contains("register_local_pretrained_model"));
+        assertTrue(resourceIds.contains("create_index"));
+
+        // Reprovision template to add ingest pipeline which uses the model ID
+        template = TestHelpers.createTemplateFromFile("registerlocalmodel-ingestpipeline-createindex.json");
+        response = reprovisionWorkflow(client(), workflowId, template);
+        assertEquals(RestStatus.CREATED, TestHelpers.restStatus(response));
+
+        resourcesCreated = getResourcesCreated(client(), workflowId, 10);
+        assertEquals(4, resourcesCreated.size());
+        resourceIds = resourcesCreated.stream().map(x -> x.workflowStepName()).collect(Collectors.toList());
+        assertTrue(resourceIds.contains("register_local_pretrained_model"));
+        assertTrue(resourceIds.contains("create_ingest_pipeline"));
+        assertTrue(resourceIds.contains("create_index"));
+
+        // Ensure ingest pipeline configuration contains the model id and index settings have the ingest pipeline as default
+        String modelId = resourcesCreated.stream()
+            .filter(x -> x.workflowStepName().equals("register_local_pretrained_model"))
+            .findFirst()
+            .get()
+            .resourceId();
+        String pipelineId = resourcesCreated.stream()
+            .filter(x -> x.workflowStepName().equals("create_ingest_pipeline"))
+            .findFirst()
+            .get()
+            .resourceId();
+        GetPipelineResponse getPipelineResponse = getPipelines(pipelineId);
+        assertEquals(1, getPipelineResponse.pipelines().size());
+        assertTrue(getPipelineResponse.pipelines().get(0).getConfigAsMap().toString().contains(modelId));
+
+        String indexName = resourcesCreated.stream()
+            .filter(x -> x.workflowStepName().equals("create_index"))
+            .findFirst()
+            .get()
+            .resourceId();
+        Map<String, Object> indexSettings = getIndexSettingsAsMap(indexName);
+        assertEquals(pipelineId, indexSettings.get("index.default_pipeline"));
+    }
+
+    public void testReprovisionWithNoChange() throws Exception {
+        Template template = TestHelpers.createTemplateFromFile("registerlocalmodel-ingestpipeline-createindex.json");
+
+        Response response;
+        if (!indexExistsWithAdminClient(".plugins-ml-config")) {
+            assertBusy(() -> assertTrue(indexExistsWithAdminClient(".plugins-ml-config")), 40, TimeUnit.SECONDS);
+            response = createWorkflowWithProvision(client(), template);
+        } else {
+            response = createWorkflowWithProvision(client(), template);
+        }
+        assertEquals(RestStatus.CREATED, TestHelpers.restStatus(response));
+        Map<String, Object> responseMap = entityAsMap(response);
+        String workflowId = (String) responseMap.get(WORKFLOW_ID);
+        // wait and ensure state is completed/done
+        assertBusy(
+            () -> { getAndAssertWorkflowStatus(client(), workflowId, State.COMPLETED, ProvisioningProgress.DONE); },
+            120,
+            TimeUnit.SECONDS
+        );
+
+        // Attempt to reprovision the same template with no changes
+        ResponseException exception = expectThrows(ResponseException.class, () -> reprovisionWorkflow(client(), workflowId, template));
+        assertEquals(RestStatus.BAD_REQUEST.getStatus(), exception.getResponse().getStatusLine().getStatusCode());
+        assertTrue(exception.getMessage().contains("Template does not contain any modifications"));
+    }
+
+    public void testReprovisionWithDeletion() throws Exception {
+        Template template = TestHelpers.createTemplateFromFile("registerlocalmodel-ingestpipeline-createindex.json");
+
+        Response response;
+        if (!indexExistsWithAdminClient(".plugins-ml-config")) {
+            assertBusy(() -> assertTrue(indexExistsWithAdminClient(".plugins-ml-config")), 40, TimeUnit.SECONDS);
+            response = createWorkflowWithProvision(client(), template);
+        } else {
+            response = createWorkflowWithProvision(client(), template);
+        }
+        assertEquals(RestStatus.CREATED, TestHelpers.restStatus(response));
+        Map<String, Object> responseMap = entityAsMap(response);
+        String workflowId = (String) responseMap.get(WORKFLOW_ID);
+        // wait and ensure state is completed/done
+        assertBusy(
+            () -> { getAndAssertWorkflowStatus(client(), workflowId, State.COMPLETED, ProvisioningProgress.DONE); },
+            120,
+            TimeUnit.SECONDS
+        );
+
+        // Attempt to reprovision template without ingest pipeline node
+        Template templateWithoutIngestPipeline = TestHelpers.createTemplateFromFile("registerlocalmodel-createindex.json");
+        ResponseException exception = expectThrows(ResponseException.class, () -> reprovisionWorkflow(client(), workflowId, templateWithoutIngestPipeline));
+        assertEquals(RestStatus.BAD_REQUEST.getStatus(), exception.getResponse().getStatusLine().getStatusCode());
+        assertTrue(exception.getMessage().contains("Workflow Step deletion is not supported when reprovisioning a template."));
+    }
+
     public void testTimestamps() throws Exception {
         Template noopTemplate = TestHelpers.createTemplateFromFile("noop.json");
         // Create the template, should have created and updated matching

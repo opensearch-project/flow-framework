@@ -1,0 +1,86 @@
+{
+    "name": "semantic search with local pretrained model",
+    "description": "Setting up semantic search, with a local pretrained embedding model",
+    "use_case": "SEMANTIC_SEARCH",
+    "version": {
+      "template": "1.0.0",
+      "compatibility": [
+        "2.12.0",
+        "3.0.0"
+      ]
+    },
+    "workflows": {
+      "provision": {
+        "nodes": [
+          {
+            "id": "register_local_pretrained_model",
+            "type": "register_local_pretrained_model",
+            "user_inputs": {
+              "name": "huggingface/sentence-transformers/paraphrase-MiniLM-L3-v2",
+              "version": "1.0.1",
+              "description": "This is a sentence transformer model",
+              "model_format": "TORCH_SCRIPT",
+              "deploy": true
+            }
+          },
+          {
+            "id": "create_ingest_pipeline",
+            "type": "create_ingest_pipeline",
+            "previous_node_inputs": {
+              "register_local_pretrained_model": "model_id"
+            },
+            "user_inputs": {
+              "pipeline_id": "nlp-ingest-pipeline",
+              "configurations": {
+                "description": "A text embedding pipeline",
+                "processors": [
+                  {
+                    "text_embedding": {
+                      "model_id": "${{register_local_pretrained_model.model_id}}",
+                      "field_map": {
+                        "passage_text": "passage_embedding"
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          },
+          {
+            "id": "create_index",
+            "type": "create_index",
+            "previous_node_inputs": {
+              "create_ingest_pipeline": "pipeline_id"
+            },
+            "user_inputs": {
+              "index_name": "my-nlp-index",
+              "configurations": {
+                "settings": {
+                  "index.knn": true,
+                  "default_pipeline": "_none",
+                  "index.number_of_shards": "2"
+                },
+                "mappings": {
+                  "properties": {
+                    "passage_embedding": {
+                      "type": "knn_vector",
+                      "dimension": "768",
+                      "method": {
+                        "engine": "lucene",
+                        "space_type": "l2",
+                        "name": "hnsw",
+                        "parameters": {}
+                      }
+                    },
+                    "passage_text": {
+                      "type": "text"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        ]
+      }
+    }
+  }
