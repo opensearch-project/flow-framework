@@ -449,6 +449,19 @@ public class FlowFrameworkRestApiIT extends FlowFrameworkRestTestCase {
         // Retrieve index settings to ensure default pipeline has been updated correctly
         indexSettings = getIndexSettingsAsMap(indexName);
         assertEquals("_none", indexSettings.get("index.default_pipeline"));
+
+        // Deprovision and delete all resources
+        Response deprovisionResponse = deprovisionWorkflowWithAllowDelete(client(), workflowId, pipelineId + "," + indexName);
+        assertBusy(
+            () -> { getAndAssertWorkflowStatus(client(), workflowId, State.NOT_STARTED, ProvisioningProgress.NOT_STARTED); },
+            60,
+            TimeUnit.SECONDS
+        );
+        assertEquals(RestStatus.OK, TestHelpers.restStatus(deprovisionResponse));
+
+        // Hit Delete API
+        Response deleteResponse = deleteWorkflow(client(), workflowId);
+        assertEquals(RestStatus.OK, TestHelpers.restStatus(deleteResponse));
     }
 
     public void testReprovisionWorkflowMidNodeAddition() throws Exception {
@@ -514,6 +527,19 @@ public class FlowFrameworkRestApiIT extends FlowFrameworkRestTestCase {
             .resourceId();
         Map<String, Object> indexSettings = getIndexSettingsAsMap(indexName);
         assertEquals(pipelineId, indexSettings.get("index.default_pipeline"));
+
+        // Deprovision and delete all resources
+        Response deprovisionResponse = deprovisionWorkflowWithAllowDelete(client(), workflowId, pipelineId + "," + indexName);
+        assertBusy(
+            () -> { getAndAssertWorkflowStatus(client(), workflowId, State.NOT_STARTED, ProvisioningProgress.NOT_STARTED); },
+            60,
+            TimeUnit.SECONDS
+        );
+        assertEquals(RestStatus.OK, TestHelpers.restStatus(deprovisionResponse));
+
+        // Hit Delete API
+        Response deleteResponse = deleteWorkflow(client(), workflowId);
+        assertEquals(RestStatus.OK, TestHelpers.restStatus(deleteResponse));
     }
 
     public void testReprovisionWithNoChange() throws Exception {
