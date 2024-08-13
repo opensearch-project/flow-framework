@@ -566,6 +566,23 @@ public class FlowFrameworkRestApiIT extends FlowFrameworkRestTestCase {
         ResponseException exception = expectThrows(ResponseException.class, () -> reprovisionWorkflow(client(), workflowId, template));
         assertEquals(RestStatus.BAD_REQUEST.getStatus(), exception.getResponse().getStatusLine().getStatusCode());
         assertTrue(exception.getMessage().contains("Template does not contain any modifications"));
+
+        // Deprovision and delete all resources
+        Response deprovisionResponse = deprovisionWorkflowWithAllowDelete(
+            client(),
+            workflowId,
+            "nlp-ingest-pipeline" + "," + "my-nlp-index"
+        );
+        assertBusy(
+            () -> { getAndAssertWorkflowStatus(client(), workflowId, State.NOT_STARTED, ProvisioningProgress.NOT_STARTED); },
+            60,
+            TimeUnit.SECONDS
+        );
+        assertEquals(RestStatus.OK, TestHelpers.restStatus(deprovisionResponse));
+
+        // Hit Delete API
+        Response deleteResponse = deleteWorkflow(client(), workflowId);
+        assertEquals(RestStatus.OK, TestHelpers.restStatus(deleteResponse));
     }
 
     public void testReprovisionWithDeletion() throws Exception {
@@ -596,6 +613,23 @@ public class FlowFrameworkRestApiIT extends FlowFrameworkRestTestCase {
         );
         assertEquals(RestStatus.BAD_REQUEST.getStatus(), exception.getResponse().getStatusLine().getStatusCode());
         assertTrue(exception.getMessage().contains("Workflow Step deletion is not supported when reprovisioning a template."));
+
+        // Deprovision and delete all resources
+        Response deprovisionResponse = deprovisionWorkflowWithAllowDelete(
+            client(),
+            workflowId,
+            "nlp-ingest-pipeline" + "," + "my-nlp-index"
+        );
+        assertBusy(
+            () -> { getAndAssertWorkflowStatus(client(), workflowId, State.NOT_STARTED, ProvisioningProgress.NOT_STARTED); },
+            60,
+            TimeUnit.SECONDS
+        );
+        assertEquals(RestStatus.OK, TestHelpers.restStatus(deprovisionResponse));
+
+        // Hit Delete API
+        Response deleteResponse = deleteWorkflow(client(), workflowId);
+        assertEquals(RestStatus.OK, TestHelpers.restStatus(deleteResponse));
     }
 
     public void testTimestamps() throws Exception {
