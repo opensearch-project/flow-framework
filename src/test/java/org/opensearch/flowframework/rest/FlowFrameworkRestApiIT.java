@@ -564,7 +564,10 @@ public class FlowFrameworkRestApiIT extends FlowFrameworkRestTestCase {
 
         // Attempt to reprovision template without ingest pipeline node
         Template templateWithoutIngestPipeline = TestHelpers.createTemplateFromFile("registerlocalmodel-createindex.json");
-        ResponseException exception = expectThrows(ResponseException.class, () -> reprovisionWorkflow(client(), workflowId, templateWithoutIngestPipeline));
+        ResponseException exception = expectThrows(
+            ResponseException.class,
+            () -> reprovisionWorkflow(client(), workflowId, templateWithoutIngestPipeline)
+        );
         assertEquals(RestStatus.BAD_REQUEST.getStatus(), exception.getResponse().getStatusLine().getStatusCode());
         assertTrue(exception.getMessage().contains("Workflow Step deletion is not supported when reprovisioning a template."));
     }
