@@ -365,7 +365,7 @@ public class FlowFrameworkRestApiIT extends FlowFrameworkRestTestCase {
 
     public void testReprovisionWorkflow() throws Exception {
         // Begin with a template to register a local pretrained model
-        Template template = TestHelpers.createTemplateFromFile("registerlocalmodel.json");
+        Template template = TestHelpers.createTemplateFromFile("registerremotemodel.json");
 
         // Hit Create Workflow API to create agent-framework template, with template validation check and provision parameter
         Response response;
@@ -387,23 +387,26 @@ public class FlowFrameworkRestApiIT extends FlowFrameworkRestTestCase {
 
         // Wait until provisioning has completed successfully before attempting to retrieve created resources
         List<ResourceCreated> resourcesCreated = getResourcesCreated(client(), workflowId, 30);
-        assertEquals(2, resourcesCreated.size());
-        assertEquals("register_local_pretrained_model", resourcesCreated.get(0).workflowStepName());
+        assertEquals(3, resourcesCreated.size());
+        List<String> resourceIds = resourcesCreated.stream().map(x -> x.workflowStepName()).collect(Collectors.toList());
+        assertTrue(resourceIds.contains("create_connector"));
+        assertTrue(resourceIds.contains("register_remote_model"));
 
         // Reprovision template to add ingest pipeline which uses the model ID
-        template = TestHelpers.createTemplateFromFile("registerlocalmodel-ingestpipeline.json");
+        template = TestHelpers.createTemplateFromFile("registerremotemodel-ingestpipeline.json");
         response = reprovisionWorkflow(client(), workflowId, template);
         assertEquals(RestStatus.CREATED, TestHelpers.restStatus(response));
 
         resourcesCreated = getResourcesCreated(client(), workflowId, 10);
-        assertEquals(3, resourcesCreated.size());
-        List<String> resourceIds = resourcesCreated.stream().map(x -> x.workflowStepName()).collect(Collectors.toList());
-        assertTrue(resourceIds.contains("register_local_pretrained_model"));
+        assertEquals(4, resourcesCreated.size());
+        resourceIds = resourcesCreated.stream().map(x -> x.workflowStepName()).collect(Collectors.toList());
+        assertTrue(resourceIds.contains("create_connector"));
+        assertTrue(resourceIds.contains("register_remote_model"));
         assertTrue(resourceIds.contains("create_ingest_pipeline"));
 
         // Retrieve pipeline by ID to ensure model ID is set correctly
         String modelId = resourcesCreated.stream()
-            .filter(x -> x.workflowStepName().equals("register_local_pretrained_model"))
+            .filter(x -> x.workflowStepName().equals("register_remote_model"))
             .findFirst()
             .get()
             .resourceId();
@@ -417,14 +420,15 @@ public class FlowFrameworkRestApiIT extends FlowFrameworkRestTestCase {
         assertTrue(getPipelineResponse.pipelines().get(0).getConfigAsMap().toString().contains(modelId));
 
         // Reprovision template to add index which uses default ingest pipeline
-        template = TestHelpers.createTemplateFromFile("registerlocalmodel-ingestpipeline-createindex.json");
+        template = TestHelpers.createTemplateFromFile("registerremotemodel-ingestpipeline-createindex.json");
         response = reprovisionWorkflow(client(), workflowId, template);
         assertEquals(RestStatus.CREATED, TestHelpers.restStatus(response));
 
         resourcesCreated = getResourcesCreated(client(), workflowId, 10);
-        assertEquals(4, resourcesCreated.size());
+        assertEquals(5, resourcesCreated.size());
         resourceIds = resourcesCreated.stream().map(x -> x.workflowStepName()).collect(Collectors.toList());
-        assertTrue(resourceIds.contains("register_local_pretrained_model"));
+        assertTrue(resourceIds.contains("create_connector"));
+        assertTrue(resourceIds.contains("register_remote_model"));
         assertTrue(resourceIds.contains("create_ingest_pipeline"));
         assertTrue(resourceIds.contains("create_index"));
 
@@ -438,13 +442,13 @@ public class FlowFrameworkRestApiIT extends FlowFrameworkRestTestCase {
         assertEquals(pipelineId, indexSettings.get("index.default_pipeline"));
 
         // Reprovision template to remove default ingest pipeline
-        template = TestHelpers.createTemplateFromFile("registerlocalmodel-ingestpipeline-updateindex.json");
+        template = TestHelpers.createTemplateFromFile("registerremotemodel-ingestpipeline-updateindex.json");
         response = reprovisionWorkflow(client(), workflowId, template);
         assertEquals(RestStatus.CREATED, TestHelpers.restStatus(response));
 
         resourcesCreated = getResourcesCreated(client(), workflowId, 10);
         // resource count should remain unchanged when updating an existing node
-        assertEquals(4, resourcesCreated.size());
+        assertEquals(5, resourcesCreated.size());
 
         // Retrieve index settings to ensure default pipeline has been updated correctly
         indexSettings = getIndexSettingsAsMap(indexName);
@@ -466,7 +470,7 @@ public class FlowFrameworkRestApiIT extends FlowFrameworkRestTestCase {
 
     public void testReprovisionWorkflowMidNodeAddition() throws Exception {
         // Begin with a template to register a local pretrained model and create an index, no edges
-        Template template = TestHelpers.createTemplateFromFile("registerlocalmodel-createindex.json");
+        Template template = TestHelpers.createTemplateFromFile("registerremotemodel-createindex.json");
 
         // Hit Create Workflow API to create agent-framework template, with template validation check and provision parameter
         Response response;
@@ -488,26 +492,28 @@ public class FlowFrameworkRestApiIT extends FlowFrameworkRestTestCase {
 
         // Wait until provisioning has completed successfully before attempting to retrieve created resources
         List<ResourceCreated> resourcesCreated = getResourcesCreated(client(), workflowId, 30);
-        assertEquals(3, resourcesCreated.size());
+        assertEquals(4, resourcesCreated.size());
         List<String> resourceIds = resourcesCreated.stream().map(x -> x.workflowStepName()).collect(Collectors.toList());
-        assertTrue(resourceIds.contains("register_local_pretrained_model"));
+        assertTrue(resourceIds.contains("create_connector"));
+        assertTrue(resourceIds.contains("register_remote_model"));
         assertTrue(resourceIds.contains("create_index"));
 
         // Reprovision template to add ingest pipeline which uses the model ID
-        template = TestHelpers.createTemplateFromFile("registerlocalmodel-ingestpipeline-createindex.json");
+        template = TestHelpers.createTemplateFromFile("registerremotemodel-ingestpipeline-createindex.json");
         response = reprovisionWorkflow(client(), workflowId, template);
         assertEquals(RestStatus.CREATED, TestHelpers.restStatus(response));
 
         resourcesCreated = getResourcesCreated(client(), workflowId, 10);
-        assertEquals(4, resourcesCreated.size());
+        assertEquals(5, resourcesCreated.size());
         resourceIds = resourcesCreated.stream().map(x -> x.workflowStepName()).collect(Collectors.toList());
-        assertTrue(resourceIds.contains("register_local_pretrained_model"));
+        assertTrue(resourceIds.contains("create_connector"));
+        assertTrue(resourceIds.contains("register_remote_model"));
         assertTrue(resourceIds.contains("create_ingest_pipeline"));
         assertTrue(resourceIds.contains("create_index"));
 
         // Ensure ingest pipeline configuration contains the model id and index settings have the ingest pipeline as default
         String modelId = resourcesCreated.stream()
-            .filter(x -> x.workflowStepName().equals("register_local_pretrained_model"))
+            .filter(x -> x.workflowStepName().equals("register_remote_model"))
             .findFirst()
             .get()
             .resourceId();
@@ -543,7 +549,7 @@ public class FlowFrameworkRestApiIT extends FlowFrameworkRestTestCase {
     }
 
     public void testReprovisionWithNoChange() throws Exception {
-        Template template = TestHelpers.createTemplateFromFile("registerlocalmodel-ingestpipeline-createindex.json");
+        Template template = TestHelpers.createTemplateFromFile("registerremotemodel-ingestpipeline-createindex.json");
 
         Response response;
         if (!indexExistsWithAdminClient(".plugins-ml-config")) {
@@ -586,7 +592,7 @@ public class FlowFrameworkRestApiIT extends FlowFrameworkRestTestCase {
     }
 
     public void testReprovisionWithDeletion() throws Exception {
-        Template template = TestHelpers.createTemplateFromFile("registerlocalmodel-ingestpipeline-createindex.json");
+        Template template = TestHelpers.createTemplateFromFile("registerremotemodel-ingestpipeline-createindex.json");
 
         Response response;
         if (!indexExistsWithAdminClient(".plugins-ml-config")) {
@@ -606,7 +612,7 @@ public class FlowFrameworkRestApiIT extends FlowFrameworkRestTestCase {
         );
 
         // Attempt to reprovision template without ingest pipeline node
-        Template templateWithoutIngestPipeline = TestHelpers.createTemplateFromFile("registerlocalmodel-createindex.json");
+        Template templateWithoutIngestPipeline = TestHelpers.createTemplateFromFile("registerremotemodel-createindex.json");
         ResponseException exception = expectThrows(
             ResponseException.class,
             () -> reprovisionWorkflow(client(), workflowId, templateWithoutIngestPipeline)
