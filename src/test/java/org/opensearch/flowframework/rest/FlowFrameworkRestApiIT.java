@@ -335,7 +335,6 @@ public class FlowFrameworkRestApiIT extends FlowFrameworkRestTestCase {
         // Begin with a template to register a local pretrained model
         Template template = TestHelpers.createTemplateFromFile("registerremotemodel.json");
 
-        // Hit Create Workflow API to create agent-framework template, with template validation check and provision parameter
         Response response = createWorkflowWithProvision(client(), template);
         assertEquals(RestStatus.CREATED, TestHelpers.restStatus(response));
         Map<String, Object> responseMap = entityAsMap(response);
@@ -350,9 +349,10 @@ public class FlowFrameworkRestApiIT extends FlowFrameworkRestTestCase {
         // Wait until provisioning has completed successfully before attempting to retrieve created resources
         List<ResourceCreated> resourcesCreated = getResourcesCreated(client(), workflowId, 30);
         assertEquals(3, resourcesCreated.size());
-        List<String> resourceIds = resourcesCreated.stream().map(x -> x.workflowStepName()).collect(Collectors.toList());
-        assertTrue(resourceIds.contains("create_connector"));
-        assertTrue(resourceIds.contains("register_remote_model"));
+        Map<String, ResourceCreated> resourceMap = resourcesCreated.stream()
+            .collect(Collectors.toMap(ResourceCreated::workflowStepName, r -> r));
+        assertTrue(resourceMap.containsKey("create_connector"));
+        assertTrue(resourceMap.containsKey("register_remote_model"));
 
         // Reprovision template to add ingest pipeline which uses the model ID
         template = TestHelpers.createTemplateFromFile("registerremotemodel-ingestpipeline.json");
@@ -361,22 +361,14 @@ public class FlowFrameworkRestApiIT extends FlowFrameworkRestTestCase {
 
         resourcesCreated = getResourcesCreated(client(), workflowId, 30);
         assertEquals(4, resourcesCreated.size());
-        resourceIds = resourcesCreated.stream().map(x -> x.workflowStepName()).collect(Collectors.toList());
-        assertTrue(resourceIds.contains("create_connector"));
-        assertTrue(resourceIds.contains("register_remote_model"));
-        assertTrue(resourceIds.contains("create_ingest_pipeline"));
+        resourceMap = resourcesCreated.stream().collect(Collectors.toMap(ResourceCreated::workflowStepName, r -> r));
+        assertTrue(resourceMap.containsKey("create_connector"));
+        assertTrue(resourceMap.containsKey("register_remote_model"));
+        assertTrue(resourceMap.containsKey("create_ingest_pipeline"));
 
         // Retrieve pipeline by ID to ensure model ID is set correctly
-        String modelId = resourcesCreated.stream()
-            .filter(x -> x.workflowStepName().equals("register_remote_model"))
-            .findFirst()
-            .get()
-            .resourceId();
-        String pipelineId = resourcesCreated.stream()
-            .filter(x -> x.workflowStepName().equals("create_ingest_pipeline"))
-            .findFirst()
-            .get()
-            .resourceId();
+        String modelId = resourceMap.get("register_remote_model").resourceId();
+        String pipelineId = resourceMap.get("create_ingest_pipeline").resourceId();
         GetPipelineResponse getPipelineResponse = getPipelines(pipelineId);
         assertEquals(1, getPipelineResponse.pipelines().size());
         assertTrue(getPipelineResponse.pipelines().get(0).getConfigAsMap().toString().contains(modelId));
@@ -388,18 +380,14 @@ public class FlowFrameworkRestApiIT extends FlowFrameworkRestTestCase {
 
         resourcesCreated = getResourcesCreated(client(), workflowId, 30);
         assertEquals(5, resourcesCreated.size());
-        resourceIds = resourcesCreated.stream().map(x -> x.workflowStepName()).collect(Collectors.toList());
-        assertTrue(resourceIds.contains("create_connector"));
-        assertTrue(resourceIds.contains("register_remote_model"));
-        assertTrue(resourceIds.contains("create_ingest_pipeline"));
-        assertTrue(resourceIds.contains("create_index"));
+        resourceMap = resourcesCreated.stream().collect(Collectors.toMap(ResourceCreated::workflowStepName, r -> r));
+        assertTrue(resourceMap.containsKey("create_connector"));
+        assertTrue(resourceMap.containsKey("register_remote_model"));
+        assertTrue(resourceMap.containsKey("create_ingest_pipeline"));
+        assertTrue(resourceMap.containsKey("create_index"));
 
         // Retrieve index settings to ensure pipeline ID is set correctly
-        String indexName = resourcesCreated.stream()
-            .filter(x -> x.workflowStepName().equals("create_index"))
-            .findFirst()
-            .get()
-            .resourceId();
+        String indexName = resourceMap.get("create_index").resourceId();
         Map<String, Object> indexSettings = getIndexSettingsAsMap(indexName);
         assertEquals(pipelineId, indexSettings.get("index.default_pipeline"));
 
@@ -434,7 +422,6 @@ public class FlowFrameworkRestApiIT extends FlowFrameworkRestTestCase {
         // Begin with a template to register a local pretrained model and create an index, no edges
         Template template = TestHelpers.createTemplateFromFile("registerremotemodel-createindex.json");
 
-        // Hit Create Workflow API to create agent-framework template, with template validation check and provision parameter
         Response response = createWorkflowWithProvision(client(), template);
         assertEquals(RestStatus.CREATED, TestHelpers.restStatus(response));
         Map<String, Object> responseMap = entityAsMap(response);
@@ -449,10 +436,11 @@ public class FlowFrameworkRestApiIT extends FlowFrameworkRestTestCase {
         // Wait until provisioning has completed successfully before attempting to retrieve created resources
         List<ResourceCreated> resourcesCreated = getResourcesCreated(client(), workflowId, 30);
         assertEquals(4, resourcesCreated.size());
-        List<String> resourceIds = resourcesCreated.stream().map(x -> x.workflowStepName()).collect(Collectors.toList());
-        assertTrue(resourceIds.contains("create_connector"));
-        assertTrue(resourceIds.contains("register_remote_model"));
-        assertTrue(resourceIds.contains("create_index"));
+        Map<String, ResourceCreated> resourceMap = resourcesCreated.stream()
+            .collect(Collectors.toMap(ResourceCreated::workflowStepName, r -> r));
+        assertTrue(resourceMap.containsKey("create_connector"));
+        assertTrue(resourceMap.containsKey("register_remote_model"));
+        assertTrue(resourceMap.containsKey("create_index"));
 
         // Reprovision template to add ingest pipeline which uses the model ID
         template = TestHelpers.createTemplateFromFile("registerremotemodel-ingestpipeline-createindex.json");
@@ -461,32 +449,20 @@ public class FlowFrameworkRestApiIT extends FlowFrameworkRestTestCase {
 
         resourcesCreated = getResourcesCreated(client(), workflowId, 30);
         assertEquals(5, resourcesCreated.size());
-        resourceIds = resourcesCreated.stream().map(x -> x.workflowStepName()).collect(Collectors.toList());
-        assertTrue(resourceIds.contains("create_connector"));
-        assertTrue(resourceIds.contains("register_remote_model"));
-        assertTrue(resourceIds.contains("create_ingest_pipeline"));
-        assertTrue(resourceIds.contains("create_index"));
+        resourceMap = resourcesCreated.stream().collect(Collectors.toMap(ResourceCreated::workflowStepName, r -> r));
+        assertTrue(resourceMap.containsKey("create_connector"));
+        assertTrue(resourceMap.containsKey("register_remote_model"));
+        assertTrue(resourceMap.containsKey("create_ingest_pipeline"));
+        assertTrue(resourceMap.containsKey("create_index"));
 
         // Ensure ingest pipeline configuration contains the model id and index settings have the ingest pipeline as default
-        String modelId = resourcesCreated.stream()
-            .filter(x -> x.workflowStepName().equals("register_remote_model"))
-            .findFirst()
-            .get()
-            .resourceId();
-        String pipelineId = resourcesCreated.stream()
-            .filter(x -> x.workflowStepName().equals("create_ingest_pipeline"))
-            .findFirst()
-            .get()
-            .resourceId();
+        String modelId = resourceMap.get("register_remote_model").resourceId();
+        String pipelineId = resourceMap.get("create_ingest_pipeline").resourceId();
         GetPipelineResponse getPipelineResponse = getPipelines(pipelineId);
         assertEquals(1, getPipelineResponse.pipelines().size());
         assertTrue(getPipelineResponse.pipelines().get(0).getConfigAsMap().toString().contains(modelId));
 
-        String indexName = resourcesCreated.stream()
-            .filter(x -> x.workflowStepName().equals("create_index"))
-            .findFirst()
-            .get()
-            .resourceId();
+        String indexName = resourceMap.get("create_index").resourceId();
         Map<String, Object> indexSettings = getIndexSettingsAsMap(indexName);
         assertEquals(pipelineId, indexSettings.get("index.default_pipeline"));
 
