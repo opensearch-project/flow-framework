@@ -10,7 +10,6 @@ package org.opensearch.flowframework.workflow;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.opensearch.ExceptionsHelper;
 import org.opensearch.action.support.PlainActionFuture;
 import org.opensearch.common.unit.TimeValue;
 import org.opensearch.common.util.concurrent.FutureUtils;
@@ -24,8 +23,11 @@ import org.opensearch.ml.client.MachineLearningNodeClient;
 import org.opensearch.ml.common.MLTask;
 import org.opensearch.threadpool.ThreadPool;
 
+import java.util.HashMap;
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
+import static org.opensearch.flowframework.common.CommonValue.REGISTER_MODEL_STATUS;
 import static org.opensearch.flowframework.common.CommonValue.WORKFLOW_THREAD_POOL;
 import static org.opensearch.flowframework.common.WorkflowResources.getResourceByWorkflowStep;
 
@@ -60,7 +62,7 @@ public abstract class AbstractRetryableWorkflowStep implements WorkflowStep {
 
     /**
      * Retryable get ml task
-     * @param workflowId the workflow id
+     * @param currentNodeInputs the current Node Inputs
      * @param nodeId the workflow node id
      * @param future the workflow step future
      * @param taskId the ml task id
@@ -68,12 +70,12 @@ public abstract class AbstractRetryableWorkflowStep implements WorkflowStep {
      * @param mlTaskListener the ML Task Listener
      */
     protected void retryableGetMlTask(
-        String workflowId,
+        WorkflowData currentNodeInputs,
         String nodeId,
         PlainActionFuture<WorkflowData> future,
         String taskId,
         String workflowStep,
-        ActionListener<MLTask> mlTaskListener
+        ActionListener<WorkflowData> mlTaskListener
     ) {
         CompletableFuture.runAsync(() -> {
             do {
@@ -82,34 +84,13 @@ public abstract class AbstractRetryableWorkflowStep implements WorkflowStep {
                     String id = getResourceId(response);
                     switch (response.getState()) {
                         case COMPLETED:
-                            try {
-                                logger.info("{} successful for {} and {} {}", workflowStep, workflowId, resourceName, id);
-                                flowFrameworkIndicesHandler.updateResourceInStateIndex(
-                                    workflowId,
-                                    nodeId,
-                                    getName(),
-                                    id,
-                                    ActionListener.wrap(updateResponse -> {
-                                        logger.info("successfully updated resources created in state index: {}", updateResponse.getIndex());
-                                        mlTaskListener.onResponse(response);
-                                    }, exception -> {
-                                        String errorMessage = "Failed to update new created "
-                                            + nodeId
-                                            + " resource "
-                                            + getName()
-                                            + " id "
-                                            + id;
-                                        logger.error(errorMessage, exception);
-                                        mlTaskListener.onFailure(
-                                            new FlowFrameworkException(errorMessage, ExceptionsHelper.status(exception))
-                                        );
-                                    })
-                                );
-                            } catch (Exception e) {
-                                String errorMessage = "Failed to parse and update new created resource " + resourceName + " id " + id;
-                                logger.error(errorMessage, e);
-                                mlTaskListener.onFailure(new FlowFrameworkException(errorMessage, ExceptionsHelper.status(e)));
-                            }
+                            logger.info("{} successful for {} and {} {}", workflowStep, currentNodeInputs, resourceName, id);
+                            ActionListener<WorkflowData> resourceListener = ActionListener.wrap(r -> {
+                                Map<String, Object> content = new HashMap<>(r.getContent());
+                                content.put(REGISTER_MODEL_STATUS, response.getState().toString());
+                                mlTaskListener.onResponse(new WorkflowData(content, r.getWorkflowId(), r.getNodeId()));
+                            }, mlTaskListener::onFailure);
+                            flowFrameworkIndicesHandler.addResourceToStateIndex(currentNodeInputs, nodeId, getName(), id, resourceListener);
                             break;
                         case FAILED:
                         case COMPLETED_WITH_ERROR:
