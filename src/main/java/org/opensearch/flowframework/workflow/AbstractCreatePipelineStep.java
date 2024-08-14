@@ -33,7 +33,6 @@ import java.util.Set;
 import static org.opensearch.flowframework.common.CommonValue.CONFIGURATIONS;
 import static org.opensearch.flowframework.common.WorkflowResources.MODEL_ID;
 import static org.opensearch.flowframework.common.WorkflowResources.PIPELINE_ID;
-import static org.opensearch.flowframework.common.WorkflowResources.getResourceByWorkflowStep;
 import static org.opensearch.flowframework.exception.WorkflowStepException.getSafeException;
 
 /**
@@ -98,43 +97,14 @@ public abstract class AbstractCreatePipelineStep implements WorkflowStep {
 
                 @Override
                 public void onResponse(AcknowledgedResponse acknowledgedResponse) {
-                    String resourceName = getResourceByWorkflowStep(getName());
-                    try {
-                        flowFrameworkIndicesHandler.updateResourceInStateIndex(
-                            currentNodeInputs.getWorkflowId(),
-                            currentNodeId,
-                            getName(),
-                            pipelineId,
-                            ActionListener.wrap(updateResponse -> {
-                                logger.info("successfully updated resources created in state index: {}", updateResponse.getIndex());
-                                // PutPipelineRequest returns only an AcknowledgeResponse, saving pipelineId instead
-                                // TODO: revisit this concept of pipeline_id to be consistent with what makes most sense to end user here
-                                createPipelineFuture.onResponse(
-                                    new WorkflowData(
-                                        Map.of(resourceName, pipelineId),
-                                        currentNodeInputs.getWorkflowId(),
-                                        currentNodeInputs.getNodeId()
-                                    )
-                                );
-                            }, exception -> {
-                                String errorMessage = "Failed to update new created "
-                                    + currentNodeId
-                                    + " resource "
-                                    + getName()
-                                    + " id "
-                                    + pipelineId;
-                                logger.error(errorMessage, exception);
-                                createPipelineFuture.onFailure(
-                                    new FlowFrameworkException(errorMessage, ExceptionsHelper.status(exception))
-                                );
-                            })
-                        );
-
-                    } catch (Exception e) {
-                        String errorMessage = "Failed to parse and update new created resource";
-                        logger.error(errorMessage, e);
-                        createPipelineFuture.onFailure(new FlowFrameworkException(errorMessage, ExceptionsHelper.status(e)));
-                    }
+                    // PutPipelineRequest returns only an AcknowledgeResponse, saving pipelineId instead
+                    flowFrameworkIndicesHandler.addResourceToStateIndex(
+                        currentNodeInputs,
+                        currentNodeId,
+                        getName(),
+                        pipelineId,
+                        createPipelineFuture
+                    );
                 }
 
                 @Override

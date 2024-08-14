@@ -47,7 +47,6 @@ import static org.opensearch.flowframework.common.CommonValue.TOOLS_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.TOOLS_ORDER_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.TYPE;
 import static org.opensearch.flowframework.common.WorkflowResources.MODEL_ID;
-import static org.opensearch.flowframework.common.WorkflowResources.getResourceByWorkflowStep;
 import static org.opensearch.flowframework.exception.WorkflowStepException.getSafeException;
 import static org.opensearch.flowframework.util.ParseUtils.getStringToStringMap;
 
@@ -95,42 +94,14 @@ public class RegisterAgentStep implements WorkflowStep {
         ActionListener<MLRegisterAgentResponse> actionListener = new ActionListener<>() {
             @Override
             public void onResponse(MLRegisterAgentResponse mlRegisterAgentResponse) {
-                try {
-                    String resourceName = getResourceByWorkflowStep(getName());
-                    logger.info("Agent registration successful for the agent {}", mlRegisterAgentResponse.getAgentId());
-                    flowFrameworkIndicesHandler.updateResourceInStateIndex(
-                        workflowId,
-                        currentNodeId,
-                        getName(),
-                        mlRegisterAgentResponse.getAgentId(),
-                        ActionListener.wrap(response -> {
-                            logger.info("successfully updated resources created in state index: {}", response.getIndex());
-                            registerAgentModelFuture.onResponse(
-                                new WorkflowData(
-                                    Map.ofEntries(Map.entry(resourceName, mlRegisterAgentResponse.getAgentId())),
-                                    workflowId,
-                                    currentNodeId
-                                )
-                            );
-                        }, exception -> {
-                            String errorMessage = "Failed to update new created "
-                                + currentNodeId
-                                + " resource "
-                                + getName()
-                                + " id "
-                                + mlRegisterAgentResponse.getAgentId();
-                            logger.error(errorMessage, exception);
-                            registerAgentModelFuture.onFailure(
-                                new FlowFrameworkException(errorMessage, ExceptionsHelper.status(exception))
-                            );
-                        })
-                    );
-
-                } catch (Exception e) {
-                    String errorMessage = "Failed to parse and update new created resource";
-                    logger.error(errorMessage, e);
-                    registerAgentModelFuture.onFailure(new FlowFrameworkException(errorMessage, ExceptionsHelper.status(e)));
-                }
+                logger.info("Agent registration successful for the agent {}", mlRegisterAgentResponse.getAgentId());
+                flowFrameworkIndicesHandler.addResourceToStateIndex(
+                    currentNodeInputs,
+                    currentNodeId,
+                    getName(),
+                    mlRegisterAgentResponse.getAgentId(),
+                    registerAgentModelFuture
+                );
             }
 
             @Override
