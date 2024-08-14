@@ -26,6 +26,7 @@ import org.opensearch.ml.common.transport.model_group.MLRegisterModelGroupInput.
 import org.opensearch.ml.common.transport.model_group.MLRegisterModelGroupResponse;
 
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -37,7 +38,6 @@ import static org.opensearch.flowframework.common.CommonValue.DESCRIPTION_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.MODEL_ACCESS_MODE;
 import static org.opensearch.flowframework.common.CommonValue.MODEL_GROUP_STATUS;
 import static org.opensearch.flowframework.common.CommonValue.NAME_FIELD;
-import static org.opensearch.flowframework.common.WorkflowResources.getResourceByWorkflowStep;
 import static org.opensearch.flowframework.exception.WorkflowStepException.getSafeException;
 
 /**
@@ -77,45 +77,19 @@ public class RegisterModelGroupStep implements WorkflowStep {
         ActionListener<MLRegisterModelGroupResponse> actionListener = new ActionListener<>() {
             @Override
             public void onResponse(MLRegisterModelGroupResponse mlRegisterModelGroupResponse) {
-                try {
-                    logger.info("Model group registration successful");
-                    String resourceName = getResourceByWorkflowStep(getName());
-                    flowFrameworkIndicesHandler.updateResourceInStateIndex(
-                        currentNodeInputs.getWorkflowId(),
-                        currentNodeId,
-                        getName(),
-                        mlRegisterModelGroupResponse.getModelGroupId(),
-                        ActionListener.wrap(updateResponse -> {
-                            logger.info("successfully updated resources created in state index: {}", updateResponse.getIndex());
-                            registerModelGroupFuture.onResponse(
-                                new WorkflowData(
-                                    Map.ofEntries(
-                                        Map.entry(resourceName, mlRegisterModelGroupResponse.getModelGroupId()),
-                                        Map.entry(MODEL_GROUP_STATUS, mlRegisterModelGroupResponse.getStatus())
-                                    ),
-                                    currentNodeInputs.getWorkflowId(),
-                                    currentNodeId
-                                )
-                            );
-                        }, exception -> {
-                            String errorMessage = "Failed to update new created "
-                                + currentNodeId
-                                + " resource "
-                                + getName()
-                                + " id "
-                                + mlRegisterModelGroupResponse.getModelGroupId();
-                            logger.error(errorMessage, exception);
-                            registerModelGroupFuture.onFailure(
-                                new FlowFrameworkException(errorMessage, ExceptionsHelper.status(exception))
-                            );
-                        })
-                    );
-
-                } catch (Exception e) {
-                    String errorMessage = "Failed to parse and update new created resource";
-                    logger.error(errorMessage, e);
-                    registerModelGroupFuture.onFailure(new FlowFrameworkException(errorMessage, ExceptionsHelper.status(e)));
-                }
+                logger.info("Model group registration successful");
+                ActionListener<WorkflowData> resourceListener = ActionListener.wrap(r -> {
+                    Map<String, Object> content = new HashMap<>(r.getContent());
+                    content.put(MODEL_GROUP_STATUS, mlRegisterModelGroupResponse.getStatus());
+                    registerModelGroupFuture.onResponse(new WorkflowData(content, r.getWorkflowId(), r.getNodeId()));
+                }, registerModelGroupFuture::onFailure);
+                flowFrameworkIndicesHandler.addResourceToStateIndex(
+                    currentNodeInputs,
+                    currentNodeId,
+                    getName(),
+                    mlRegisterModelGroupResponse.getModelGroupId(),
+                    resourceListener
+                );
             }
 
             @Override

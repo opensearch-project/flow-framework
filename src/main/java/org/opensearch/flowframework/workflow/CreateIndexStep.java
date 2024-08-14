@@ -21,13 +21,11 @@ import org.opensearch.core.common.bytes.BytesArray;
 import org.opensearch.core.common.bytes.BytesReference;
 import org.opensearch.core.rest.RestStatus;
 import org.opensearch.core.xcontent.MediaTypeRegistry;
-import org.opensearch.flowframework.exception.FlowFrameworkException;
 import org.opensearch.flowframework.exception.WorkflowStepException;
 import org.opensearch.flowframework.indices.FlowFrameworkIndicesHandler;
 import org.opensearch.flowframework.util.ParseUtils;
 import org.opensearch.index.mapper.MapperService;
 
-import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.Collections;
 import java.util.HashMap;
@@ -37,7 +35,6 @@ import java.util.Set;
 import static java.util.Collections.singletonMap;
 import static org.opensearch.flowframework.common.CommonValue.CONFIGURATIONS;
 import static org.opensearch.flowframework.common.WorkflowResources.INDEX_NAME;
-import static org.opensearch.flowframework.common.WorkflowResources.getResourceByWorkflowStep;
 import static org.opensearch.flowframework.exception.WorkflowStepException.getSafeException;
 
 /**
@@ -108,35 +105,14 @@ public class CreateIndexStep implements WorkflowStep {
             }
 
             client.admin().indices().create(createIndexRequest, ActionListener.wrap(acknowledgedResponse -> {
-                String resourceName = getResourceByWorkflowStep(getName());
                 logger.info("Created index: {}", indexName);
-                try {
-                    flowFrameworkIndicesHandler.updateResourceInStateIndex(
-                        currentNodeInputs.getWorkflowId(),
-                        currentNodeId,
-                        getName(),
-                        indexName,
-                        ActionListener.wrap(response -> {
-                            logger.info("successfully updated resource created in state index: {}", response.getIndex());
-                            createIndexFuture.onResponse(
-                                new WorkflowData(Map.of(resourceName, indexName), currentNodeInputs.getWorkflowId(), currentNodeId)
-                            );
-                        }, exception -> {
-                            String errorMessage = "Failed to update new created "
-                                + currentNodeId
-                                + " resource "
-                                + getName()
-                                + " id "
-                                + indexName;
-                            logger.error(errorMessage, exception);
-                            createIndexFuture.onFailure(new FlowFrameworkException(errorMessage, ExceptionsHelper.status(exception)));
-                        })
-                    );
-                } catch (IOException ex) {
-                    String errorMessage = "Failed to parse and update new created resource";
-                    logger.error(errorMessage, ex);
-                    createIndexFuture.onFailure(new FlowFrameworkException(errorMessage, ExceptionsHelper.status(ex)));
-                }
+                flowFrameworkIndicesHandler.addResourceToStateIndex(
+                    currentNodeInputs,
+                    currentNodeId,
+                    getName(),
+                    indexName,
+                    createIndexFuture
+                );
             }, ex -> {
                 Exception e = getSafeException(ex);
                 String errorMessage = (e == null ? "Failed to create the index " + indexName : e.getMessage());
@@ -155,7 +131,7 @@ public class CreateIndexStep implements WorkflowStep {
     // to encounter the same behavior and not suddenly have to add `_doc` while using our create_index step
     // related bug: https://github.com/opensearch-project/OpenSearch/issues/12775
     private static Map<String, Object> prepareMappings(Map<String, Object> source) {
-        if (source.containsKey("mappings") == false || (source.get("mappings") instanceof Map) == false) {
+        if (!source.containsKey("mappings") || !(source.get("mappings") instanceof Map)) {
             return source;
         }
 
