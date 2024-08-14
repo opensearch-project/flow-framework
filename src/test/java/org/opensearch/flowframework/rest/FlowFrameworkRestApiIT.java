@@ -359,7 +359,7 @@ public class FlowFrameworkRestApiIT extends FlowFrameworkRestTestCase {
         response = reprovisionWorkflow(client(), workflowId, template);
         assertEquals(RestStatus.CREATED, TestHelpers.restStatus(response));
 
-        resourcesCreated = getResourcesCreated(client(), workflowId, 10);
+        resourcesCreated = getResourcesCreated(client(), workflowId, 30);
         assertEquals(4, resourcesCreated.size());
         resourceIds = resourcesCreated.stream().map(x -> x.workflowStepName()).collect(Collectors.toList());
         assertTrue(resourceIds.contains("create_connector"));
@@ -386,7 +386,7 @@ public class FlowFrameworkRestApiIT extends FlowFrameworkRestTestCase {
         response = reprovisionWorkflow(client(), workflowId, template);
         assertEquals(RestStatus.CREATED, TestHelpers.restStatus(response));
 
-        resourcesCreated = getResourcesCreated(client(), workflowId, 10);
+        resourcesCreated = getResourcesCreated(client(), workflowId, 30);
         assertEquals(5, resourcesCreated.size());
         resourceIds = resourcesCreated.stream().map(x -> x.workflowStepName()).collect(Collectors.toList());
         assertTrue(resourceIds.contains("create_connector"));
@@ -408,7 +408,7 @@ public class FlowFrameworkRestApiIT extends FlowFrameworkRestTestCase {
         response = reprovisionWorkflow(client(), workflowId, template);
         assertEquals(RestStatus.CREATED, TestHelpers.restStatus(response));
 
-        resourcesCreated = getResourcesCreated(client(), workflowId, 10);
+        resourcesCreated = getResourcesCreated(client(), workflowId, 30);
         // resource count should remain unchanged when updating an existing node
         assertEquals(5, resourcesCreated.size());
 
@@ -459,7 +459,7 @@ public class FlowFrameworkRestApiIT extends FlowFrameworkRestTestCase {
         response = reprovisionWorkflow(client(), workflowId, template);
         assertEquals(RestStatus.CREATED, TestHelpers.restStatus(response));
 
-        resourcesCreated = getResourcesCreated(client(), workflowId, 10);
+        resourcesCreated = getResourcesCreated(client(), workflowId, 30);
         assertEquals(5, resourcesCreated.size());
         resourceIds = resourcesCreated.stream().map(x -> x.workflowStepName()).collect(Collectors.toList());
         assertTrue(resourceIds.contains("create_connector"));
