@@ -8,8 +8,6 @@
  */
 package org.opensearch.flowframework.workflow;
 
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import org.opensearch.client.Client;
 import org.opensearch.flowframework.indices.FlowFrameworkIndicesHandler;
 
@@ -17,8 +15,6 @@ import org.opensearch.flowframework.indices.FlowFrameworkIndicesHandler;
  * Step to create a search pipeline
  */
 public class CreateSearchPipelineStep extends AbstractCreatePipelineStep {
-    private static final Logger logger = LogManager.getLogger(CreateSearchPipelineStep.class);
-
     /** The name of this step, used as a key in the template and the {@link WorkflowStepFactory} */
     public static final String NAME = "create_search_pipeline";
 

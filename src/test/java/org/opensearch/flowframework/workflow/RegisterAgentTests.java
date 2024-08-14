@@ -9,9 +9,7 @@
 package org.opensearch.flowframework.workflow;
 
 import org.opensearch.action.support.PlainActionFuture;
-import org.opensearch.action.update.UpdateResponse;
 import org.opensearch.core.action.ActionListener;
-import org.opensearch.core.index.shard.ShardId;
 import org.opensearch.core.rest.RestStatus;
 import org.opensearch.flowframework.exception.FlowFrameworkException;
 import org.opensearch.flowframework.indices.FlowFrameworkIndicesHandler;
@@ -33,8 +31,6 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
-import static org.opensearch.action.DocWriteResponse.Result.UPDATED;
-import static org.opensearch.flowframework.common.CommonValue.WORKFLOW_STATE_INDEX;
 import static org.opensearch.flowframework.common.WorkflowResources.AGENT_ID;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -101,10 +97,10 @@ public class RegisterAgentTests extends OpenSearchTestCase {
         }).when(machineLearningNodeClient).registerAgent(any(MLAgent.class), actionListenerCaptor.capture());
 
         doAnswer(invocation -> {
-            ActionListener<UpdateResponse> updateResponseListener = invocation.getArgument(4);
-            updateResponseListener.onResponse(new UpdateResponse(new ShardId(WORKFLOW_STATE_INDEX, "", 1), "id", -2, 0, 0, UPDATED));
+            ActionListener<WorkflowData> updateResponseListener = invocation.getArgument(4);
+            updateResponseListener.onResponse(new WorkflowData(Map.of(AGENT_ID, agentId), "test-id", "test-node-id"));
             return null;
-        }).when(flowFrameworkIndicesHandler).updateResourceInStateIndex(anyString(), anyString(), anyString(), anyString(), any());
+        }).when(flowFrameworkIndicesHandler).addResourceToStateIndex(any(WorkflowData.class), anyString(), anyString(), anyString(), any());
 
         PlainActionFuture<WorkflowData> future = registerAgentStep.execute(
             inputData.getNodeId(),
@@ -134,10 +130,10 @@ public class RegisterAgentTests extends OpenSearchTestCase {
         }).when(machineLearningNodeClient).registerAgent(any(MLAgent.class), actionListenerCaptor.capture());
 
         doAnswer(invocation -> {
-            ActionListener<UpdateResponse> updateResponseListener = invocation.getArgument(4);
-            updateResponseListener.onResponse(new UpdateResponse(new ShardId(WORKFLOW_STATE_INDEX, "", 1), "id", -2, 0, 0, UPDATED));
+            ActionListener<WorkflowData> updateResponseListener = invocation.getArgument(4);
+            updateResponseListener.onResponse(new WorkflowData(Map.of(AGENT_ID, agentId), "test-id", "test-node-id"));
             return null;
-        }).when(flowFrameworkIndicesHandler).updateResourceInStateIndex(anyString(), anyString(), anyString(), anyString(), any());
+        }).when(flowFrameworkIndicesHandler).addResourceToStateIndex(any(WorkflowData.class), anyString(), anyString(), anyString(), any());
 
         PlainActionFuture<WorkflowData> future = registerAgentStep.execute(
             inputData.getNodeId(),

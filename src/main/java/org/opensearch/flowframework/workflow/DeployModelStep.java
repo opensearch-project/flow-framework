@@ -28,7 +28,6 @@ import java.util.Map;
 import java.util.Set;
 
 import static org.opensearch.flowframework.common.WorkflowResources.MODEL_ID;
-import static org.opensearch.flowframework.common.WorkflowResources.getResourceByWorkflowStep;
 import static org.opensearch.flowframework.exception.WorkflowStepException.getSafeException;
 
 /**
@@ -93,24 +92,16 @@ public class DeployModelStep extends AbstractRetryableWorkflowStep {
 
                     // Attempt to retrieve the model ID
                     retryableGetMlTask(
-                        currentNodeInputs.getWorkflowId(),
+                        currentNodeInputs,
                         currentNodeId,
                         deployModelFuture,
                         taskId,
                         "Deploy model",
-                        ActionListener.wrap(mlTask -> {
-                            // Deployed Model Resource has been updated
-                            String resourceName = getResourceByWorkflowStep(getName());
-                            String id = getResourceId(mlTask);
-                            deployModelFuture.onResponse(
-                                new WorkflowData(Map.of(resourceName, id), currentNodeInputs.getWorkflowId(), currentNodeId)
-                            );
-                        },
-                            e -> {
-                                deployModelFuture.onFailure(
-                                    new FlowFrameworkException("Failed to deploy model", ExceptionsHelper.status(e))
-                                );
-                            }
+                        ActionListener.wrap(
+                            deployModelFuture::onResponse,
+                            e -> deployModelFuture.onFailure(
+                                new FlowFrameworkException("Failed to deploy model", ExceptionsHelper.status(e))
+                            )
                         )
                     );
                 }
