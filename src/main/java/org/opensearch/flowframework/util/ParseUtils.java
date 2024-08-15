@@ -332,27 +332,27 @@ public class ParseUtils {
         NamedXContentRegistry xContentRegistry
     ) {
         if (clusterService.state().metadata().hasIndex(GLOBAL_CONTEXT_INDEX)) {
-//            try (ThreadContext.StoredContext context = client.threadPool().getThreadContext().stashContext()) {
+            try (ThreadContext.StoredContext context = client.threadPool().getThreadContext().stashContext()) {
                 GetRequest request = new GetRequest(GLOBAL_CONTEXT_INDEX, workflowId);
                 client.get(
-                        request,
-                        ActionListener.wrap(
-                                response -> onGetWorkflowResponse(
-                                        response,
-                                        requestUser,
-                                        workflowId,
-                                        filterByEnabled,
-                                        listener,
-                                        function,
-                                        xContentRegistry
-                                ),
-                                exception -> {
-                                    logger.error("Failed to get workflow: {}", workflowId, exception);
-                                    listener.onFailure(exception);
-                                }
-                        )
+                    request,
+                    ActionListener.wrap(
+                        response -> onGetWorkflowResponse(
+                            response,
+                            requestUser,
+                            workflowId,
+                            filterByEnabled,
+                            listener,
+                            function,
+                            xContentRegistry
+                        ),
+                        exception -> {
+                            logger.error("Failed to get workflow: {}", workflowId, exception);
+                            listener.onFailure(exception);
+                        }
+                    )
                 );
-            //}
+            }
         } else {
             listener.onFailure(new IndexNotFoundException(GLOBAL_CONTEXT_INDEX));
         }

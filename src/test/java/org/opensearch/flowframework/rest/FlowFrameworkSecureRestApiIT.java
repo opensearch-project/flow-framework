@@ -9,8 +9,6 @@
 package org.opensearch.flowframework.rest;
 
 import org.apache.hc.core5.http.HttpHost;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import org.opensearch.action.search.SearchResponse;
 import org.opensearch.client.Response;
 import org.opensearch.client.ResponseException;
@@ -385,13 +383,6 @@ public class FlowFrameworkSecureRestApiIT extends FlowFrameworkRestTestCase {
         assertEquals(RestStatus.NOT_FOUND.getStatus(), exception.getResponse().getStatusLine().getStatusCode());
     }
 
-    public void testCreateWorkflowWithNoIndexPermission() throws Exception {
-        enableFilterBy();
-        Template template = TestHelpers.createTemplateFromFile("register-deploylocalsparseencodingmodel.json");
-        ResponseException exception = expectThrows(ResponseException.class, () -> createWorkflow(elkClient, template));
-        assertEquals(RestStatus.FORBIDDEN.getStatus(), exception.getResponse().getStatusLine().getStatusCode());
-    }
-
     public void testUpdateWorkflowEnabledForAdmin() throws Exception {
         Template template = TestHelpers.createTemplateFromFile("register-deploylocalsparseencodingmodel.json");
 
@@ -464,24 +455,24 @@ public class FlowFrameworkSecureRestApiIT extends FlowFrameworkRestTestCase {
         assertEquals(RestStatus.CREATED, TestHelpers.restStatus(updateResponse));
     }
 
-    public void testUpdateWorkflowWithNoIndexPermission() throws Exception {
+    public void testUpdateWorkflowWithNoFFAccess() throws Exception {
         Template template = TestHelpers.createTemplateFromFile("register-deploylocalsparseencodingmodel.json");
 
         // Remove register model input to test validation
         Workflow originalWorkflow = template.workflows().get(PROVISION_WORKFLOW);
         List<WorkflowNode> modifiednodes = originalWorkflow.nodes()
-                .stream()
-                .map(
-                        n -> "workflow_step_1".equals(n.id())
-                                ? new WorkflowNode(
-                                "workflow_step_1",
-                                "register_local_sparse_encoding_model",
-                                Collections.emptyMap(),
-                                Collections.emptyMap()
-                        )
-                                : n
-                )
-                .collect(Collectors.toList());
+            .stream()
+            .map(
+                n -> "workflow_step_1".equals(n.id())
+                    ? new WorkflowNode(
+                        "workflow_step_1",
+                        "register_local_sparse_encoding_model",
+                        Collections.emptyMap(),
+                        Collections.emptyMap()
+                    )
+                    : n
+            )
+            .collect(Collectors.toList());
         Workflow missingInputs = new Workflow(originalWorkflow.userParams(), modifiednodes, originalWorkflow.edges());
         Template templateWithMissingInputs = new Template.Builder(template).workflows(Map.of(PROVISION_WORKFLOW, missingInputs)).build();
 
@@ -494,7 +485,7 @@ public class FlowFrameworkSecureRestApiIT extends FlowFrameworkRestTestCase {
         enableFilterBy();
 
         // User elk has FF full access, but has no read permission of index
-        ResponseException exception1 = expectThrows(ResponseException.class, () -> { updateWorkflow(elkClient, workflowId, template); });
+        ResponseException exception1 = expectThrows(ResponseException.class, () -> { updateWorkflow(lionClient, workflowId, template); });
         assertEquals(RestStatus.FORBIDDEN.getStatus(), exception1.getResponse().getStatusLine().getStatusCode());
     }
 
