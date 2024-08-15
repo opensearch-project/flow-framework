@@ -529,11 +529,6 @@ public class ParseUtils {
             if (value instanceof Map) {
                 flattenSettings(key, (Map<String, Object>) value, flattenedSettings);
             } else {
-                // Create index setting configuration can be a mix of flattened or expanded settings
-                // prepend index. to ensure successful setting comparison
-                if (!key.startsWith("index.")) {
-                    key = "index." + key;
-                }
                 flattenedSettings.put(key, value.toString());
             }
         }
