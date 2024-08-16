@@ -11,7 +11,6 @@ package org.opensearch.flowframework;
 import org.apache.hc.core5.http.Header;
 import org.apache.hc.core5.http.HttpEntity;
 import org.apache.hc.core5.http.io.entity.StringEntity;
-import org.apache.logging.log4j.util.Strings;
 import org.opensearch.action.get.GetResponse;
 import org.opensearch.action.search.SearchRequest;
 import org.opensearch.client.Request;
