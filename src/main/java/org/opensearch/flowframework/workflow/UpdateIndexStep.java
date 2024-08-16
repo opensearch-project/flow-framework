@@ -113,7 +113,10 @@ public class UpdateIndexStep implements WorkflowStep {
                     if (updatedSettings.containsKey("index")) {
                         ParseUtils.flattenSettings("", updatedSettings, flattenedSettings);
                     } else {
-                        flattenedSettings.putAll(updatedSettings);
+                        // Create index setting configuration can be a mix of flattened or expanded settings
+                        // prepend index. to ensure successful setting comparison
+
+                        flattenedSettings.putAll(ParseUtils.prependIndexToSettings(updatedSettings));
                     }
 
                     Map<String, Object> filteredSettings = new HashMap<>();
@@ -133,34 +136,38 @@ public class UpdateIndexStep implements WorkflowStep {
                                 filteredSettings.put(e.getKey(), e.getValue());
                             }
                         }
+
+                        // Create and send the update settings request
+                        updateSettingsRequest.settings(filteredSettings);
+                        if (updateSettingsRequest.settings().size() == 0) {
+                            String errorMessage = "Failed to update index settings for index "
+                                + indexName
+                                + ", no settings have been updated";
+                            updateIndexFuture.onFailure(new WorkflowStepException(errorMessage, RestStatus.BAD_REQUEST));
+                        } else {
+                            client.admin().indices().updateSettings(updateSettingsRequest, ActionListener.wrap(acknowledgedResponse -> {
+                                String resourceName = getResourceByWorkflowStep(getName());
+                                logger.info("Updated index settings for index {}", indexName);
+                                updateIndexFuture.onResponse(
+                                    new WorkflowData(Map.of(resourceName, indexName), currentNodeInputs.getWorkflowId(), currentNodeId)
+                                );
+
+                            }, ex -> {
+                                Exception e = getSafeException(ex);
+                                String errorMessage = (e == null
+                                    ? "Failed to update the index settings for index " + indexName
+                                    : e.getMessage());
+                                logger.error(errorMessage, e);
+                                updateIndexFuture.onFailure(new WorkflowStepException(errorMessage, ExceptionsHelper.status(e)));
+                            }));
+                        }
                     }, ex -> {
                         Exception e = getSafeException(ex);
                         String errorMessage = (e == null ? "Failed to retrieve the index settings for index " + indexName : e.getMessage());
                         logger.error(errorMessage, e);
                         updateIndexFuture.onFailure(new WorkflowStepException(errorMessage, ExceptionsHelper.status(e)));
                     }));
-
-                    updateSettingsRequest.settings(filteredSettings);
                 }
-            }
-
-            if (updateSettingsRequest.settings().size() == 0) {
-                String errorMessage = "Failed to update index settings for index " + indexName + ", no settings have been updated";
-                throw new FlowFrameworkException(errorMessage, RestStatus.BAD_REQUEST);
-            } else {
-                client.admin().indices().updateSettings(updateSettingsRequest, ActionListener.wrap(acknowledgedResponse -> {
-                    String resourceName = getResourceByWorkflowStep(getName());
-                    logger.info("Updated index settings for index {}", indexName);
-                    updateIndexFuture.onResponse(
-                        new WorkflowData(Map.of(resourceName, indexName), currentNodeInputs.getWorkflowId(), currentNodeId)
-                    );
-
-                }, ex -> {
-                    Exception e = getSafeException(ex);
-                    String errorMessage = (e == null ? "Failed to update the index settings for index " + indexName : e.getMessage());
-                    logger.error(errorMessage, e);
-                    updateIndexFuture.onFailure(new WorkflowStepException(errorMessage, ExceptionsHelper.status(e)));
-                }));
             }
         } catch (Exception e) {
             updateIndexFuture.onFailure(new WorkflowStepException(e.getMessage(), ExceptionsHelper.status(e)));

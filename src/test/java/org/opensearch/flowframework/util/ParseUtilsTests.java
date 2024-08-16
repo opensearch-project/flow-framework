@@ -330,4 +330,21 @@ public class ParseUtilsTests extends OpenSearchTestCase {
         assertTrue(flattenedSettings.entrySet().stream().allMatch(x -> x.getKey().startsWith("index.")));
 
     }
+
+    public void testPrependIndexToSettings() throws Exception {
+
+        Map<String, Object> indexSettingsMap = Map.ofEntries(
+            Map.entry("knn", "true"),
+            Map.entry("number_of_shards", "2"),
+            Map.entry("number_of_replicas", "1"),
+            Map.entry("index.default_pipeline", "_none"),
+            Map.entry("search", Map.of("default_pipeine", "_none"))
+        );
+        Map<String, Object> prependedSettings = ParseUtils.prependIndexToSettings(indexSettingsMap);
+        assertEquals(5, prependedSettings.size());
+
+        // every setting should start with index
+        assertTrue(prependedSettings.entrySet().stream().allMatch(x -> x.getKey().startsWith("index.")));
+
+    }
 }

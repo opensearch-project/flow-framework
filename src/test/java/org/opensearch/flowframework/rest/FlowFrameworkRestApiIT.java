@@ -37,9 +37,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
 
 import static org.opensearch.flowframework.common.CommonValue.CREATE_CONNECTOR_CREDENTIAL_KEY;
@@ -48,15 +46,12 @@ import static org.opensearch.flowframework.common.CommonValue.PROVISION_WORKFLOW
 import static org.opensearch.flowframework.common.CommonValue.WORKFLOW_ID;
 
 public class FlowFrameworkRestApiIT extends FlowFrameworkRestTestCase {
-    private static AtomicBoolean waitToStart = new AtomicBoolean(true);
 
     @Before
     public void waitToStart() throws Exception {
         // ML Commons cron job runs every 10 seconds and takes 20+ seconds to initialize .plugins-ml-config index
-        // Delay on the first attempt for 25 seconds to allow this initialization and prevent flaky tests
-        if (waitToStart.getAndSet(false)) {
-            CountDownLatch latch = new CountDownLatch(1);
-            latch.await(25, TimeUnit.SECONDS);
+        if (!indexExistsWithAdminClient(".plugins-ml-config")) {
+            assertBusy(() -> assertTrue(indexExistsWithAdminClient(".plugins-ml-config")), 40, TimeUnit.SECONDS);
         }
     }
 
@@ -93,14 +88,7 @@ public class FlowFrameworkRestApiIT extends FlowFrameworkRestTestCase {
         Map<String, Object> responseMap = entityAsMap(response);
         String workflowId = (String) responseMap.get(WORKFLOW_ID);
 
-        // Ensure Ml config index is initialized as creating a connector requires this, then hit Provision API and assert status
-        Response provisionResponse;
-        if (!indexExistsWithAdminClient(".plugins-ml-config")) {
-            assertBusy(() -> assertTrue(indexExistsWithAdminClient(".plugins-ml-config")), 40, TimeUnit.SECONDS);
-            provisionResponse = provisionWorkflow(client(), workflowId);
-        } else {
-            provisionResponse = provisionWorkflow(client(), workflowId);
-        }
+        Response provisionResponse = provisionResponse = provisionWorkflow(client(), workflowId);
         assertEquals(RestStatus.OK, TestHelpers.restStatus(provisionResponse));
         getAndAssertWorkflowStatus(client(), workflowId, State.PROVISIONING, ProvisioningProgress.IN_PROGRESS);
 
@@ -122,14 +110,7 @@ public class FlowFrameworkRestApiIT extends FlowFrameworkRestTestCase {
         Map<String, Object> responseMap = entityAsMap(response);
         String workflowId = (String) responseMap.get(WORKFLOW_ID);
 
-        // Ensure Ml config index is initialized as creating a connector requires this, then hit Provision API and assert status
-        Response provisionResponse;
-        if (!indexExistsWithAdminClient(".plugins-ml-config")) {
-            assertBusy(() -> assertTrue(indexExistsWithAdminClient(".plugins-ml-config")), 40, TimeUnit.SECONDS);
-            provisionResponse = provisionWorkflow(client(), workflowId);
-        } else {
-            provisionResponse = provisionWorkflow(client(), workflowId);
-        }
+        Response provisionResponse = provisionWorkflow(client(), workflowId);
         assertEquals(RestStatus.OK, TestHelpers.restStatus(provisionResponse));
         getAndAssertWorkflowStatus(client(), workflowId, State.PROVISIONING, ProvisioningProgress.IN_PROGRESS);
 
@@ -259,14 +240,7 @@ public class FlowFrameworkRestApiIT extends FlowFrameworkRestTestCase {
         String workflowId = (String) responseMap.get(WORKFLOW_ID);
         getAndAssertWorkflowStatus(client(), workflowId, State.NOT_STARTED, ProvisioningProgress.NOT_STARTED);
 
-        // Ensure Ml config index is initialized as creating a connector requires this, then hit Provision API and assert status
-        if (!indexExistsWithAdminClient(".plugins-ml-config")) {
-            assertBusy(() -> assertTrue(indexExistsWithAdminClient(".plugins-ml-config")), 40, TimeUnit.SECONDS);
-            response = provisionWorkflow(client(), workflowId);
-        } else {
-            response = provisionWorkflow(client(), workflowId);
-        }
-
+        response = provisionWorkflow(client(), workflowId);
         assertEquals(RestStatus.OK, TestHelpers.restStatus(response));
         getAndAssertWorkflowStatus(client(), workflowId, State.PROVISIONING, ProvisioningProgress.IN_PROGRESS);
 
@@ -294,13 +268,7 @@ public class FlowFrameworkRestApiIT extends FlowFrameworkRestTestCase {
         Template template = TestHelpers.createTemplateFromFile("agent-framework.json");
 
         // Hit Create Workflow API to create agent-framework template, with template validation check and provision parameter
-        Response response;
-        if (!indexExistsWithAdminClient(".plugins-ml-config")) {
-            assertBusy(() -> assertTrue(indexExistsWithAdminClient(".plugins-ml-config")), 40, TimeUnit.SECONDS);
-            response = createWorkflowWithProvision(client(), template);
-        } else {
-            response = createWorkflowWithProvision(client(), template);
-        }
+        Response response = createWorkflowWithProvision(client(), template);
         assertEquals(RestStatus.CREATED, TestHelpers.restStatus(response));
         Map<String, Object> responseMap = entityAsMap(response);
         String workflowId = (String) responseMap.get(WORKFLOW_ID);
@@ -363,6 +331,233 @@ public class FlowFrameworkRestApiIT extends FlowFrameworkRestTestCase {
         assertBusy(() -> { getAndAssertWorkflowStatusNotFound(client(), workflowId); }, 30, TimeUnit.SECONDS);
     }
 
+    public void testReprovisionWorkflow() throws Exception {
+        // Begin with a template to register a local pretrained model
+        Template template = TestHelpers.createTemplateFromFile("registerremotemodel.json");
+
+        Response response = createWorkflowWithProvision(client(), template);
+        assertEquals(RestStatus.CREATED, TestHelpers.restStatus(response));
+        Map<String, Object> responseMap = entityAsMap(response);
+        String workflowId = (String) responseMap.get(WORKFLOW_ID);
+        // wait and ensure state is completed/done
+        assertBusy(
+            () -> { getAndAssertWorkflowStatus(client(), workflowId, State.COMPLETED, ProvisioningProgress.DONE); },
+            120,
+            TimeUnit.SECONDS
+        );
+
+        // Wait until provisioning has completed successfully before attempting to retrieve created resources
+        List<ResourceCreated> resourcesCreated = getResourcesCreated(client(), workflowId, 30);
+        assertEquals(3, resourcesCreated.size());
+        Map<String, ResourceCreated> resourceMap = resourcesCreated.stream()
+            .collect(Collectors.toMap(ResourceCreated::workflowStepName, r -> r));
+        assertTrue(resourceMap.containsKey("create_connector"));
+        assertTrue(resourceMap.containsKey("register_remote_model"));
+
+        // Reprovision template to add ingest pipeline which uses the model ID
+        template = TestHelpers.createTemplateFromFile("registerremotemodel-ingestpipeline.json");
+        response = reprovisionWorkflow(client(), workflowId, template);
+        assertEquals(RestStatus.CREATED, TestHelpers.restStatus(response));
+
+        resourcesCreated = getResourcesCreated(client(), workflowId, 30);
+        assertEquals(4, resourcesCreated.size());
+        resourceMap = resourcesCreated.stream().collect(Collectors.toMap(ResourceCreated::workflowStepName, r -> r));
+        assertTrue(resourceMap.containsKey("create_connector"));
+        assertTrue(resourceMap.containsKey("register_remote_model"));
+        assertTrue(resourceMap.containsKey("create_ingest_pipeline"));
+
+        // Retrieve pipeline by ID to ensure model ID is set correctly
+        String modelId = resourceMap.get("register_remote_model").resourceId();
+        String pipelineId = resourceMap.get("create_ingest_pipeline").resourceId();
+        GetPipelineResponse getPipelineResponse = getPipelines(pipelineId);
+        assertEquals(1, getPipelineResponse.pipelines().size());
+        assertTrue(getPipelineResponse.pipelines().get(0).getConfigAsMap().toString().contains(modelId));
+
+        // Reprovision template to add index which uses default ingest pipeline
+        template = TestHelpers.createTemplateFromFile("registerremotemodel-ingestpipeline-createindex.json");
+        response = reprovisionWorkflow(client(), workflowId, template);
+        assertEquals(RestStatus.CREATED, TestHelpers.restStatus(response));
+
+        resourcesCreated = getResourcesCreated(client(), workflowId, 30);
+        assertEquals(5, resourcesCreated.size());
+        resourceMap = resourcesCreated.stream().collect(Collectors.toMap(ResourceCreated::workflowStepName, r -> r));
+        assertTrue(resourceMap.containsKey("create_connector"));
+        assertTrue(resourceMap.containsKey("register_remote_model"));
+        assertTrue(resourceMap.containsKey("create_ingest_pipeline"));
+        assertTrue(resourceMap.containsKey("create_index"));
+
+        // Retrieve index settings to ensure pipeline ID is set correctly
+        String indexName = resourceMap.get("create_index").resourceId();
+        Map<String, Object> indexSettings = getIndexSettingsAsMap(indexName);
+        assertEquals(pipelineId, indexSettings.get("index.default_pipeline"));
+
+        // Reprovision template to remove default ingest pipeline
+        template = TestHelpers.createTemplateFromFile("registerremotemodel-ingestpipeline-updateindex.json");
+        response = reprovisionWorkflow(client(), workflowId, template);
+        assertEquals(RestStatus.CREATED, TestHelpers.restStatus(response));
+
+        resourcesCreated = getResourcesCreated(client(), workflowId, 30);
+        // resource count should remain unchanged when updating an existing node
+        assertEquals(5, resourcesCreated.size());
+
+        // Retrieve index settings to ensure default pipeline has been updated correctly
+        indexSettings = getIndexSettingsAsMap(indexName);
+        assertEquals("_none", indexSettings.get("index.default_pipeline"));
+
+        // Deprovision and delete all resources
+        Response deprovisionResponse = deprovisionWorkflowWithAllowDelete(client(), workflowId, pipelineId + "," + indexName);
+        assertBusy(
+            () -> { getAndAssertWorkflowStatus(client(), workflowId, State.NOT_STARTED, ProvisioningProgress.NOT_STARTED); },
+            60,
+            TimeUnit.SECONDS
+        );
+        assertEquals(RestStatus.OK, TestHelpers.restStatus(deprovisionResponse));
+
+        // Hit Delete API
+        Response deleteResponse = deleteWorkflow(client(), workflowId);
+        assertEquals(RestStatus.OK, TestHelpers.restStatus(deleteResponse));
+    }
+
+    public void testReprovisionWorkflowMidNodeAddition() throws Exception {
+        // Begin with a template to register a local pretrained model and create an index, no edges
+        Template template = TestHelpers.createTemplateFromFile("registerremotemodel-createindex.json");
+
+        Response response = createWorkflowWithProvision(client(), template);
+        assertEquals(RestStatus.CREATED, TestHelpers.restStatus(response));
+        Map<String, Object> responseMap = entityAsMap(response);
+        String workflowId = (String) responseMap.get(WORKFLOW_ID);
+        // wait and ensure state is completed/done
+        assertBusy(
+            () -> { getAndAssertWorkflowStatus(client(), workflowId, State.COMPLETED, ProvisioningProgress.DONE); },
+            120,
+            TimeUnit.SECONDS
+        );
+
+        // Wait until provisioning has completed successfully before attempting to retrieve created resources
+        List<ResourceCreated> resourcesCreated = getResourcesCreated(client(), workflowId, 30);
+        assertEquals(4, resourcesCreated.size());
+        Map<String, ResourceCreated> resourceMap = resourcesCreated.stream()
+            .collect(Collectors.toMap(ResourceCreated::workflowStepName, r -> r));
+        assertTrue(resourceMap.containsKey("create_connector"));
+        assertTrue(resourceMap.containsKey("register_remote_model"));
+        assertTrue(resourceMap.containsKey("create_index"));
+
+        // Reprovision template to add ingest pipeline which uses the model ID
+        template = TestHelpers.createTemplateFromFile("registerremotemodel-ingestpipeline-createindex.json");
+        response = reprovisionWorkflow(client(), workflowId, template);
+        assertEquals(RestStatus.CREATED, TestHelpers.restStatus(response));
+
+        resourcesCreated = getResourcesCreated(client(), workflowId, 30);
+        assertEquals(5, resourcesCreated.size());
+        resourceMap = resourcesCreated.stream().collect(Collectors.toMap(ResourceCreated::workflowStepName, r -> r));
+        assertTrue(resourceMap.containsKey("create_connector"));
+        assertTrue(resourceMap.containsKey("register_remote_model"));
+        assertTrue(resourceMap.containsKey("create_ingest_pipeline"));
+        assertTrue(resourceMap.containsKey("create_index"));
+
+        // Ensure ingest pipeline configuration contains the model id and index settings have the ingest pipeline as default
+        String modelId = resourceMap.get("register_remote_model").resourceId();
+        String pipelineId = resourceMap.get("create_ingest_pipeline").resourceId();
+        GetPipelineResponse getPipelineResponse = getPipelines(pipelineId);
+        assertEquals(1, getPipelineResponse.pipelines().size());
+        assertTrue(getPipelineResponse.pipelines().get(0).getConfigAsMap().toString().contains(modelId));
+
+        String indexName = resourceMap.get("create_index").resourceId();
+        Map<String, Object> indexSettings = getIndexSettingsAsMap(indexName);
+        assertEquals(pipelineId, indexSettings.get("index.default_pipeline"));
+
+        // Deprovision and delete all resources
+        Response deprovisionResponse = deprovisionWorkflowWithAllowDelete(client(), workflowId, pipelineId + "," + indexName);
+        assertBusy(
+            () -> { getAndAssertWorkflowStatus(client(), workflowId, State.NOT_STARTED, ProvisioningProgress.NOT_STARTED); },
+            60,
+            TimeUnit.SECONDS
+        );
+        assertEquals(RestStatus.OK, TestHelpers.restStatus(deprovisionResponse));
+
+        // Hit Delete API
+        Response deleteResponse = deleteWorkflow(client(), workflowId);
+        assertEquals(RestStatus.OK, TestHelpers.restStatus(deleteResponse));
+    }
+
+    public void testReprovisionWithNoChange() throws Exception {
+        Template template = TestHelpers.createTemplateFromFile("registerremotemodel-ingestpipeline-createindex.json");
+
+        Response response = createWorkflowWithProvision(client(), template);
+        assertEquals(RestStatus.CREATED, TestHelpers.restStatus(response));
+        Map<String, Object> responseMap = entityAsMap(response);
+        String workflowId = (String) responseMap.get(WORKFLOW_ID);
+        // wait and ensure state is completed/done
+        assertBusy(
+            () -> { getAndAssertWorkflowStatus(client(), workflowId, State.COMPLETED, ProvisioningProgress.DONE); },
+            120,
+            TimeUnit.SECONDS
+        );
+
+        // Attempt to reprovision the same template with no changes
+        ResponseException exception = expectThrows(ResponseException.class, () -> reprovisionWorkflow(client(), workflowId, template));
+        assertEquals(RestStatus.BAD_REQUEST.getStatus(), exception.getResponse().getStatusLine().getStatusCode());
+        assertTrue(exception.getMessage().contains("Template does not contain any modifications"));
+
+        // Deprovision and delete all resources
+        Response deprovisionResponse = deprovisionWorkflowWithAllowDelete(
+            client(),
+            workflowId,
+            "nlp-ingest-pipeline" + "," + "my-nlp-index"
+        );
+        assertBusy(
+            () -> { getAndAssertWorkflowStatus(client(), workflowId, State.NOT_STARTED, ProvisioningProgress.NOT_STARTED); },
+            60,
+            TimeUnit.SECONDS
+        );
+        assertEquals(RestStatus.OK, TestHelpers.restStatus(deprovisionResponse));
+
+        // Hit Delete API
+        Response deleteResponse = deleteWorkflow(client(), workflowId);
+        assertEquals(RestStatus.OK, TestHelpers.restStatus(deleteResponse));
+    }
+
+    public void testReprovisionWithDeletion() throws Exception {
+        Template template = TestHelpers.createTemplateFromFile("registerremotemodel-ingestpipeline-createindex.json");
+
+        Response response = createWorkflowWithProvision(client(), template);
+        assertEquals(RestStatus.CREATED, TestHelpers.restStatus(response));
+        Map<String, Object> responseMap = entityAsMap(response);
+        String workflowId = (String) responseMap.get(WORKFLOW_ID);
+        // wait and ensure state is completed/done
+        assertBusy(
+            () -> { getAndAssertWorkflowStatus(client(), workflowId, State.COMPLETED, ProvisioningProgress.DONE); },
+            120,
+            TimeUnit.SECONDS
+        );
+
+        // Attempt to reprovision template without ingest pipeline node
+        Template templateWithoutIngestPipeline = TestHelpers.createTemplateFromFile("registerremotemodel-createindex.json");
+        ResponseException exception = expectThrows(
+            ResponseException.class,
+            () -> reprovisionWorkflow(client(), workflowId, templateWithoutIngestPipeline)
+        );
+        assertEquals(RestStatus.BAD_REQUEST.getStatus(), exception.getResponse().getStatusLine().getStatusCode());
+        assertTrue(exception.getMessage().contains("Workflow Step deletion is not supported when reprovisioning a template."));
+
+        // Deprovision and delete all resources
+        Response deprovisionResponse = deprovisionWorkflowWithAllowDelete(
+            client(),
+            workflowId,
+            "nlp-ingest-pipeline" + "," + "my-nlp-index"
+        );
+        assertBusy(
+            () -> { getAndAssertWorkflowStatus(client(), workflowId, State.NOT_STARTED, ProvisioningProgress.NOT_STARTED); },
+            60,
+            TimeUnit.SECONDS
+        );
+        assertEquals(RestStatus.OK, TestHelpers.restStatus(deprovisionResponse));
+
+        // Hit Delete API
+        Response deleteResponse = deleteWorkflow(client(), workflowId);
+        assertEquals(RestStatus.OK, TestHelpers.restStatus(deleteResponse));
+    }
+
     public void testTimestamps() throws Exception {
         Template noopTemplate = TestHelpers.createTemplateFromFile("noop.json");
         // Create the template, should have created and updated matching
@@ -421,14 +616,7 @@ public class FlowFrameworkRestApiIT extends FlowFrameworkRestTestCase {
         String workflowId = (String) responseMap.get(WORKFLOW_ID);
         getAndAssertWorkflowStatus(client(), workflowId, State.NOT_STARTED, ProvisioningProgress.NOT_STARTED);
 
-        // Ensure Ml config index is initialized as creating a connector requires this, then hit Provision API and assert status
-        if (!indexExistsWithAdminClient(".plugins-ml-config")) {
-            assertBusy(() -> assertTrue(indexExistsWithAdminClient(".plugins-ml-config")), 40, TimeUnit.SECONDS);
-            response = provisionWorkflow(client(), workflowId);
-        } else {
-            response = provisionWorkflow(client(), workflowId);
-        }
-
+        response = provisionWorkflow(client(), workflowId);
         assertEquals(RestStatus.OK, TestHelpers.restStatus(response));
         getAndAssertWorkflowStatus(client(), workflowId, State.PROVISIONING, ProvisioningProgress.IN_PROGRESS);
 
@@ -475,14 +663,7 @@ public class FlowFrameworkRestApiIT extends FlowFrameworkRestTestCase {
         String workflowId = (String) responseMap.get(WORKFLOW_ID);
         getAndAssertWorkflowStatus(client(), workflowId, State.NOT_STARTED, ProvisioningProgress.NOT_STARTED);
 
-        // Ensure Ml config index is initialized as creating a connector requires this, then hit Provision API and assert status
-        if (!indexExistsWithAdminClient(".plugins-ml-config")) {
-            assertBusy(() -> assertTrue(indexExistsWithAdminClient(".plugins-ml-config")), 40, TimeUnit.SECONDS);
-            response = provisionWorkflow(client(), workflowId);
-        } else {
-            response = provisionWorkflow(client(), workflowId);
-        }
-
+        response = provisionWorkflow(client(), workflowId);
         assertEquals(RestStatus.OK, TestHelpers.restStatus(response));
         getAndAssertWorkflowStatus(client(), workflowId, State.PROVISIONING, ProvisioningProgress.IN_PROGRESS);
 
@@ -526,14 +707,7 @@ public class FlowFrameworkRestApiIT extends FlowFrameworkRestTestCase {
         String workflowId = (String) responseMap.get(WORKFLOW_ID);
         getAndAssertWorkflowStatus(client(), workflowId, State.NOT_STARTED, ProvisioningProgress.NOT_STARTED);
 
-        // Ensure Ml config index is initialized as creating a connector requires this, then hit Provision API and assert status
-        if (!indexExistsWithAdminClient(".plugins-ml-config")) {
-            assertBusy(() -> assertTrue(indexExistsWithAdminClient(".plugins-ml-config")), 40, TimeUnit.SECONDS);
-            response = provisionWorkflow(client(), workflowId);
-        } else {
-            response = provisionWorkflow(client(), workflowId);
-        }
-
+        response = provisionWorkflow(client(), workflowId);
         assertEquals(RestStatus.OK, TestHelpers.restStatus(response));
         getAndAssertWorkflowStatus(client(), workflowId, State.FAILED, ProvisioningProgress.FAILED);
     }
