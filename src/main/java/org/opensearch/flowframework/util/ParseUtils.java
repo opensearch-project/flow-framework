@@ -537,6 +537,7 @@ public class ParseUtils {
     /**
      * Ensures index is prepended to flattened setting keys
      * @param originalSettings the original settings map
+     * @return new map with keys prepended with index
      */
     public static Map<String, Object> prependIndexToSettings(Map<String, Object> originalSettings) {
         Map<String, Object> newSettings = new HashMap<>();
