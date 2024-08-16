@@ -188,6 +188,55 @@ public class UpdateIndexStepTests extends OpenSearchTestCase {
         );
     }
 
+    public void testUpdateMixedSettings() throws InterruptedException {
+        UpdateIndexStep updateIndexStep = new UpdateIndexStep(client);
+
+        String indexName = "test-index";
+
+        // Create existing settings for default pipelines
+        Settings.Builder builder = Settings.builder();
+        builder.put("index.number_of_shards", 2);
+        builder.put("index.number_of_replicas", 1);
+        builder.put("index.knn", true);
+        builder.put("index.default_pipeline", "ingest_pipeline_id");
+        Map<String, Settings> indexToSettings = new HashMap<>();
+        indexToSettings.put(indexName, builder.build());
+
+        // Stub get index settings request/response
+        doAnswer(invocation -> {
+            ActionListener<GetSettingsResponse> getSettingsResponseListener = invocation.getArgument(1);
+            getSettingsResponseListener.onResponse(new GetSettingsResponse(indexToSettings, indexToSettings));
+            return null;
+        }).when(indicesAdminClient).getSettings(any(), any());
+
+        // validate update settings request content
+        @SuppressWarnings({ "unchecked" })
+        ArgumentCaptor<UpdateSettingsRequest> updateSettingsRequestCaptor = ArgumentCaptor.forClass(UpdateSettingsRequest.class);
+
+        // Configurations has updated ingest pipeline default values of _none. Settings have regular and full names
+        String configurations =
+            "{\"settings\":{\"index.knn\":true,\"default_pipeline\":\"_none\",\"index.number_of_shards\":2,\"index.number_of_replicas\":1},\"mappings\":{\"properties\":{\"age\":{\"type\":\"integer\"}}},\"aliases\":{\"sample-alias1\":{}}}";
+        WorkflowData data = new WorkflowData(
+            Map.ofEntries(Map.entry(INDEX_NAME, indexName), Map.entry(CONFIGURATIONS, configurations)),
+            "test-id",
+            "test-node-id"
+        );
+        PlainActionFuture future = updateIndexStep.execute(
+            data.getNodeId(),
+            data,
+            Collections.emptyMap(),
+            Collections.emptyMap(),
+            Collections.emptyMap()
+        );
+
+        verify(indicesAdminClient, times(1)).getSettings(any(GetSettingsRequest.class), any());
+        verify(indicesAdminClient, times(1)).updateSettings(updateSettingsRequestCaptor.capture(), any());
+
+        Settings settingsToUpdate = updateSettingsRequestCaptor.getValue().settings();
+        assertEquals(1, settingsToUpdate.size());
+        assertEquals("_none", settingsToUpdate.get("index.default_pipeline"));
+    }
+
     public void testEmptyConfiguration() throws InterruptedException {
 
         UpdateIndexStep updateIndexStep = new UpdateIndexStep(client);
