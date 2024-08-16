@@ -138,6 +138,13 @@ public class RestCreateWorkflowAction extends BaseRestHandler {
             );
             return processError(ffe, params, request);
         }
+        if (reprovision && !params.isEmpty()) {
+            FlowFrameworkException ffe = new FlowFrameworkException(
+                "Only the parameters " + request.consumedParams() + " are permitted unless the provision parameter is set to true.",
+                RestStatus.BAD_REQUEST
+            );
+            return processError(ffe, params, request);
+        }
         try {
             Template template;
             Map<String, String> useCaseDefaultsMap = Collections.emptyMap();

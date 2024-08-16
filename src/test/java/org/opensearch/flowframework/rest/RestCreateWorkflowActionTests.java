@@ -178,6 +178,20 @@ public class RestCreateWorkflowActionTests extends OpenSearchTestCase {
         );
     }
 
+    public void testCreateWorkflowRequestWithReprovisionAndSubstitutionParams() throws Exception {
+        RestRequest request = new FakeRestRequest.Builder(xContentRegistry()).withMethod(RestRequest.Method.POST)
+            .withPath(this.createWorkflowPath)
+            .withParams(Map.ofEntries(Map.entry(REPROVISION_WORKFLOW, "true"), Map.entry("open_ai_key", "1234")))
+            .withContent(new BytesArray(validTemplate), MediaTypeRegistry.JSON)
+            .build();
+        FakeRestChannel channel = new FakeRestChannel(request, false, 1);
+        createWorkflowRestAction.handleRequest(request, channel, nodeClient);
+        assertEquals(RestStatus.BAD_REQUEST, channel.capturedResponse().status());
+        assertTrue(
+            channel.capturedResponse().content().utf8ToString().contains("are permitted unless the provision parameter is set to true.")
+        );
+    }
+
     public void testCreateWorkflowRequestWithUpdateAndParams() throws Exception {
         RestRequest request = new FakeRestRequest.Builder(xContentRegistry()).withMethod(RestRequest.Method.POST)
             .withPath(this.createWorkflowPath)

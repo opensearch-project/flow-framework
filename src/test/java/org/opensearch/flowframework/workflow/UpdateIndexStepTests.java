@@ -12,6 +12,7 @@ import org.opensearch.action.admin.indices.settings.get.GetSettingsRequest;
 import org.opensearch.action.admin.indices.settings.get.GetSettingsResponse;
 import org.opensearch.action.admin.indices.settings.put.UpdateSettingsRequest;
 import org.opensearch.action.support.PlainActionFuture;
+import org.opensearch.action.support.master.AcknowledgedResponse;
 import org.opensearch.client.AdminClient;
 import org.opensearch.client.Client;
 import org.opensearch.client.IndicesAdminClient;
@@ -78,6 +79,12 @@ public class UpdateIndexStepTests extends OpenSearchTestCase {
             return null;
         }).when(indicesAdminClient).getSettings(any(), any());
 
+        doAnswer(invocation -> {
+            ActionListener<AcknowledgedResponse> ackResponseListener = invocation.getArgument(1);
+            ackResponseListener.onResponse(new AcknowledgedResponse(true));
+            return null;
+        }).when(indicesAdminClient).updateSettings(any(), any());
+
         // validate update settings request content
         @SuppressWarnings({ "unchecked" })
         ArgumentCaptor<UpdateSettingsRequest> updateSettingsRequestCaptor = ArgumentCaptor.forClass(UpdateSettingsRequest.class);
@@ -105,6 +112,63 @@ public class UpdateIndexStepTests extends OpenSearchTestCase {
         assertEquals(2, settingsToUpdate.size());
         assertEquals("_none", settingsToUpdate.get("index.default_pipeline"));
         assertEquals("_none", settingsToUpdate.get("index.search.default_pipeline"));
+
+        assertTrue(future.isDone());
+        WorkflowData returnedData = (WorkflowData) future.get();
+        assertEquals(Map.ofEntries(Map.entry(INDEX_NAME, indexName)), returnedData.getContent());
+        assertEquals(data.getWorkflowId(), returnedData.getWorkflowId());
+        assertEquals(data.getNodeId(), returnedData.getNodeId());
+    }
+
+    public void testFailedToUpdateIndexSettings() throws ExecutionException, InterruptedException, IOException {
+
+        UpdateIndexStep updateIndexStep = new UpdateIndexStep(client);
+
+        String indexName = "test-index";
+
+        // Create existing settings for default pipelines
+        Settings.Builder builder = Settings.builder();
+        builder.put("index.number_of_shards", 2);
+        builder.put("index.number_of_replicas", 1);
+        builder.put("index.knn", true);
+        builder.put("index.default_pipeline", "ingest_pipeline_id");
+        builder.put("index.search.default_pipeline", "search_pipeline_id");
+        Map<String, Settings> indexToSettings = new HashMap<>();
+        indexToSettings.put(indexName, builder.build());
+
+        // Stub get index settings request/response
+        doAnswer(invocation -> {
+            ActionListener<GetSettingsResponse> getSettingsResponseListener = invocation.getArgument(1);
+            getSettingsResponseListener.onResponse(new GetSettingsResponse(indexToSettings, indexToSettings));
+            return null;
+        }).when(indicesAdminClient).getSettings(any(), any());
+
+        doAnswer(invocation -> {
+            ActionListener<AcknowledgedResponse> ackResponseListener = invocation.getArgument(1);
+            ackResponseListener.onFailure(new Exception(""));
+            return null;
+        }).when(indicesAdminClient).updateSettings(any(), any());
+
+        // Configurations has updated search/ingest pipeline default values of _none
+        String configurations =
+            "{\"settings\":{\"index\":{\"knn\":true,\"number_of_shards\":2,\"number_of_replicas\":1,\"default_pipeline\":\"_none\",\"search\":{\"default_pipeline\":\"_none\"}}},\"mappings\":{\"properties\":{\"age\":{\"type\":\"integer\"}}},\"aliases\":{\"sample-alias1\":{}}}";
+        WorkflowData data = new WorkflowData(
+            Map.ofEntries(Map.entry(INDEX_NAME, indexName), Map.entry(CONFIGURATIONS, configurations)),
+            "test-id",
+            "test-node-id"
+        );
+        PlainActionFuture future = updateIndexStep.execute(
+            data.getNodeId(),
+            data,
+            Collections.emptyMap(),
+            Collections.emptyMap(),
+            Collections.emptyMap()
+        );
+
+        assertTrue(future.isDone());
+        ExecutionException exception = assertThrows(ExecutionException.class, () -> future.get());
+        assertTrue(exception.getCause() instanceof Exception);
+        assertEquals("Failed to update the index settings for index test-index", exception.getCause().getMessage());
     }
 
     public void testMissingSettings() throws InterruptedException {
@@ -134,6 +198,55 @@ public class UpdateIndexStepTests extends OpenSearchTestCase {
             "Failed to update index settings for index index-name, settings are not found in the index configuration",
             exception.getCause().getMessage()
         );
+    }
+
+    public void testUpdateMixedSettings() throws InterruptedException {
+        UpdateIndexStep updateIndexStep = new UpdateIndexStep(client);
+
+        String indexName = "test-index";
+
+        // Create existing settings for default pipelines
+        Settings.Builder builder = Settings.builder();
+        builder.put("index.number_of_shards", 2);
+        builder.put("index.number_of_replicas", 1);
+        builder.put("index.knn", true);
+        builder.put("index.default_pipeline", "ingest_pipeline_id");
+        Map<String, Settings> indexToSettings = new HashMap<>();
+        indexToSettings.put(indexName, builder.build());
+
+        // Stub get index settings request/response
+        doAnswer(invocation -> {
+            ActionListener<GetSettingsResponse> getSettingsResponseListener = invocation.getArgument(1);
+            getSettingsResponseListener.onResponse(new GetSettingsResponse(indexToSettings, indexToSettings));
+            return null;
+        }).when(indicesAdminClient).getSettings(any(), any());
+
+        // validate update settings request content
+        @SuppressWarnings({ "unchecked" })
+        ArgumentCaptor<UpdateSettingsRequest> updateSettingsRequestCaptor = ArgumentCaptor.forClass(UpdateSettingsRequest.class);
+
+        // Configurations has updated ingest pipeline default values of _none. Settings have regular and full names
+        String configurations =
+            "{\"settings\":{\"index.knn\":true,\"default_pipeline\":\"_none\",\"index.number_of_shards\":2,\"index.number_of_replicas\":1},\"mappings\":{\"properties\":{\"age\":{\"type\":\"integer\"}}},\"aliases\":{\"sample-alias1\":{}}}";
+        WorkflowData data = new WorkflowData(
+            Map.ofEntries(Map.entry(INDEX_NAME, indexName), Map.entry(CONFIGURATIONS, configurations)),
+            "test-id",
+            "test-node-id"
+        );
+        PlainActionFuture future = updateIndexStep.execute(
+            data.getNodeId(),
+            data,
+            Collections.emptyMap(),
+            Collections.emptyMap(),
+            Collections.emptyMap()
+        );
+
+        verify(indicesAdminClient, times(1)).getSettings(any(GetSettingsRequest.class), any());
+        verify(indicesAdminClient, times(1)).updateSettings(updateSettingsRequestCaptor.capture(), any());
+
+        Settings settingsToUpdate = updateSettingsRequestCaptor.getValue().settings();
+        assertEquals(1, settingsToUpdate.size());
+        assertEquals("_none", settingsToUpdate.get("index.default_pipeline"));
     }
 
     public void testEmptyConfiguration() throws InterruptedException {

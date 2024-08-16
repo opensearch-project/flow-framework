@@ -407,6 +407,25 @@ public abstract class FlowFrameworkRestTestCase extends OpenSearchRestTestCase {
     }
 
     /**
+     * Helper method to invoke the Reprovision Workflow API
+     * @param client the rest client
+     * @param workflowId the document id
+     * @param templateFields the template to reprovision
+     * @throws Exception if the request fails
+     * @return a rest response
+     */
+    protected Response reprovisionWorkflow(RestClient client, String workflowId, Template template) throws Exception {
+        return TestHelpers.makeRequest(
+            client,
+            "PUT",
+            String.format(Locale.ROOT, "%s/%s?reprovision=true", WORKFLOW_URI, workflowId),
+            Collections.emptyMap(),
+            template.toJson(),
+            null
+        );
+    }
+
+    /**
      * Helper method to invoke the Update Workflow API
      * @param client the rest client
      * @param workflowId the document id
