@@ -57,6 +57,8 @@ public class GetWorkflowStateTransportAction extends HandledTransportAction<GetW
      * @param actionFilters action filters
      * @param client The client used to make the request to OS
      * @param xContentRegistry contentRegister to parse get response
+     * @param clusterService the cluster service
+     * @param settings the plugin settings
      */
     @Inject
     public GetWorkflowStateTransportAction(
@@ -100,6 +102,12 @@ public class GetWorkflowStateTransportAction extends HandledTransportAction<GetW
         }
     }
 
+    /**
+     * Execute the get workflow state request
+     * @param request the get workflow state request
+     * @param listener the action listener
+     * @param context the thread context
+     */
     private void executeGetWorkflowStateRequest(
         GetWorkflowStateRequest request,
         ActionListener<GetWorkflowStateResponse> listener,

@@ -27,7 +27,9 @@ import org.junit.Before;
 
 import java.io.IOException;
 import java.security.SecureRandom;
-import java.util.*;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
@@ -402,7 +404,7 @@ public class FlowFrameworkSecureRestApiIT extends FlowFrameworkRestTestCase {
             )
             .collect(Collectors.toList());
         Workflow missingInputs = new Workflow(originalWorkflow.userParams(), modifiednodes, originalWorkflow.edges());
-        Template templateWithMissingInputs = new Template.Builder(template).workflows(Map.of(PROVISION_WORKFLOW, missingInputs)).build();
+        Template templateWithMissingInputs = Template.builder(template).workflows(Map.of(PROVISION_WORKFLOW, missingInputs)).build();
 
         Response response = createWorkflow(aliceClient, templateWithMissingInputs);
         assertEquals(RestStatus.CREATED, TestHelpers.restStatus(response));
@@ -439,7 +441,7 @@ public class FlowFrameworkSecureRestApiIT extends FlowFrameworkRestTestCase {
             )
             .collect(Collectors.toList());
         Workflow missingInputs = new Workflow(originalWorkflow.userParams(), modifiednodes, originalWorkflow.edges());
-        Template templateWithMissingInputs = new Template.Builder(template).workflows(Map.of(PROVISION_WORKFLOW, missingInputs)).build();
+        Template templateWithMissingInputs = Template.builder(template).workflows(Map.of(PROVISION_WORKFLOW, missingInputs)).build();
 
         Response response = createWorkflow(aliceClient, templateWithMissingInputs);
         assertEquals(RestStatus.CREATED, TestHelpers.restStatus(response));
@@ -474,7 +476,7 @@ public class FlowFrameworkSecureRestApiIT extends FlowFrameworkRestTestCase {
             )
             .collect(Collectors.toList());
         Workflow missingInputs = new Workflow(originalWorkflow.userParams(), modifiednodes, originalWorkflow.edges());
-        Template templateWithMissingInputs = new Template.Builder(template).workflows(Map.of(PROVISION_WORKFLOW, missingInputs)).build();
+        Template templateWithMissingInputs = Template.builder(template).workflows(Map.of(PROVISION_WORKFLOW, missingInputs)).build();
 
         Response response = createWorkflow(aliceClient, templateWithMissingInputs);
         assertEquals(RestStatus.CREATED, TestHelpers.restStatus(response));

@@ -54,6 +54,9 @@ public class DeleteWorkflowTransportAction extends HandledTransportAction<Workfl
      * @param actionFilters action filters
      * @param flowFrameworkIndicesHandler The Flow Framework indices handler
      * @param client the OpenSearch Client
+     * @param clusterService the cluster service
+     * @param xContentRegistry contentRegister to parse get response
+     * @param settings the plugin settings
      */
     @Inject
     public DeleteWorkflowTransportAction(
@@ -100,6 +103,12 @@ public class DeleteWorkflowTransportAction extends HandledTransportAction<Workfl
         }
     }
 
+    /**
+     * Executes the delete request
+     * @param request the workflow request
+     * @param listener the action listener
+     * @param context the thread context
+     */
     protected void executeDeleteRequest(
         WorkflowRequest request,
         ActionListener<DeleteResponse> listener,

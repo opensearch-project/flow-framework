@@ -41,7 +41,12 @@ import org.opensearch.test.OpenSearchTestCase;
 import org.opensearch.threadpool.ThreadPool;
 import org.opensearch.transport.TransportService;
 
-import java.util.*;
+import java.util.List;
+import java.util.Map;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.Optional;
 import java.util.function.Consumer;
 
 import org.mockito.ArgumentCaptor;

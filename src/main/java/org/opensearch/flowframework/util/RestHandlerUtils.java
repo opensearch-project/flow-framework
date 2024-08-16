@@ -61,6 +61,13 @@ public class RestHandlerUtils {
         }
     }
 
+    /**
+     * Create an XContentParser from the provided NamedXContentRegistry and BytesReference
+     * @param xContentRegistry content registry
+     * @param bytesReference bytes reference
+     * @return XContentParser
+     * @throws IOException if error occurs while creating parser
+     */
     public static XContentParser createXContentParserFromRegistry(NamedXContentRegistry xContentRegistry, BytesReference bytesReference)
         throws IOException {
         return XContentHelper.createParser(xContentRegistry, LoggingDeprecationHandler.INSTANCE, bytesReference, XContentType.JSON);

@@ -57,6 +57,9 @@ public class GetWorkflowTransportAction extends HandledTransportAction<WorkflowR
      * @param flowFrameworkIndicesHandler The Flow Framework indices handler
      * @param encryptorUtils Encryptor utils
      * @param client the Opensearch Client
+     * @param xContentRegistry contentRegister to parse get response
+     * @param clusterService the cluster service
+     * @param settings the plugin settings
      */
     @Inject
     public GetWorkflowTransportAction(
@@ -113,6 +116,12 @@ public class GetWorkflowTransportAction extends HandledTransportAction<WorkflowR
 
     }
 
+    /**
+     * Execute the get request against the global context index
+     * @param request the workflow request
+     * @param listener the action listener
+     * @param context the thread context
+     */
     private void executeGetRequest(
         WorkflowRequest request,
         ActionListener<GetWorkflowResponse> listener,

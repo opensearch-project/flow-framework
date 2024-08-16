@@ -8,6 +8,10 @@
  */
 package org.opensearch.flowframework.transport.handler;
 
+/**
+ * Interface for a workflow function.
+ *
+ */
 public interface WorkflowFunction {
     /**
      * Performs this operation.

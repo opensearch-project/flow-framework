@@ -39,7 +39,11 @@ import org.opensearch.flowframework.transport.WorkflowResponse;
 import org.opensearch.flowframework.transport.handler.WorkflowFunction;
 import org.opensearch.flowframework.workflow.WorkflowData;
 import org.opensearch.index.IndexNotFoundException;
-import org.opensearch.index.query.*;
+import org.opensearch.index.query.BoolQueryBuilder;
+import org.opensearch.index.query.QueryBuilders;
+import org.opensearch.index.query.TermsQueryBuilder;
+import org.opensearch.index.query.NestedQueryBuilder;
+import org.opensearch.index.query.QueryBuilder;
 import org.opensearch.ml.repackage.com.google.common.collect.ImmutableList;
 import org.opensearch.search.builder.SearchSourceBuilder;
 
@@ -47,7 +51,14 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.time.Instant;
-import java.util.*;
+import java.util.Map;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Set;
+import java.util.Locale;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.Optional;
 import java.util.Map.Entry;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -238,6 +249,12 @@ public class ParseUtils {
         return User.parse(userStr);
     }
 
+    /**
+     * Add user backend roles filter to search source builder=
+     * @param user the user
+     * @param searchSourceBuilder search builder
+     * @return search builder with filter added
+     */
     public static SearchSourceBuilder addUserBackendRolesFilter(User user, SearchSourceBuilder searchSourceBuilder) {
         if (user == null) {
             return searchSourceBuilder;
@@ -262,6 +279,17 @@ public class ParseUtils {
         return searchSourceBuilder;
     }
 
+    /**
+     * Resolve user and execute the function
+     * @param requestedUser the user to execute the request
+     * @param workflowId workflow id
+     * @param filterByEnabled filter by enabled setting
+     * @param listener action listener
+     * @param function workflow function
+     * @param client node client
+     * @param clusterService cluster service
+     * @param xContentRegistry contentRegister to parse get response
+     */
     public static void resolveUserAndExecute(
         User requestedUser,
         String workflowId,
@@ -286,6 +314,14 @@ public class ParseUtils {
         }
     }
 
+    /**
+     * Check if requested user has backend role required to access the resource
+     * @param requestedUser the user to execute the request
+     * @param resourceUser user of the resource
+     * @param workflowId workflow id
+     * @return boolean if the requested user has backend role required to access the resource
+     * @throws Exception exception
+     */
     private static boolean checkUserPermissions(User requestedUser, User resourceUser, String workflowId) throws Exception {
         if (resourceUser.getBackendRoles() == null || requestedUser.getBackendRoles() == null) {
             return false;
@@ -307,6 +343,11 @@ public class ParseUtils {
         return false;
     }
 
+    /**
+     * Check if filter by backend roles is enabled and validate the requested user
+     * @param requestedUser the user to execute the request
+     * @return error message if validation fails, null otherwise
+     */
     public static String checkFilterByBackendRoles(User requestedUser) {
         if (requestedUser == null) {
             return "Filter by backend roles is enabled and User is null";
@@ -321,6 +362,17 @@ public class ParseUtils {
         return null;
     }
 
+    /**
+     * Get workflow
+     * @param requestUser the user to execute the request
+     * @param workflowId workflow id
+     * @param filterByEnabled filter by enabled setting
+     * @param listener action listener
+     * @param function workflow function
+     * @param client node client
+     * @param clusterService cluster service
+     * @param xContentRegistry contentRegister to parse get response
+     */
     public static void getWorkflow(
         User requestUser,
         String workflowId,
@@ -358,6 +410,16 @@ public class ParseUtils {
         }
     }
 
+    /**
+     * Execute the function if user has permissions to access the resource
+     * @param requestUser the user to execute the request
+     * @param response get response
+     * @param workflowId workflow id
+     * @param filterByEnabled filter by enabled setting
+     * @param listener action listener
+     * @param function workflow function
+     * @param xContentRegistry contentRegister to parse get response
+     */
     public static void onGetWorkflowResponse(
         GetResponse response,
         User requestUser,

@@ -86,6 +86,9 @@ public class DeprovisionWorkflowTransportAction extends HandledTransportAction<W
      * @param workflowStepFactory The factory instantiating workflow steps
      * @param flowFrameworkIndicesHandler Class to handle all internal system indices actions
      * @param flowFrameworkSettings The plugin settings
+     * @param clusterService the cluster service
+     * @param xContentRegistry contentRegister to parse get response
+     * @param settings the plugin settings
      */
     @Inject
     public DeprovisionWorkflowTransportAction(

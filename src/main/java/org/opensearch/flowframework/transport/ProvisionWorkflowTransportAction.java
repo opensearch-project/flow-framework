@@ -86,6 +86,9 @@ public class ProvisionWorkflowTransportAction extends HandledTransportAction<Wor
      * @param flowFrameworkIndicesHandler Class to handle all internal system indices actions
      * @param encryptorUtils Utility class to handle encryption/decryption
      * @param pluginsService The Plugins Service
+     * @param clusterService the cluster service
+     * @param xContentRegistry the named content registry
+     * @param settings the plugin settings
      */
     @Inject
     public ProvisionWorkflowTransportAction(
@@ -141,6 +144,19 @@ public class ProvisionWorkflowTransportAction extends HandledTransportAction<Wor
         }
     }
 
+    /**
+     * Execute the provision request
+     * 1. Retrieve template from global context
+     * 2. Decrypt template
+     * 3. Sort and validate graph
+     * 4. Update state index
+     * 5. Execute workflow asynchronously
+     * 6. Update last provisioned field in template
+     * 7. Return response
+     * @param request the workflow request
+     * @param listener the action listener
+     * @param context the thread context
+     */
     private void executeProvisionRequest(
         WorkflowRequest request,
         ActionListener<WorkflowResponse> listener,

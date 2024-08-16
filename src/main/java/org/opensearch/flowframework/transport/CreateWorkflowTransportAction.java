@@ -54,7 +54,9 @@ import static org.opensearch.flowframework.common.CommonValue.GLOBAL_CONTEXT_IND
 import static org.opensearch.flowframework.common.CommonValue.PROVISIONING_PROGRESS_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.STATE_FIELD;
 import static org.opensearch.flowframework.common.FlowFrameworkSettings.FILTER_BY_BACKEND_ROLES;
-import static org.opensearch.flowframework.util.ParseUtils.*;
+import static org.opensearch.flowframework.util.ParseUtils.checkFilterByBackendRoles;
+import static org.opensearch.flowframework.util.ParseUtils.getUserContext;
+import static org.opensearch.flowframework.util.ParseUtils.getWorkflow;
 
 /**
  * Transport Action to index or update a use case template within the Global Context
@@ -82,6 +84,9 @@ public class CreateWorkflowTransportAction extends HandledTransportAction<Workfl
      * @param flowFrameworkSettings Plugin settings
      * @param client The client used to make the request to OS
      * @param pluginsService The plugin service
+     * @param clusterService the cluster service
+     * @param xContentRegistry the named content registry
+     * @param settings the plugin settings
      */
     @Inject
     public CreateWorkflowTransportAction(
@@ -116,11 +121,18 @@ public class CreateWorkflowTransportAction extends HandledTransportAction<Workfl
         try {
             resolveUserAndExecute(user, workflowId, listener, () -> createExecute(request, user, listener));
         } catch (Exception e) {
-            logger.error(e);
+            logger.error("Failed to create workflow", e);
             listener.onFailure(e);
         }
     }
 
+    /**
+     * Resolve user and execute the workflow function
+     * @param requestedUser the user making the request
+     * @param workflowId the workflow id
+     * @param listener the action listener
+     * @param function the workflow function to execute
+     */
     private void resolveUserAndExecute(
         User requestedUser,
         String workflowId,
@@ -154,6 +166,16 @@ public class CreateWorkflowTransportAction extends HandledTransportAction<Workfl
         }
     }
 
+    /**
+     * Execute the create or update request
+     * 1. Validate workflows if requested
+     * 2. Create or update global context index
+     * 3. Create or update state index
+     * 4. Create or update provisioning progress index
+     * @param request the workflow request
+     * @param user the user making the request
+     * @param listener the action listener
+     */
     protected void createExecute(WorkflowRequest request, User user, ActionListener<WorkflowResponse> listener) {
         Instant creationTime = Instant.now();
         Template templateWithUser = new Template(

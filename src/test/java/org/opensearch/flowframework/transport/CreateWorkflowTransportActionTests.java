@@ -47,7 +47,13 @@ import org.opensearch.threadpool.ThreadPool;
 import org.opensearch.transport.TransportService;
 
 import java.io.IOException;
-import java.util.*;
+import java.util.Map;
+import java.util.List;
+import java.util.Set;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Locale;
+import java.util.Arrays;
 import java.util.concurrent.TimeUnit;
 
 import org.mockito.ArgumentCaptor;

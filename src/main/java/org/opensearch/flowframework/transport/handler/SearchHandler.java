@@ -25,17 +25,32 @@ import org.opensearch.search.builder.SearchSourceBuilder;
 import static org.opensearch.flowframework.util.ParseUtils.isAdmin;
 import static org.opensearch.flowframework.util.RestHandlerUtils.getSourceContext;
 
+/**
+ * Handle general search request, check user role and return search response.
+ */
 public class SearchHandler {
     private final Logger logger = LogManager.getLogger(SearchHandler.class);
     private final Client client;
     private volatile Boolean filterEnabled;
 
+    /**
+     * Instantiates a new SearchHandler
+     * @param settings settings
+     * @param clusterService cluster service
+     * @param client The node client to retrieve a stored use case template
+     * @param filterByBackendRoleSetting filter role backend settings
+     */
     public SearchHandler(Settings settings, ClusterService clusterService, Client client, Setting<Boolean> filterByBackendRoleSetting) {
         this.client = client;
         filterEnabled = filterByBackendRoleSetting.get(settings);
         clusterService.getClusterSettings().addSettingsUpdateConsumer(filterByBackendRoleSetting, it -> filterEnabled = it);
     }
 
+    /**
+     * Search workflows in global context
+     * @param request SearchRequest
+     * @param actionListener ActionListener
+     */
     public void search(SearchRequest request, ActionListener<SearchResponse> actionListener) {
         // AccessController should take care of letting the user with right permission to view the workflow
         User user = ParseUtils.getUserContext(client);
@@ -50,6 +65,13 @@ public class SearchHandler {
         }
     }
 
+    /**
+     * Validate user role and call search
+     * @param request SearchRequest
+     * @param user User
+     * @param listener ActionListener
+     * @param context ThreadContext
+     */
     public void validateRole(
         SearchRequest request,
         User user,
