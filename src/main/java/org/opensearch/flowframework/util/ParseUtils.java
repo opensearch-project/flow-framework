@@ -13,7 +13,6 @@ import com.google.gson.JsonParser;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.lucene.search.join.ScoreMode;
-import org.opensearch.ResourceNotFoundException;
 import org.opensearch.action.get.GetRequest;
 import org.opensearch.action.get.GetResponse;
 import org.opensearch.client.Client;
@@ -38,12 +37,11 @@ import org.opensearch.flowframework.model.Template;
 import org.opensearch.flowframework.transport.WorkflowResponse;
 import org.opensearch.flowframework.transport.handler.WorkflowFunction;
 import org.opensearch.flowframework.workflow.WorkflowData;
-import org.opensearch.index.IndexNotFoundException;
 import org.opensearch.index.query.BoolQueryBuilder;
-import org.opensearch.index.query.QueryBuilders;
-import org.opensearch.index.query.TermsQueryBuilder;
 import org.opensearch.index.query.NestedQueryBuilder;
 import org.opensearch.index.query.QueryBuilder;
+import org.opensearch.index.query.QueryBuilders;
+import org.opensearch.index.query.TermsQueryBuilder;
 import org.opensearch.ml.repackage.com.google.common.collect.ImmutableList;
 import org.opensearch.search.builder.SearchSourceBuilder;
 
@@ -51,15 +49,15 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.time.Instant;
-import java.util.Map;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Set;
-import java.util.Locale;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Optional;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Optional;
+import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -406,7 +404,9 @@ public class ParseUtils {
                 );
             }
         } else {
-            listener.onFailure(new IndexNotFoundException(GLOBAL_CONTEXT_INDEX));
+            String errorMessage = "Failed to retrieve template (" + workflowId + ") from global context.";
+            logger.error(errorMessage);
+            listener.onFailure(new FlowFrameworkException(errorMessage, RestStatus.NOT_FOUND));
         }
     }
 
@@ -453,7 +453,9 @@ public class ParseUtils {
                 listener.onFailure(e);
             }
         } else {
-            listener.onFailure(new ResourceNotFoundException(workflowId));
+            String errorMessage = "Failed to retrieve template (" + workflowId + ") from global context.";
+            logger.error(errorMessage);
+            listener.onFailure(new FlowFrameworkException(errorMessage, RestStatus.NOT_FOUND));
         }
     }
 

@@ -47,13 +47,13 @@ import org.opensearch.threadpool.ThreadPool;
 import org.opensearch.transport.TransportService;
 
 import java.io.IOException;
-import java.util.Map;
-import java.util.List;
-import java.util.Set;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Locale;
-import java.util.Arrays;
+import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
 import org.mockito.ArgumentCaptor;
@@ -377,7 +377,7 @@ public class CreateWorkflowTransportActionTests extends OpenSearchTestCase {
         assertEquals("1", workflowResponseCaptor.getValue().getWorkflowId());
     }
 
-    public void testUpdateWorkflowWithReprovision() {
+    public void testUpdateWorkflowWithReprovision() throws IOException {
         @SuppressWarnings("unchecked")
         ActionListener<WorkflowResponse> listener = mock(ActionListener.class);
         WorkflowRequest workflowRequest = new WorkflowRequest(
@@ -400,6 +400,23 @@ public class CreateWorkflowTransportActionTests extends OpenSearchTestCase {
             return null;
         }).when(client).get(any(GetRequest.class), any());
 
+        GetResponse getWorkflowResponse = TestHelpers.createGetResponse(template, "123", GLOBAL_CONTEXT_INDEX);
+        doAnswer(invocation -> {
+            Object[] args = invocation.getArguments();
+            assertEquals(
+                String.format(Locale.ROOT, "The size of args is %d.  Its content is %s", args.length, Arrays.toString(args)),
+                2,
+                args.length
+            );
+
+            assertTrue(args[0] instanceof GetRequest);
+            assertTrue(args[1] instanceof ActionListener);
+
+            ActionListener<GetResponse> getListener = (ActionListener<GetResponse>) args[1];
+            getListener.onResponse(getWorkflowResponse);
+            return null;
+        }).when(client).get(any(GetRequest.class), any());
+
         doAnswer(invocation -> {
             ActionListener<WorkflowResponse> responseListener = invocation.getArgument(2);
             responseListener.onResponse(new WorkflowResponse("1"));
@@ -413,7 +430,7 @@ public class CreateWorkflowTransportActionTests extends OpenSearchTestCase {
         assertEquals("1", responseCaptor.getValue().getWorkflowId());
     }
 
-    public void testFailedToUpdateWorkflowWithReprovision() {
+    public void testFailedToUpdateWorkflowWithReprovision() throws IOException {
         @SuppressWarnings("unchecked")
         ActionListener<WorkflowResponse> listener = mock(ActionListener.class);
         WorkflowRequest workflowRequest = new WorkflowRequest(
@@ -433,6 +450,23 @@ public class CreateWorkflowTransportActionTests extends OpenSearchTestCase {
             when(getResponse.isExists()).thenReturn(true);
             when(getResponse.getSourceAsString()).thenReturn(template.toJson());
             getListener.onResponse(getResponse);
+            return null;
+        }).when(client).get(any(GetRequest.class), any());
+
+        GetResponse getWorkflowResponse = TestHelpers.createGetResponse(template, "123", GLOBAL_CONTEXT_INDEX);
+        doAnswer(invocation -> {
+            Object[] args = invocation.getArguments();
+            assertEquals(
+                String.format(Locale.ROOT, "The size of args is %d.  Its content is %s", args.length, Arrays.toString(args)),
+                2,
+                args.length
+            );
+
+            assertTrue(args[0] instanceof GetRequest);
+            assertTrue(args[1] instanceof ActionListener);
+
+            ActionListener<GetResponse> getListener = (ActionListener<GetResponse>) args[1];
+            getListener.onResponse(getWorkflowResponse);
             return null;
         }).when(client).get(any(GetRequest.class), any());
 
