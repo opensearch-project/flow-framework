@@ -79,6 +79,12 @@ public class UpdateIndexStepTests extends OpenSearchTestCase {
             return null;
         }).when(indicesAdminClient).getSettings(any(), any());
 
+        doAnswer(invocation -> {
+            ActionListener<AcknowledgedResponse> ackResponseListener = invocation.getArgument(1);
+            ackResponseListener.onResponse(new AcknowledgedResponse(true));
+            return null;
+        }).when(indicesAdminClient).updateSettings(any(), any());
+
         // validate update settings request content
         @SuppressWarnings({ "unchecked" })
         ArgumentCaptor<UpdateSettingsRequest> updateSettingsRequestCaptor = ArgumentCaptor.forClass(UpdateSettingsRequest.class);
@@ -106,6 +112,12 @@ public class UpdateIndexStepTests extends OpenSearchTestCase {
         assertEquals(2, settingsToUpdate.size());
         assertEquals("_none", settingsToUpdate.get("index.default_pipeline"));
         assertEquals("_none", settingsToUpdate.get("index.search.default_pipeline"));
+
+        assertTrue(future.isDone());
+        WorkflowData returnedData = (WorkflowData) future.get();
+        assertEquals(Map.ofEntries(Map.entry(INDEX_NAME, indexName)), returnedData.getContent());
+        assertEquals(data.getWorkflowId(), returnedData.getWorkflowId());
+        assertEquals(data.getNodeId(), returnedData.getNodeId());
     }
 
     public void testFailedToUpdateIndexSettings() throws ExecutionException, InterruptedException, IOException {
