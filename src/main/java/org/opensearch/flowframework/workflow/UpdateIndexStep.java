@@ -115,13 +115,8 @@ public class UpdateIndexStep implements WorkflowStep {
                     } else {
                         // Create index setting configuration can be a mix of flattened or expanded settings
                         // prepend index. to ensure successful setting comparison
-                        updatedSettings.entrySet().stream().forEach(x -> {
-                            if (!x.getKey().startsWith("index.")) {
-                                flattenedSettings.put("index." + x.getKey(), x.getValue());
-                            } else {
-                                flattenedSettings.put(x.getKey(), x.getValue());
-                            }
-                        });
+
+                        flattenedSettings.putAll(ParseUtils.prependIndexToSettings(updatedSettings));
                     }
 
                     Map<String, Object> filteredSettings = new HashMap<>();
