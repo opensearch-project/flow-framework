@@ -8,12 +8,12 @@
  */
 package org.opensearch.flowframework.model;
 
-import org.apache.logging.log4j.util.Strings;
 import org.opensearch.Version;
 import org.opensearch.common.xcontent.LoggingDeprecationHandler;
 import org.opensearch.common.xcontent.json.JsonXContent;
 import org.opensearch.common.xcontent.yaml.YamlXContent;
 import org.opensearch.commons.authuser.User;
+import org.opensearch.core.common.Strings;
 import org.opensearch.core.rest.RestStatus;
 import org.opensearch.core.xcontent.NamedXContentRegistry;
 import org.opensearch.core.xcontent.ToXContentObject;
@@ -372,10 +372,10 @@ public class Template implements ToXContentObject {
         if (templateWithNewFields.name() != null) {
             builder.name(templateWithNewFields.name());
         }
-        if (!Strings.isBlank(templateWithNewFields.description())) {
+        if (Strings.hasText(templateWithNewFields.description())) {
             builder.description(templateWithNewFields.description());
         }
-        if (!Strings.isBlank(templateWithNewFields.useCase())) {
+        if (Strings.hasText(templateWithNewFields.useCase())) {
             builder.useCase(templateWithNewFields.useCase());
         }
         if (templateWithNewFields.templateVersion() != null) {

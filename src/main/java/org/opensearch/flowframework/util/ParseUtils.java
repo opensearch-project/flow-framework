@@ -533,4 +533,21 @@ public class ParseUtils {
             }
         }
     }
+
+    /**
+     * Ensures index is prepended to flattened setting keys
+     * @param originalSettings the original settings map
+     * @return new map with keys prepended with index
+     */
+    public static Map<String, Object> prependIndexToSettings(Map<String, Object> originalSettings) {
+        Map<String, Object> newSettings = new HashMap<>();
+        originalSettings.entrySet().stream().forEach(x -> {
+            if (!x.getKey().startsWith("index.")) {
+                newSettings.put("index." + x.getKey(), x.getValue());
+            } else {
+                newSettings.put(x.getKey(), x.getValue());
+            }
+        });
+        return newSettings;
+    }
 }
