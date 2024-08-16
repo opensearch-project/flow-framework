@@ -337,7 +337,7 @@ public class ParseUtilsTests extends OpenSearchTestCase {
             Map.entry("knn", "true"),
             Map.entry("number_of_shards", "2"),
             Map.entry("number_of_replicas", "1"),
-            Map.entry("default_pipeline", "_none"),
+            Map.entry("index.default_pipeline", "_none"),
             Map.entry("search", Map.of("default_pipeine", "_none"))
         );
         Map<String, Object> prependedSettings = ParseUtils.prependIndexToSettings(indexSettingsMap);
