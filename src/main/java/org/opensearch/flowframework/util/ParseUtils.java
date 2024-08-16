@@ -301,7 +301,7 @@ public class ParseUtils {
         try {
             if (requestedUser == null || !filterByEnabled) {
                 // requestedUser == null means security is disabled or user is superadmin. In this case we don't need to
-                // check if request user have access to the detector or not.
+                // check if request user have access to the workflow or not.
                 // !filterByEnabled means security is enabled and filterByEnabled is disabled
                 function.execute();
             } else {

@@ -50,8 +50,6 @@ public class FlowFrameworkSecureRestApiIT extends FlowFrameworkRestTestCase {
     RestClient elkClient;
     String fishUser = "fish";
     RestClient fishClient;
-    String goatUser = "goat";
-    RestClient goatClient;
     String lionUser = "lion";
     RestClient lionClient;
     private String indexAllAccessRole = "index_all_access";
@@ -63,8 +61,6 @@ public class FlowFrameworkSecureRestApiIT extends FlowFrameworkRestTestCase {
     @Before
     public void setupSecureTests() throws IOException {
         if (!isHttps()) throw new IllegalArgumentException("Secure Tests are running but HTTPS is not set");
-        createIndexRole(indexAllAccessRole, "*");
-        createSearchRole(indexSearchAccessRole, "*");
         String alicePassword = generatePassword(aliceUser);
         createUser(aliceUser, alicePassword, List.of("odfe"));
         aliceClient = new SecureRestClientBuilder(getClusterHosts().toArray(new HttpHost[0]), isHttps(), aliceUser, alicePassword)
@@ -101,12 +97,6 @@ public class FlowFrameworkSecureRestApiIT extends FlowFrameworkRestTestCase {
             .setSocketTimeout(60000)
             .build();
 
-        String goatPassword = generatePassword(goatUser);
-        createUser(goatUser, goatPassword, List.of("opensearch"));
-        goatClient = new SecureRestClientBuilder(getClusterHosts().toArray(new HttpHost[0]), isHttps(), goatUser, goatPassword)
-            .setSocketTimeout(60000)
-            .build();
-
         String lionPassword = generatePassword(lionUser);
         createUser(lionUser, lionPassword, List.of("opensearch"));
         lionClient = new SecureRestClientBuilder(getClusterHosts().toArray(new HttpHost[0]), isHttps(), lionUser, lionPassword)
@@ -114,10 +104,8 @@ public class FlowFrameworkSecureRestApiIT extends FlowFrameworkRestTestCase {
             .build();
 
         createRoleMapping(FLOW_FRAMEWORK_READ_ACCESS_ROLE, List.of(bobUser));
-        createRoleMapping(ML_COMMONS_FULL_ACCESS_ROLE, List.of(aliceUser, catUser, dogUser, elkUser, fishUser, goatUser));
-        createRoleMapping(FLOW_FRAMEWORK_FULL_ACCESS_ROLE, List.of(aliceUser, catUser, dogUser, elkUser, fishUser, goatUser));
-        createRoleMapping(indexAllAccessRole, List.of(aliceUser, bobUser, catUser, dogUser, fishUser, lionUser));
-        createRoleMapping(indexSearchAccessRole, List.of(goatUser));
+        createRoleMapping(ML_COMMONS_FULL_ACCESS_ROLE, List.of(aliceUser, catUser, dogUser, elkUser, fishUser));
+        createRoleMapping(FLOW_FRAMEWORK_FULL_ACCESS_ROLE, List.of(aliceUser, catUser, dogUser, elkUser, fishUser));
     }
 
     @After
@@ -128,7 +116,6 @@ public class FlowFrameworkSecureRestApiIT extends FlowFrameworkRestTestCase {
         dogClient.close();
         elkClient.close();
         fishClient.close();
-        goatClient.close();
         lionClient.close();
         deleteUser(aliceUser);
         deleteUser(bobUser);
@@ -136,7 +123,6 @@ public class FlowFrameworkSecureRestApiIT extends FlowFrameworkRestTestCase {
         deleteUser(dogUser);
         deleteUser(elkUser);
         deleteUser(fishUser);
-        deleteUser(goatUser);
         deleteUser(lionUser);
     }
 
@@ -486,7 +472,7 @@ public class FlowFrameworkSecureRestApiIT extends FlowFrameworkRestTestCase {
 
         enableFilterBy();
 
-        // User elk has FF full access, but has no read permission of index
+        // User lion has no FF access and should not be able to update the workflow created by alice
         ResponseException exception1 = expectThrows(ResponseException.class, () -> { updateWorkflow(lionClient, workflowId, template); });
         assertEquals(RestStatus.FORBIDDEN.getStatus(), exception1.getResponse().getStatusLine().getStatusCode());
     }

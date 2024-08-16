@@ -162,7 +162,12 @@ public class CreateWorkflowTransportAction extends HandledTransportAction<Workfl
                 function.execute();
             }
         } catch (Exception e) {
-            listener.onFailure(e);
+            String errorMessage = "Failed to create or update workflow";
+            if (e instanceof FlowFrameworkException) {
+                listener.onFailure(e);
+            } else {
+                listener.onFailure(new FlowFrameworkException(errorMessage, ExceptionsHelper.status(e)));
+            }
         }
     }
 
