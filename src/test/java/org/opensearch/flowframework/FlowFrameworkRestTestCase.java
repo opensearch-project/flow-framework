@@ -337,6 +337,7 @@ public abstract class FlowFrameworkRestTestCase extends OpenSearchRestTestCase {
             TestHelpers.toHttpEntity(
                 "{\n"
                     + "\"cluster_permissions\": [\n"
+                    + "\"cluster:admin/ingest/pipeline/delete\"\n"
                     + "],\n"
                     + "\"index_permissions\": [\n"
                     + "{\n"
@@ -351,40 +352,8 @@ public abstract class FlowFrameworkRestTestCase extends OpenSearchRestTestCase {
                     + "\"allowed_actions\": [\n"
                     + "\"crud\",\n"
                     + "\"indices:admin/create\",\n"
-                    + "\"indices:admin/aliases\"\n"
-                    + "]\n"
-                    + "}\n"
-                    + "],\n"
-                    + "\"tenant_permissions\": []\n"
-                    + "}"
-            ),
-            ImmutableList.of(new BasicHeader(HttpHeaders.USER_AGENT, "Kibana"))
-        );
-    }
-
-    public Response createSearchRole(String role, String index) throws IOException {
-        return TestHelpers.makeRequest(
-            client(),
-            "PUT",
-            "/_plugins/_security/api/roles/" + role,
-            null,
-            TestHelpers.toHttpEntity(
-                "{\n"
-                    + "\"cluster_permissions\": [\n"
-                    + "],\n"
-                    + "\"index_permissions\": [\n"
-                    + "{\n"
-                    + "\"index_patterns\": [\n"
-                    + "\""
-                    + index
-                    + "\"\n"
-                    + "],\n"
-                    + "\"dls\": \"\",\n"
-                    + "\"fls\": [],\n"
-                    + "\"masked_fields\": [],\n"
-                    + "\"allowed_actions\": [\n"
-                    + "\"indices:data/read/search\",\n"
-                    + "\"indices:data/read/get\"\n"
+                    + "\"indices:admin/aliases\",\n"
+                    + "\"indices:admin/delete\"\n"
                     + "]\n"
                     + "}\n"
                     + "],\n"

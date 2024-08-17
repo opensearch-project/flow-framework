@@ -9,6 +9,7 @@
 package org.opensearch.flowframework.rest;
 
 import org.apache.hc.core5.http.HttpHost;
+import org.opensearch.action.ingest.GetPipelineResponse;
 import org.opensearch.action.search.SearchResponse;
 import org.opensearch.client.Response;
 import org.opensearch.client.ResponseException;
@@ -17,11 +18,7 @@ import org.opensearch.commons.rest.SecureRestClientBuilder;
 import org.opensearch.core.rest.RestStatus;
 import org.opensearch.flowframework.FlowFrameworkRestTestCase;
 import org.opensearch.flowframework.TestHelpers;
-import org.opensearch.flowframework.model.ProvisioningProgress;
-import org.opensearch.flowframework.model.State;
-import org.opensearch.flowframework.model.Template;
-import org.opensearch.flowframework.model.Workflow;
-import org.opensearch.flowframework.model.WorkflowNode;
+import org.opensearch.flowframework.model.*;
 import org.junit.After;
 import org.junit.Before;
 
@@ -53,7 +50,6 @@ public class FlowFrameworkSecureRestApiIT extends FlowFrameworkRestTestCase {
     String lionUser = "lion";
     RestClient lionClient;
     private String indexAllAccessRole = "index_all_access";
-    private String indexSearchAccessRole = "index_all_search";
     private static String FLOW_FRAMEWORK_FULL_ACCESS_ROLE = "flow_framework_full_access";
     private static String ML_COMMONS_FULL_ACCESS_ROLE = "ml_full_access";
     private static String FLOW_FRAMEWORK_READ_ACCESS_ROLE = "flow_framework_read_access";
@@ -61,6 +57,7 @@ public class FlowFrameworkSecureRestApiIT extends FlowFrameworkRestTestCase {
     @Before
     public void setupSecureTests() throws IOException {
         if (!isHttps()) throw new IllegalArgumentException("Secure Tests are running but HTTPS is not set");
+        createIndexRole(indexAllAccessRole, "*");
         String alicePassword = generatePassword(aliceUser);
         createUser(aliceUser, alicePassword, List.of("odfe"));
         aliceClient = new SecureRestClientBuilder(getClusterHosts().toArray(new HttpHost[0]), isHttps(), aliceUser, alicePassword)
@@ -106,6 +103,7 @@ public class FlowFrameworkSecureRestApiIT extends FlowFrameworkRestTestCase {
         createRoleMapping(FLOW_FRAMEWORK_READ_ACCESS_ROLE, List.of(bobUser));
         createRoleMapping(ML_COMMONS_FULL_ACCESS_ROLE, List.of(aliceUser, catUser, dogUser, elkUser, fishUser));
         createRoleMapping(FLOW_FRAMEWORK_FULL_ACCESS_ROLE, List.of(aliceUser, catUser, dogUser, elkUser, fishUser));
+        createRoleMapping(indexAllAccessRole, List.of(aliceUser));
     }
 
     @After
@@ -189,6 +187,12 @@ public class FlowFrameworkSecureRestApiIT extends FlowFrameworkRestTestCase {
 
     public void testProvisionWorkflowWithReadAccess() throws Exception {
         ResponseException exception = expectThrows(ResponseException.class, () -> provisionWorkflow(bobClient, "test"));
+        assertEquals(RestStatus.FORBIDDEN.getStatus(), exception.getResponse().getStatusLine().getStatusCode());
+    }
+
+    public void testReprovisionWorkflowWithReadAccess() throws Exception {
+        Template template = TestHelpers.createTemplateFromFile("createconnector-registerremotemodel-deploymodel.json");
+        ResponseException exception = expectThrows(ResponseException.class, () -> reprovisionWorkflow(bobClient, "test", template));
         assertEquals(RestStatus.FORBIDDEN.getStatus(), exception.getResponse().getStatusLine().getStatusCode());
     }
 
@@ -317,6 +321,71 @@ public class FlowFrameworkSecureRestApiIT extends FlowFrameworkRestTestCase {
         assertEquals(RestStatus.OK, TestHelpers.restStatus(response));
     }
 
+    public void testReprovisionWorkflowWithWriteAccess() throws Exception {
+        // User Alice has FF full access, should be able to reprovision a workflow
+        // Begin with a template to register a local pretrained model and create an index, no edges
+        Template template = TestHelpers.createTemplateFromFile("registerremotemodel-createindex.json");
+
+        enableFilterBy();
+        Response response = createWorkflowWithProvision(aliceClient, template);
+        assertEquals(RestStatus.CREATED, TestHelpers.restStatus(response));
+
+        Map<String, Object> responseMap = entityAsMap(response);
+        String workflowId = (String) responseMap.get(WORKFLOW_ID);
+        // wait and ensure state is completed/done
+        assertBusy(
+            () -> { getAndAssertWorkflowStatus(aliceClient, workflowId, State.COMPLETED, ProvisioningProgress.DONE); },
+            120,
+            TimeUnit.SECONDS
+        );
+
+        // Wait until provisioning has completed successfully before attempting to retrieve created resources
+        List<ResourceCreated> resourcesCreated = getResourcesCreated(aliceClient, workflowId, 30);
+        assertEquals(4, resourcesCreated.size());
+        Map<String, ResourceCreated> resourceMap = resourcesCreated.stream()
+            .collect(Collectors.toMap(ResourceCreated::workflowStepName, r -> r));
+        assertTrue(resourceMap.containsKey("create_connector"));
+        assertTrue(resourceMap.containsKey("register_remote_model"));
+        assertTrue(resourceMap.containsKey("create_index"));
+
+        // Reprovision template to add ingest pipeline which uses the model ID
+        template = TestHelpers.createTemplateFromFile("registerremotemodel-ingestpipeline-createindex.json");
+        response = reprovisionWorkflow(aliceClient, workflowId, template);
+        assertEquals(RestStatus.CREATED, TestHelpers.restStatus(response));
+
+        resourcesCreated = getResourcesCreated(aliceClient, workflowId, 30);
+        assertEquals(5, resourcesCreated.size());
+        resourceMap = resourcesCreated.stream().collect(Collectors.toMap(ResourceCreated::workflowStepName, r -> r));
+        assertTrue(resourceMap.containsKey("create_connector"));
+        assertTrue(resourceMap.containsKey("register_remote_model"));
+        assertTrue(resourceMap.containsKey("create_ingest_pipeline"));
+        assertTrue(resourceMap.containsKey("create_index"));
+
+        // Ensure ingest pipeline configuration contains the model id and index settings have the ingest pipeline as default
+        String modelId = resourceMap.get("register_remote_model").resourceId();
+        String pipelineId = resourceMap.get("create_ingest_pipeline").resourceId();
+        GetPipelineResponse getPipelineResponse = getPipelines(pipelineId);
+        assertEquals(1, getPipelineResponse.pipelines().size());
+        assertTrue(getPipelineResponse.pipelines().get(0).getConfigAsMap().toString().contains(modelId));
+
+        String indexName = resourceMap.get("create_index").resourceId();
+        Map<String, Object> indexSettings = getIndexSettingsAsMap(indexName);
+        assertEquals(pipelineId, indexSettings.get("index.default_pipeline"));
+
+        // Deprovision and delete all resources
+        Response deprovisionResponse = deprovisionWorkflowWithAllowDelete(aliceClient, workflowId, pipelineId + "," + indexName);
+        assertBusy(
+            () -> { getAndAssertWorkflowStatus(aliceClient, workflowId, State.NOT_STARTED, ProvisioningProgress.NOT_STARTED); },
+            60,
+            TimeUnit.SECONDS
+        );
+        assertEquals(RestStatus.OK, TestHelpers.restStatus(deprovisionResponse));
+
+        // Hit Delete API
+        Response deleteResponse = deleteWorkflow(aliceClient, workflowId);
+        assertEquals(RestStatus.OK, TestHelpers.restStatus(deleteResponse));
+    }
+
     public void testDeleteWorkflowWithWriteAccess() throws Exception {
         // User Alice has FF full access, should be able to delete a workflow
         Template template = TestHelpers.createTemplateFromFile("register-deploylocalsparseencodingmodel.json");
@@ -398,7 +467,7 @@ public class FlowFrameworkSecureRestApiIT extends FlowFrameworkRestTestCase {
         Map<String, Object> responseMap = entityAsMap(response);
         String workflowId = (String) responseMap.get(WORKFLOW_ID);
 
-        ResponseException exception = expectThrows(ResponseException.class, () -> provisionWorkflow(client(), workflowId));
+        ResponseException exception = expectThrows(ResponseException.class, () -> provisionWorkflow(aliceClient, workflowId));
         assertTrue(exception.getMessage().contains("Invalid workflow, node [workflow_step_1] missing the following required inputs"));
         getAndAssertWorkflowStatus(aliceClient, workflowId, State.NOT_STARTED, ProvisioningProgress.NOT_STARTED);
 
