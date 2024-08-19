@@ -174,7 +174,7 @@ dependencies {
     api "org.apache.httpcomponents.core5:httpcore5:5.2.5"
     implementation "jakarta.json.bind:jakarta.json.bind-api:3.0.1"
     implementation "org.glassfish:jakarta.json:2.0.1"
-    implementation "org.eclipse:yasson:3.0.3"
+    implementation "org.eclipse:yasson:3.0.4"
     implementation "com.google.code.gson:gson:2.11.0"
 
     // ZipArchive dependencies used for integration tests
