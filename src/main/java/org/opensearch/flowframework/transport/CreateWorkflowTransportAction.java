@@ -70,7 +70,6 @@ public class CreateWorkflowTransportAction extends HandledTransportAction<Workfl
     private final FlowFrameworkSettings flowFrameworkSettings;
     private final PluginsService pluginsService;
     private volatile Boolean filterByEnabled;
-    private final Settings settings;
     private final ClusterService clusterService;
     private final NamedXContentRegistry xContentRegistry;
 
@@ -110,7 +109,6 @@ public class CreateWorkflowTransportAction extends HandledTransportAction<Workfl
         this.clusterService = clusterService;
         clusterService.getClusterSettings().addSettingsUpdateConsumer(FILTER_BY_BACKEND_ROLES, it -> filterByEnabled = it);
         this.xContentRegistry = xContentRegistry;
-        this.settings = settings;
     }
 
     @Override
@@ -141,7 +139,7 @@ public class CreateWorkflowTransportAction extends HandledTransportAction<Workfl
         try {
             // Check if user has backend roles
             // When filter by is enabled, block users creating/updating workflows who do not have backend roles.
-            if (filterByEnabled) {
+            if (filterByEnabled == Boolean.TRUE) {
                 try {
                     checkFilterByBackendRoles(requestedUser);
                 } catch (FlowFrameworkException e) {

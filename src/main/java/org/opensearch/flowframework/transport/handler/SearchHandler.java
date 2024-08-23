@@ -88,7 +88,7 @@ public class SearchHandler {
             // Security is enabled, filter is enabled and user isn't admin
             try {
                 ParseUtils.addUserBackendRolesFilter(user, request.source());
-                logger.debug("Filtering result by " + user.getBackendRoles());
+                logger.debug("Filtering result by {}", user.getBackendRoles());
                 client.search(request, ActionListener.runBefore(listener, context::restore));
             } catch (Exception e) {
                 listener.onFailure(e);

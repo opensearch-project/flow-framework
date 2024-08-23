@@ -27,6 +27,7 @@ import org.opensearch.common.xcontent.json.JsonXContent;
 import org.opensearch.commons.ConfigConstants;
 import org.opensearch.commons.authuser.User;
 import org.opensearch.core.action.ActionListener;
+import org.opensearch.core.action.ActionResponse;
 import org.opensearch.core.common.bytes.BytesReference;
 import org.opensearch.core.rest.RestStatus;
 import org.opensearch.core.xcontent.NamedXContentRegistry;
@@ -292,14 +293,14 @@ public class ParseUtils {
         User requestedUser,
         String workflowId,
         Boolean filterByEnabled,
-        ActionListener listener,
+        ActionListener<? extends ActionResponse> listener,
         Runnable function,
         Client client,
         ClusterService clusterService,
         NamedXContentRegistry xContentRegistry
     ) {
         try {
-            if (requestedUser == null || !filterByEnabled) {
+            if (requestedUser == null || filterByEnabled == Boolean.FALSE) {
                 // requestedUser == null means security is disabled or user is superadmin. In this case we don't need to
                 // check if request user have access to the workflow or not.
                 // !filterByEnabled means security is enabled and filterByEnabled is disabled
