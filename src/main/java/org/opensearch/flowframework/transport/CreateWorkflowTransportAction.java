@@ -33,7 +33,6 @@ import org.opensearch.flowframework.model.ProvisioningProgress;
 import org.opensearch.flowframework.model.State;
 import org.opensearch.flowframework.model.Template;
 import org.opensearch.flowframework.model.Workflow;
-import org.opensearch.flowframework.transport.handler.WorkflowFunction;
 import org.opensearch.flowframework.workflow.ProcessNode;
 import org.opensearch.flowframework.workflow.WorkflowProcessSorter;
 import org.opensearch.index.query.QueryBuilder;
@@ -137,15 +136,17 @@ public class CreateWorkflowTransportAction extends HandledTransportAction<Workfl
         User requestedUser,
         String workflowId,
         ActionListener<WorkflowResponse> listener,
-        WorkflowFunction function
+        Runnable function
     ) {
         try {
             // Check if user has backend roles
             // When filter by is enabled, block users creating/updating workflows who do not have backend roles.
             if (filterByEnabled) {
-                String error = checkFilterByBackendRoles(requestedUser);
-                if (error != null) {
-                    listener.onFailure(new FlowFrameworkException(error, RestStatus.BAD_REQUEST));
+                try {
+                    checkFilterByBackendRoles(requestedUser);
+                } catch (FlowFrameworkException e) {
+                    logger.error(e.getMessage(), e);
+                    listener.onFailure(e);
                     return;
                 }
             }
@@ -159,7 +160,7 @@ public class CreateWorkflowTransportAction extends HandledTransportAction<Workfl
                 getWorkflow(requestedUser, workflowId, filterByBackendRole, listener, function, client, clusterService, xContentRegistry);
             } else {
                 // Create Workflow. No need to get current workflow.
-                function.execute();
+                function.run();
             }
         } catch (Exception e) {
             String errorMessage = "Failed to create or update workflow";
@@ -181,7 +182,7 @@ public class CreateWorkflowTransportAction extends HandledTransportAction<Workfl
      * @param user the user making the request
      * @param listener the action listener
      */
-    protected void createExecute(WorkflowRequest request, User user, ActionListener<WorkflowResponse> listener) {
+    private void createExecute(WorkflowRequest request, User user, ActionListener<WorkflowResponse> listener) {
         Instant creationTime = Instant.now();
         Template templateWithUser = new Template(
             request.getTemplate().name(),

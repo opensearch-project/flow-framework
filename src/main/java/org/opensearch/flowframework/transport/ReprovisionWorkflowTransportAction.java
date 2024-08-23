@@ -160,7 +160,7 @@ public class ReprovisionWorkflowTransportAction extends HandledTransportAction<R
      * @param listener the action listener
      * @param context the thread context
      */
-    protected void executeReprovisionRequest(
+    private void executeReprovisionRequest(
         ReprovisionWorkflowRequest request,
         ActionListener<WorkflowResponse> listener,
         ThreadContext.StoredContext context

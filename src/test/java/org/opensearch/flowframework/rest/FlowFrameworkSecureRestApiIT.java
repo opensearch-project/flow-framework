@@ -276,7 +276,7 @@ public class FlowFrameworkSecureRestApiIT extends FlowFrameworkRestTestCase {
         Template template = TestHelpers.createTemplateFromFile("register-deploylocalsparseencodingmodel.json");
         Exception exception = expectThrows(IOException.class, () -> { createWorkflow(dogClient, template); });
         assertTrue(
-            exception.getMessage().contains("Filter by backend roles is enabled and User dog does not have backend roles configured")
+            exception.getMessage().contains("Filter by backend roles is enabled, but User dog does not have any backend roles configured")
         );
     }
 

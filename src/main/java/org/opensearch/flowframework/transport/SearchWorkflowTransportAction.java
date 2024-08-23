@@ -10,12 +10,14 @@ package org.opensearch.flowframework.transport;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.opensearch.ExceptionsHelper;
 import org.opensearch.action.search.SearchRequest;
 import org.opensearch.action.search.SearchResponse;
 import org.opensearch.action.support.ActionFilters;
 import org.opensearch.action.support.HandledTransportAction;
 import org.opensearch.common.inject.Inject;
 import org.opensearch.core.action.ActionListener;
+import org.opensearch.flowframework.exception.FlowFrameworkException;
 import org.opensearch.flowframework.transport.handler.SearchHandler;
 import org.opensearch.tasks.Task;
 import org.opensearch.transport.TransportService;
@@ -43,6 +45,12 @@ public class SearchWorkflowTransportAction extends HandledTransportAction<Search
 
     @Override
     protected void doExecute(Task task, SearchRequest request, ActionListener<SearchResponse> actionListener) {
-        searchHandler.search(request, actionListener);
+        try {
+            searchHandler.search(request, actionListener);
+        } catch (Exception e) {
+            String errorMessage = "Failed to search workflows in global context";
+            logger.error(errorMessage, e);
+            actionListener.onFailure(new FlowFrameworkException(errorMessage, ExceptionsHelper.status(e)));
+        }
     }
 }

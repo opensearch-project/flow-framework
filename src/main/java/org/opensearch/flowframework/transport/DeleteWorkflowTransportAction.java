@@ -109,7 +109,7 @@ public class DeleteWorkflowTransportAction extends HandledTransportAction<Workfl
      * @param listener the action listener
      * @param context the thread context
      */
-    protected void executeDeleteRequest(
+    private void executeDeleteRequest(
         WorkflowRequest request,
         ActionListener<DeleteResponse> listener,
         ThreadContext.StoredContext context

@@ -27,6 +27,7 @@ import org.opensearch.common.settings.ClusterSettings;
 import org.opensearch.common.settings.Settings;
 import org.opensearch.common.unit.TimeValue;
 import org.opensearch.common.util.concurrent.ThreadContext;
+import org.opensearch.commons.ConfigConstants;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.core.index.shard.ShardId;
 import org.opensearch.flowframework.TestHelpers;
@@ -92,6 +93,7 @@ public class CreateWorkflowTransportActionTests extends OpenSearchTestCase {
     private FlowFrameworkSettings flowFrameworkSettings;
     private PluginsService pluginsService;
     private ClusterService clusterService;
+    private ClusterSettings clusterSettings;
 
     @Override
     public void setUp() throws Exception {
@@ -109,10 +111,7 @@ public class CreateWorkflowTransportActionTests extends OpenSearchTestCase {
         this.pluginsService = mock(PluginsService.class);
 
         clusterService = mock(ClusterService.class);
-        ClusterSettings clusterSettings = new ClusterSettings(
-            Settings.EMPTY,
-            Set.copyOf(List.of(FlowFrameworkSettings.FILTER_BY_BACKEND_ROLES))
-        );
+        clusterSettings = new ClusterSettings(Settings.EMPTY, Set.copyOf(List.of(FlowFrameworkSettings.FILTER_BY_BACKEND_ROLES)));
         when(clusterService.getClusterSettings()).thenReturn(clusterSettings);
 
         FlowFrameworkIndex index = FlowFrameworkIndex.GLOBAL_CONTEXT;
@@ -375,6 +374,168 @@ public class CreateWorkflowTransportActionTests extends OpenSearchTestCase {
         verify(listener, times(1)).onResponse(workflowResponseCaptor.capture());
 
         assertEquals("1", workflowResponseCaptor.getValue().getWorkflowId());
+    }
+
+    public void testCreateWithUserAndFilterOn() {
+        Settings settings = Settings.builder().put(FlowFrameworkSettings.FILTER_BY_BACKEND_ROLES.getKey(), true).build();
+        ThreadContext threadContext = new ThreadContext(settings);
+        threadContext.putTransient(ConfigConstants.OPENSEARCH_SECURITY_USER_INFO_THREAD_CONTEXT, "alice|odfe,aes|engineering,operations");
+        when(clusterService.getClusterSettings()).thenReturn(clusterSettings);
+        org.opensearch.threadpool.ThreadPool mockThreadPool = mock(ThreadPool.class);
+        when(client.threadPool()).thenReturn(mockThreadPool);
+        when(mockThreadPool.getThreadContext()).thenReturn(threadContext);
+
+        CreateWorkflowTransportAction createWorkflowTransportAction1 = spy(
+            new CreateWorkflowTransportAction(
+                mock(TransportService.class),
+                mock(ActionFilters.class),
+                workflowProcessSorter,
+                flowFrameworkIndicesHandler,
+                flowFrameworkSettings,
+                client,
+                pluginsService,
+                clusterService,
+                xContentRegistry(),
+                settings
+            )
+        );
+
+        ActionListener<WorkflowResponse> listener = mock(ActionListener.class);
+        WorkflowRequest workflowRequest = new WorkflowRequest(
+            null,
+            template,
+            new String[] { "off" },
+            false,
+            Collections.emptyMap(),
+            null,
+            Collections.emptyMap(),
+            false
+        );
+
+        // Bypass checkMaxWorkflows and force onResponse
+        doAnswer(invocation -> {
+            ActionListener<Boolean> checkMaxWorkflowListener = invocation.getArgument(2);
+            checkMaxWorkflowListener.onResponse(true);
+            return null;
+        }).when(createWorkflowTransportAction1).checkMaxWorkflows(any(TimeValue.class), anyInt(), any());
+
+        // Bypass initializeConfigIndex and force onResponse
+        doAnswer(invocation -> {
+            ActionListener<Boolean> initalizeMasterKeyIndexListener = invocation.getArgument(0);
+            initalizeMasterKeyIndexListener.onResponse(true);
+            return null;
+        }).when(flowFrameworkIndicesHandler).initializeConfigIndex(any());
+
+        // Bypass putTemplateToGlobalContext and force onResponse
+        doAnswer(invocation -> {
+            ActionListener<IndexResponse> responseListener = invocation.getArgument(1);
+            responseListener.onResponse(new IndexResponse(new ShardId(GLOBAL_CONTEXT_INDEX, "", 1), "1", 1L, 1L, 1L, true));
+            return null;
+        }).when(flowFrameworkIndicesHandler).putTemplateToGlobalContext(any(), any());
+
+        // Bypass putInitialStateToWorkflowState and force on response
+        doAnswer(invocation -> {
+            ActionListener<IndexResponse> responseListener = invocation.getArgument(2);
+            responseListener.onResponse(new IndexResponse(new ShardId(WORKFLOW_STATE_INDEX, "", 1), "1", 1L, 1L, 1L, true));
+            return null;
+        }).when(flowFrameworkIndicesHandler).putInitialStateToWorkflowState(any(), any(), any());
+
+        ArgumentCaptor<WorkflowResponse> workflowResponseCaptor = ArgumentCaptor.forClass(WorkflowResponse.class);
+
+        createWorkflowTransportAction1.doExecute(mock(Task.class), workflowRequest, listener);
+
+        verify(listener, times(1)).onResponse(workflowResponseCaptor.capture());
+    }
+
+    public void testFailedToCreateNewWorkflowWithNullUser() {
+        @SuppressWarnings("unchecked")
+        Settings settings = Settings.builder().put(FlowFrameworkSettings.FILTER_BY_BACKEND_ROLES.getKey(), true).build();
+        ThreadContext threadContext = new ThreadContext(settings);
+        threadContext.putTransient(ConfigConstants.OPENSEARCH_SECURITY_USER_INFO_THREAD_CONTEXT, null);
+        when(clusterService.getClusterSettings()).thenReturn(clusterSettings);
+        org.opensearch.threadpool.ThreadPool mockThreadPool = mock(ThreadPool.class);
+        when(client.threadPool()).thenReturn(mockThreadPool);
+        when(mockThreadPool.getThreadContext()).thenReturn(threadContext);
+
+        CreateWorkflowTransportAction createWorkflowTransportAction1 = spy(
+            new CreateWorkflowTransportAction(
+                mock(TransportService.class),
+                mock(ActionFilters.class),
+                workflowProcessSorter,
+                flowFrameworkIndicesHandler,
+                flowFrameworkSettings,
+                client,
+                pluginsService,
+                clusterService,
+                xContentRegistry(),
+                settings
+            )
+        );
+
+        ActionListener<WorkflowResponse> listener = mock(ActionListener.class);
+
+        WorkflowRequest workflowRequest = new WorkflowRequest(
+            null,
+            template,
+            new String[] { "off" },
+            false,
+            Collections.emptyMap(),
+            null,
+            Collections.emptyMap(),
+            false
+        );
+
+        createWorkflowTransportAction1.doExecute(mock(Task.class), workflowRequest, listener);
+        ArgumentCaptor<Exception> exceptionCaptor = ArgumentCaptor.forClass(Exception.class);
+        verify(listener, times(1)).onFailure(exceptionCaptor.capture());
+        assertEquals("Filter by backend roles is enabled and User is null", exceptionCaptor.getValue().getMessage());
+    }
+
+    public void testFailedToCreateNewWorkflowWithNoBackendRoleUser() {
+        @SuppressWarnings("unchecked")
+        Settings settings = Settings.builder().put(FlowFrameworkSettings.FILTER_BY_BACKEND_ROLES.getKey(), true).build();
+        ThreadContext threadContext = new ThreadContext(settings);
+        threadContext.putTransient(ConfigConstants.OPENSEARCH_SECURITY_USER_INFO_THREAD_CONTEXT, "test");
+        when(clusterService.getClusterSettings()).thenReturn(clusterSettings);
+        org.opensearch.threadpool.ThreadPool mockThreadPool = mock(ThreadPool.class);
+        when(client.threadPool()).thenReturn(mockThreadPool);
+        when(mockThreadPool.getThreadContext()).thenReturn(threadContext);
+
+        CreateWorkflowTransportAction createWorkflowTransportAction1 = spy(
+            new CreateWorkflowTransportAction(
+                mock(TransportService.class),
+                mock(ActionFilters.class),
+                workflowProcessSorter,
+                flowFrameworkIndicesHandler,
+                flowFrameworkSettings,
+                client,
+                pluginsService,
+                clusterService,
+                xContentRegistry(),
+                settings
+            )
+        );
+
+        ActionListener<WorkflowResponse> listener = mock(ActionListener.class);
+
+        WorkflowRequest workflowRequest = new WorkflowRequest(
+            null,
+            template,
+            new String[] { "off" },
+            false,
+            Collections.emptyMap(),
+            null,
+            Collections.emptyMap(),
+            false
+        );
+
+        createWorkflowTransportAction1.doExecute(mock(Task.class), workflowRequest, listener);
+        ArgumentCaptor<Exception> exceptionCaptor = ArgumentCaptor.forClass(Exception.class);
+        verify(listener, times(1)).onFailure(exceptionCaptor.capture());
+        assertEquals(
+            "Filter by backend roles is enabled, but User test does not have any backend roles configured",
+            exceptionCaptor.getValue().getMessage()
+        );
     }
 
     public void testUpdateWorkflowWithReprovision() throws IOException {

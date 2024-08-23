@@ -35,7 +35,6 @@ import org.opensearch.core.xcontent.XContentParser;
 import org.opensearch.flowframework.exception.FlowFrameworkException;
 import org.opensearch.flowframework.model.Template;
 import org.opensearch.flowframework.transport.WorkflowResponse;
-import org.opensearch.flowframework.transport.handler.WorkflowFunction;
 import org.opensearch.flowframework.workflow.WorkflowData;
 import org.opensearch.index.query.BoolQueryBuilder;
 import org.opensearch.index.query.NestedQueryBuilder;
@@ -53,7 +52,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Optional;
@@ -243,7 +241,7 @@ public class ParseUtils {
      */
     public static User getUserContext(Client client) {
         String userStr = client.threadPool().getThreadContext().getTransient(ConfigConstants.OPENSEARCH_SECURITY_USER_INFO_THREAD_CONTEXT);
-        logger.debug("Filtering result by " + userStr);
+        logger.debug("Filtering result by {}", userStr);
         return User.parse(userStr);
     }
 
@@ -271,8 +269,10 @@ public class ParseUtils {
         } else if (query instanceof BoolQueryBuilder) {
             ((BoolQueryBuilder) query).filter(boolQueryBuilder);
         } else {
-            // e.g., wild card query
-            throw new FlowFrameworkException("Search API does not support queries other than BoolQuery", RestStatus.BAD_REQUEST);
+            // Convert any other query to a BoolQueryBuilder
+            BoolQueryBuilder boolQuery = QueryBuilders.boolQuery().must(query);
+            boolQuery.filter(boolQueryBuilder);
+            searchSourceBuilder.query(boolQuery);
         }
         return searchSourceBuilder;
     }
@@ -291,9 +291,9 @@ public class ParseUtils {
     public static void resolveUserAndExecute(
         User requestedUser,
         String workflowId,
-        boolean filterByEnabled,
+        Boolean filterByEnabled,
         ActionListener listener,
-        WorkflowFunction function,
+        Runnable function,
         Client client,
         ClusterService clusterService,
         NamedXContentRegistry xContentRegistry
@@ -303,7 +303,7 @@ public class ParseUtils {
                 // requestedUser == null means security is disabled or user is superadmin. In this case we don't need to
                 // check if request user have access to the workflow or not.
                 // !filterByEnabled means security is enabled and filterByEnabled is disabled
-                function.execute();
+                function.run();
             } else {
                 getWorkflow(requestedUser, workflowId, filterByEnabled, listener, function, client, clusterService, xContentRegistry);
             }
@@ -344,20 +344,21 @@ public class ParseUtils {
     /**
      * Check if filter by backend roles is enabled and validate the requested user
      * @param requestedUser the user to execute the request
-     * @return error message if validation fails, null otherwise
      */
-    public static String checkFilterByBackendRoles(User requestedUser) {
+    public static void checkFilterByBackendRoles(User requestedUser) {
         if (requestedUser == null) {
-            return "Filter by backend roles is enabled and User is null";
+            String errorMessage = "Filter by backend roles is enabled and User is null";
+            logger.error(errorMessage);
+            throw new FlowFrameworkException(errorMessage, RestStatus.BAD_REQUEST);
         }
         if (requestedUser.getBackendRoles().isEmpty()) {
-            return String.format(
-                Locale.ROOT,
-                "Filter by backend roles is enabled and User %s does not have backend roles configured",
-                requestedUser.getName()
-            );
+            String userErrorMessage = "Filter by backend roles is enabled, but User "
+                + requestedUser.getName()
+                + " does not have any backend roles configured";
+
+            logger.error(userErrorMessage);
+            throw new FlowFrameworkException(userErrorMessage, RestStatus.FORBIDDEN);
         }
-        return null;
     }
 
     /**
@@ -376,7 +377,7 @@ public class ParseUtils {
         String workflowId,
         Boolean filterByEnabled,
         ActionListener listener,
-        WorkflowFunction function,
+        Runnable function,
         Client client,
         ClusterService clusterService,
         NamedXContentRegistry xContentRegistry
@@ -426,7 +427,7 @@ public class ParseUtils {
         String workflowId,
         Boolean filterByEnabled,
         ActionListener<WorkflowResponse> listener,
-        WorkflowFunction function,
+        Runnable function,
         NamedXContentRegistry xContentRegistry
     ) {
         if (response.isExists()) {
@@ -438,7 +439,7 @@ public class ParseUtils {
                 User resourceUser = template.getUser();
 
                 if (!filterByEnabled || checkUserPermissions(requestUser, resourceUser, workflowId) || isAdmin(requestUser)) {
-                    function.execute();
+                    function.run();
                 } else {
                     logger.debug("User: " + requestUser.getName() + " does not have permissions to access workflow: " + workflowId);
                     listener.onFailure(

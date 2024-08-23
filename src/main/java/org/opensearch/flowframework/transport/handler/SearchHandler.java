@@ -31,7 +31,7 @@ import static org.opensearch.flowframework.util.RestHandlerUtils.getSourceContex
 public class SearchHandler {
     private final Logger logger = LogManager.getLogger(SearchHandler.class);
     private final Client client;
-    private volatile Boolean filterEnabled;
+    private volatile Boolean filterByBackendRole;
 
     /**
      * Instantiates a new SearchHandler
@@ -42,8 +42,8 @@ public class SearchHandler {
      */
     public SearchHandler(Settings settings, ClusterService clusterService, Client client, Setting<Boolean> filterByBackendRoleSetting) {
         this.client = client;
-        filterEnabled = filterByBackendRoleSetting.get(settings);
-        clusterService.getClusterSettings().addSettingsUpdateConsumer(filterByBackendRoleSetting, it -> filterEnabled = it);
+        filterByBackendRole = filterByBackendRoleSetting.get(settings);
+        clusterService.getClusterSettings().addSettingsUpdateConsumer(filterByBackendRoleSetting, it -> filterByBackendRole = it);
     }
 
     /**
@@ -78,7 +78,7 @@ public class SearchHandler {
         ActionListener<SearchResponse> listener,
         ThreadContext.StoredContext context
     ) {
-        if (user == null || !filterEnabled || isAdmin(user)) {
+        if (user == null || !filterByBackendRole || isAdmin(user)) {
             // Case 1: user == null when 1. Security is disabled. 2. When user is super-admin
             // Case 2: If Security is enabled and filter is disabled, proceed with search as
             // user is already authenticated to hit this API.
