@@ -11,6 +11,8 @@ package org.opensearch.flowframework.transport;
 import org.opensearch.action.support.ActionFilters;
 import org.opensearch.action.update.UpdateResponse;
 import org.opensearch.client.Client;
+import org.opensearch.cluster.service.ClusterService;
+import org.opensearch.common.settings.ClusterSettings;
 import org.opensearch.common.settings.Settings;
 import org.opensearch.common.util.concurrent.ThreadContext;
 import org.opensearch.core.action.ActionListener;
@@ -31,7 +33,10 @@ import org.opensearch.test.OpenSearchTestCase;
 import org.opensearch.threadpool.ThreadPool;
 import org.opensearch.transport.TransportService;
 
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 
@@ -75,6 +80,13 @@ public class ReprovisionWorkflowTransportActionTests extends OpenSearchTestCase 
         this.encryptorUtils = mock(EncryptorUtils.class);
         this.pluginsService = mock(PluginsService.class);
 
+        ClusterService clusterService = mock(ClusterService.class);
+        ClusterSettings clusterSettings = new ClusterSettings(
+            Settings.EMPTY,
+            Collections.unmodifiableSet(new HashSet<>(Arrays.asList(FlowFrameworkSettings.FILTER_BY_BACKEND_ROLES)))
+        );
+        when(clusterService.getClusterSettings()).thenReturn(clusterSettings);
+
         this.reprovisionWorkflowTransportAction = new ReprovisionWorkflowTransportAction(
             transportService,
             actionFilters,
@@ -85,7 +97,10 @@ public class ReprovisionWorkflowTransportActionTests extends OpenSearchTestCase 
             flowFrameworkIndicesHandler,
             flowFrameworkSettings,
             encryptorUtils,
-            pluginsService
+            pluginsService,
+            clusterService,
+            xContentRegistry(),
+            Settings.EMPTY
         );
 
         ThreadPool clientThreadPool = mock(ThreadPool.class);

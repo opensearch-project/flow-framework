@@ -15,10 +15,14 @@ import org.opensearch.action.support.ActionFilters;
 import org.opensearch.action.support.HandledTransportAction;
 import org.opensearch.action.support.PlainActionFuture;
 import org.opensearch.client.Client;
+import org.opensearch.cluster.service.ClusterService;
 import org.opensearch.common.inject.Inject;
+import org.opensearch.common.settings.Settings;
 import org.opensearch.common.util.concurrent.ThreadContext;
+import org.opensearch.commons.authuser.User;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.core.rest.RestStatus;
+import org.opensearch.core.xcontent.NamedXContentRegistry;
 import org.opensearch.flowframework.common.FlowFrameworkSettings;
 import org.opensearch.flowframework.exception.FlowFrameworkException;
 import org.opensearch.flowframework.indices.FlowFrameworkIndicesHandler;
@@ -55,6 +59,9 @@ import static org.opensearch.flowframework.common.CommonValue.PROVISION_WORKFLOW
 import static org.opensearch.flowframework.common.CommonValue.RESOURCES_CREATED_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.STATE_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.WORKFLOW_STATE_INDEX;
+import static org.opensearch.flowframework.common.FlowFrameworkSettings.FILTER_BY_BACKEND_ROLES;
+import static org.opensearch.flowframework.util.ParseUtils.getUserContext;
+import static org.opensearch.flowframework.util.ParseUtils.resolveUserAndExecute;
 
 /**
  * Transport Action to reprovision a provisioned template
@@ -71,6 +78,9 @@ public class ReprovisionWorkflowTransportAction extends HandledTransportAction<R
     private final FlowFrameworkSettings flowFrameworkSettings;
     private final PluginsService pluginsService;
     private final EncryptorUtils encryptorUtils;
+    private volatile Boolean filterByEnabled;
+    private final ClusterService clusterService;
+    private final NamedXContentRegistry xContentRegistry;
 
     /**
      * Instantiates a new ReprovisionWorkflowTransportAction
@@ -84,6 +94,9 @@ public class ReprovisionWorkflowTransportAction extends HandledTransportAction<R
      * @param flowFrameworkSettings Whether this API is enabled
      * @param encryptorUtils Utility class to handle encryption/decryption
      * @param pluginsService The Plugins Service
+     * @param clusterService The Cluster Service
+     * @param xContentRegistry The XContent Registry
+     * @param settings  The plugin settings
      */
     @Inject
     public ReprovisionWorkflowTransportAction(
@@ -96,7 +109,10 @@ public class ReprovisionWorkflowTransportAction extends HandledTransportAction<R
         FlowFrameworkIndicesHandler flowFrameworkIndicesHandler,
         FlowFrameworkSettings flowFrameworkSettings,
         EncryptorUtils encryptorUtils,
-        PluginsService pluginsService
+        PluginsService pluginsService,
+        ClusterService clusterService,
+        NamedXContentRegistry xContentRegistry,
+        Settings settings
     ) {
         super(ReprovisionWorkflowAction.NAME, transportService, actionFilters, ReprovisionWorkflowRequest::new);
         this.threadPool = threadPool;
@@ -107,98 +123,104 @@ public class ReprovisionWorkflowTransportAction extends HandledTransportAction<R
         this.flowFrameworkSettings = flowFrameworkSettings;
         this.encryptorUtils = encryptorUtils;
         this.pluginsService = pluginsService;
+        filterByEnabled = FILTER_BY_BACKEND_ROLES.get(settings);
+        this.xContentRegistry = xContentRegistry;
+        this.clusterService = clusterService;
+        clusterService.getClusterSettings().addSettingsUpdateConsumer(FILTER_BY_BACKEND_ROLES, it -> filterByEnabled = it);
     }
 
     @Override
     protected void doExecute(Task task, ReprovisionWorkflowRequest request, ActionListener<WorkflowResponse> listener) {
 
         String workflowId = request.getWorkflowId();
+        User user = getUserContext(client);
 
+        try (ThreadContext.StoredContext context = client.threadPool().getThreadContext().stashContext()) {
+            resolveUserAndExecute(
+                user,
+                workflowId,
+                filterByEnabled,
+                listener,
+                () -> executeReprovisionRequest(request, listener, context),
+                client,
+                clusterService,
+                xContentRegistry
+            );
+        } catch (Exception e) {
+            String errorMessage = "Failed to get workflow state for workflow " + workflowId;
+            logger.error(errorMessage, e);
+            listener.onFailure(new FlowFrameworkException(errorMessage, ExceptionsHelper.status(e)));
+        }
+
+    }
+
+    /**
+     * Execute the reprovision request
+     * @param request the reprovision request
+     * @param listener the action listener
+     * @param context the thread context
+     */
+    private void executeReprovisionRequest(
+        ReprovisionWorkflowRequest request,
+        ActionListener<WorkflowResponse> listener,
+        ThreadContext.StoredContext context
+    ) {
+        String workflowId = request.getWorkflowId();
+        logger.info("Querying state for workflow: {}", workflowId);
         // Retrieve state and resources created
         GetWorkflowStateRequest getStateRequest = new GetWorkflowStateRequest(workflowId, true);
-        try (ThreadContext.StoredContext context = client.threadPool().getThreadContext().stashContext()) {
-            logger.info("Querying state for workflow: {}", workflowId);
-            client.execute(GetWorkflowStateAction.INSTANCE, getStateRequest, ActionListener.wrap(response -> {
-                context.restore();
+        client.execute(GetWorkflowStateAction.INSTANCE, getStateRequest, ActionListener.wrap(response -> {
+            context.restore();
 
-                State currentState = State.valueOf(response.getWorkflowState().getState());
-                if (State.PROVISIONING.equals(currentState) || State.NOT_STARTED.equals(currentState)) {
-                    String errorMessage = "The template can not be reprovisioned unless its provisioning state is DONE or FAILED: "
-                        + workflowId;
-                    throw new FlowFrameworkException(errorMessage, RestStatus.BAD_REQUEST);
-                }
+            State currentState = State.valueOf(response.getWorkflowState().getState());
+            if (State.PROVISIONING.equals(currentState) || State.NOT_STARTED.equals(currentState)) {
+                String errorMessage = "The template can not be reprovisioned unless its provisioning state is DONE or FAILED: "
+                    + workflowId;
+                throw new FlowFrameworkException(errorMessage, RestStatus.BAD_REQUEST);
+            }
 
-                // Generate reprovision sequence
-                List<ResourceCreated> resourceCreated = response.getWorkflowState().resourcesCreated();
+            // Generate reprovision sequence
+            List<ResourceCreated> resourceCreated = response.getWorkflowState().resourcesCreated();
 
-                // Original template is retrieved from index, attempt to decrypt any exisiting credentials before processing
-                Template originalTemplate = encryptorUtils.decryptTemplateCredentials(request.getOriginalTemplate());
-                Template updatedTemplate = request.getUpdatedTemplate();
+            // Original template is retrieved from index, attempt to decrypt any exisiting credentials before processing
+            Template originalTemplate = encryptorUtils.decryptTemplateCredentials(request.getOriginalTemplate());
+            Template updatedTemplate = request.getUpdatedTemplate();
 
-                // Validate updated template prior to execution
-                Workflow provisionWorkflow = updatedTemplate.workflows().get(PROVISION_WORKFLOW);
-                List<ProcessNode> updatedProcessSequence = workflowProcessSorter.sortProcessNodes(
-                    provisionWorkflow,
-                    request.getWorkflowId(),
-                    Collections.emptyMap() // TODO : Add suport to reprovision substitution templates
+            // Validate updated template prior to execution
+            Workflow provisionWorkflow = updatedTemplate.workflows().get(PROVISION_WORKFLOW);
+            List<ProcessNode> updatedProcessSequence = workflowProcessSorter.sortProcessNodes(
+                provisionWorkflow,
+                request.getWorkflowId(),
+                Collections.emptyMap() // TODO : Add suport to reprovision substitution templates
+            );
+
+            try {
+                workflowProcessSorter.validate(updatedProcessSequence, pluginsService);
+            } catch (Exception e) {
+                String errormessage = "Workflow validation failed for workflow " + request.getWorkflowId();
+                logger.error(errormessage, e);
+                listener.onFailure(new FlowFrameworkException(errormessage, RestStatus.BAD_REQUEST));
+            }
+            List<ProcessNode> reprovisionProcessSequence = workflowProcessSorter.createReprovisionSequence(
+                workflowId,
+                originalTemplate,
+                updatedTemplate,
+                resourceCreated
+            );
+
+            // Remove error field if any prior to subsequent execution
+            if (response.getWorkflowState().getError() != null) {
+                Script script = new Script(
+                    ScriptType.INLINE,
+                    "painless",
+                    "if(ctx._source.containsKey('error')){ctx._source.remove('error')}",
+                    Collections.emptyMap()
                 );
-
-                try {
-                    workflowProcessSorter.validate(updatedProcessSequence, pluginsService);
-                } catch (Exception e) {
-                    String errormessage = "Workflow validation failed for workflow " + request.getWorkflowId();
-                    logger.error(errormessage, e);
-                    listener.onFailure(new FlowFrameworkException(errormessage, RestStatus.BAD_REQUEST));
-                }
-                List<ProcessNode> reprovisionProcessSequence = workflowProcessSorter.createReprovisionSequence(
+                flowFrameworkIndicesHandler.updateFlowFrameworkSystemIndexDocWithScript(
+                    WORKFLOW_STATE_INDEX,
                     workflowId,
-                    originalTemplate,
-                    updatedTemplate,
-                    resourceCreated
-                );
-
-                // Remove error field if any prior to subsequent execution
-                if (response.getWorkflowState().getError() != null) {
-                    Script script = new Script(
-                        ScriptType.INLINE,
-                        "painless",
-                        "if(ctx._source.containsKey('error')){ctx._source.remove('error')}",
-                        Collections.emptyMap()
-                    );
-                    flowFrameworkIndicesHandler.updateFlowFrameworkSystemIndexDocWithScript(
-                        WORKFLOW_STATE_INDEX,
-                        workflowId,
-                        script,
-                        ActionListener.wrap(updateResponse -> {
-
-                        }, exception -> {
-                            String errorMessage = "Failed to update workflow state: " + workflowId;
-                            logger.error(errorMessage, exception);
-                            listener.onFailure(new FlowFrameworkException(errorMessage, ExceptionsHelper.status(exception)));
-                        })
-                    );
-                }
-
-                // Update State Index, maintain resources created for subsequent execution
-                flowFrameworkIndicesHandler.updateFlowFrameworkSystemIndexDoc(
-                    workflowId,
-                    Map.ofEntries(
-                        Map.entry(STATE_FIELD, State.PROVISIONING),
-                        Map.entry(PROVISIONING_PROGRESS_FIELD, ProvisioningProgress.IN_PROGRESS),
-                        Map.entry(PROVISION_START_TIME_FIELD, Instant.now().toEpochMilli()),
-                        Map.entry(RESOURCES_CREATED_FIELD, resourceCreated)
-                    ),
+                    script,
                     ActionListener.wrap(updateResponse -> {
-
-                        logger.info("Updated workflow {} state to {}", request.getWorkflowId(), State.PROVISIONING);
-
-                        // Attach last provisioned time to updated template and execute reprovisioning
-                        Template updatedTemplateWithProvisionedTime = Template.builder(updatedTemplate)
-                            .lastProvisionedTime(Instant.now())
-                            .build();
-                        executeWorkflowAsync(workflowId, updatedTemplateWithProvisionedTime, reprovisionProcessSequence, listener);
-
-                        listener.onResponse(new WorkflowResponse(workflowId));
 
                     }, exception -> {
                         String errorMessage = "Failed to update workflow state: " + workflowId;
@@ -206,21 +228,44 @@ public class ReprovisionWorkflowTransportAction extends HandledTransportAction<R
                         listener.onFailure(new FlowFrameworkException(errorMessage, ExceptionsHelper.status(exception)));
                     })
                 );
-            }, exception -> {
-                if (exception instanceof FlowFrameworkException) {
-                    listener.onFailure(exception);
-                } else {
-                    String errorMessage = "Failed to get workflow state for workflow " + workflowId;
+            }
+
+            // Update State Index, maintain resources created for subsequent execution
+            flowFrameworkIndicesHandler.updateFlowFrameworkSystemIndexDoc(
+                workflowId,
+                Map.ofEntries(
+                    Map.entry(STATE_FIELD, State.PROVISIONING),
+                    Map.entry(PROVISIONING_PROGRESS_FIELD, ProvisioningProgress.IN_PROGRESS),
+                    Map.entry(PROVISION_START_TIME_FIELD, Instant.now().toEpochMilli()),
+                    Map.entry(RESOURCES_CREATED_FIELD, resourceCreated)
+                ),
+                ActionListener.wrap(updateResponse -> {
+
+                    logger.info("Updated workflow {} state to {}", request.getWorkflowId(), State.PROVISIONING);
+
+                    // Attach last provisioned time to updated template and execute reprovisioning
+                    Template updatedTemplateWithProvisionedTime = Template.builder(updatedTemplate)
+                        .lastProvisionedTime(Instant.now())
+                        .build();
+                    executeWorkflowAsync(workflowId, updatedTemplateWithProvisionedTime, reprovisionProcessSequence, listener);
+
+                    listener.onResponse(new WorkflowResponse(workflowId));
+
+                }, exception -> {
+                    String errorMessage = "Failed to update workflow state: " + workflowId;
                     logger.error(errorMessage, exception);
                     listener.onFailure(new FlowFrameworkException(errorMessage, ExceptionsHelper.status(exception)));
-                }
-            }));
-        } catch (Exception e) {
-            String errorMessage = "Failed to get workflow state for workflow " + workflowId;
-            logger.error(errorMessage, e);
-            listener.onFailure(new FlowFrameworkException(errorMessage, ExceptionsHelper.status(e)));
-        }
-
+                })
+            );
+        }, exception -> {
+            if (exception instanceof FlowFrameworkException) {
+                listener.onFailure(exception);
+            } else {
+                String errorMessage = "Failed to get workflow state for workflow " + workflowId;
+                logger.error(errorMessage, exception);
+                listener.onFailure(new FlowFrameworkException(errorMessage, ExceptionsHelper.status(exception)));
+            }
+        }));
     }
 
     /**

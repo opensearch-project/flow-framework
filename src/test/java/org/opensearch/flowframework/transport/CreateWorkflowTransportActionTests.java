@@ -18,13 +18,21 @@ import org.opensearch.action.search.SearchResponse;
 import org.opensearch.action.support.ActionFilters;
 import org.opensearch.action.update.UpdateResponse;
 import org.opensearch.client.Client;
+import org.opensearch.cluster.ClusterName;
+import org.opensearch.cluster.ClusterState;
+import org.opensearch.cluster.metadata.IndexMetadata;
+import org.opensearch.cluster.metadata.Metadata;
+import org.opensearch.cluster.service.ClusterService;
+import org.opensearch.common.settings.ClusterSettings;
 import org.opensearch.common.settings.Settings;
 import org.opensearch.common.unit.TimeValue;
 import org.opensearch.common.util.concurrent.ThreadContext;
+import org.opensearch.commons.ConfigConstants;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.core.index.shard.ShardId;
 import org.opensearch.flowframework.TestHelpers;
 import org.opensearch.flowframework.common.FlowFrameworkSettings;
+import org.opensearch.flowframework.indices.FlowFrameworkIndex;
 import org.opensearch.flowframework.indices.FlowFrameworkIndicesHandler;
 import org.opensearch.flowframework.model.Template;
 import org.opensearch.flowframework.model.Workflow;
@@ -39,9 +47,14 @@ import org.opensearch.test.OpenSearchTestCase;
 import org.opensearch.threadpool.ThreadPool;
 import org.opensearch.transport.TransportService;
 
+import java.io.IOException;
+import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
 import org.mockito.ArgumentCaptor;
@@ -79,6 +92,8 @@ public class CreateWorkflowTransportActionTests extends OpenSearchTestCase {
     private ThreadPool threadPool;
     private FlowFrameworkSettings flowFrameworkSettings;
     private PluginsService pluginsService;
+    private ClusterService clusterService;
+    private ClusterSettings clusterSettings;
 
     @Override
     public void setUp() throws Exception {
@@ -95,6 +110,26 @@ public class CreateWorkflowTransportActionTests extends OpenSearchTestCase {
         this.workflowProcessSorter = mock(WorkflowProcessSorter.class);
         this.pluginsService = mock(PluginsService.class);
 
+        clusterService = mock(ClusterService.class);
+        clusterSettings = new ClusterSettings(Settings.EMPTY, Set.copyOf(List.of(FlowFrameworkSettings.FILTER_BY_BACKEND_ROLES)));
+        when(clusterService.getClusterSettings()).thenReturn(clusterSettings);
+
+        FlowFrameworkIndex index = FlowFrameworkIndex.GLOBAL_CONTEXT;
+        ClusterName clusterName = new ClusterName("test");
+
+        Settings indexSettings = Settings.builder()
+            .put(IndexMetadata.SETTING_NUMBER_OF_SHARDS, 1)
+            .put(IndexMetadata.SETTING_NUMBER_OF_REPLICAS, 0)
+            .put(IndexMetadata.SETTING_VERSION_CREATED, Version.CURRENT)
+            .build();
+        final Settings.Builder existingSettings = Settings.builder().put(indexSettings).put(IndexMetadata.SETTING_INDEX_UUID, "test2UUID");
+
+        IndexMetadata indexMetaData = IndexMetadata.builder(GLOBAL_CONTEXT_INDEX).settings(existingSettings).build();
+        final Map<String, IndexMetadata> indices = new HashMap<>();
+        indices.put(GLOBAL_CONTEXT_INDEX, indexMetaData);
+        ClusterState clusterState = ClusterState.builder(clusterName).metadata(Metadata.builder().indices(indices).build()).build();
+        when(clusterService.state()).thenReturn(clusterState);
+
         // Spy this action to stub check max workflows
         this.createWorkflowTransportAction = spy(
             new CreateWorkflowTransportAction(
@@ -104,7 +139,10 @@ public class CreateWorkflowTransportActionTests extends OpenSearchTestCase {
                 flowFrameworkIndicesHandler,
                 flowFrameworkSettings,
                 client,
-                pluginsService
+                pluginsService,
+                clusterService,
+                xContentRegistry(),
+                Settings.EMPTY
             )
         );
         // client = mock(Client.class);
@@ -338,7 +376,169 @@ public class CreateWorkflowTransportActionTests extends OpenSearchTestCase {
         assertEquals("1", workflowResponseCaptor.getValue().getWorkflowId());
     }
 
-    public void testUpdateWorkflowWithReprovision() {
+    public void testCreateWithUserAndFilterOn() {
+        Settings settings = Settings.builder().put(FlowFrameworkSettings.FILTER_BY_BACKEND_ROLES.getKey(), true).build();
+        ThreadContext threadContext = new ThreadContext(settings);
+        threadContext.putTransient(ConfigConstants.OPENSEARCH_SECURITY_USER_INFO_THREAD_CONTEXT, "alice|odfe,aes|engineering,operations");
+        when(clusterService.getClusterSettings()).thenReturn(clusterSettings);
+        org.opensearch.threadpool.ThreadPool mockThreadPool = mock(ThreadPool.class);
+        when(client.threadPool()).thenReturn(mockThreadPool);
+        when(mockThreadPool.getThreadContext()).thenReturn(threadContext);
+
+        CreateWorkflowTransportAction createWorkflowTransportAction1 = spy(
+            new CreateWorkflowTransportAction(
+                mock(TransportService.class),
+                mock(ActionFilters.class),
+                workflowProcessSorter,
+                flowFrameworkIndicesHandler,
+                flowFrameworkSettings,
+                client,
+                pluginsService,
+                clusterService,
+                xContentRegistry(),
+                settings
+            )
+        );
+
+        ActionListener<WorkflowResponse> listener = mock(ActionListener.class);
+        WorkflowRequest workflowRequest = new WorkflowRequest(
+            null,
+            template,
+            new String[] { "off" },
+            false,
+            Collections.emptyMap(),
+            null,
+            Collections.emptyMap(),
+            false
+        );
+
+        // Bypass checkMaxWorkflows and force onResponse
+        doAnswer(invocation -> {
+            ActionListener<Boolean> checkMaxWorkflowListener = invocation.getArgument(2);
+            checkMaxWorkflowListener.onResponse(true);
+            return null;
+        }).when(createWorkflowTransportAction1).checkMaxWorkflows(any(TimeValue.class), anyInt(), any());
+
+        // Bypass initializeConfigIndex and force onResponse
+        doAnswer(invocation -> {
+            ActionListener<Boolean> initalizeMasterKeyIndexListener = invocation.getArgument(0);
+            initalizeMasterKeyIndexListener.onResponse(true);
+            return null;
+        }).when(flowFrameworkIndicesHandler).initializeConfigIndex(any());
+
+        // Bypass putTemplateToGlobalContext and force onResponse
+        doAnswer(invocation -> {
+            ActionListener<IndexResponse> responseListener = invocation.getArgument(1);
+            responseListener.onResponse(new IndexResponse(new ShardId(GLOBAL_CONTEXT_INDEX, "", 1), "1", 1L, 1L, 1L, true));
+            return null;
+        }).when(flowFrameworkIndicesHandler).putTemplateToGlobalContext(any(), any());
+
+        // Bypass putInitialStateToWorkflowState and force on response
+        doAnswer(invocation -> {
+            ActionListener<IndexResponse> responseListener = invocation.getArgument(2);
+            responseListener.onResponse(new IndexResponse(new ShardId(WORKFLOW_STATE_INDEX, "", 1), "1", 1L, 1L, 1L, true));
+            return null;
+        }).when(flowFrameworkIndicesHandler).putInitialStateToWorkflowState(any(), any(), any());
+
+        ArgumentCaptor<WorkflowResponse> workflowResponseCaptor = ArgumentCaptor.forClass(WorkflowResponse.class);
+
+        createWorkflowTransportAction1.doExecute(mock(Task.class), workflowRequest, listener);
+
+        verify(listener, times(1)).onResponse(workflowResponseCaptor.capture());
+    }
+
+    public void testFailedToCreateNewWorkflowWithNullUser() {
+        @SuppressWarnings("unchecked")
+        Settings settings = Settings.builder().put(FlowFrameworkSettings.FILTER_BY_BACKEND_ROLES.getKey(), true).build();
+        ThreadContext threadContext = new ThreadContext(settings);
+        threadContext.putTransient(ConfigConstants.OPENSEARCH_SECURITY_USER_INFO_THREAD_CONTEXT, null);
+        when(clusterService.getClusterSettings()).thenReturn(clusterSettings);
+        org.opensearch.threadpool.ThreadPool mockThreadPool = mock(ThreadPool.class);
+        when(client.threadPool()).thenReturn(mockThreadPool);
+        when(mockThreadPool.getThreadContext()).thenReturn(threadContext);
+
+        CreateWorkflowTransportAction createWorkflowTransportAction1 = spy(
+            new CreateWorkflowTransportAction(
+                mock(TransportService.class),
+                mock(ActionFilters.class),
+                workflowProcessSorter,
+                flowFrameworkIndicesHandler,
+                flowFrameworkSettings,
+                client,
+                pluginsService,
+                clusterService,
+                xContentRegistry(),
+                settings
+            )
+        );
+
+        ActionListener<WorkflowResponse> listener = mock(ActionListener.class);
+
+        WorkflowRequest workflowRequest = new WorkflowRequest(
+            null,
+            template,
+            new String[] { "off" },
+            false,
+            Collections.emptyMap(),
+            null,
+            Collections.emptyMap(),
+            false
+        );
+
+        createWorkflowTransportAction1.doExecute(mock(Task.class), workflowRequest, listener);
+        ArgumentCaptor<Exception> exceptionCaptor = ArgumentCaptor.forClass(Exception.class);
+        verify(listener, times(1)).onFailure(exceptionCaptor.capture());
+        assertEquals("Filter by backend roles is enabled and User is null", exceptionCaptor.getValue().getMessage());
+    }
+
+    public void testFailedToCreateNewWorkflowWithNoBackendRoleUser() {
+        @SuppressWarnings("unchecked")
+        Settings settings = Settings.builder().put(FlowFrameworkSettings.FILTER_BY_BACKEND_ROLES.getKey(), true).build();
+        ThreadContext threadContext = new ThreadContext(settings);
+        threadContext.putTransient(ConfigConstants.OPENSEARCH_SECURITY_USER_INFO_THREAD_CONTEXT, "test");
+        when(clusterService.getClusterSettings()).thenReturn(clusterSettings);
+        org.opensearch.threadpool.ThreadPool mockThreadPool = mock(ThreadPool.class);
+        when(client.threadPool()).thenReturn(mockThreadPool);
+        when(mockThreadPool.getThreadContext()).thenReturn(threadContext);
+
+        CreateWorkflowTransportAction createWorkflowTransportAction1 = spy(
+            new CreateWorkflowTransportAction(
+                mock(TransportService.class),
+                mock(ActionFilters.class),
+                workflowProcessSorter,
+                flowFrameworkIndicesHandler,
+                flowFrameworkSettings,
+                client,
+                pluginsService,
+                clusterService,
+                xContentRegistry(),
+                settings
+            )
+        );
+
+        ActionListener<WorkflowResponse> listener = mock(ActionListener.class);
+
+        WorkflowRequest workflowRequest = new WorkflowRequest(
+            null,
+            template,
+            new String[] { "off" },
+            false,
+            Collections.emptyMap(),
+            null,
+            Collections.emptyMap(),
+            false
+        );
+
+        createWorkflowTransportAction1.doExecute(mock(Task.class), workflowRequest, listener);
+        ArgumentCaptor<Exception> exceptionCaptor = ArgumentCaptor.forClass(Exception.class);
+        verify(listener, times(1)).onFailure(exceptionCaptor.capture());
+        assertEquals(
+            "Filter by backend roles is enabled, but User test does not have any backend roles configured",
+            exceptionCaptor.getValue().getMessage()
+        );
+    }
+
+    public void testUpdateWorkflowWithReprovision() throws IOException {
         @SuppressWarnings("unchecked")
         ActionListener<WorkflowResponse> listener = mock(ActionListener.class);
         WorkflowRequest workflowRequest = new WorkflowRequest(
@@ -358,6 +558,23 @@ public class CreateWorkflowTransportActionTests extends OpenSearchTestCase {
             when(getResponse.isExists()).thenReturn(true);
             when(getResponse.getSourceAsString()).thenReturn(template.toJson());
             getListener.onResponse(getResponse);
+            return null;
+        }).when(client).get(any(GetRequest.class), any());
+
+        GetResponse getWorkflowResponse = TestHelpers.createGetResponse(template, "123", GLOBAL_CONTEXT_INDEX);
+        doAnswer(invocation -> {
+            Object[] args = invocation.getArguments();
+            assertEquals(
+                String.format(Locale.ROOT, "The size of args is %d.  Its content is %s", args.length, Arrays.toString(args)),
+                2,
+                args.length
+            );
+
+            assertTrue(args[0] instanceof GetRequest);
+            assertTrue(args[1] instanceof ActionListener);
+
+            ActionListener<GetResponse> getListener = (ActionListener<GetResponse>) args[1];
+            getListener.onResponse(getWorkflowResponse);
             return null;
         }).when(client).get(any(GetRequest.class), any());
 
@@ -374,7 +591,7 @@ public class CreateWorkflowTransportActionTests extends OpenSearchTestCase {
         assertEquals("1", responseCaptor.getValue().getWorkflowId());
     }
 
-    public void testFailedToUpdateWorkflowWithReprovision() {
+    public void testFailedToUpdateWorkflowWithReprovision() throws IOException {
         @SuppressWarnings("unchecked")
         ActionListener<WorkflowResponse> listener = mock(ActionListener.class);
         WorkflowRequest workflowRequest = new WorkflowRequest(
@@ -397,6 +614,23 @@ public class CreateWorkflowTransportActionTests extends OpenSearchTestCase {
             return null;
         }).when(client).get(any(GetRequest.class), any());
 
+        GetResponse getWorkflowResponse = TestHelpers.createGetResponse(template, "123", GLOBAL_CONTEXT_INDEX);
+        doAnswer(invocation -> {
+            Object[] args = invocation.getArguments();
+            assertEquals(
+                String.format(Locale.ROOT, "The size of args is %d.  Its content is %s", args.length, Arrays.toString(args)),
+                2,
+                args.length
+            );
+
+            assertTrue(args[0] instanceof GetRequest);
+            assertTrue(args[1] instanceof ActionListener);
+
+            ActionListener<GetResponse> getListener = (ActionListener<GetResponse>) args[1];
+            getListener.onResponse(getWorkflowResponse);
+            return null;
+        }).when(client).get(any(GetRequest.class), any());
+
         doAnswer(invocation -> {
             ActionListener<WorkflowResponse> responseListener = invocation.getArgument(2);
             responseListener.onFailure(new Exception("failed"));
@@ -410,7 +644,7 @@ public class CreateWorkflowTransportActionTests extends OpenSearchTestCase {
         assertEquals("Reprovisioning failed for workflow 1", responseCaptor.getValue().getMessage());
     }
 
-    public void testFailedToUpdateWorkflow() {
+    public void testFailedToUpdateWorkflow() throws IOException {
         @SuppressWarnings("unchecked")
         ActionListener<WorkflowResponse> listener = mock(ActionListener.class);
         WorkflowRequest updateWorkflow = new WorkflowRequest("1", template);
@@ -421,6 +655,23 @@ public class CreateWorkflowTransportActionTests extends OpenSearchTestCase {
             when(getResponse.isExists()).thenReturn(true);
             when(getResponse.getSourceAsString()).thenReturn(template.toJson());
             getListener.onResponse(getResponse);
+            return null;
+        }).when(client).get(any(GetRequest.class), any());
+
+        GetResponse getWorkflowResponse = TestHelpers.createGetResponse(template, "123", GLOBAL_CONTEXT_INDEX);
+        doAnswer(invocation -> {
+            Object[] args = invocation.getArguments();
+            assertEquals(
+                String.format(Locale.ROOT, "The size of args is %d.  Its content is %s", args.length, Arrays.toString(args)),
+                2,
+                args.length
+            );
+
+            assertTrue(args[0] instanceof GetRequest);
+            assertTrue(args[1] instanceof ActionListener);
+
+            ActionListener<GetResponse> getListener = (ActionListener<GetResponse>) args[1];
+            getListener.onResponse(getWorkflowResponse);
             return null;
         }).when(client).get(any(GetRequest.class), any());
 
@@ -436,7 +687,7 @@ public class CreateWorkflowTransportActionTests extends OpenSearchTestCase {
         assertEquals("Failed to update use case template 1", exceptionCaptor.getValue().getMessage());
     }
 
-    public void testFailedToUpdateNonExistingWorkflow() {
+    public void testFailedToUpdateNonExistingWorkflow() throws IOException {
         @SuppressWarnings("unchecked")
         ActionListener<WorkflowResponse> listener = mock(ActionListener.class);
         WorkflowRequest updateWorkflow = new WorkflowRequest("2", template);
@@ -446,6 +697,23 @@ public class CreateWorkflowTransportActionTests extends OpenSearchTestCase {
             GetResponse getResponse = mock(GetResponse.class);
             when(getResponse.isExists()).thenReturn(false);
             getListener.onResponse(getResponse);
+            return null;
+        }).when(client).get(any(GetRequest.class), any());
+
+        GetResponse getWorkflowResponse = TestHelpers.createGetResponse(template, "123", GLOBAL_CONTEXT_INDEX);
+        doAnswer(invocation -> {
+            Object[] args = invocation.getArguments();
+            assertEquals(
+                String.format(Locale.ROOT, "The size of args is %d.  Its content is %s", args.length, Arrays.toString(args)),
+                2,
+                args.length
+            );
+
+            assertTrue(args[0] instanceof GetRequest);
+            assertTrue(args[1] instanceof ActionListener);
+
+            ActionListener<GetResponse> getListener = (ActionListener<GetResponse>) args[1];
+            getListener.onFailure(new Exception("Failed to retrieve template (2) from global context."));
             return null;
         }).when(client).get(any(GetRequest.class), any());
 
@@ -461,7 +729,7 @@ public class CreateWorkflowTransportActionTests extends OpenSearchTestCase {
         assertEquals("Failed to retrieve template (2) from global context.", exceptionCaptor.getValue().getMessage());
     }
 
-    public void testUpdateWorkflow() {
+    public void testUpdateWorkflow() throws IOException {
         @SuppressWarnings("unchecked")
         ActionListener<WorkflowResponse> listener = mock(ActionListener.class);
         WorkflowRequest updateWorkflow = new WorkflowRequest("1", template);
@@ -481,6 +749,23 @@ public class CreateWorkflowTransportActionTests extends OpenSearchTestCase {
             return null;
         }).when(flowFrameworkIndicesHandler).updateTemplateInGlobalContext(anyString(), any(Template.class), any(), anyBoolean());
 
+        GetResponse getWorkflowResponse = TestHelpers.createGetResponse(template, "123", GLOBAL_CONTEXT_INDEX);
+        doAnswer(invocation -> {
+            Object[] args = invocation.getArguments();
+            assertEquals(
+                String.format(Locale.ROOT, "The size of args is %d.  Its content is %s", args.length, Arrays.toString(args)),
+                2,
+                args.length
+            );
+
+            assertTrue(args[0] instanceof GetRequest);
+            assertTrue(args[1] instanceof ActionListener);
+
+            ActionListener<GetResponse> getListener = (ActionListener<GetResponse>) args[1];
+            getListener.onResponse(getWorkflowResponse);
+            return null;
+        }).when(client).get(any(GetRequest.class), any());
+
         doAnswer(invocation -> {
             ActionListener<UpdateResponse> updateResponseListener = invocation.getArgument(2);
             updateResponseListener.onResponse(new UpdateResponse(new ShardId(WORKFLOW_STATE_INDEX, "", 1), "id", -2, 0, 0, UPDATED));
@@ -494,14 +779,13 @@ public class CreateWorkflowTransportActionTests extends OpenSearchTestCase {
         assertEquals("1", responseCaptor.getValue().getWorkflowId());
     }
 
-    public void testUpdateWorkflowWithField() {
+    public void testUpdateWorkflowWithField() throws IOException {
         @SuppressWarnings("unchecked")
         ActionListener<WorkflowResponse> listener = mock(ActionListener.class);
-        WorkflowRequest updateWorkflow = new WorkflowRequest(
-            "1",
-            Template.builder().name("new name").description("test").useCase(null).uiMetadata(Map.of("foo", "bar")).build(),
-            Map.of(UPDATE_WORKFLOW_FIELDS, "true")
-        );
+
+        Template template1 = Template.builder().name("new name").description("test").useCase(null).uiMetadata(Map.of("foo", "bar")).build();
+
+        WorkflowRequest updateWorkflow = new WorkflowRequest("1", template1, Map.of(UPDATE_WORKFLOW_FIELDS, "true"));
 
         doAnswer(invocation -> {
             ActionListener<GetResponse> getListener = invocation.getArgument(1);
@@ -509,6 +793,23 @@ public class CreateWorkflowTransportActionTests extends OpenSearchTestCase {
             when(getResponse.isExists()).thenReturn(true);
             when(getResponse.getSourceAsString()).thenReturn(template.toJson());
             getListener.onResponse(getResponse);
+            return null;
+        }).when(client).get(any(GetRequest.class), any());
+
+        GetResponse getWorkflowResponse = TestHelpers.createGetResponse(template, "123", GLOBAL_CONTEXT_INDEX);
+        doAnswer(invocation -> {
+            Object[] args = invocation.getArguments();
+            assertEquals(
+                String.format(Locale.ROOT, "The size of args is %d.  Its content is %s", args.length, Arrays.toString(args)),
+                2,
+                args.length
+            );
+
+            assertTrue(args[0] instanceof GetRequest);
+            assertTrue(args[1] instanceof ActionListener);
+
+            ActionListener<GetResponse> getListener = (ActionListener<GetResponse>) args[1];
+            getListener.onResponse(getWorkflowResponse);
             return null;
         }).when(client).get(any(GetRequest.class), any());
 
@@ -552,6 +853,24 @@ public class CreateWorkflowTransportActionTests extends OpenSearchTestCase {
             getListener.onResponse(getResponse);
             return null;
         }).when(client).get(any(GetRequest.class), any());
+
+        GetResponse getWorkflowResponse1 = TestHelpers.createGetResponse(template1, "123", GLOBAL_CONTEXT_INDEX);
+        doAnswer(invocation -> {
+            Object[] args = invocation.getArguments();
+            assertEquals(
+                String.format(Locale.ROOT, "The size of args is %d.  Its content is %s", args.length, Arrays.toString(args)),
+                2,
+                args.length
+            );
+
+            assertTrue(args[0] instanceof GetRequest);
+            assertTrue(args[1] instanceof ActionListener);
+
+            ActionListener<GetResponse> getListener = (ActionListener<GetResponse>) args[1];
+            getListener.onResponse(getWorkflowResponse1);
+            return null;
+        }).when(client).get(any(GetRequest.class), any());
+
         createWorkflowTransportAction.doExecute(mock(Task.class), updateWorkflow, listener);
         verify(listener, times(2)).onResponse(any());
 

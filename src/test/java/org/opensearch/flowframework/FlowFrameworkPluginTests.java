@@ -28,6 +28,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import static org.opensearch.flowframework.common.FlowFrameworkSettings.FILTER_BY_BACKEND_ROLES;
 import static org.opensearch.flowframework.common.FlowFrameworkSettings.FLOW_FRAMEWORK_ENABLED;
 import static org.opensearch.flowframework.common.FlowFrameworkSettings.MAX_WORKFLOWS;
 import static org.opensearch.flowframework.common.FlowFrameworkSettings.MAX_WORKFLOW_STEPS;
@@ -65,7 +66,14 @@ public class FlowFrameworkPluginTests extends OpenSearchTestCase {
 
         final Set<Setting<?>> settingsSet = Stream.concat(
             ClusterSettings.BUILT_IN_CLUSTER_SETTINGS.stream(),
-            Stream.of(FLOW_FRAMEWORK_ENABLED, MAX_WORKFLOWS, MAX_WORKFLOW_STEPS, WORKFLOW_REQUEST_TIMEOUT, TASK_REQUEST_RETRY_DURATION)
+            Stream.of(
+                FLOW_FRAMEWORK_ENABLED,
+                MAX_WORKFLOWS,
+                MAX_WORKFLOW_STEPS,
+                WORKFLOW_REQUEST_TIMEOUT,
+                TASK_REQUEST_RETRY_DURATION,
+                FILTER_BY_BACKEND_ROLES
+            )
         ).collect(Collectors.toSet());
         clusterSettings = new ClusterSettings(settings, settingsSet);
         clusterService = mock(ClusterService.class);
@@ -81,13 +89,13 @@ public class FlowFrameworkPluginTests extends OpenSearchTestCase {
     public void testPlugin() throws IOException {
         try (FlowFrameworkPlugin ffp = new FlowFrameworkPlugin()) {
             assertEquals(
-                5,
+                6,
                 ffp.createComponents(client, clusterService, threadPool, null, null, null, environment, null, null, null, null).size()
             );
             assertEquals(9, ffp.getRestHandlers(settings, null, null, null, null, null, null).size());
             assertEquals(10, ffp.getActions().size());
             assertEquals(3, ffp.getExecutorBuilders(settings).size());
-            assertEquals(5, ffp.getSettings().size());
+            assertEquals(6, ffp.getSettings().size());
 
             Collection<SystemIndexDescriptor> systemIndexDescriptors = ffp.getSystemIndexDescriptors(Settings.EMPTY);
             assertEquals(3, systemIndexDescriptors.size());
