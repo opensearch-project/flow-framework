@@ -28,6 +28,7 @@ import static org.opensearch.flowframework.common.CommonValue.PARAMETERS_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.TOOLS_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.TYPE;
 import static org.opensearch.flowframework.common.WorkflowResources.AGENT_ID;
+import static org.opensearch.flowframework.common.WorkflowResources.CONNECTOR_ID;
 import static org.opensearch.flowframework.common.WorkflowResources.MODEL_ID;
 
 /**
@@ -114,6 +115,13 @@ public class ToolStep implements WorkflowStep {
     ) {
         @SuppressWarnings("unchecked")
         Map<String, String> parametersMap = (Map<String, String>) parameters;
+
+        Optional<String> previousNodeConnector = previousNodeInputs.entrySet()
+            .stream()
+            .filter(e -> CONNECTOR_ID.equals(e.getValue()))
+            .map(Map.Entry::getKey)
+            .findFirst();
+
         Optional<String> previousNodeModel = previousNodeInputs.entrySet()
             .stream()
             .filter(e -> MODEL_ID.equals(e.getValue()))
@@ -125,6 +133,14 @@ public class ToolStep implements WorkflowStep {
             .filter(e -> AGENT_ID.equals(e.getValue()))
             .map(Map.Entry::getKey)
             .findFirst();
+
+        // Case when connectorId is passed through previousSteps and not present already in parameters
+        if (previousNodeConnector.isPresent() && !parametersMap.containsKey(CONNECTOR_ID)) {
+            WorkflowData previousNodeOutput = outputs.get(previousNodeConnector.get());
+            if (previousNodeOutput != null && previousNodeOutput.getContent().containsKey(CONNECTOR_ID)) {
+                parametersMap.put(CONNECTOR_ID, previousNodeOutput.getContent().get(CONNECTOR_ID).toString());
+            }
+        }
 
         // Case when modelId is passed through previousSteps and not present already in parameters
         if (previousNodeModel.isPresent() && !parametersMap.containsKey(MODEL_ID)) {
