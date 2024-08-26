@@ -75,7 +75,7 @@ public class FlowFrameworkSettings {
         Setting.Property.Dynamic
     );
 
-    /** This setting sets the time between task request retries */
+    /** This setting sets the backend role filtering */
     public static final Setting<Boolean> FILTER_BY_BACKEND_ROLES = Setting.boolSetting(
         "plugins.flow_framework.filter_by_backend_roles",
         false,
