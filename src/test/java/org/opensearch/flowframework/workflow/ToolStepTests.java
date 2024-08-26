@@ -30,6 +30,9 @@ public class ToolStepTests extends OpenSearchTestCase {
     private static final String mockedConnectorId = "mocked-connector-id";
     private static final String mockedModelId = "mocked-model-id";
     private static final String mockedAgentId = "mocked-agent-id";
+    private static final String createConnectorNodeId = "create_connector_node_id";
+    private static final String createModelNodeId = "create_model_node_id";
+    private static final String createAgentNodeId = "create_agent_node_id";
 
     private WorkflowData boolStringInputData;
     private WorkflowData badBoolInputData;
@@ -49,9 +52,9 @@ public class ToolStepTests extends OpenSearchTestCase {
             "test-id",
             "test-node-id"
         );
-        inputDataWithConnectorId = new WorkflowData(Map.of(CONNECTOR_ID, mockedConnectorId), "test-id", "test-node-id");
-        inputDataWithModelId = new WorkflowData(Map.of(MODEL_ID, mockedModelId), "test-id", "test-node-id");
-        inputDataWithAgentId = new WorkflowData(Map.of(AGENT_ID, mockedAgentId), "test-id", "test-node-id");
+        inputDataWithConnectorId = new WorkflowData(Map.of(CONNECTOR_ID, mockedConnectorId), "test-id", createConnectorNodeId);
+        inputDataWithModelId = new WorkflowData(Map.of(MODEL_ID, mockedModelId), "test-id", createModelNodeId);
+        inputDataWithAgentId = new WorkflowData(Map.of(AGENT_ID, mockedAgentId), "test-id", createAgentNodeId);
         boolStringInputData = new WorkflowData(
             Map.ofEntries(
                 Map.entry("type", "type"),
@@ -123,12 +126,11 @@ public class ToolStepTests extends OpenSearchTestCase {
     public void testToolWithConnectorId() throws ExecutionException, InterruptedException {
         ToolStep toolStep = new ToolStep();
 
-        String createConnectorNodeName = "create_connector";
         PlainActionFuture<WorkflowData> future = toolStep.execute(
             inputData.getNodeId(),
             inputData,
-            Map.of(createConnectorNodeName, inputDataWithConnectorId),
-            Map.of(createConnectorNodeName, CONNECTOR_ID),
+            Map.of(createConnectorNodeId, inputDataWithConnectorId),
+            Map.of(createConnectorNodeId, CONNECTOR_ID),
             Collections.emptyMap()
         );
         assertTrue(future.isDone());
@@ -141,12 +143,11 @@ public class ToolStepTests extends OpenSearchTestCase {
     public void testToolWithModelId() throws ExecutionException, InterruptedException {
         ToolStep toolStep = new ToolStep();
 
-        String createModelNodeName = "create_model";
         PlainActionFuture<WorkflowData> future = toolStep.execute(
             inputData.getNodeId(),
             inputData,
-            Map.of(createModelNodeName, inputDataWithModelId),
-            Map.of(createModelNodeName, MODEL_ID),
+            Map.of(createModelNodeId, inputDataWithModelId),
+            Map.of(createModelNodeId, MODEL_ID),
             Collections.emptyMap()
         );
         assertTrue(future.isDone());
@@ -159,12 +160,11 @@ public class ToolStepTests extends OpenSearchTestCase {
     public void testToolWithAgentId() throws ExecutionException, InterruptedException {
         ToolStep toolStep = new ToolStep();
 
-        String createAgentNodeName = "create_agent";
         PlainActionFuture<WorkflowData> future = toolStep.execute(
             inputData.getNodeId(),
             inputData,
-            Map.of(createAgentNodeName, inputDataWithAgentId),
-            Map.of(createAgentNodeName, AGENT_ID),
+            Map.of(createAgentNodeId, inputDataWithAgentId),
+            Map.of(createAgentNodeId, AGENT_ID),
             Collections.emptyMap()
         );
         assertTrue(future.isDone());
