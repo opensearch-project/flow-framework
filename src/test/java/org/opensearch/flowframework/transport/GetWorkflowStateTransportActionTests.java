@@ -8,19 +8,29 @@
  */
 package org.opensearch.flowframework.transport;
 
+import org.opensearch.action.get.GetRequest;
+import org.opensearch.action.get.GetResponse;
 import org.opensearch.action.support.ActionFilters;
 import org.opensearch.client.Client;
+import org.opensearch.cluster.service.ClusterService;
 import org.opensearch.common.io.stream.BytesStreamOutput;
+import org.opensearch.common.settings.ClusterSettings;
 import org.opensearch.common.settings.Settings;
 import org.opensearch.common.util.concurrent.ThreadContext;
+import org.opensearch.common.xcontent.XContentFactory;
 import org.opensearch.core.action.ActionListener;
+import org.opensearch.core.common.bytes.BytesReference;
 import org.opensearch.core.common.io.stream.NamedWriteableAwareStreamInput;
 import org.opensearch.core.common.io.stream.StreamInput;
 import org.opensearch.core.xcontent.ToXContent;
 import org.opensearch.core.xcontent.XContentBuilder;
 import org.opensearch.flowframework.TestHelpers;
+import org.opensearch.flowframework.common.FlowFrameworkSettings;
+import org.opensearch.flowframework.exception.FlowFrameworkException;
 import org.opensearch.flowframework.indices.FlowFrameworkIndicesHandler;
 import org.opensearch.flowframework.model.WorkflowState;
+import org.opensearch.index.IndexNotFoundException;
+import org.opensearch.index.get.GetResult;
 import org.opensearch.tasks.Task;
 import org.opensearch.test.OpenSearchTestCase;
 import org.opensearch.threadpool.ThreadPool;
@@ -29,12 +39,21 @@ import org.junit.Assert;
 
 import java.io.IOException;
 import java.time.Instant;
+import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.Map;
 
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
 
+import static org.opensearch.flowframework.common.CommonValue.GLOBAL_CONTEXT_INDEX;
+import static org.mockito.Mockito.any;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 public class GetWorkflowStateTransportActionTests extends OpenSearchTestCase {
@@ -52,11 +71,20 @@ public class GetWorkflowStateTransportActionTests extends OpenSearchTestCase {
         super.setUp();
         this.client = mock(Client.class);
         this.threadPool = mock(ThreadPool.class);
+        ClusterService clusterService = mock(ClusterService.class);
+        ClusterSettings clusterSettings = new ClusterSettings(
+            Settings.EMPTY,
+            Collections.unmodifiableSet(new HashSet<>(Arrays.asList(FlowFrameworkSettings.FILTER_BY_BACKEND_ROLES)))
+        );
+        when(clusterService.getClusterSettings()).thenReturn(clusterSettings);
+
         this.getWorkflowStateTransportAction = new GetWorkflowStateTransportAction(
             mock(TransportService.class),
             mock(ActionFilters.class),
             client,
-            xContentRegistry()
+            xContentRegistry(),
+            clusterService,
+            Settings.EMPTY
         );
         task = Mockito.mock(Task.class);
         ThreadPool clientThreadPool = mock(ThreadPool.class);
@@ -124,4 +152,71 @@ public class GetWorkflowStateTransportActionTests extends OpenSearchTestCase {
         Assert.assertEquals(map.get("state"), workFlowState.getState());
         Assert.assertEquals(map.get("workflow_id"), workFlowState.getWorkflowId());
     }
+
+    public void testExecuteGetWorkflowStateRequestFailure() throws IOException {
+        String workflowId = "test-workflow";
+        GetWorkflowStateRequest request = new GetWorkflowStateRequest(workflowId, false);
+        ActionListener<GetWorkflowStateResponse> listener = mock(ActionListener.class);
+
+        // Stub client.get to force on failure
+        doAnswer(invocation -> {
+            ActionListener<GetResponse> responseListener = invocation.getArgument(1);
+            responseListener.onFailure(new Exception("failed"));
+            return null;
+        }).when(client).get(any(GetRequest.class), any());
+
+        getWorkflowStateTransportAction.doExecute(null, request, listener);
+
+        verify(listener, never()).onResponse(any(GetWorkflowStateResponse.class));
+        ArgumentCaptor<FlowFrameworkException> responseCaptor = ArgumentCaptor.forClass(FlowFrameworkException.class);
+        verify(listener, times(1)).onFailure(responseCaptor.capture());
+
+        assertEquals("Failed to get workflow status of: " + workflowId, responseCaptor.getValue().getMessage());
+    }
+
+    public void testExecuteGetWorkflowStateRequestIndexNotFound() throws IOException {
+        String workflowId = "test-workflow";
+        GetWorkflowStateRequest request = new GetWorkflowStateRequest(workflowId, false);
+        ActionListener<GetWorkflowStateResponse> listener = mock(ActionListener.class);
+
+        // Stub client.get to force on failure
+        doAnswer(invocation -> {
+            ActionListener<GetResponse> responseListener = invocation.getArgument(1);
+            responseListener.onFailure(new IndexNotFoundException("index not found"));
+            return null;
+        }).when(client).get(any(GetRequest.class), any());
+
+        getWorkflowStateTransportAction.doExecute(null, request, listener);
+
+        verify(listener, never()).onResponse(any(GetWorkflowStateResponse.class));
+        ArgumentCaptor<FlowFrameworkException> responseCaptor = ArgumentCaptor.forClass(FlowFrameworkException.class);
+        verify(listener, times(1)).onFailure(responseCaptor.capture());
+
+        assertEquals("Fail to find workflow status of " + workflowId, responseCaptor.getValue().getMessage());
+    }
+
+    public void testExecuteGetWorkflowStateRequestParseFailure() throws IOException {
+        String workflowId = "test-workflow";
+        GetWorkflowStateRequest request = new GetWorkflowStateRequest(workflowId, false);
+        ActionListener<GetWorkflowStateResponse> listener = mock(ActionListener.class);
+
+        // Stub client.get to force on response
+        doAnswer(invocation -> {
+            ActionListener<GetResponse> responseListener = invocation.getArgument(1);
+            XContentBuilder builder = XContentFactory.jsonBuilder();
+            BytesReference templateBytesRef = BytesReference.bytes(builder);
+            GetResult getResult = new GetResult(GLOBAL_CONTEXT_INDEX, workflowId, 1, 1, 1, true, templateBytesRef, null, null);
+            responseListener.onResponse(new GetResponse(getResult));
+            return null;
+        }).when(client).get(any(GetRequest.class), any());
+
+        getWorkflowStateTransportAction.doExecute(null, request, listener);
+
+        verify(listener, never()).onResponse(any(GetWorkflowStateResponse.class));
+        ArgumentCaptor<FlowFrameworkException> responseCaptor = ArgumentCaptor.forClass(FlowFrameworkException.class);
+        verify(listener, times(1)).onFailure(responseCaptor.capture());
+
+        assertEquals("Failed to parse workflowState: " + workflowId, responseCaptor.getValue().getMessage());
+    }
+
 }

@@ -16,12 +16,15 @@ import org.opensearch.action.search.SearchRequest;
 import org.opensearch.action.support.ActionFilters;
 import org.opensearch.action.support.HandledTransportAction;
 import org.opensearch.client.Client;
+import org.opensearch.cluster.service.ClusterService;
 import org.opensearch.common.inject.Inject;
+import org.opensearch.common.settings.Settings;
 import org.opensearch.common.unit.TimeValue;
 import org.opensearch.common.util.concurrent.ThreadContext;
 import org.opensearch.commons.authuser.User;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.core.rest.RestStatus;
+import org.opensearch.core.xcontent.NamedXContentRegistry;
 import org.opensearch.flowframework.common.CommonValue;
 import org.opensearch.flowframework.common.FlowFrameworkSettings;
 import org.opensearch.flowframework.exception.FlowFrameworkException;
@@ -49,7 +52,10 @@ import static java.lang.Boolean.FALSE;
 import static org.opensearch.flowframework.common.CommonValue.GLOBAL_CONTEXT_INDEX;
 import static org.opensearch.flowframework.common.CommonValue.PROVISIONING_PROGRESS_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.STATE_FIELD;
+import static org.opensearch.flowframework.common.FlowFrameworkSettings.FILTER_BY_BACKEND_ROLES;
+import static org.opensearch.flowframework.util.ParseUtils.checkFilterByBackendRoles;
 import static org.opensearch.flowframework.util.ParseUtils.getUserContext;
+import static org.opensearch.flowframework.util.ParseUtils.getWorkflow;
 
 /**
  * Transport Action to index or update a use case template within the Global Context
@@ -63,6 +69,9 @@ public class CreateWorkflowTransportAction extends HandledTransportAction<Workfl
     private final Client client;
     private final FlowFrameworkSettings flowFrameworkSettings;
     private final PluginsService pluginsService;
+    private volatile Boolean filterByEnabled;
+    private final ClusterService clusterService;
+    private final NamedXContentRegistry xContentRegistry;
 
     /**
      * Instantiates a new CreateWorkflowTransportAction
@@ -73,6 +82,9 @@ public class CreateWorkflowTransportAction extends HandledTransportAction<Workfl
      * @param flowFrameworkSettings Plugin settings
      * @param client The client used to make the request to OS
      * @param pluginsService The plugin service
+     * @param clusterService the cluster service
+     * @param xContentRegistry the named content registry
+     * @param settings the plugin settings
      */
     @Inject
     public CreateWorkflowTransportAction(
@@ -82,7 +94,10 @@ public class CreateWorkflowTransportAction extends HandledTransportAction<Workfl
         FlowFrameworkIndicesHandler flowFrameworkIndicesHandler,
         FlowFrameworkSettings flowFrameworkSettings,
         Client client,
-        PluginsService pluginsService
+        PluginsService pluginsService,
+        ClusterService clusterService,
+        NamedXContentRegistry xContentRegistry,
+        Settings settings
     ) {
         super(CreateWorkflowAction.NAME, transportService, actionFilters, WorkflowRequest::new);
         this.workflowProcessSorter = workflowProcessSorter;
@@ -90,12 +105,82 @@ public class CreateWorkflowTransportAction extends HandledTransportAction<Workfl
         this.flowFrameworkSettings = flowFrameworkSettings;
         this.client = client;
         this.pluginsService = pluginsService;
+        filterByEnabled = FILTER_BY_BACKEND_ROLES.get(settings);
+        this.clusterService = clusterService;
+        clusterService.getClusterSettings().addSettingsUpdateConsumer(FILTER_BY_BACKEND_ROLES, it -> filterByEnabled = it);
+        this.xContentRegistry = xContentRegistry;
     }
 
     @Override
     protected void doExecute(Task task, WorkflowRequest request, ActionListener<WorkflowResponse> listener) {
-
         User user = getUserContext(client);
+        String workflowId = request.getWorkflowId();
+        try {
+            resolveUserAndExecute(user, workflowId, listener, () -> createExecute(request, user, listener));
+        } catch (Exception e) {
+            logger.error("Failed to create workflow", e);
+            listener.onFailure(e);
+        }
+    }
+
+    /**
+     * Resolve user and execute the workflow function
+     * @param requestedUser the user making the request
+     * @param workflowId the workflow id
+     * @param listener the action listener
+     * @param function the workflow function to execute
+     */
+    private void resolveUserAndExecute(
+        User requestedUser,
+        String workflowId,
+        ActionListener<WorkflowResponse> listener,
+        Runnable function
+    ) {
+        try {
+            // Check if user has backend roles
+            // When filter by is enabled, block users creating/updating workflows who do not have backend roles.
+            if (filterByEnabled == Boolean.TRUE) {
+                try {
+                    checkFilterByBackendRoles(requestedUser);
+                } catch (FlowFrameworkException e) {
+                    logger.error(e.getMessage(), e);
+                    listener.onFailure(e);
+                    return;
+                }
+            }
+            if (workflowId != null) {
+                // requestedUser == null means security is disabled or user is superadmin. In this case we don't need to
+                // check if request user have access to the workflow or not. But we still need to get current workflow for
+                // this case, so we can keep current workflow's user data.
+                boolean filterByBackendRole = requestedUser == null ? false : filterByEnabled;
+                // Update workflow request, check if user has permissions to update the workflow
+                // Get workflow and verify backend roles
+                getWorkflow(requestedUser, workflowId, filterByBackendRole, listener, function, client, clusterService, xContentRegistry);
+            } else {
+                // Create Workflow. No need to get current workflow.
+                function.run();
+            }
+        } catch (Exception e) {
+            String errorMessage = "Failed to create or update workflow";
+            if (e instanceof FlowFrameworkException) {
+                listener.onFailure(e);
+            } else {
+                listener.onFailure(new FlowFrameworkException(errorMessage, ExceptionsHelper.status(e)));
+            }
+        }
+    }
+
+    /**
+     * Execute the create or update request
+     * 1. Validate workflows if requested
+     * 2. Create or update global context index
+     * 3. Create or update state index
+     * 4. Create or update provisioning progress index
+     * @param request the workflow request
+     * @param user the user making the request
+     * @param listener the action listener
+     */
+    private void createExecute(WorkflowRequest request, User user, ActionListener<WorkflowResponse> listener) {
         Instant creationTime = Instant.now();
         Template templateWithUser = new Template(
             request.getTemplate().name(),

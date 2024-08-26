@@ -13,16 +13,23 @@ import org.opensearch.action.delete.DeleteRequest;
 import org.opensearch.action.delete.DeleteResponse;
 import org.opensearch.action.support.ActionFilters;
 import org.opensearch.client.Client;
+import org.opensearch.cluster.service.ClusterService;
+import org.opensearch.common.settings.ClusterSettings;
 import org.opensearch.common.settings.Settings;
 import org.opensearch.common.util.concurrent.ThreadContext;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.core.index.Index;
 import org.opensearch.core.index.shard.ShardId;
+import org.opensearch.flowframework.common.FlowFrameworkSettings;
 import org.opensearch.flowframework.indices.FlowFrameworkIndicesHandler;
 import org.opensearch.tasks.Task;
 import org.opensearch.test.OpenSearchTestCase;
 import org.opensearch.threadpool.ThreadPool;
 import org.opensearch.transport.TransportService;
+
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashSet;
 
 import org.mockito.ArgumentCaptor;
 
@@ -45,11 +52,22 @@ public class DeleteWorkflowTransportActionTests extends OpenSearchTestCase {
         super.setUp();
         this.client = mock(Client.class);
         this.flowFrameworkIndicesHandler = mock(FlowFrameworkIndicesHandler.class);
+
+        ClusterService clusterService = mock(ClusterService.class);
+        ClusterSettings clusterSettings = new ClusterSettings(
+            Settings.EMPTY,
+            Collections.unmodifiableSet(new HashSet<>(Arrays.asList(FlowFrameworkSettings.FILTER_BY_BACKEND_ROLES)))
+        );
+        when(clusterService.getClusterSettings()).thenReturn(clusterSettings);
+
         this.deleteWorkflowTransportAction = new DeleteWorkflowTransportAction(
             mock(TransportService.class),
             mock(ActionFilters.class),
             flowFrameworkIndicesHandler,
-            client
+            client,
+            clusterService,
+            xContentRegistry(),
+            Settings.EMPTY
         );
 
         ThreadPool clientThreadPool = mock(ThreadPool.class);
