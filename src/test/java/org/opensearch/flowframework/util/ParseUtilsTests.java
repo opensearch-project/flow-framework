@@ -9,6 +9,7 @@
 package org.opensearch.flowframework.util;
 
 import org.opensearch.common.xcontent.XContentFactory;
+import org.opensearch.commons.authuser.User;
 import org.opensearch.core.rest.RestStatus;
 import org.opensearch.core.xcontent.XContentBuilder;
 import org.opensearch.core.xcontent.XContentParser;
@@ -17,6 +18,8 @@ import org.opensearch.flowframework.common.CommonValue;
 import org.opensearch.flowframework.exception.FlowFrameworkException;
 import org.opensearch.flowframework.workflow.WorkflowData;
 import org.opensearch.ml.common.connector.ConnectorAction;
+import org.opensearch.ml.repackage.com.google.common.collect.ImmutableList;
+import org.opensearch.search.builder.SearchSourceBuilder;
 import org.opensearch.test.OpenSearchTestCase;
 
 import java.io.IOException;
@@ -27,6 +30,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import static org.opensearch.flowframework.util.ParseUtils.isAdmin;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
@@ -109,6 +113,71 @@ public class ParseUtilsTests extends OpenSearchTestCase {
         Object result = ParseUtils.conditionallySubstitute(input, outputs, params);
 
         assertEquals("This string has no placeholders", result);
+    }
+
+    public void testAddUserRoleFilterWithNullUser() {
+        SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder();
+        ParseUtils.addUserBackendRolesFilter(null, searchSourceBuilder);
+        assertEquals("{}", searchSourceBuilder.toString());
+    }
+
+    public void testAddUserRoleFilterWithNullUserBackendRole() {
+        SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder();
+        ParseUtils.addUserBackendRolesFilter(
+            new User(randomAlphaOfLength(5), null, ImmutableList.of(randomAlphaOfLength(5)), ImmutableList.of(randomAlphaOfLength(5))),
+            searchSourceBuilder
+        );
+        assertEquals(
+            "{\"query\":{\"bool\":{\"must\":[{\"nested\":{\"query\":{\"terms\":{\"user.backend_roles.keyword\":[],"
+                + "\"boost\":1.0}},\"path\":\"user\",\"ignore_unmapped\":false,\"score_mode\":\"none\",\"boost\":1.0}}],"
+                + "\"adjust_pure_negative\":true,\"boost\":1.0}}}",
+            searchSourceBuilder.toString()
+        );
+    }
+
+    public void testAddUserRoleFilterWithEmptyUserBackendRole() {
+        SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder();
+        ParseUtils.addUserBackendRolesFilter(
+            new User(
+                randomAlphaOfLength(5),
+                ImmutableList.of(),
+                ImmutableList.of(randomAlphaOfLength(5)),
+                ImmutableList.of(randomAlphaOfLength(5))
+            ),
+            searchSourceBuilder
+        );
+        assertEquals(
+            "{\"query\":{\"bool\":{\"must\":[{\"nested\":{\"query\":{\"terms\":{\"user.backend_roles.keyword\":[],"
+                + "\"boost\":1.0}},\"path\":\"user\",\"ignore_unmapped\":false,\"score_mode\":\"none\",\"boost\":1.0}}],"
+                + "\"adjust_pure_negative\":true,\"boost\":1.0}}}",
+            searchSourceBuilder.toString()
+        );
+    }
+
+    public void testAddUserRoleFilterWithUserBackendRole() {
+        SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder();
+        String backendRole1 = randomAlphaOfLength(5);
+        String backendRole2 = randomAlphaOfLength(5);
+        ParseUtils.addUserBackendRolesFilter(
+            new User(
+                randomAlphaOfLength(5),
+                ImmutableList.of(backendRole1, backendRole2),
+                ImmutableList.of(randomAlphaOfLength(5)),
+                ImmutableList.of(randomAlphaOfLength(5))
+            ),
+            searchSourceBuilder
+        );
+        assertEquals(
+            "{\"query\":{\"bool\":{\"must\":[{\"nested\":{\"query\":{\"terms\":{\"user.backend_roles.keyword\":"
+                + "[\""
+                + backendRole1
+                + "\",\""
+                + backendRole2
+                + "\"],"
+                + "\"boost\":1.0}},\"path\":\"user\",\"ignore_unmapped\":false,\"score_mode\":\"none\",\"boost\":1.0}}],"
+                + "\"adjust_pure_negative\":true,\"boost\":1.0}}}",
+            searchSourceBuilder.toString()
+        );
     }
 
     public void testConditionallySubstituteWithUnmatchedPlaceholders() {
@@ -346,5 +415,30 @@ public class ParseUtilsTests extends OpenSearchTestCase {
         // every setting should start with index
         assertTrue(prependedSettings.entrySet().stream().allMatch(x -> x.getKey().startsWith("index.")));
 
+    }
+
+    public void testIsAdmin() {
+        User user1 = new User(
+            randomAlphaOfLength(5),
+            ImmutableList.of(),
+            ImmutableList.of("all_access"),
+            ImmutableList.of(randomAlphaOfLength(5))
+        );
+        assertTrue(isAdmin(user1));
+    }
+
+    public void testIsAdminBackendRoleIsAllAccess() {
+        String backendRole1 = "all_access";
+        User user1 = new User(
+            randomAlphaOfLength(5),
+            ImmutableList.of(backendRole1),
+            ImmutableList.of(randomAlphaOfLength(5)),
+            ImmutableList.of(randomAlphaOfLength(5))
+        );
+        assertFalse(isAdmin(user1));
+    }
+
+    public void testIsAdminNull() {
+        assertFalse(isAdmin(null));
     }
 }

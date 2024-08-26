@@ -12,6 +12,8 @@ import org.opensearch.action.LatchedActionListener;
 import org.opensearch.action.support.ActionFilters;
 import org.opensearch.action.support.PlainActionFuture;
 import org.opensearch.client.Client;
+import org.opensearch.cluster.service.ClusterService;
+import org.opensearch.common.settings.ClusterSettings;
 import org.opensearch.common.settings.Settings;
 import org.opensearch.common.unit.TimeValue;
 import org.opensearch.common.util.concurrent.OpenSearchExecutors;
@@ -37,6 +39,9 @@ import org.opensearch.threadpool.ThreadPool;
 import org.opensearch.transport.TransportService;
 import org.junit.AfterClass;
 
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CountDownLatch;
@@ -109,6 +114,13 @@ public class DeprovisionWorkflowTransportActionTests extends OpenSearchTestCase 
         flowFrameworkSettings = mock(FlowFrameworkSettings.class);
         when(flowFrameworkSettings.getRequestTimeout()).thenReturn(TimeValue.timeValueSeconds(10));
 
+        ClusterService clusterService = mock(ClusterService.class);
+        ClusterSettings clusterSettings = new ClusterSettings(
+            Settings.EMPTY,
+            Collections.unmodifiableSet(new HashSet<>(Arrays.asList(FlowFrameworkSettings.FILTER_BY_BACKEND_ROLES)))
+        );
+        when(clusterService.getClusterSettings()).thenReturn(clusterSettings);
+
         this.deprovisionWorkflowTransportAction = new DeprovisionWorkflowTransportAction(
             mock(TransportService.class),
             mock(ActionFilters.class),
@@ -116,7 +128,10 @@ public class DeprovisionWorkflowTransportActionTests extends OpenSearchTestCase 
             client,
             workflowStepFactory,
             flowFrameworkIndicesHandler,
-            flowFrameworkSettings
+            flowFrameworkSettings,
+            clusterService,
+            xContentRegistry(),
+            Settings.EMPTY
         );
     }
 

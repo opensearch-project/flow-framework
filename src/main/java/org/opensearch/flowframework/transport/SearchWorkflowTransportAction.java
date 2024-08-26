@@ -10,21 +10,17 @@ package org.opensearch.flowframework.transport;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.opensearch.ExceptionsHelper;
 import org.opensearch.action.search.SearchRequest;
 import org.opensearch.action.search.SearchResponse;
 import org.opensearch.action.support.ActionFilters;
 import org.opensearch.action.support.HandledTransportAction;
-import org.opensearch.client.Client;
 import org.opensearch.common.inject.Inject;
-import org.opensearch.common.util.concurrent.ThreadContext;
-import org.opensearch.commons.authuser.User;
 import org.opensearch.core.action.ActionListener;
-import org.opensearch.flowframework.util.ParseUtils;
-import org.opensearch.search.builder.SearchSourceBuilder;
+import org.opensearch.flowframework.exception.FlowFrameworkException;
+import org.opensearch.flowframework.transport.handler.SearchHandler;
 import org.opensearch.tasks.Task;
 import org.opensearch.transport.TransportService;
-
-import static org.opensearch.flowframework.util.RestHandlerUtils.getSourceContext;
 
 /**
  * Transport Action to search workflows created
@@ -33,32 +29,28 @@ public class SearchWorkflowTransportAction extends HandledTransportAction<Search
 
     private final Logger logger = LogManager.getLogger(SearchWorkflowTransportAction.class);
 
-    private Client client;
+    private SearchHandler searchHandler;
 
     /**
      * Instantiates a new CreateWorkflowTransportAction
      * @param transportService the TransportService
      * @param actionFilters action filters
-     * @param client The client used to make the request to OS
+     * @param searchHandler the Search Handler
      */
     @Inject
-    public SearchWorkflowTransportAction(TransportService transportService, ActionFilters actionFilters, Client client) {
+    public SearchWorkflowTransportAction(TransportService transportService, ActionFilters actionFilters, SearchHandler searchHandler) {
         super(SearchWorkflowAction.NAME, transportService, actionFilters, SearchRequest::new);
-        this.client = client;
+        this.searchHandler = searchHandler;
     }
 
     @Override
     protected void doExecute(Task task, SearchRequest request, ActionListener<SearchResponse> actionListener) {
-        // AccessController should take care of letting the user with right permission to view the workflow
-        User user = ParseUtils.getUserContext(client);
-        try (ThreadContext.StoredContext context = client.threadPool().getThreadContext().stashContext()) {
-            logger.info("Searching workflows in global context");
-            SearchSourceBuilder searchSourceBuilder = request.source();
-            searchSourceBuilder.fetchSource(getSourceContext(user, searchSourceBuilder));
-            client.search(request, ActionListener.runBefore(actionListener, context::restore));
+        try {
+            searchHandler.search(request, actionListener);
         } catch (Exception e) {
-            logger.error("Failed to search workflows in global context", e);
-            actionListener.onFailure(e);
+            String errorMessage = "Failed to search workflows in global context";
+            logger.error(errorMessage, e);
+            actionListener.onFailure(new FlowFrameworkException(errorMessage, ExceptionsHelper.status(e)));
         }
     }
 }

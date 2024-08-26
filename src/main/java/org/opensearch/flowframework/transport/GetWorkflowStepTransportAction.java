@@ -57,7 +57,7 @@ public class GetWorkflowStepTransportAction extends HandledTransportAction<Workf
     protected void doExecute(Task task, WorkflowRequest request, ActionListener<GetWorkflowStepResponse> listener) {
         try {
             logger.info("Getting workflow validator from the WorkflowStepFactory");
-            List<String> steps = request.getParams().size() > 0
+            List<String> steps = !request.getParams().isEmpty()
                 ? Arrays.asList(Strings.splitStringByCommaToArray(request.getParams().get(WORKFLOW_STEP)))
                 : Collections.emptyList();
             WorkflowValidator workflowValidator;

@@ -12,22 +12,38 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonParser;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.apache.lucene.search.join.ScoreMode;
+import org.opensearch.action.get.GetRequest;
+import org.opensearch.action.get.GetResponse;
 import org.opensearch.client.Client;
+import org.opensearch.cluster.service.ClusterService;
 import org.opensearch.common.Booleans;
 import org.opensearch.common.io.Streams;
+import org.opensearch.common.util.concurrent.ThreadContext;
 import org.opensearch.common.xcontent.LoggingDeprecationHandler;
 import org.opensearch.common.xcontent.XContentHelper;
 import org.opensearch.common.xcontent.XContentType;
 import org.opensearch.common.xcontent.json.JsonXContent;
 import org.opensearch.commons.ConfigConstants;
 import org.opensearch.commons.authuser.User;
+import org.opensearch.core.action.ActionListener;
+import org.opensearch.core.action.ActionResponse;
 import org.opensearch.core.common.bytes.BytesReference;
 import org.opensearch.core.rest.RestStatus;
 import org.opensearch.core.xcontent.NamedXContentRegistry;
 import org.opensearch.core.xcontent.XContentBuilder;
 import org.opensearch.core.xcontent.XContentParser;
 import org.opensearch.flowframework.exception.FlowFrameworkException;
+import org.opensearch.flowframework.model.Template;
+import org.opensearch.flowframework.transport.WorkflowResponse;
 import org.opensearch.flowframework.workflow.WorkflowData;
+import org.opensearch.index.query.BoolQueryBuilder;
+import org.opensearch.index.query.NestedQueryBuilder;
+import org.opensearch.index.query.QueryBuilder;
+import org.opensearch.index.query.QueryBuilders;
+import org.opensearch.index.query.TermsQueryBuilder;
+import org.opensearch.ml.repackage.com.google.common.collect.ImmutableList;
+import org.opensearch.search.builder.SearchSourceBuilder;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -49,6 +65,7 @@ import jakarta.json.bind.Jsonb;
 import jakarta.json.bind.JsonbBuilder;
 
 import static org.opensearch.core.xcontent.XContentParserUtils.ensureExpectedToken;
+import static org.opensearch.flowframework.common.CommonValue.GLOBAL_CONTEXT_INDEX;
 
 /**
  * Utility methods for Template parsing
@@ -225,8 +242,223 @@ public class ParseUtils {
      */
     public static User getUserContext(Client client) {
         String userStr = client.threadPool().getThreadContext().getTransient(ConfigConstants.OPENSEARCH_SECURITY_USER_INFO_THREAD_CONTEXT);
-        logger.debug("Filtering result by " + userStr);
+        logger.debug("Filtering result by {}", userStr);
         return User.parse(userStr);
+    }
+
+    /**
+     * Add user backend roles filter to search source builder=
+     * @param user the user
+     * @param searchSourceBuilder search builder
+     * @return search builder with filter added
+     */
+    public static SearchSourceBuilder addUserBackendRolesFilter(User user, SearchSourceBuilder searchSourceBuilder) {
+        if (user == null) {
+            return searchSourceBuilder;
+        }
+        BoolQueryBuilder boolQueryBuilder = new BoolQueryBuilder();
+        String userFieldName = "user";
+        String userBackendRoleFieldName = "user.backend_roles.keyword";
+        List<String> backendRoles = user.getBackendRoles() != null ? user.getBackendRoles() : ImmutableList.of();
+        // For normal case, user should have backend roles.
+        TermsQueryBuilder userRolesFilterQuery = QueryBuilders.termsQuery(userBackendRoleFieldName, backendRoles);
+        NestedQueryBuilder nestedQueryBuilder = new NestedQueryBuilder(userFieldName, userRolesFilterQuery, ScoreMode.None);
+        boolQueryBuilder.must(nestedQueryBuilder);
+        QueryBuilder query = searchSourceBuilder.query();
+        if (query == null) {
+            searchSourceBuilder.query(boolQueryBuilder);
+        } else if (query instanceof BoolQueryBuilder) {
+            ((BoolQueryBuilder) query).filter(boolQueryBuilder);
+        } else {
+            // Convert any other query to a BoolQueryBuilder
+            BoolQueryBuilder boolQuery = QueryBuilders.boolQuery().must(query);
+            boolQuery.filter(boolQueryBuilder);
+            searchSourceBuilder.query(boolQuery);
+        }
+        return searchSourceBuilder;
+    }
+
+    /**
+     * Resolve user and execute the function
+     * @param requestedUser the user to execute the request
+     * @param workflowId workflow id
+     * @param filterByEnabled filter by enabled setting
+     * @param listener action listener
+     * @param function workflow function
+     * @param client node client
+     * @param clusterService cluster service
+     * @param xContentRegistry contentRegister to parse get response
+     */
+    public static void resolveUserAndExecute(
+        User requestedUser,
+        String workflowId,
+        Boolean filterByEnabled,
+        ActionListener<? extends ActionResponse> listener,
+        Runnable function,
+        Client client,
+        ClusterService clusterService,
+        NamedXContentRegistry xContentRegistry
+    ) {
+        try {
+            if (requestedUser == null || filterByEnabled == Boolean.FALSE) {
+                // requestedUser == null means security is disabled or user is superadmin. In this case we don't need to
+                // check if request user have access to the workflow or not.
+                // !filterByEnabled means security is enabled and filterByEnabled is disabled
+                function.run();
+            } else {
+                getWorkflow(requestedUser, workflowId, filterByEnabled, listener, function, client, clusterService, xContentRegistry);
+            }
+        } catch (Exception e) {
+            listener.onFailure(e);
+        }
+    }
+
+    /**
+     * Check if requested user has backend role required to access the resource
+     * @param requestedUser the user to execute the request
+     * @param resourceUser user of the resource
+     * @param workflowId workflow id
+     * @return boolean if the requested user has backend role required to access the resource
+     * @throws Exception exception
+     */
+    private static boolean checkUserPermissions(User requestedUser, User resourceUser, String workflowId) throws Exception {
+        if (resourceUser.getBackendRoles() == null || requestedUser.getBackendRoles() == null) {
+            return false;
+        }
+        // Check if requested user has backend role required to access the resource
+        for (String backendRole : requestedUser.getBackendRoles()) {
+            if (resourceUser.getBackendRoles().contains(backendRole)) {
+                logger.debug(
+                    "User: "
+                        + requestedUser.getName()
+                        + " has backend role: "
+                        + backendRole
+                        + " permissions to access config: "
+                        + workflowId
+                );
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Check if filter by backend roles is enabled and validate the requested user
+     * @param requestedUser the user to execute the request
+     */
+    public static void checkFilterByBackendRoles(User requestedUser) {
+        if (requestedUser == null) {
+            String errorMessage = "Filter by backend roles is enabled and User is null";
+            logger.error(errorMessage);
+            throw new FlowFrameworkException(errorMessage, RestStatus.BAD_REQUEST);
+        }
+        if (requestedUser.getBackendRoles().isEmpty()) {
+            String userErrorMessage = "Filter by backend roles is enabled, but User "
+                + requestedUser.getName()
+                + " does not have any backend roles configured";
+
+            logger.error(userErrorMessage);
+            throw new FlowFrameworkException(userErrorMessage, RestStatus.FORBIDDEN);
+        }
+    }
+
+    /**
+     * Get workflow
+     * @param requestUser the user to execute the request
+     * @param workflowId workflow id
+     * @param filterByEnabled filter by enabled setting
+     * @param listener action listener
+     * @param function workflow function
+     * @param client node client
+     * @param clusterService cluster service
+     * @param xContentRegistry contentRegister to parse get response
+     */
+    public static void getWorkflow(
+        User requestUser,
+        String workflowId,
+        Boolean filterByEnabled,
+        ActionListener listener,
+        Runnable function,
+        Client client,
+        ClusterService clusterService,
+        NamedXContentRegistry xContentRegistry
+    ) {
+        if (clusterService.state().metadata().hasIndex(GLOBAL_CONTEXT_INDEX)) {
+            try (ThreadContext.StoredContext context = client.threadPool().getThreadContext().stashContext()) {
+                GetRequest request = new GetRequest(GLOBAL_CONTEXT_INDEX, workflowId);
+                client.get(
+                    request,
+                    ActionListener.wrap(
+                        response -> onGetWorkflowResponse(
+                            response,
+                            requestUser,
+                            workflowId,
+                            filterByEnabled,
+                            listener,
+                            function,
+                            xContentRegistry
+                        ),
+                        exception -> {
+                            logger.error("Failed to get workflow: {}", workflowId, exception);
+                            listener.onFailure(exception);
+                        }
+                    )
+                );
+            }
+        } else {
+            String errorMessage = "Failed to retrieve template (" + workflowId + ") from global context.";
+            logger.error(errorMessage);
+            listener.onFailure(new FlowFrameworkException(errorMessage, RestStatus.NOT_FOUND));
+        }
+    }
+
+    /**
+     * Execute the function if user has permissions to access the resource
+     * @param requestUser the user to execute the request
+     * @param response get response
+     * @param workflowId workflow id
+     * @param filterByEnabled filter by enabled setting
+     * @param listener action listener
+     * @param function workflow function
+     * @param xContentRegistry contentRegister to parse get response
+     */
+    public static void onGetWorkflowResponse(
+        GetResponse response,
+        User requestUser,
+        String workflowId,
+        Boolean filterByEnabled,
+        ActionListener<WorkflowResponse> listener,
+        Runnable function,
+        NamedXContentRegistry xContentRegistry
+    ) {
+        if (response.isExists()) {
+            try (
+                XContentParser parser = RestHandlerUtils.createXContentParserFromRegistry(xContentRegistry, response.getSourceAsBytesRef())
+            ) {
+                ensureExpectedToken(XContentParser.Token.START_OBJECT, parser.nextToken(), parser);
+                Template template = Template.parse(parser);
+                User resourceUser = template.getUser();
+
+                if (!filterByEnabled || checkUserPermissions(requestUser, resourceUser, workflowId) || isAdmin(requestUser)) {
+                    function.run();
+                } else {
+                    logger.debug("User: " + requestUser.getName() + " does not have permissions to access workflow: " + workflowId);
+                    listener.onFailure(
+                        new FlowFrameworkException(
+                            "User does not have permissions to access workflow: " + workflowId,
+                            RestStatus.BAD_REQUEST
+                        )
+                    );
+                }
+            } catch (Exception e) {
+                logger.error("Failed to parse workflow: {}", workflowId, e);
+                listener.onFailure(e);
+            }
+        } else {
+            String errorMessage = "Failed to retrieve template (" + workflowId + ") from global context.";
+            logger.error(errorMessage);
+            listener.onFailure(new FlowFrameworkException(errorMessage, RestStatus.NOT_FOUND));
+        }
     }
 
     /**

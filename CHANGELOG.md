@@ -17,6 +17,7 @@ Inspired from [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 ## [Unreleased 2.x](https://github.com/opensearch-project/flow-framework/compare/2.14...2.x)
 ### Features
 - Adds reprovision API to support updating search pipelines, ingest pipelines index settings ([#804](https://github.com/opensearch-project/flow-framework/pull/804))
+- Adds user level access control based on backend roles ([#838](https://github.com/opensearch-project/flow-framework/pull/838))
 
 ### Enhancements
 ### Bug Fixes
