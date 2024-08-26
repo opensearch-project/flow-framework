@@ -727,6 +727,38 @@ public abstract class FlowFrameworkRestTestCase extends OpenSearchRestTestCase {
     }
 
     /**
+     * Helper method to invoke the Search Agent Rest Action
+     * @param client the rest client
+     * @param query the search query
+     * @return
+     * @throws Exception
+     */
+    protected SearchResponse searchAgent(RestClient client, String query) throws Exception {
+        Response restSearchResponse = TestHelpers.makeRequest(
+            client,
+            "GET",
+            "/_plugins/_ml/agents/_search",
+            Collections.emptyMap(),
+            query,
+            null
+        );
+        assertEquals(RestStatus.OK, TestHelpers.restStatus(restSearchResponse));
+
+        // Parse entity content into SearchResponse
+        MediaType mediaType = MediaType.fromMediaType(restSearchResponse.getEntity().getContentType());
+        try (
+            XContentParser parser = mediaType.xContent()
+                .createParser(
+                    NamedXContentRegistry.EMPTY,
+                    DeprecationHandler.THROW_UNSUPPORTED_OPERATION,
+                    restSearchResponse.getEntity().getContent()
+                )
+        ) {
+            return SearchResponse.fromXContent(parser);
+        }
+    }
+
+    /**
      * Helper method to invoke the Get Workflow Status Rest Action and assert the provisioning and state status
      * @param client the rest client
      * @param workflowId the workflow ID to get the status
