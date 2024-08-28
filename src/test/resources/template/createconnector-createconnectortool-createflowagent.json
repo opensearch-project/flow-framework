@@ -1,11 +1,11 @@
 {
-  "name": "createconnector-registerremotemodel-deploymodel",
+  "name": "createconnector-createconnectortool-createflowagent",
   "description": "test case",
   "use_case": "TEST_CASE",
   "version": {
     "template": "1.0.0",
     "compatibility": [
-      "2.12.0",
+      "2.15.0",
       "3.0.0"
     ]
   },
@@ -13,7 +13,7 @@
     "provision": {
       "nodes": [
         {
-          "id": "workflow_step_1",
+          "id": "create_connector",
           "type": "create_connector",
           "user_inputs": {
             "name": "OpenAI Chat Connector",
@@ -37,33 +37,38 @@
           }
         },
         {
-          "id": "workflow_step_2",
-          "type": "register_remote_model",
+          "id": "create_tool",
+          "type": "create_tool",
           "previous_node_inputs": {
-            "workflow_step_1": "connector_id"
+            "create_connector": "connector_id"
           },
           "user_inputs": {
-            "name": "openAI-gpt-3.5-turbo",
-            "function_name": "remote",
-            "description": "test model"
+            "parameters": {},
+            "name": "ConnectorTool",
+            "type": "ConnectorTool"
           }
         },
         {
-          "id": "workflow_step_3",
-          "type": "deploy_model",
+          "id": "create_flow_agent",
+          "type": "register_agent",
           "previous_node_inputs": {
-            "workflow_step_2": "model_id"
+            "create_tool": "tools"
+          },
+          "user_inputs": {
+            "parameters": {},
+            "type": "flow",
+            "name": "OpenAI Chat Agent"
           }
         }
       ],
       "edges": [
         {
-          "source": "workflow_step_1",
-          "dest": "workflow_step_2"
+          "source": "create_connector",
+          "dest": "create_tool"
         },
         {
-          "source": "workflow_step_2",
-          "dest": "workflow_step_3"
+          "source": "create_tool",
+          "dest": "create_flow_agent"
         }
       ]
     }
