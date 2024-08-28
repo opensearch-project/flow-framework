@@ -365,7 +365,7 @@ public class FlowFrameworkRestApiIT extends FlowFrameworkRestTestCase {
         @SuppressWarnings("unchecked")
         ArrayList<Map<String, Object>> tools = (ArrayList<Map<String, Object>>) agentResponse.get("tools");
         assertEquals(1, tools.size());
-        Map<String, Object> tool = tools.getFirst();
+        Map<String, Object> tool = tools.get(0);
         assertTrue(tool.containsKey("parameters"));
         @SuppressWarnings("unchecked")
         Map<String, String> toolParameters = (Map<String, String>) tool.get("parameters");
