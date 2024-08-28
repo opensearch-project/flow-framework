@@ -661,6 +661,23 @@ public abstract class FlowFrameworkRestTestCase extends OpenSearchRestTestCase {
     }
 
     /**
+     * Helper method to invoke the Get Agent Rest Action
+     * @param client the rest client
+     * @return rest response
+     * @throws Exception
+     */
+    protected Response getAgent(RestClient client, String agentId) throws Exception {
+        return TestHelpers.makeRequest(
+            client,
+            "GET",
+            String.format(Locale.ROOT, "/_plugins/_ml/agents/%s", agentId),
+            Collections.emptyMap(),
+            "",
+            null
+        );
+    }
+
+    /**
      * Helper method to invoke the Search Workflow Rest Action with the given query
      * @param client the rest client
      * @param query the search query
@@ -668,7 +685,6 @@ public abstract class FlowFrameworkRestTestCase extends OpenSearchRestTestCase {
      * @throws Exception if the request fails
      */
     protected SearchResponse searchWorkflows(RestClient client, String query) throws Exception {
-
         // Execute search
         Response restSearchResponse = TestHelpers.makeRequest(
             client,
@@ -706,38 +722,6 @@ public abstract class FlowFrameworkRestTestCase extends OpenSearchRestTestCase {
             client,
             "GET",
             String.format(Locale.ROOT, "%s/state/_search", WORKFLOW_URI),
-            Collections.emptyMap(),
-            query,
-            null
-        );
-        assertEquals(RestStatus.OK, TestHelpers.restStatus(restSearchResponse));
-
-        // Parse entity content into SearchResponse
-        MediaType mediaType = MediaType.fromMediaType(restSearchResponse.getEntity().getContentType());
-        try (
-            XContentParser parser = mediaType.xContent()
-                .createParser(
-                    NamedXContentRegistry.EMPTY,
-                    DeprecationHandler.THROW_UNSUPPORTED_OPERATION,
-                    restSearchResponse.getEntity().getContent()
-                )
-        ) {
-            return SearchResponse.fromXContent(parser);
-        }
-    }
-
-    /**
-     * Helper method to invoke the Search Agent Rest Action
-     * @param client the rest client
-     * @param query the search query
-     * @return
-     * @throws Exception
-     */
-    protected SearchResponse searchAgent(RestClient client, String query) throws Exception {
-        Response restSearchResponse = TestHelpers.makeRequest(
-            client,
-            "GET",
-            "/_plugins/_ml/agents/_search",
             Collections.emptyMap(),
             query,
             null

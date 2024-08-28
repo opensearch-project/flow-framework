@@ -25,7 +25,6 @@ import org.opensearch.flowframework.model.Workflow;
 import org.opensearch.flowframework.model.WorkflowEdge;
 import org.opensearch.flowframework.model.WorkflowNode;
 import org.opensearch.flowframework.model.WorkflowState;
-import org.opensearch.search.SearchHit;
 import org.junit.Before;
 import org.junit.ComparisonFailure;
 
@@ -347,36 +346,24 @@ public class FlowFrameworkRestApiIT extends FlowFrameworkRestTestCase {
             TimeUnit.SECONDS
         );
 
-        // Hit Search State API with the workflow id created above
-        String query = "{\"query\":{\"ids\":{\"values\":[\"" + workflowId + "\"]}}}";
-        SearchResponse searchResponse = searchWorkflowState(client(), query);
-        assertEquals(1, searchResponse.getHits().getTotalHits().value);
-        String searchHitSource = searchResponse.getHits().getAt(0).getSourceAsString();
-        WorkflowState searchHitWorkflowState = WorkflowState.parse(searchHitSource);
-
         // Assert based on the agent-framework template
-        List<ResourceCreated> resourcesCreated = searchHitWorkflowState.resourcesCreated();
-        Set<String> expectedStepNames = new HashSet<>();
-        expectedStepNames.add("create_connector");
-        expectedStepNames.add("create_flow_agent");
-        Set<String> stepNames = resourcesCreated.stream().map(ResourceCreated::workflowStepId).collect(Collectors.toSet());
-
-        assertEquals(2, resourcesCreated.size());
-        assertEquals(stepNames, expectedStepNames);
-        String connectorId = resourcesCreated.getFirst().resourceId();
-        String agentId = resourcesCreated.get(1).resourceId();
+        List<ResourceCreated> resourcesCreated = getResourcesCreated(client(), workflowId, 120);
+        Map<String, ResourceCreated> resourceMap = resourcesCreated.stream()
+            .collect(Collectors.toMap(ResourceCreated::workflowStepName, r -> r));
+        assertEquals(2, resourceMap.size());
+        assertTrue(resourceMap.containsKey("create_connector"));
+        assertTrue(resourceMap.containsKey("register_agent"));
+        String connectorId = resourceMap.get("create_connector").resourceId();
+        String agentId = resourceMap.get("register_agent").resourceId();
         assertNotNull(connectorId);
         assertNotNull(agentId);
 
-        query = "{\"query\":{\"ids\":{\"values\":[\"" + agentId + "\"]}}}";
-        searchResponse = searchAgent(client(), query);
-        assertEquals(1, searchResponse.getHits().getTotalHits().value);
-        SearchHit searchHit = searchResponse.getHits().getAt(0);
-        Map<String, Object> searchHitSourceMap = searchHit.getSourceAsMap();
-        assertTrue(searchHitSourceMap.containsKey("tools"));
-
+        // Assert that the agent contains the correct connector_id
+        response = getAgent(client(), agentId);
+        Map<String, Object> agentResponse = entityAsMap(response);
+        assertTrue(agentResponse.containsKey("tools"));
         @SuppressWarnings("unchecked")
-        ArrayList<Map<String, Object>> tools = (ArrayList<Map<String, Object>>) searchHitSourceMap.get("tools");
+        ArrayList<Map<String, Object>> tools = (ArrayList<Map<String, Object>>) agentResponse.get("tools");
         assertEquals(1, tools.size());
         Map<String, Object> tool = tools.getFirst();
         assertTrue(tool.containsKey("parameters"));
@@ -735,7 +722,6 @@ public class FlowFrameworkRestApiIT extends FlowFrameworkRestTestCase {
     }
 
     public void testDefaultCohereUseCase() throws Exception {
-
         // Hit Create Workflow API with original template
         Response response = createWorkflowWithUseCaseWithNoValidation(
             client(),
