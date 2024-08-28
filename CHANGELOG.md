@@ -19,7 +19,6 @@ Inspired from [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 - Adds reprovision API to support updating search pipelines, ingest pipelines index settings ([#804](https://github.com/opensearch-project/flow-framework/pull/804))
 - Adds user level access control based on backend roles ([#838](https://github.com/opensearch-project/flow-framework/pull/838))
 - Support parsing connector_id when creating tools ([#846](https://github.com/opensearch-project/flow-framework/pull/846))
->>>>>>> 222094d (update changelog)
 
 ### Enhancements
 ### Bug Fixes
