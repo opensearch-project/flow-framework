@@ -661,6 +661,23 @@ public abstract class FlowFrameworkRestTestCase extends OpenSearchRestTestCase {
     }
 
     /**
+     * Helper method to invoke the Get Agent Rest Action
+     * @param client the rest client
+     * @return rest response
+     * @throws Exception
+     */
+    protected Response getAgent(RestClient client, String agentId) throws Exception {
+        return TestHelpers.makeRequest(
+            client,
+            "GET",
+            String.format(Locale.ROOT, "/_plugins/_ml/agents/%s", agentId),
+            Collections.emptyMap(),
+            "",
+            null
+        );
+    }
+
+    /**
      * Helper method to invoke the Search Workflow Rest Action with the given query
      * @param client the rest client
      * @param query the search query
@@ -668,7 +685,6 @@ public abstract class FlowFrameworkRestTestCase extends OpenSearchRestTestCase {
      * @throws Exception if the request fails
      */
     protected SearchResponse searchWorkflows(RestClient client, String query) throws Exception {
-
         // Execute search
         Response restSearchResponse = TestHelpers.makeRequest(
             client,
