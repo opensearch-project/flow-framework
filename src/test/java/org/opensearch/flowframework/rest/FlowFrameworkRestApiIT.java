@@ -30,6 +30,7 @@ import org.junit.ComparisonFailure;
 
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.EnumSet;
 import java.util.HashMap;
@@ -56,7 +57,6 @@ public class FlowFrameworkRestApiIT extends FlowFrameworkRestTestCase {
     }
 
     public void testSearchWorkflows() throws Exception {
-
         // Create a Workflow that has a credential 12345
         Template template = TestHelpers.createTemplateFromFile("createconnector-registerremotemodel-deploymodel.json");
         Response response = createWorkflow(client(), template);
@@ -228,7 +228,6 @@ public class FlowFrameworkRestApiIT extends FlowFrameworkRestTestCase {
     }
 
     public void testCreateAndProvisionRemoteModelWorkflow() throws Exception {
-
         // Using a 3 step template to create a connector, register remote model and deploy model
         Template template = TestHelpers.createTemplateFromFile("createconnector-registerremotemodel-deploymodel.json");
 
@@ -298,6 +297,79 @@ public class FlowFrameworkRestApiIT extends FlowFrameworkRestTestCase {
         assertEquals(5, resourcesCreated.size());
         assertEquals(stepNames, expectedStepNames);
         assertNotNull(resourcesCreated.get(0).resourceId());
+
+        // Hit Deprovision API
+        // By design, this may not completely deprovision the first time if it takes >2s to process removals
+        Response deprovisionResponse = deprovisionWorkflow(client(), workflowId);
+        try {
+            assertBusy(
+                () -> { getAndAssertWorkflowStatus(client(), workflowId, State.NOT_STARTED, ProvisioningProgress.NOT_STARTED); },
+                30,
+                TimeUnit.SECONDS
+            );
+        } catch (ComparisonFailure e) {
+            // 202 return if still processing
+            assertEquals(RestStatus.ACCEPTED, TestHelpers.restStatus(deprovisionResponse));
+        }
+        if (TestHelpers.restStatus(deprovisionResponse) == RestStatus.ACCEPTED) {
+            // Short wait before we try again
+            Thread.sleep(10000);
+            deprovisionResponse = deprovisionWorkflow(client(), workflowId);
+            assertBusy(
+                () -> { getAndAssertWorkflowStatus(client(), workflowId, State.NOT_STARTED, ProvisioningProgress.NOT_STARTED); },
+                30,
+                TimeUnit.SECONDS
+            );
+        }
+        assertEquals(RestStatus.OK, TestHelpers.restStatus(deprovisionResponse));
+        // Hit Delete API
+        Response deleteResponse = deleteWorkflow(client(), workflowId);
+        assertEquals(RestStatus.OK, TestHelpers.restStatus(deleteResponse));
+
+        // Verify state doc is deleted
+        assertBusy(() -> { getAndAssertWorkflowStatusNotFound(client(), workflowId); }, 30, TimeUnit.SECONDS);
+    }
+
+    public void testCreateAndProvisionConnectorToolAgentFrameworkWorkflow() throws Exception {
+        // Create a Workflow that has a credential 12345
+        Template template = TestHelpers.createTemplateFromFile("createconnector-createconnectortool-createflowagent.json");
+
+        // Hit Create Workflow API to create agent-framework template, with template validation check and provision parameter
+        Response response = createWorkflowWithProvision(client(), template);
+        assertEquals(RestStatus.CREATED, TestHelpers.restStatus(response));
+        Map<String, Object> responseMap = entityAsMap(response);
+        String workflowId = (String) responseMap.get(WORKFLOW_ID);
+        // wait and ensure state is completed/done
+        assertBusy(
+            () -> { getAndAssertWorkflowStatus(client(), workflowId, State.COMPLETED, ProvisioningProgress.DONE); },
+            120,
+            TimeUnit.SECONDS
+        );
+
+        // Assert based on the agent-framework template
+        List<ResourceCreated> resourcesCreated = getResourcesCreated(client(), workflowId, 120);
+        Map<String, ResourceCreated> resourceMap = resourcesCreated.stream()
+            .collect(Collectors.toMap(ResourceCreated::workflowStepName, r -> r));
+        assertEquals(2, resourceMap.size());
+        assertTrue(resourceMap.containsKey("create_connector"));
+        assertTrue(resourceMap.containsKey("register_agent"));
+        String connectorId = resourceMap.get("create_connector").resourceId();
+        String agentId = resourceMap.get("register_agent").resourceId();
+        assertNotNull(connectorId);
+        assertNotNull(agentId);
+
+        // Assert that the agent contains the correct connector_id
+        response = getAgent(client(), agentId);
+        Map<String, Object> agentResponse = entityAsMap(response);
+        assertTrue(agentResponse.containsKey("tools"));
+        @SuppressWarnings("unchecked")
+        ArrayList<Map<String, Object>> tools = (ArrayList<Map<String, Object>>) agentResponse.get("tools");
+        assertEquals(1, tools.size());
+        Map<String, Object> tool = tools.getFirst();
+        assertTrue(tool.containsKey("parameters"));
+        @SuppressWarnings("unchecked")
+        Map<String, String> toolParameters = (Map<String, String>) tool.get("parameters");
+        assertEquals(toolParameters, Map.of("connector_id", connectorId));
 
         // Hit Deprovision API
         // By design, this may not completely deprovision the first time if it takes >2s to process removals
@@ -650,7 +722,6 @@ public class FlowFrameworkRestApiIT extends FlowFrameworkRestTestCase {
     }
 
     public void testDefaultCohereUseCase() throws Exception {
-
         // Hit Create Workflow API with original template
         Response response = createWorkflowWithUseCaseWithNoValidation(
             client(),

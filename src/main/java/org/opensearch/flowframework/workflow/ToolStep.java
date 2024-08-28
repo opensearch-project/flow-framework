@@ -28,6 +28,7 @@ import static org.opensearch.flowframework.common.CommonValue.PARAMETERS_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.TOOLS_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.TYPE;
 import static org.opensearch.flowframework.common.WorkflowResources.AGENT_ID;
+import static org.opensearch.flowframework.common.WorkflowResources.CONNECTOR_ID;
 import static org.opensearch.flowframework.common.WorkflowResources.MODEL_ID;
 
 /**
@@ -64,7 +65,15 @@ public class ToolStep implements WorkflowStep {
             String name = (String) inputs.get(NAME_FIELD);
             String description = (String) inputs.get(DESCRIPTION_FIELD);
             Boolean includeOutputInAgentResponse = ParseUtils.parseIfExists(inputs, INCLUDE_OUTPUT_IN_AGENT_RESPONSE, Boolean.class);
-            Map<String, String> parameters = getToolsParametersMap(inputs.get(PARAMETERS_FIELD), previousNodeInputs, outputs);
+
+            // parse connector_id, model_id and agent_id from previous node inputs
+            Set<String> toolParameterKeys = Set.of(CONNECTOR_ID, MODEL_ID, AGENT_ID);
+            Map<String, String> parameters = getToolsParametersMap(
+                inputs.get(PARAMETERS_FIELD),
+                previousNodeInputs,
+                outputs,
+                toolParameterKeys
+            );
 
             MLToolSpec.MLToolSpecBuilder builder = MLToolSpec.builder();
 
@@ -110,39 +119,29 @@ public class ToolStep implements WorkflowStep {
     private Map<String, String> getToolsParametersMap(
         Object parameters,
         Map<String, String> previousNodeInputs,
-        Map<String, WorkflowData> outputs
+        Map<String, WorkflowData> outputs,
+        Set<String> toolParameterKeys
     ) {
         @SuppressWarnings("unchecked")
         Map<String, String> parametersMap = (Map<String, String>) parameters;
-        Optional<String> previousNodeModel = previousNodeInputs.entrySet()
-            .stream()
-            .filter(e -> MODEL_ID.equals(e.getValue()))
-            .map(Map.Entry::getKey)
-            .findFirst();
 
-        Optional<String> previousNodeAgent = previousNodeInputs.entrySet()
-            .stream()
-            .filter(e -> AGENT_ID.equals(e.getValue()))
-            .map(Map.Entry::getKey)
-            .findFirst();
+        for (String toolParameterKey : toolParameterKeys) {
+            Optional<String> previousNodeParameter = previousNodeInputs.entrySet()
+                .stream()
+                .filter(e -> toolParameterKey.equals(e.getValue()))
+                .map(Map.Entry::getKey)
+                .findFirst();
 
-        // Case when modelId is passed through previousSteps and not present already in parameters
-        if (previousNodeModel.isPresent() && !parametersMap.containsKey(MODEL_ID)) {
-            WorkflowData previousNodeOutput = outputs.get(previousNodeModel.get());
-            if (previousNodeOutput != null && previousNodeOutput.getContent().containsKey(MODEL_ID)) {
-                parametersMap.put(MODEL_ID, previousNodeOutput.getContent().get(MODEL_ID).toString());
+            // Case when toolParameterKey is passed through previousSteps and not present already in parameters
+            if (previousNodeParameter.isPresent() && !parametersMap.containsKey(toolParameterKey)) {
+                WorkflowData previousNodeOutput = outputs.get(previousNodeParameter.get());
+                if (previousNodeOutput != null && previousNodeOutput.getContent().containsKey(toolParameterKey)) {
+                    parametersMap.put(toolParameterKey, previousNodeOutput.getContent().get(toolParameterKey).toString());
+                }
             }
         }
 
-        // Case when agentId is passed through previousSteps and not present already in parameters
-        if (previousNodeAgent.isPresent() && !parametersMap.containsKey(AGENT_ID)) {
-            WorkflowData previousNodeOutput = outputs.get(previousNodeAgent.get());
-            if (previousNodeOutput != null && previousNodeOutput.getContent().containsKey(AGENT_ID)) {
-                parametersMap.put(AGENT_ID, previousNodeOutput.getContent().get(AGENT_ID).toString());
-            }
-        }
-
-        // For other cases where modelId is already present in the parameters or not return the parametersMap
+        // For other cases where toolParameterKey is already present in the parameters or not return the parametersMap
         return parametersMap;
     }
 
