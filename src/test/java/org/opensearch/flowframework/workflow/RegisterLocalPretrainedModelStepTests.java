@@ -137,22 +137,7 @@ public class RegisterLocalPretrainedModelStepTests extends OpenSearchTestCase {
         // Stub getTask for success case
         doAnswer(invocation -> {
             ActionListener<MLTask> actionListener = invocation.getArgument(1);
-            MLTask output = new MLTask(
-                taskId,
-                modelId,
-                null,
-                null,
-                MLTaskState.COMPLETED,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                false
-            );
+            MLTask output = MLTask.builder().taskId(taskId).modelId(modelId).state(MLTaskState.COMPLETED).async(false).build();
             actionListener.onResponse(output);
             return null;
         }).when(machineLearningNodeClient).getTask(any(), any());
@@ -247,22 +232,13 @@ public class RegisterLocalPretrainedModelStepTests extends OpenSearchTestCase {
         // Stub get ml task for failure case
         doAnswer(invocation -> {
             ActionListener<MLTask> actionListener = invocation.getArgument(1);
-            MLTask output = new MLTask(
-                taskId,
-                modelId,
-                null,
-                null,
-                MLTaskState.FAILED,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                testErrorMessage,
-                null,
-                false
-            );
+            MLTask output = MLTask.builder()
+                .taskId(taskId)
+                .modelId(modelId)
+                .state(MLTaskState.FAILED)
+                .error(testErrorMessage)
+                .async(false)
+                .build();
             actionListener.onResponse(output);
             return null;
         }).when(machineLearningNodeClient).getTask(any(), any());
