@@ -169,7 +169,7 @@ dependencies {
     api group: 'org.opensearch.client', name: 'opensearch-rest-client', version: "${opensearch_version}"
     implementation group: 'org.apache.commons', name: 'commons-lang3', version: '3.16.0'
     implementation "org.opensearch:common-utils:${common_utils_version}"
-    implementation 'com.amazonaws:aws-encryption-sdk-java:2.4.1'
+    implementation 'com.amazonaws:aws-encryption-sdk-java:3.0.1'
     implementation 'org.bouncycastle:bcprov-jdk18on:1.78.1'
     api "org.apache.httpcomponents.core5:httpcore5:5.2.5"
     implementation "jakarta.json.bind:jakarta.json.bind-api:3.0.1"
