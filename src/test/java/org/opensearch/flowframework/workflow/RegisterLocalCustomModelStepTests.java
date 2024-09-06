@@ -312,7 +312,13 @@ public class RegisterLocalCustomModelStepTests extends OpenSearchTestCase {
         // Stub get ml task for failure case
         doAnswer(invocation -> {
             ActionListener<MLTask> actionListener = invocation.getArgument(1);
-            MLTask output = MLTask.builder().taskId(taskId).modelId(modelId).state(MLTaskState.COMPLETED).async(false).build();
+            MLTask output = MLTask.builder()
+                .taskId(taskId)
+                .modelId(modelId)
+                .state(MLTaskState.FAILED)
+                .error(testErrorMessage)
+                .async(false)
+                .build();
             actionListener.onResponse(output);
             return null;
         }).when(machineLearningNodeClient).getTask(any(), any());
