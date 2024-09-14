@@ -81,4 +81,3 @@ workflows:
           name: Bedrock knowledge base agent
           description: this is an agent to call retrieveAndGenerate API in bedrock knowledge
             base suggestion agent
-
