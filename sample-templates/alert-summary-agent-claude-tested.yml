@@ -1,6 +1,6 @@
 ---
 name: Alert Summary Agent
-description: Create a Alert Summary Agent using Claude on BedRock
+description: Create Alert Summary Agent using Claude on BedRock
 use_case: REGISTER_AGENT
 version:
   template: 1.0.0
@@ -57,7 +57,7 @@ workflows:
         register_claude_model: model_id
       user_inputs:
         parameters:
-          prompt: ''
+          prompt:  "You are an OpenSearch Alert Assistant to help summarize the alerts.\n Here is the detail of alert: ${parameters.context};\n The question is: ${parameters.question}."
         name: MLModelTool
         type: MLModelTool
     - id: create_alert_summary_agent

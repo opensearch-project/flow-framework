@@ -1,6 +1,6 @@
 {
   "name": "Alert Summary Agent",
-  "description": "Create a Alert Summary Agent using Claude on BedRock",
+  "description": "Create Alert Summary Agent using Claude on BedRock",
   "use_case": "REGISTER_AGENT",
   "version": {
     "template": "1.0.0",
