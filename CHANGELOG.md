@@ -9,6 +9,7 @@ Inspired from [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 ### Bug Fixes
 ### Infrastructure
 - Set Java target compatibility to JDK 21 ([#730](https://github.com/opensearch-project/flow-framework/pull/730))
+- Add knowledge base alert agent into sample templates ([#874](https://github.com/opensearch-project/flow-framework/pull/874))
 
 ### Documentation
 ### Maintenance

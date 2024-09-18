@@ -1,0 +1,83 @@
+# This template creates a connector to the BedRock service for Knowledge base
+# It then registers a model using the connector and deploys it.
+# Finally, it creates a flow agent base agent with ML Model tool to access the knowledge base.
+#
+# To use:
+#  - update the "credential" and "knowledgeBaseId" fields under the create_knowledge_base_connector node.
+#  - if needed, update region
+#
+# After provisioning:
+#  - returns a workflow ID
+#  - use the status API to get the deployed agent ID
+---
+name: Olly II Agents
+description: 'This template is to create all Agents required for olly II features '
+use_case: REGISTER_AGENTS
+version:
+  template: 1.0.0
+  compatibility:
+    - 2.15.0
+    - 3.0.0
+workflows:
+  provision:
+    user_params: {}
+    nodes:
+      - id: create_knowledge_base_connector
+        type: create_connector
+        previous_node_inputs: {}
+        user_inputs:
+          name: 'Amazon Bedrock Connector: knowledge base'
+          description: The connector to the Bedrock knowledge base
+          version: '1'
+          protocol: aws_sigv4
+          parameters:
+            region: us-west-2
+            service_name: bedrock
+            knowledgeBaseId: PUT_YOUR_KNOWLEDGE_BASE_ID_HERE
+            model_arn: arn:aws:bedrock:us-west-2::foundation-model/anthropic.claude-3-sonnet-20240229-v1:0
+          credential:
+            access_key: PUT_YOUR_ACCESS_KEY_HERE
+            secret_key: PUT_YOUR_SECRET_KEY_HERE
+          actions:
+            - action_type: predict
+              method: POST
+              url: https://bedrock-agent-runtime.us-west-2.amazonaws.com/retrieveAndGenerate
+              headers:
+                content-type: application/json
+              request_body: '{"input": {"text": "${parameters.text}"}, "retrieveAndGenerateConfiguration":
+            {"type": "KNOWLEDGE_BASE", "knowledgeBaseConfiguration": {"knowledgeBaseId":
+            "${parameters.knowledgeBaseId}", "modelArn": "${parameters.model_arn}"}}}'
+              post_process_function: return params.output.text;
+      - id: register_knowledge_base_model
+        type: register_remote_model
+        previous_node_inputs:
+          create_knowledge_base_connector: connector_id
+        user_inputs:
+          name: Claude model on bedrock
+          function_name: remote
+          version: 1.0.0
+          description: Claude model on bedrock
+          deploy: 'true'
+      - id: create_kb_ml_model_tool
+        type: create_tool
+        previous_node_inputs:
+          register_knowledge_base_model: model_id
+        user_inputs:
+          parameters:
+            text: |-
+              You are an OpenSearch Alert Assistant to provide your insight on this alert to help users understand the alert, find potential causes and give feasible solutions to address it.
+               Here is the detail of alert: ${parameters.context};
+               The alert summary is: ${parameters.summary};
+               The question is: ${parameters.question}.
+          name: MLModelTool
+          type: MLModelTool
+      - id: create_knowledge_base_agent
+        type: register_agent
+        previous_node_inputs:
+          create_kb_ml_model_tool: tools
+        user_inputs:
+          parameters: {}
+          type: flow
+          name: Bedrock knowledge base agent
+          description: this is an agent to call retrieveAndGenerate API in bedrock knowledge
+            base suggestion agent
