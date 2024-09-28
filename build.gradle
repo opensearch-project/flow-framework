@@ -188,7 +188,7 @@ dependencies {
 
     configurations.all {
         resolutionStrategy {
-            force("com.google.guava:guava:33.3.0-jre") // CVE for 31.1, keep to force transitive dependencies
+            force("com.google.guava:guava:33.3.1-jre") // CVE for 31.1, keep to force transitive dependencies
             force("com.fasterxml.jackson.core:jackson-core:2.17.2") // Dependency Jar Hell
             force("org.apache.httpcomponents.core5:httpcore5:5.3") // Dependency Jar Hell
         }
