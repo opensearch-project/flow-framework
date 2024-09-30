@@ -1,0 +1,94 @@
+{
+  "name": "Alert Summary Agent",
+  "description": "Create Alert Summary Agent using Claude on BedRock",
+  "use_case": "REGISTER_AGENT",
+  "version": {
+    "template": "1.0.0",
+    "compatibility": ["2.17.0", "3.0.0"]
+  },
+  "workflows": {
+    "provision": {
+      "user_params": {},
+      "nodes": [
+        {
+          "id": "create_claude_connector",
+          "type": "create_connector",
+          "previous_node_inputs": {},
+          "user_inputs": {
+            "version": "1",
+            "name": "Claude instant runtime Connector",
+            "protocol": "aws_sigv4",
+            "description": "The connector to BedRock service for Claude model",
+            "actions": [
+              {
+                "headers": {
+                  "x-amz-content-sha256": "required",
+                  "content-type": "application/json"
+                },
+                "method": "POST",
+                "request_body": "{\"prompt\":\"${parameters.prompt}\", \"max_tokens_to_sample\":${parameters.max_tokens_to_sample}, \"temperature\":${parameters.temperature},  \"anthropic_version\":\"${parameters.anthropic_version}\" }",
+                "action_type": "predict",
+                "url": "https://bedrock-runtime.us-west-2.amazonaws.com/model/anthropic.claude-instant-v1/invoke"
+              }
+            ],
+            "credential": {
+                "access_key": "<YOUR_ACCESS_KEY>",
+                "secret_key": "<YOUR_SECRET_KEY>",
+                "session_token": "<YOUR_SESSION_TOKEN>"
+            },
+            "parameters": {
+              "region": "us-west-2",
+              "endpoint": "bedrock-runtime.us-west-2.amazonaws.com",
+              "content_type": "application/json",
+              "auth": "Sig_V4",
+              "max_tokens_to_sample": "8000",
+              "service_name": "bedrock",
+              "temperature": "0.0001",
+              "response_filter": "$.completion",
+              "anthropic_version": "bedrock-2023-05-31"
+            }
+          }
+        },
+        {
+          "id": "register_claude_model",
+          "type": "register_remote_model",
+          "previous_node_inputs": {
+            "create_claude_connector": "connector_id"
+          },
+          "user_inputs": {
+            "description": "Claude model",
+            "deploy": true,
+            "name": "claude-instant"
+          }
+        },
+        {
+          "id": "create_alert_summary_ml_model_tool",
+          "type": "create_tool",
+          "previous_node_inputs": {
+            "register_claude_model": "model_id"
+          },
+          "user_inputs": {
+            "parameters": {
+              "prompt": "You are an OpenSearch Alert Assistant to help summarize the alerts.\n Here is the detail of alert: ${parameters.context};\n The question is: ${parameters.question}."
+            },
+            "name": "MLModelTool",
+            "type": "MLModelTool"
+          }
+        },
+        {
+          "id": "create_alert_summary_agent",
+          "type": "register_agent",
+          "previous_node_inputs": {
+            "create_alert_summary_ml_model_tool": "tools"
+          },
+          "user_inputs": {
+            "parameters": {},
+            "type": "flow",
+            "name": "Alert Summary Agent",
+            "description": "this is an alert summary agent"
+          }
+        }
+      ]
+    }
+  }
+}
