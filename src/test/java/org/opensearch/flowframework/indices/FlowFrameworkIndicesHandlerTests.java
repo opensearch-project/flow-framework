@@ -47,6 +47,7 @@ import org.opensearch.flowframework.util.EncryptorUtils;
 import org.opensearch.flowframework.workflow.CreateConnectorStep;
 import org.opensearch.flowframework.workflow.CreateIndexStep;
 import org.opensearch.flowframework.workflow.WorkflowData;
+import org.opensearch.index.engine.VersionConflictEngineException;
 import org.opensearch.index.get.GetResult;
 import org.opensearch.test.OpenSearchTestCase;
 import org.opensearch.threadpool.ThreadPool;
@@ -503,13 +504,23 @@ public class FlowFrameworkIndicesHandlerTests extends OpenSearchTestCase {
         ActionListener<WorkflowData> listener = mock(ActionListener.class);
         // test success
         doAnswer(invocation -> {
+            ActionListener<GetResponse> responseListener = invocation.getArgument(1);
+            XContentBuilder builder = XContentFactory.jsonBuilder();
+            WorkflowState state = WorkflowState.builder().build();
+            state.toXContent(builder, null);
+            BytesReference workflowBytesRef = BytesReference.bytes(builder);
+            GetResult getResult = new GetResult(WORKFLOW_STATE_INDEX, "this_id", 1, 1, 1, true, workflowBytesRef, null, null);
+            responseListener.onResponse(new GetResponse(getResult));
+            return null;
+        }).when(client).get(any(GetRequest.class), any());
+        doAnswer(invocation -> {
             ActionListener<UpdateResponse> responseListener = invocation.getArgument(1);
             responseListener.onResponse(new UpdateResponse(new ShardId(WORKFLOW_STATE_INDEX, "", 1), "this_id", -2, 0, 0, Result.UPDATED));
             return null;
         }).when(client).update(any(UpdateRequest.class), any());
 
         flowFrameworkIndicesHandler.addResourceToStateIndex(
-            new WorkflowData(Collections.emptyMap(), null, null),
+            new WorkflowData(Collections.emptyMap(), "this_id", null),
             "node_id",
             CreateConnectorStep.NAME,
             "this_id",
@@ -528,7 +539,7 @@ public class FlowFrameworkIndicesHandlerTests extends OpenSearchTestCase {
         }).when(client).update(any(UpdateRequest.class), any());
 
         flowFrameworkIndicesHandler.addResourceToStateIndex(
-            new WorkflowData(Collections.emptyMap(), null, null),
+            new WorkflowData(Collections.emptyMap(), "this_id", null),
             "node_id",
             CreateConnectorStep.NAME,
             "this_id",
@@ -537,6 +548,124 @@ public class FlowFrameworkIndicesHandlerTests extends OpenSearchTestCase {
 
         ArgumentCaptor<Exception> exceptionCaptor = ArgumentCaptor.forClass(Exception.class);
         verify(listener, times(1)).onFailure(exceptionCaptor.capture());
-        assertEquals("Failed to update new created node_id resource create_connector id this_id", exceptionCaptor.getValue().getMessage());
+        assertEquals(
+            "Failed to update workflow state for this_id on step node_id with connector_id this_id",
+            exceptionCaptor.getValue().getMessage()
+        );
+        
+        // test index not found
+        @SuppressWarnings("unchecked")
+        ActionListener<WorkflowData> notFoundListener = mock(ActionListener.class);
+        doAnswer(invocation -> {
+            ActionListener<GetResponse> responseListener = invocation.getArgument(1);
+            GetResult getResult = new GetResult(WORKFLOW_STATE_INDEX, "this_id", -2, 0, 1, false, null, null, null);
+            responseListener.onResponse(new GetResponse(getResult));
+            return null;
+        }).when(client).get(any(GetRequest.class), any());
+        flowFrameworkIndicesHandler.addResourceToStateIndex(
+            new WorkflowData(Collections.emptyMap(), "this_id", null),
+            "node_id",
+            CreateConnectorStep.NAME,
+            "this_id",
+            notFoundListener
+        );
+
+        exceptionCaptor = ArgumentCaptor.forClass(Exception.class);
+        verify(notFoundListener, times(1)).onFailure(exceptionCaptor.capture());
+        assertEquals(
+            "Workflow state not found for this_id",
+            exceptionCaptor.getValue().getMessage()
+        );
+
+    }
+
+    public void testAddResourceToStateIndexWithRetries() throws IOException {
+        ClusterState mockClusterState = mock(ClusterState.class);
+        Metadata mockMetaData = mock(Metadata.class);
+        when(clusterService.state()).thenReturn(mockClusterState);
+        when(mockClusterState.metadata()).thenReturn(mockMetaData);
+        when(mockMetaData.hasIndex(WORKFLOW_STATE_INDEX)).thenReturn(true);
+        VersionConflictEngineException conflictException = new VersionConflictEngineException(
+            new ShardId(WORKFLOW_STATE_INDEX, "", 1),
+            "this_id",
+            null
+        );
+        UpdateResponse updateResponse = new UpdateResponse(new ShardId(WORKFLOW_STATE_INDEX, "", 1), "this_id", -2, 0, 0, Result.UPDATED);
+        doAnswer(invocation -> {
+            ActionListener<GetResponse> responseListener = invocation.getArgument(1);
+            XContentBuilder builder = XContentFactory.jsonBuilder();
+            WorkflowState state = WorkflowState.builder().build();
+            state.toXContent(builder, null);
+            BytesReference workflowBytesRef = BytesReference.bytes(builder);
+            GetResult getResult = new GetResult(WORKFLOW_STATE_INDEX, "this_id", 1, 1, 1, true, workflowBytesRef, null, null);
+            responseListener.onResponse(new GetResponse(getResult));
+            return null;
+        }).when(client).get(any(GetRequest.class), any());
+
+        // test success on retry
+        @SuppressWarnings("unchecked")
+        ActionListener<WorkflowData> retryListener = mock(ActionListener.class);
+        doAnswer(invocation -> {
+            ActionListener<UpdateResponse> responseListener = invocation.getArgument(1);
+            responseListener.onFailure(conflictException);
+            return null;
+        }).doAnswer(invocation -> {
+            ActionListener<UpdateResponse> responseListener = invocation.getArgument(1);
+            responseListener.onResponse(updateResponse);
+            return null;
+        }).when(client).update(any(UpdateRequest.class), any());
+
+        flowFrameworkIndicesHandler.addResourceToStateIndex(
+            new WorkflowData(Collections.emptyMap(), "this_id", null),
+            "node_id",
+            CreateConnectorStep.NAME,
+            "this_id",
+            retryListener
+        );
+
+        ArgumentCaptor<WorkflowData> responseCaptor = ArgumentCaptor.forClass(WorkflowData.class);
+        verify(retryListener, times(1)).onResponse(responseCaptor.capture());
+        assertEquals("this_id", responseCaptor.getValue().getContent().get(WorkflowResources.CONNECTOR_ID));
+
+        // test failure on 4th after 3 retries even if 5th would have been success
+        @SuppressWarnings("unchecked")
+        ActionListener<WorkflowData> threeRetryListener = mock(ActionListener.class);
+        doAnswer(invocation -> {
+            ActionListener<UpdateResponse> responseListener = invocation.getArgument(1);
+            responseListener.onFailure(conflictException);
+            return null;
+        }).doAnswer(invocation -> {
+            ActionListener<UpdateResponse> responseListener = invocation.getArgument(1);
+            responseListener.onFailure(conflictException);
+            return null;
+        }).doAnswer(invocation -> {
+            ActionListener<UpdateResponse> responseListener = invocation.getArgument(1);
+            responseListener.onFailure(conflictException);
+            return null;
+        }).doAnswer(invocation -> {
+            ActionListener<UpdateResponse> responseListener = invocation.getArgument(1);
+            responseListener.onFailure(conflictException);
+            return null;
+        }).doAnswer(invocation -> {
+            // we'll never get here
+            ActionListener<UpdateResponse> responseListener = invocation.getArgument(1);
+            responseListener.onResponse(updateResponse);
+            return null;
+        }).when(client).update(any(UpdateRequest.class), any());
+
+        flowFrameworkIndicesHandler.addResourceToStateIndex(
+            new WorkflowData(Collections.emptyMap(), "this_id", null),
+            "node_id",
+            CreateConnectorStep.NAME,
+            "this_id",
+            threeRetryListener
+        );
+
+        ArgumentCaptor<Exception> exceptionCaptor = ArgumentCaptor.forClass(Exception.class);
+        verify(threeRetryListener, times(1)).onFailure(exceptionCaptor.capture());
+        assertEquals(
+            "Failed to update workflow state for this_id on step node_id with connector_id this_id",
+            exceptionCaptor.getValue().getMessage()
+        );
     }
 }
