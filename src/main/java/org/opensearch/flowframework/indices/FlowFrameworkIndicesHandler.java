@@ -34,6 +34,7 @@ import org.opensearch.core.action.ActionListener;
 import org.opensearch.core.rest.RestStatus;
 import org.opensearch.core.xcontent.NamedXContentRegistry;
 import org.opensearch.core.xcontent.ToXContent;
+import org.opensearch.core.xcontent.ToXContentObject;
 import org.opensearch.core.xcontent.XContentBuilder;
 import org.opensearch.core.xcontent.XContentParser;
 import org.opensearch.flowframework.exception.FlowFrameworkException;
@@ -578,7 +579,39 @@ public class FlowFrameworkIndicesHandler {
     }
 
     /**
-     * Updates a document in the workflow state index
+     * Updates a complete document in the workflow state index
+     * @param documentId the document ID
+     * @param updatedDocument a complete document to update the global state index with
+     * @param listener action listener
+     */
+    public void updateFlowFrameworkSystemIndexDoc(
+        String documentId,
+        ToXContentObject updatedDocument,
+        ActionListener<UpdateResponse> listener
+    ) {
+        if (!doesIndexExist(WORKFLOW_STATE_INDEX)) {
+            String errorMessage = "Failed to update document " + documentId + " due to missing " + WORKFLOW_STATE_INDEX + " index";
+            logger.error(errorMessage);
+            listener.onFailure(new FlowFrameworkException(errorMessage, RestStatus.BAD_REQUEST));
+        } else {
+            try (ThreadContext.StoredContext context = client.threadPool().getThreadContext().stashContext()) {
+                UpdateRequest updateRequest = new UpdateRequest(WORKFLOW_STATE_INDEX, documentId);
+                XContentBuilder builder = XContentFactory.jsonBuilder();
+                updatedDocument.toXContent(builder, null);
+                updateRequest.doc(builder);
+                updateRequest.setRefreshPolicy(WriteRequest.RefreshPolicy.IMMEDIATE);
+                updateRequest.retryOnConflict(5);
+                client.update(updateRequest, ActionListener.runBefore(listener, context::restore));
+            } catch (Exception e) {
+                String errorMessage = "Failed to update " + WORKFLOW_STATE_INDEX + " entry : " + documentId;
+                logger.error(errorMessage, e);
+                listener.onFailure(new FlowFrameworkException(errorMessage, ExceptionsHelper.status(e)));
+            }
+        }
+    }
+
+    /**
+     * Updates a partial document in the workflow state index
      * @param documentId the document ID
      * @param updatedFields the fields to update the global state index with
      * @param listener action listener

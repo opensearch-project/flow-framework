@@ -35,6 +35,7 @@ import org.opensearch.common.xcontent.XContentFactory;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.core.common.bytes.BytesReference;
 import org.opensearch.core.index.shard.ShardId;
+import org.opensearch.core.xcontent.ToXContentObject;
 import org.opensearch.core.xcontent.XContentBuilder;
 import org.opensearch.flowframework.TestHelpers;
 import org.opensearch.flowframework.common.WorkflowResources;
@@ -446,6 +447,63 @@ public class FlowFrameworkIndicesHandlerTests extends OpenSearchTestCase {
         );
     }
 
+    public void testUpdateFlowFrameworkSystemIndexFullDoc() throws IOException {
+        ClusterState mockClusterState = mock(ClusterState.class);
+        Metadata mockMetaData = mock(Metadata.class);
+        when(clusterService.state()).thenReturn(mockClusterState);
+        when(mockClusterState.metadata()).thenReturn(mockMetaData);
+        when(mockMetaData.hasIndex(WORKFLOW_STATE_INDEX)).thenReturn(true);
+
+        @SuppressWarnings("unchecked")
+        ActionListener<UpdateResponse> listener = mock(ActionListener.class);
+
+        // test success
+        doAnswer(invocation -> {
+            ActionListener<UpdateResponse> responseListener = invocation.getArgument(1);
+            responseListener.onResponse(new UpdateResponse(new ShardId(WORKFLOW_STATE_INDEX, "", 1), "id", -2, 0, 0, Result.UPDATED));
+            return null;
+        }).when(client).update(any(UpdateRequest.class), any());
+
+        ToXContentObject fooBar = new ToXContentObject() {
+            @Override
+            public XContentBuilder toXContent(XContentBuilder builder, Params params) throws IOException {
+                XContentBuilder xContentBuilder = builder.startObject();
+                xContentBuilder.field("foo", "bar");
+                xContentBuilder.endObject();
+                return builder;
+            }
+        };
+
+        flowFrameworkIndicesHandler.updateFlowFrameworkSystemIndexDoc("1", fooBar, listener);
+
+        ArgumentCaptor<UpdateResponse> responseCaptor = ArgumentCaptor.forClass(UpdateResponse.class);
+        verify(listener, times(1)).onResponse(responseCaptor.capture());
+        assertEquals(Result.UPDATED, responseCaptor.getValue().getResult());
+
+        // test failure
+        doAnswer(invocation -> {
+            ActionListener<UpdateResponse> responseListener = invocation.getArgument(1);
+            responseListener.onFailure(new Exception("Failed to update state"));
+            return null;
+        }).when(client).update(any(UpdateRequest.class), any());
+
+        flowFrameworkIndicesHandler.updateFlowFrameworkSystemIndexDoc("1", fooBar, listener);
+
+        ArgumentCaptor<Exception> exceptionCaptor = ArgumentCaptor.forClass(Exception.class);
+        verify(listener, times(1)).onFailure(exceptionCaptor.capture());
+        assertEquals("Failed to update state", exceptionCaptor.getValue().getMessage());
+
+        // test no index
+        when(mockMetaData.hasIndex(WORKFLOW_STATE_INDEX)).thenReturn(false);
+        flowFrameworkIndicesHandler.updateFlowFrameworkSystemIndexDoc("1", fooBar, listener);
+
+        verify(listener, times(2)).onFailure(exceptionCaptor.capture());
+        assertEquals(
+            "Failed to update document 1 due to missing .plugins-flow-framework-state index",
+            exceptionCaptor.getValue().getMessage()
+        );
+    }
+
     public void testDeleteFlowFrameworkSystemIndexDoc() throws IOException {
         ClusterState mockClusterState = mock(ClusterState.class);
         Metadata mockMetaData = mock(Metadata.class);
@@ -552,7 +610,7 @@ public class FlowFrameworkIndicesHandlerTests extends OpenSearchTestCase {
             "Failed to update workflow state for this_id on step node_id with connector_id this_id",
             exceptionCaptor.getValue().getMessage()
         );
-        
+
         // test index not found
         @SuppressWarnings("unchecked")
         ActionListener<WorkflowData> notFoundListener = mock(ActionListener.class);
@@ -572,10 +630,7 @@ public class FlowFrameworkIndicesHandlerTests extends OpenSearchTestCase {
 
         exceptionCaptor = ArgumentCaptor.forClass(Exception.class);
         verify(notFoundListener, times(1)).onFailure(exceptionCaptor.capture());
-        assertEquals(
-            "Workflow state not found for this_id",
-            exceptionCaptor.getValue().getMessage()
-        );
+        assertEquals("Workflow state not found for this_id", exceptionCaptor.getValue().getMessage());
 
     }
 
