@@ -727,31 +727,14 @@ public class FlowFrameworkIndicesHandler {
                 .setRefreshPolicy(WriteRequest.RefreshPolicy.IMMEDIATE)
                 .setIfSeqNo(getResponse.getSeqNo())
                 .setIfPrimaryTerm(getResponse.getPrimaryTerm());
-            updateResourceInStateDocumentWithRetries(updateRequest, newResource, retries, listener);
-        }, e -> handleStateUpdateException(workflowId, newResource, 0, listener, e)));
-    }
-
-    /**
-     * Performs an update of a State Index document with strong consistency and retries
-     * @param updateRequest An update request ensuring the document being updated is the one just fetched
-     * @param newResource The resource to add to the resources created list
-     * @param retries The number of retries on update version conflicts
-     * @param listener The listener to complete on success or failure
-     */
-    private void updateResourceInStateDocumentWithRetries(
-        UpdateRequest updateRequest,
-        ResourceCreated newResource,
-        int retries,
-        ActionListener<WorkflowData> listener
-    ) {
-        String workflowId = updateRequest.id();
-        client.update(
-            updateRequest,
-            ActionListener.wrap(
-                r -> handleStateUpdateSuccess(workflowId, newResource, listener),
-                e -> handleStateUpdateException(workflowId, newResource, retries, listener, e)
-            )
-        );
+            client.update(
+                updateRequest,
+                ActionListener.wrap(
+                    r -> handleStateUpdateSuccess(workflowId, newResource, listener),
+                    e -> handleStateUpdateException(workflowId, newResource, retries, listener, e)
+                )
+            );
+        }, ex -> handleStateUpdateException(workflowId, newResource, 0, listener, ex)));
     }
 
     private void handleStateUpdateSuccess(String workflowId, ResourceCreated newResource, ActionListener<WorkflowData> listener) {
