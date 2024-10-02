@@ -47,7 +47,6 @@ import org.opensearch.flowframework.util.EncryptorUtils;
 import org.opensearch.flowframework.util.ParseUtils;
 import org.opensearch.flowframework.workflow.WorkflowData;
 import org.opensearch.index.engine.VersionConflictEngineException;
-import org.opensearch.script.Script;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -659,40 +658,6 @@ public class FlowFrameworkIndicesHandler {
                 client.delete(deleteRequest, ActionListener.runBefore(listener, context::restore));
             } catch (Exception e) {
                 String errorMessage = "Failed to delete " + WORKFLOW_STATE_INDEX + " entry : " + documentId;
-                logger.error(errorMessage, e);
-                listener.onFailure(new FlowFrameworkException(errorMessage, ExceptionsHelper.status(e)));
-            }
-        }
-    }
-
-    /**
-     * Updates a document in the workflow state index
-     * @param indexName the index that we will be updating a document of.
-     * @param documentId the document ID
-     * @param script the given script to update doc
-     * @param listener action listener
-     */
-    public void updateFlowFrameworkSystemIndexDocWithScript(
-        String indexName,
-        String documentId,
-        Script script,
-        ActionListener<UpdateResponse> listener
-    ) {
-        if (!doesIndexExist(indexName)) {
-            String errorMessage = "Failed to update document for given workflow due to missing " + indexName + " index";
-            logger.error(errorMessage);
-            listener.onFailure(new Exception(errorMessage));
-        } else {
-            try (ThreadContext.StoredContext context = client.threadPool().getThreadContext().stashContext()) {
-                UpdateRequest updateRequest = new UpdateRequest(indexName, documentId);
-                // TODO: Also add ability to change other fields at the same time when adding detailed provision progress
-                updateRequest.script(script);
-                updateRequest.setRefreshPolicy(WriteRequest.RefreshPolicy.IMMEDIATE);
-                updateRequest.retryOnConflict(3);
-                // TODO: Implement our own concurrency control to improve on retry mechanism
-                client.update(updateRequest, ActionListener.runBefore(listener, context::restore));
-            } catch (Exception e) {
-                String errorMessage = "Failed to update " + indexName + " entry : " + documentId;
                 logger.error(errorMessage, e);
                 listener.onFailure(new FlowFrameworkException(errorMessage, ExceptionsHelper.status(e)));
             }
