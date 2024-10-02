@@ -691,7 +691,7 @@ public class FlowFrameworkIndicesHandler {
                 getAndUpdateResourceInStateDocumentWithRetries(
                     workflowId,
                     newResource,
-                    3,
+                    5,
                     ActionListener.runBefore(listener, context::restore)
                 );
             }

@@ -700,10 +700,18 @@ public class FlowFrameworkIndicesHandlerTests extends OpenSearchTestCase {
         verify(retryListener, times(1)).onResponse(responseCaptor.capture());
         assertEquals("this_id", responseCaptor.getValue().getContent().get(WorkflowResources.CONNECTOR_ID));
 
-        // test failure on 4th after 3 retries even if 5th would have been success
+        // test failure on 6th after 5 retries even if 7th would have been success
         @SuppressWarnings("unchecked")
         ActionListener<WorkflowData> threeRetryListener = mock(ActionListener.class);
         doAnswer(invocation -> {
+            ActionListener<UpdateResponse> responseListener = invocation.getArgument(1);
+            responseListener.onFailure(conflictException);
+            return null;
+        }).doAnswer(invocation -> {
+            ActionListener<UpdateResponse> responseListener = invocation.getArgument(1);
+            responseListener.onFailure(conflictException);
+            return null;
+        }).doAnswer(invocation -> {
             ActionListener<UpdateResponse> responseListener = invocation.getArgument(1);
             responseListener.onFailure(conflictException);
             return null;
