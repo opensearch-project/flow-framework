@@ -611,7 +611,7 @@ public class FlowFrameworkIndicesHandlerTests extends OpenSearchTestCase {
             exceptionCaptor.getValue().getMessage()
         );
 
-        // test index not found
+        // test document not found
         @SuppressWarnings("unchecked")
         ActionListener<WorkflowData> notFoundListener = mock(ActionListener.class);
         doAnswer(invocation -> {
@@ -632,6 +632,24 @@ public class FlowFrameworkIndicesHandlerTests extends OpenSearchTestCase {
         verify(notFoundListener, times(1)).onFailure(exceptionCaptor.capture());
         assertEquals("Workflow state not found for this_id", exceptionCaptor.getValue().getMessage());
 
+        // test index not found
+        when(mockMetaData.hasIndex(WORKFLOW_STATE_INDEX)).thenReturn(false);
+        @SuppressWarnings("unchecked")
+        ActionListener<WorkflowData> indexNotFoundListener = mock(ActionListener.class);
+        flowFrameworkIndicesHandler.addResourceToStateIndex(
+            new WorkflowData(Collections.emptyMap(), "this_id", null),
+            "node_id",
+            CreateConnectorStep.NAME,
+            "this_id",
+            indexNotFoundListener
+        );
+
+        exceptionCaptor = ArgumentCaptor.forClass(Exception.class);
+        verify(indexNotFoundListener, times(1)).onFailure(exceptionCaptor.capture());
+        assertEquals(
+            "Failed to update state for this_id due to missing .plugins-flow-framework-state index",
+            exceptionCaptor.getValue().getMessage()
+        );
     }
 
     public void testAddResourceToStateIndexWithRetries() throws IOException {

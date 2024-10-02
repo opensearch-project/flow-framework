@@ -26,3 +26,4 @@ Inspired from [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 - Add query assist data summary agent into sample templates ([#875](https://github.com/opensearch-project/flow-framework/pull/875))
 ### Maintenance
 ### Refactoring
+- Update workflow state without using painless script ([#894](https://github.com/opensearch-project/flow-framework/pull/894))
