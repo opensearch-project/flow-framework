@@ -44,6 +44,7 @@ import org.mockito.ArgumentCaptor;
 
 import static org.opensearch.flowframework.common.CommonValue.PROVISION_WORKFLOW;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.mock;
@@ -147,7 +148,7 @@ public class ReprovisionWorkflowTransportActionTests extends OpenSearchTestCase 
             ActionListener<UpdateResponse> actionListener = invocation.getArgument(2);
             actionListener.onResponse(mock(UpdateResponse.class));
             return null;
-        }).when(flowFrameworkIndicesHandler).updateFlowFrameworkSystemIndexDoc(any(), any(), any());
+        }).when(flowFrameworkIndicesHandler).updateFlowFrameworkSystemIndexDoc(any(), anyMap(), any());
 
         @SuppressWarnings("unchecked")
         ActionListener<WorkflowResponse> listener = mock(ActionListener.class);
@@ -275,7 +276,7 @@ public class ReprovisionWorkflowTransportActionTests extends OpenSearchTestCase 
             ActionListener<UpdateResponse> actionListener = invocation.getArgument(2);
             actionListener.onFailure(new Exception("failed"));
             return null;
-        }).when(flowFrameworkIndicesHandler).updateFlowFrameworkSystemIndexDoc(any(), any(), any());
+        }).when(flowFrameworkIndicesHandler).updateFlowFrameworkSystemIndexDoc(any(), anyMap(), any());
 
         @SuppressWarnings("unchecked")
         ActionListener<WorkflowResponse> listener = mock(ActionListener.class);

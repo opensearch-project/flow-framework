@@ -31,13 +31,12 @@ import org.opensearch.flowframework.model.ResourceCreated;
 import org.opensearch.flowframework.model.State;
 import org.opensearch.flowframework.model.Template;
 import org.opensearch.flowframework.model.Workflow;
+import org.opensearch.flowframework.model.WorkflowState;
 import org.opensearch.flowframework.util.EncryptorUtils;
 import org.opensearch.flowframework.workflow.ProcessNode;
 import org.opensearch.flowframework.workflow.WorkflowProcessSorter;
 import org.opensearch.flowframework.workflow.WorkflowStepFactory;
 import org.opensearch.plugins.PluginsService;
-import org.opensearch.script.Script;
-import org.opensearch.script.ScriptType;
 import org.opensearch.tasks.Task;
 import org.opensearch.threadpool.ThreadPool;
 import org.opensearch.transport.TransportService;
@@ -58,7 +57,6 @@ import static org.opensearch.flowframework.common.CommonValue.PROVISION_WORKFLOW
 import static org.opensearch.flowframework.common.CommonValue.PROVISION_WORKFLOW_THREAD_POOL;
 import static org.opensearch.flowframework.common.CommonValue.RESOURCES_CREATED_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.STATE_FIELD;
-import static org.opensearch.flowframework.common.CommonValue.WORKFLOW_STATE_INDEX;
 import static org.opensearch.flowframework.common.FlowFrameworkSettings.FILTER_BY_BACKEND_ROLES;
 import static org.opensearch.flowframework.util.ParseUtils.getUserContext;
 import static org.opensearch.flowframework.util.ParseUtils.resolveUserAndExecute;
@@ -210,24 +208,14 @@ public class ReprovisionWorkflowTransportAction extends HandledTransportAction<R
 
             // Remove error field if any prior to subsequent execution
             if (response.getWorkflowState().getError() != null) {
-                Script script = new Script(
-                    ScriptType.INLINE,
-                    "painless",
-                    "if(ctx._source.containsKey('error')){ctx._source.remove('error')}",
-                    Collections.emptyMap()
-                );
-                flowFrameworkIndicesHandler.updateFlowFrameworkSystemIndexDocWithScript(
-                    WORKFLOW_STATE_INDEX,
-                    workflowId,
-                    script,
-                    ActionListener.wrap(updateResponse -> {
+                WorkflowState newState = WorkflowState.builder(response.getWorkflowState()).error(null).build();
+                flowFrameworkIndicesHandler.updateFlowFrameworkSystemIndexDoc(workflowId, newState, ActionListener.wrap(updateResponse -> {
 
-                    }, exception -> {
-                        String errorMessage = "Failed to update workflow state: " + workflowId;
-                        logger.error(errorMessage, exception);
-                        listener.onFailure(new FlowFrameworkException(errorMessage, ExceptionsHelper.status(exception)));
-                    })
-                );
+                }, exception -> {
+                    String errorMessage = "Failed to update workflow state: " + workflowId;
+                    logger.error(errorMessage, exception);
+                    listener.onFailure(new FlowFrameworkException(errorMessage, ExceptionsHelper.status(exception)));
+                }));
             }
 
             // Update State Index, maintain resources created for subsequent execution
