@@ -82,6 +82,8 @@ public class FlowFrameworkIndicesHandler {
     private static final Map<String, AtomicBoolean> indexMappingUpdated = new HashMap<>();
     private static final Map<String, Object> indexSettings = Map.of("index.auto_expand_replicas", "0-1");
     private final NamedXContentRegistry xContentRegistry;
+    // Retries in case of simultaneous updates
+    private static final int RETRIES = 5;
 
     /**
      * constructor
@@ -599,7 +601,7 @@ public class FlowFrameworkIndicesHandler {
                 updatedDocument.toXContent(builder, null);
                 updateRequest.doc(builder);
                 updateRequest.setRefreshPolicy(WriteRequest.RefreshPolicy.IMMEDIATE);
-                updateRequest.retryOnConflict(5);
+                updateRequest.retryOnConflict(RETRIES);
                 client.update(updateRequest, ActionListener.runBefore(listener, context::restore));
             } catch (Exception e) {
                 String errorMessage = "Failed to update " + WORKFLOW_STATE_INDEX + " entry : " + documentId;
@@ -630,7 +632,7 @@ public class FlowFrameworkIndicesHandler {
                 Map<String, Object> updatedContent = new HashMap<>(updatedFields);
                 updateRequest.doc(updatedContent);
                 updateRequest.setRefreshPolicy(WriteRequest.RefreshPolicy.IMMEDIATE);
-                updateRequest.retryOnConflict(5);
+                updateRequest.retryOnConflict(RETRIES);
                 // TODO: decide what condition can be considered as an update conflict and add retry strategy
                 client.update(updateRequest, ActionListener.runBefore(listener, context::restore));
             } catch (Exception e) {
@@ -691,7 +693,7 @@ public class FlowFrameworkIndicesHandler {
                 getAndUpdateResourceInStateDocumentWithRetries(
                     workflowId,
                     newResource,
-                    5,
+                    RETRIES,
                     ActionListener.runBefore(listener, context::restore)
                 );
             }
