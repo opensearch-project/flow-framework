@@ -164,6 +164,8 @@ public class CommonValue {
     public static final String TOOLS_FIELD = "tools";
     /** The tools order field for an agent */
     public static final String TOOLS_ORDER_FIELD = "tools_order";
+    /** The tools config field */
+    public static final String CONFIG_FIELD = "config";
     /** The memory field for an agent */
     public static final String MEMORY_FIELD = "memory";
     /** The app type field for an agent */

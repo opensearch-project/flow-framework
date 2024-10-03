@@ -17,10 +17,13 @@ import org.opensearch.flowframework.exception.WorkflowStepException;
 import org.opensearch.flowframework.util.ParseUtils;
 import org.opensearch.ml.common.agent.MLToolSpec;
 
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 
+import static org.opensearch.flowframework.common.CommonValue.CONFIG_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.DESCRIPTION_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.INCLUDE_OUTPUT_IN_AGENT_RESPONSE;
 import static org.opensearch.flowframework.common.CommonValue.NAME_FIELD;
@@ -38,7 +41,21 @@ public class ToolStep implements WorkflowStep {
 
     private static final Logger logger = LogManager.getLogger(ToolStep.class);
     PlainActionFuture<WorkflowData> toolFuture = PlainActionFuture.newFuture();
-    static final String NAME = "create_tool";
+
+    /** The name of this step, used as a key in the template and the {@link WorkflowStepFactory} */
+    public static final String NAME = "create_tool";
+    /** Required input keys */
+    public static final Set<String> REQUIRED_INPUTS = Set.of(TYPE);
+    /** Optional input keys */
+    public static final Set<String> OPTIONAL_INPUTS = Set.of(
+        NAME_FIELD,
+        DESCRIPTION_FIELD,
+        PARAMETERS_FIELD,
+        CONFIG_FIELD,
+        INCLUDE_OUTPUT_IN_AGENT_RESPONSE
+    );
+    /** Provided output keys */
+    public static final Set<String> PROVIDED_OUTPUTS = Set.of(TOOLS_FIELD);
 
     @Override
     public PlainActionFuture<WorkflowData> execute(
@@ -48,13 +65,10 @@ public class ToolStep implements WorkflowStep {
         Map<String, String> previousNodeInputs,
         Map<String, String> params
     ) {
-        Set<String> requiredKeys = Set.of(TYPE);
-        Set<String> optionalKeys = Set.of(NAME_FIELD, DESCRIPTION_FIELD, PARAMETERS_FIELD, INCLUDE_OUTPUT_IN_AGENT_RESPONSE);
-
         try {
             Map<String, Object> inputs = ParseUtils.getInputsFromPreviousSteps(
-                requiredKeys,
-                optionalKeys,
+                REQUIRED_INPUTS,
+                OPTIONAL_INPUTS,
                 currentNodeInputs,
                 outputs,
                 previousNodeInputs,
@@ -69,11 +83,12 @@ public class ToolStep implements WorkflowStep {
             // parse connector_id, model_id and agent_id from previous node inputs
             Set<String> toolParameterKeys = Set.of(CONNECTOR_ID, MODEL_ID, AGENT_ID);
             Map<String, String> parameters = getToolsParametersMap(
-                inputs.get(PARAMETERS_FIELD),
+                inputs.getOrDefault(PARAMETERS_FIELD, new HashMap<>()),
                 previousNodeInputs,
                 outputs,
                 toolParameterKeys
             );
+            Map<String, String> config = (Map<String, String>) inputs.getOrDefault(CONFIG_FIELD, Collections.emptyMap());
 
             MLToolSpec.MLToolSpecBuilder builder = MLToolSpec.builder();
 
@@ -90,6 +105,8 @@ public class ToolStep implements WorkflowStep {
             if (includeOutputInAgentResponse != null) {
                 builder.includeOutputInAgentResponse(includeOutputInAgentResponse);
             }
+            // TODO https://github.com/opensearch-project/ml-commons/pull/2977/files must be merged for this to compile
+            // builder.configMap(config);
 
             MLToolSpec mlToolSpec = builder.build();
 
