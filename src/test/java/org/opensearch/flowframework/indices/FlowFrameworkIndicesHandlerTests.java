@@ -651,7 +651,7 @@ public class FlowFrameworkIndicesHandlerTests extends OpenSearchTestCase {
             exceptionCaptor.getValue().getMessage()
         );
     }
-    
+
     public void testDeleteResourceFromStateIndex() {
         ClusterState mockClusterState = mock(ClusterState.class);
         Metadata mockMetaData = mock(Metadata.class);
@@ -679,11 +679,7 @@ public class FlowFrameworkIndicesHandlerTests extends OpenSearchTestCase {
             return null;
         }).when(client).update(any(UpdateRequest.class), any());
 
-        flowFrameworkIndicesHandler.deleteResourceFromStateIndex(
-            "this_id",
-            resourceToDelete,
-            listener
-        );
+        flowFrameworkIndicesHandler.deleteResourceFromStateIndex("this_id", resourceToDelete, listener);
 
         ArgumentCaptor<WorkflowData> responseCaptor = ArgumentCaptor.forClass(WorkflowData.class);
         verify(listener, times(1)).onResponse(responseCaptor.capture());
@@ -696,11 +692,7 @@ public class FlowFrameworkIndicesHandlerTests extends OpenSearchTestCase {
             return null;
         }).when(client).update(any(UpdateRequest.class), any());
 
-        flowFrameworkIndicesHandler.deleteResourceFromStateIndex(
-            "this_id",
-            resourceToDelete,
-            listener
-        );
+        flowFrameworkIndicesHandler.deleteResourceFromStateIndex("this_id", resourceToDelete, listener);
 
         ArgumentCaptor<Exception> exceptionCaptor = ArgumentCaptor.forClass(Exception.class);
         verify(listener, times(1)).onFailure(exceptionCaptor.capture());
@@ -718,11 +710,7 @@ public class FlowFrameworkIndicesHandlerTests extends OpenSearchTestCase {
             responseListener.onResponse(new GetResponse(getResult));
             return null;
         }).when(client).get(any(GetRequest.class), any());
-        flowFrameworkIndicesHandler.deleteResourceFromStateIndex(
-            "this_id",
-            resourceToDelete,
-            notFoundListener
-        );
+        flowFrameworkIndicesHandler.deleteResourceFromStateIndex("this_id", resourceToDelete, notFoundListener);
 
         exceptionCaptor = ArgumentCaptor.forClass(Exception.class);
         verify(notFoundListener, times(1)).onFailure(exceptionCaptor.capture());
@@ -732,11 +720,7 @@ public class FlowFrameworkIndicesHandlerTests extends OpenSearchTestCase {
         when(mockMetaData.hasIndex(WORKFLOW_STATE_INDEX)).thenReturn(false);
         @SuppressWarnings("unchecked")
         ActionListener<WorkflowData> indexNotFoundListener = mock(ActionListener.class);
-        flowFrameworkIndicesHandler.deleteResourceFromStateIndex(
-            "this_id",
-            resourceToDelete,
-            indexNotFoundListener
-        );
+        flowFrameworkIndicesHandler.deleteResourceFromStateIndex("this_id", resourceToDelete, indexNotFoundListener);
 
         exceptionCaptor = ArgumentCaptor.forClass(Exception.class);
         verify(indexNotFoundListener, times(1)).onFailure(exceptionCaptor.capture());
@@ -843,7 +827,7 @@ public class FlowFrameworkIndicesHandlerTests extends OpenSearchTestCase {
             exceptionCaptor.getValue().getMessage()
         );
     }
-    
+
     public void testDeleteResourceFromStateIndexWithRetries() {
         ClusterState mockClusterState = mock(ClusterState.class);
         Metadata mockMetaData = mock(Metadata.class);
@@ -882,11 +866,7 @@ public class FlowFrameworkIndicesHandlerTests extends OpenSearchTestCase {
             return null;
         }).when(client).update(any(UpdateRequest.class), any());
 
-        flowFrameworkIndicesHandler.deleteResourceFromStateIndex(
-            "this_id",
-            resourceToDelete,
-            retryListener
-        );
+        flowFrameworkIndicesHandler.deleteResourceFromStateIndex("this_id", resourceToDelete, retryListener);
 
         ArgumentCaptor<WorkflowData> responseCaptor = ArgumentCaptor.forClass(WorkflowData.class);
         verify(retryListener, times(1)).onResponse(responseCaptor.capture());
@@ -926,11 +906,7 @@ public class FlowFrameworkIndicesHandlerTests extends OpenSearchTestCase {
             return null;
         }).when(client).update(any(UpdateRequest.class), any());
 
-        flowFrameworkIndicesHandler.deleteResourceFromStateIndex(
-            "this_id",
-            resourceToDelete,
-            threeRetryListener
-        );
+        flowFrameworkIndicesHandler.deleteResourceFromStateIndex("this_id", resourceToDelete, threeRetryListener);
 
         ArgumentCaptor<Exception> exceptionCaptor = ArgumentCaptor.forClass(Exception.class);
         verify(threeRetryListener, times(1)).onFailure(exceptionCaptor.capture());

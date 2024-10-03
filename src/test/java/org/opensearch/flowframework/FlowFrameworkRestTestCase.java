@@ -817,6 +817,17 @@ public abstract class FlowFrameworkRestTestCase extends OpenSearchRestTestCase {
             TimeUnit.SECONDS
         );
 
+        return getResourcesCreated(client, workflowId);
+    }
+
+    /**
+     * Helper method retrieve any resources created incrementally without waiting for completion
+     * @param client the rest client
+     * @param workflowId the workflow id to retrieve resources from
+     * @return a list of created resources
+     * @throws Exception if the request fails
+     */
+    protected List<ResourceCreated> getResourcesCreated(RestClient client, String workflowId) throws Exception {
         Response response = getWorkflowStatus(client, workflowId, true);
 
         // Parse workflow state from response and retrieve resources created
