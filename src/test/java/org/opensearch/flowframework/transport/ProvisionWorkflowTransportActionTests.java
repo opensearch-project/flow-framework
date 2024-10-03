@@ -54,6 +54,7 @@ import org.mockito.ArgumentCaptor;
 import static org.opensearch.flowframework.common.CommonValue.GLOBAL_CONTEXT_INDEX;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
+import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
@@ -164,7 +165,7 @@ public class ProvisionWorkflowTransportActionTests extends OpenSearchTestCase {
             ActionListener<UpdateResponse> actionListener = invocation.getArgument(2);
             actionListener.onResponse(mock(UpdateResponse.class));
             return null;
-        }).when(flowFrameworkIndicesHandler).updateFlowFrameworkSystemIndexDoc(any(), any(), any());
+        }).when(flowFrameworkIndicesHandler).updateFlowFrameworkSystemIndexDoc(any(), anyMap(), any());
 
         doAnswer(invocation -> {
             ActionListener<IndexResponse> responseListener = invocation.getArgument(2);
@@ -211,7 +212,7 @@ public class ProvisionWorkflowTransportActionTests extends OpenSearchTestCase {
             ActionListener<UpdateResponse> actionListener = invocation.getArgument(2);
             actionListener.onResponse(mock(UpdateResponse.class));
             return null;
-        }).when(flowFrameworkIndicesHandler).updateFlowFrameworkSystemIndexDoc(any(), any(), any());
+        }).when(flowFrameworkIndicesHandler).updateFlowFrameworkSystemIndexDoc(any(), anyMap(), any());
 
         provisionWorkflowTransportAction.doExecute(mock(Task.class), workflowRequest, listener);
         ArgumentCaptor<Exception> exceptionCaptor = ArgumentCaptor.forClass(Exception.class);
