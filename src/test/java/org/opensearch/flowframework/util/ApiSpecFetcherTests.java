@@ -22,16 +22,20 @@ import io.swagger.v3.oas.models.OpenAPI;
 public class ApiSpecFetcherTests extends OpenSearchTestCase {
 
     private ApiSpecFetcher apiSpecFetcher;
+    private URI apiSpecUri;
 
     @Before
     public void setUp() throws Exception {
         super.setUp();
         this.apiSpecFetcher = new ApiSpecFetcher(); // Initialize your fetcher
+        this.apiSpecUri = new URI(
+            "https://raw.githubusercontent.com/opensearch-project/opensearch-api-specification/refs/heads/main/spec/namespaces/ml.yaml"
+        );
     }
 
     public void testFetchApiSpecSuccess() throws Exception {
         URI validUri = new URI(
-            "https://raw.githubusercontent.com/junweid62/opensearch-api-specification/refs/heads/main/spec/namespaces/ml.yaml"
+            "https://raw.githubusercontent.com/opensearch-project/opensearch-api-specification/refs/heads/main/spec/namespaces/ml.yaml"
         );
 
         OpenAPI result = apiSpecFetcher.fetchApiSpec(validUri);
@@ -50,7 +54,7 @@ public class ApiSpecFetcherTests extends OpenSearchTestCase {
 
     public void testCompareRequiredFieldsSuccess() throws Exception {
         URI validUri = new URI(
-            "https://raw.githubusercontent.com/junweid62/opensearch-api-specification/refs/heads/main/spec/namespaces/ml.yaml"
+            "https://raw.githubusercontent.com/opensearch-project/opensearch-api-specification/refs/heads/main/spec/namespaces/ml.yaml"
         );
         String path = "/_plugins/_ml/agents/_register";
         RestRequest.Method method = RestRequest.Method.POST;
@@ -65,7 +69,7 @@ public class ApiSpecFetcherTests extends OpenSearchTestCase {
 
     public void testCompareRequiredFieldsFailure() throws Exception {
         URI validUri = new URI(
-            "https://raw.githubusercontent.com/junweid62/opensearch-api-specification/refs/heads/main/spec/namespaces/ml.yaml"
+            "https://raw.githubusercontent.com/opensearch-project/opensearch-api-specification/refs/heads/main/spec/namespaces/ml.yaml"
         );
         String path = "/_plugins/_ml/agents/_register";
         RestRequest.Method method = RestRequest.Method.POST;
@@ -89,6 +93,14 @@ public class ApiSpecFetcherTests extends OpenSearchTestCase {
 
         assertNotNull("An exception should be thrown for an invalid API spec URI", exception);
         assertTrue(exception.getMessage().contains("Unable to parse spec"));
+    }
+
+    public void testNoOperationFoundException() throws Exception {
+        Exception exception = expectThrows(Exception.class, () -> {
+            apiSpecFetcher.compareRequiredFields(List.of("name", "type"), apiSpecUri, "/invalid/path", RestRequest.Method.PATCH);
+        });
+
+        assertEquals("Unsupported HTTP method: PATCH", exception.getMessage());
     }
 
 }
