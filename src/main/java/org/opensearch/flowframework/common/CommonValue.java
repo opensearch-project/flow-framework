@@ -233,4 +233,12 @@ public class CommonValue {
     public static final String CREATE_INGEST_PIPELINE_MODEL_ID = "create_ingest_pipeline.model_id";
     /** The field name for reindex source index substitution */
     public static final String REINDEX_SOURCE_INDEX = "reindex.source_index";
+
+    /*
+     * Constants associated with API specification
+     */
+
+    public static final String ML_COMMONS_API_SPEC_YAML_URI =
+        "https://raw.githubusercontent.com/opensearch-project/opensearch-api-specification/refs/heads/main/spec/namespaces/ml.yaml";
+
 }

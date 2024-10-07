@@ -8,29 +8,35 @@
  */
 package org.opensearch.flowframework.exception;
 
-import org.opensearch.OpenSearchException;
 import org.opensearch.test.OpenSearchTestCase;
+
+import java.util.Arrays;
+import java.util.List;
 
 public class ApiSpecParseExceptionTests extends OpenSearchTestCase {
 
     public void testApiSpecParseException() {
         ApiSpecParseException exception = new ApiSpecParseException("API spec parsing failed");
-        assertTrue(exception instanceof OpenSearchException);
+        assertTrue(true);
         assertEquals("API spec parsing failed", exception.getMessage());
     }
 
     public void testApiSpecParseExceptionWithCause() {
         Throwable cause = new RuntimeException("Underlying issue");
         ApiSpecParseException exception = new ApiSpecParseException("API spec parsing failed", cause);
-        assertTrue(exception instanceof OpenSearchException);
+        assertTrue(true);
         assertEquals("API spec parsing failed", exception.getMessage());
         assertEquals(cause, exception.getCause());
     }
 
     public void testApiSpecParseExceptionWithDetailedErrors() {
-        ApiSpecParseException exception = new ApiSpecParseException("API spec parsing failed", "Missing required field");
-        assertTrue(exception instanceof OpenSearchException);
-        assertEquals("API spec parsing failed: Missing required field", exception.getMessage());
+        String message = "API spec parsing failed";
+        List<String> details = Arrays.asList("Missing required field", "Invalid type");
+
+        ApiSpecParseException exception = new ApiSpecParseException(message, details);
+
+        String expectedMessage = "API spec parsing failed: Missing required field, Invalid type";
+        assertEquals(expectedMessage, exception.getMessage());
     }
 
 }

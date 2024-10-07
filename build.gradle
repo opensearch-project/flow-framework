@@ -24,7 +24,7 @@ buildscript {
         opensearch_no_snapshot = opensearch_build.replace("-SNAPSHOT","")
         System.setProperty('tests.security.manager', 'false')
         common_utils_version = System.getProperty("common_utils.version", opensearch_build)
-
+        swaggerCoreVersion = "2.2.23"
         bwcVersionShort = "2.12.0"
         bwcVersion = bwcVersionShort + ".0"
         bwcOpenSearchFFDownload = 'https://ci.opensearch.org/ci/dbc/distribution-build-opensearch/' + bwcVersionShort + '/latest/linux/x64/tar/builds/' +
@@ -33,7 +33,11 @@ buildscript {
         bwcFilePath = "src/test/resources/org/opensearch/flowframework/bwc/"
         bwcFlowFrameworkPath = bwcFilePath + "flowframework/"
 
-        isSameMajorVersion = opensearch_version.split("\\.")[0] == bwcVersionShort.split("\\.")[0]
+        isSameMajorVersion = opensearch_version.split("\\.")[0] == bwcVersionShort.split("\\.")
+        swaggerVersion = "2.1.22"
+        jacksonVersion = "2.18.0"
+        swaggerCoreVersion = "2.2.23"
+
     }
 
     repositories {
@@ -180,14 +184,14 @@ dependencies {
     implementation "org.eclipse:yasson:3.0.4"
     implementation "com.google.code.gson:gson:2.11.0"
     // Swagger-Parser dependencies for API consistency tests
-    implementation 'io.swagger.core.v3:swagger-models:2.2.23'
-    implementation 'io.swagger.parser.v3:swagger-parser-core:2.1.22'
-    implementation 'io.swagger.parser.v3:swagger-parser:2.1.22'
-    implementation 'io.swagger.parser.v3:swagger-parser-v3:2.1.22'
-    implementation 'com.fasterxml.jackson.core:jackson-databind:2.17.0'
-    implementation 'com.fasterxml.jackson.datatype:jackson-datatype-jsr310:2.13.0'
-    implementation 'com.fasterxml.jackson.core:jackson-annotations:2.17.0'
-    implementation 'io.swagger.core.v3:swagger-core:2.2.21'
+    implementation "io.swagger.core.v3:swagger-models:${swaggerCoreVersion}"
+    implementation "io.swagger.core.v3:swagger-core:${swaggerCoreVersion}"
+    implementation "io.swagger.parser.v3:swagger-parser-core:${swaggerVersion}"
+    implementation "io.swagger.parser.v3:swagger-parser:${swaggerVersion}"
+    implementation "io.swagger.parser.v3:swagger-parser-v3:${swaggerVersion}"
+    implementation "com.fasterxml.jackson.core:jackson-databind:${jacksonVersion}"
+    implementation "com.fasterxml.jackson.datatype:jackson-datatype-jsr310:${jacksonVersion}"
+    implementation "com.fasterxml.jackson.core:jackson-annotations:${jacksonVersion}"
 
     // ZipArchive dependencies used for integration tests
     zipArchive group: 'org.opensearch.plugin', name:'opensearch-ml-plugin', version: "${opensearch_build}"

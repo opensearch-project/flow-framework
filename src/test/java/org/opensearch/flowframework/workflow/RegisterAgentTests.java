@@ -25,7 +25,6 @@ import org.opensearch.rest.RestRequest;
 import org.opensearch.test.OpenSearchTestCase;
 
 import java.io.IOException;
-import java.net.URI;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -35,6 +34,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
+import static org.opensearch.flowframework.common.CommonValue.ML_COMMONS_API_SPEC_YAML_URI;
 import static org.opensearch.flowframework.common.WorkflowResources.AGENT_ID;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -161,14 +161,12 @@ public class RegisterAgentTests extends OpenSearchTestCase {
         ApiSpecFetcher apiSpecFetcher = new ApiSpecFetcher();
         boolean isMatch = apiSpecFetcher.compareRequiredFields(
             requiredEnumParams,
-            new URI(
-                "https://raw.githubusercontent.com/opensearch-project/opensearch-api-specification/refs/heads/main/spec/namespaces/ml.yaml"
-            ),
+            ML_COMMONS_API_SPEC_YAML_URI,
             "/_plugins/_ml/agents/_register",
             RestRequest.Method.POST
         );
 
-        assertTrue("API spec input params do not match enum required params", isMatch);
+        assertTrue("API spec input params do match enum required params", isMatch);
     }
 
 }

@@ -10,10 +10,10 @@ package org.opensearch.flowframework.util;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.opensearch.common.xcontent.XContentType;
 import org.opensearch.flowframework.exception.ApiSpecParseException;
 import org.opensearch.rest.RestRequest;
 
-import java.net.URI;
 import java.util.HashSet;
 import java.util.List;
 
@@ -32,17 +32,13 @@ import io.swagger.v3.parser.core.models.SwaggerParseResult;
  * Utility class for fetching and parsing OpenAPI specifications.
  */
 public class ApiSpecFetcher {
-    private static final Logger LOGGER = LogManager.getLogger(ApiSpecFetcher.class);
-    private static final ParseOptions PARSE_OPTIONS = new ParseOptions();
+    private static final Logger logger = LogManager.getLogger(ApiSpecFetcher.class);
+    private static final ParseOptions OPENAPI_PARSER = new ParseOptions();
     private static final OpenAPIV3Parser PARSER = new OpenAPIV3Parser();
 
-    /**
-     * Default constructor for ApiSpecFetcher.
-     * It sets up default parse options for resolving references.
-     */
-    public ApiSpecFetcher() {
-        PARSE_OPTIONS.setResolve(true);
-        PARSE_OPTIONS.setResolveFully(true);
+    static {
+        OPENAPI_PARSER.setResolve(true);
+        OPENAPI_PARSER.setResolveFully(true);
     }
 
     /**
@@ -52,13 +48,13 @@ public class ApiSpecFetcher {
      * @return Parsed OpenAPI object.
      * @throws ApiSpecParseException If parsing fails.
      */
-    public OpenAPI fetchApiSpec(URI apiSpecUri) {
-        LOGGER.info("Parsing API spec from URI: {}", apiSpecUri);
-        SwaggerParseResult result = PARSER.readLocation(apiSpecUri.toString(), null, PARSE_OPTIONS);
+    public static OpenAPI fetchApiSpec(String apiSpecUri) {
+        logger.info("Parsing API spec from URI: {}", apiSpecUri);
+        SwaggerParseResult result = PARSER.readLocation(apiSpecUri, null, OPENAPI_PARSER);
         OpenAPI openApi = result.getOpenAPI();
 
         if (openApi == null) {
-            throw new ApiSpecParseException("Unable to parse spec from URI: " + apiSpecUri, String.join(", ", result.getMessages()));
+            throw new ApiSpecParseException("Unable to parse spec from URI: " + apiSpecUri, result.getMessages());
         }
 
         return openApi;
@@ -72,15 +68,14 @@ public class ApiSpecFetcher {
      * @param path The API path to check.
      * @param method The HTTP method (POST, GET, etc.).
      * @return boolean indicating if the required fields match.
-     * @throws Exception If fetching or parsing fails.
      */
-    public boolean compareRequiredFields(List<String> requiredEnumParams, URI apiSpecUri, String path, RestRequest.Method method)
-        throws Exception {
+    public static boolean compareRequiredFields(List<String> requiredEnumParams, String apiSpecUri, String path, RestRequest.Method method)
+        throws IllegalArgumentException, ApiSpecParseException {
         OpenAPI openAPI = fetchApiSpec(apiSpecUri);
 
         PathItem pathItem = openAPI.getPaths().get(path);
         Content content = getContent(method, pathItem);
-        MediaType mediaType = content.get("application/json");
+        MediaType mediaType = content.get(XContentType.JSON.mediaTypeWithoutParameters());
         if (mediaType != null) {
             Schema<?> schema = mediaType.getSchema();
 
@@ -92,22 +87,22 @@ public class ApiSpecFetcher {
         return false;
     }
 
-    private static Content getContent(RestRequest.Method method, PathItem pathItem) throws Exception {
+    private static Content getContent(RestRequest.Method method, PathItem pathItem) throws IllegalArgumentException, ApiSpecParseException {
         Operation operation = switch (method) {
             case RestRequest.Method.POST -> pathItem.getPost();
             case RestRequest.Method.GET -> pathItem.getGet();
             case RestRequest.Method.PUT -> pathItem.getPut();
             case RestRequest.Method.DELETE -> pathItem.getDelete();
-            default -> throw new Exception("Unsupported HTTP method: " + method);
+            default -> throw new IllegalArgumentException("Unsupported HTTP method: " + method);
         };
 
         if (operation == null) {
-            throw new Exception("No operation found for the specified method: " + method);
+            throw new IllegalArgumentException("No operation found for the specified method: " + method);
         }
 
         RequestBody requestBody = operation.getRequestBody();
         if (requestBody == null) {
-            throw new Exception("No requestBody defined for this operation.");
+            throw new ApiSpecParseException("No requestBody defined for this operation.");
         }
 
         return requestBody.getContent();

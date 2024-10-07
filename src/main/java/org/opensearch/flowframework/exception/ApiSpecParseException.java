@@ -10,6 +10,8 @@ package org.opensearch.flowframework.exception;
 
 import org.opensearch.OpenSearchException;
 
+import java.util.List;
+
 /**
  * Custom exception to be thrown when an error occurs during the parsing of an API specification.
  */
@@ -38,9 +40,9 @@ public class ApiSpecParseException extends OpenSearchException {
      * Constructor with message and list of detailed errors.
      *
      * @param message The detail message.
-     * @param detailedErrors The list of errors encountered during the parsing process.
+     * @param details The list of errors encountered during the parsing process.
      */
-    public ApiSpecParseException(String message, String detailedErrors) {
-        super(message + ": " + detailedErrors);
+    public ApiSpecParseException(String message, List<String> details) {
+        super(message + ": " + String.join(", ", details));
     }
 }
