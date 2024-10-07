@@ -10,6 +10,7 @@ package org.opensearch.flowframework.indices;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.apache.logging.log4j.message.ParameterizedMessageFactory;
 import org.opensearch.ExceptionsHelper;
 import org.opensearch.action.DocWriteRequest.OpType;
 import org.opensearch.action.admin.indices.create.CreateIndexRequest;
@@ -804,11 +805,14 @@ public class FlowFrameworkIndicesHandler {
             getAndUpdateResourceInStateDocumentWithRetries(workflowId, newResource, operation, retries - 1, listener);
             return;
         }
-        StringBuilder sb = new StringBuilder("Failed to update workflow state for ");
-        sb.append(workflowId).append(" on step ").append(newResource.workflowStepId());
-        sb.append(" to ").append(operation.equals(OpType.DELETE) ? "delete" : "add");
-        sb.append(" resource ").append(newResource.resourceType()).append(" ").append(newResource.resourceId());
-        String errorMessage = sb.toString();
+        String errorMessage = ParameterizedMessageFactory.INSTANCE.newMessage(
+            "Failed to update workflow state for {} on step {} to {} resource {} {}",
+            workflowId,
+            newResource.workflowStepId(),
+            operation.equals(OpType.DELETE) ? "delete" : "add",
+            newResource.resourceType(),
+            newResource.resourceId()
+        ).getFormattedMessage();
         logger.error(errorMessage, e);
         listener.onFailure(new FlowFrameworkException(errorMessage, ExceptionsHelper.status(e)));
     }
