@@ -84,17 +84,43 @@ public class ApiSpecFetcherTests extends OpenSearchTestCase {
         assertTrue(exception.getMessage().contains("Unable to parse spec"));
     }
 
-    public void testNoOperationFoundException() throws Exception {
+    public void testUnsupportedMethodException() throws IllegalArgumentException {
         Exception exception = expectThrows(Exception.class, () -> {
             ApiSpecFetcher.compareRequiredFields(
                 List.of("name", "type"),
                 ML_COMMONS_API_SPEC_YAML_URI,
-                "/invalid/path",
+                "/_plugins/_ml/agents/_register",
                 RestRequest.Method.PATCH
             );
         });
 
         assertEquals("Unsupported HTTP method: PATCH", exception.getMessage());
+    }
+
+    public void testNoOperationFoundException() throws Exception {
+        Exception exception = expectThrows(IllegalArgumentException.class, () -> {
+            ApiSpecFetcher.compareRequiredFields(
+                List.of("name", "type"),
+                ML_COMMONS_API_SPEC_YAML_URI,
+                "/_plugins/_ml/agents/_register",
+                RestRequest.Method.DELETE // PATCH should be unsupported
+            );
+        });
+
+        assertEquals("No operation found for the specified method: DELETE", exception.getMessage());
+    }
+
+    public void testNoRequestBodyDefinedException() throws ApiSpecParseException {
+        Exception exception = expectThrows(ApiSpecParseException.class, () -> {
+            ApiSpecFetcher.compareRequiredFields(
+                List.of("name", "type"),
+                ML_COMMONS_API_SPEC_YAML_URI,
+                "/_plugins/_ml/model_groups/{model_group_id}",
+                RestRequest.Method.GET
+            );
+        });
+
+        assertEquals("No requestBody defined for this operation.", exception.getMessage());
     }
 
 }

@@ -8,6 +8,7 @@
  */
 package org.opensearch.flowframework.exception;
 
+import org.opensearch.OpenSearchException;
 import org.opensearch.test.OpenSearchTestCase;
 
 import java.util.Arrays;
@@ -17,14 +18,14 @@ public class ApiSpecParseExceptionTests extends OpenSearchTestCase {
 
     public void testApiSpecParseException() {
         ApiSpecParseException exception = new ApiSpecParseException("API spec parsing failed");
-        assertTrue(true);
+        assertTrue(exception instanceof OpenSearchException);
         assertEquals("API spec parsing failed", exception.getMessage());
     }
 
     public void testApiSpecParseExceptionWithCause() {
         Throwable cause = new RuntimeException("Underlying issue");
         ApiSpecParseException exception = new ApiSpecParseException("API spec parsing failed", cause);
-        assertTrue(true);
+        assertTrue(exception instanceof OpenSearchException);
         assertEquals("API spec parsing failed", exception.getMessage());
         assertEquals(cause, exception.getCause());
     }
@@ -32,9 +33,8 @@ public class ApiSpecParseExceptionTests extends OpenSearchTestCase {
     public void testApiSpecParseExceptionWithDetailedErrors() {
         String message = "API spec parsing failed";
         List<String> details = Arrays.asList("Missing required field", "Invalid type");
-
         ApiSpecParseException exception = new ApiSpecParseException(message, details);
-
+        assertTrue(exception instanceof OpenSearchException);
         String expectedMessage = "API spec parsing failed: Missing required field, Invalid type";
         assertEquals(expectedMessage, exception.getMessage());
     }

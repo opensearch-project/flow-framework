@@ -88,13 +88,23 @@ public class ApiSpecFetcher {
     }
 
     private static Content getContent(RestRequest.Method method, PathItem pathItem) throws IllegalArgumentException, ApiSpecParseException {
-        Operation operation = switch (method) {
-            case RestRequest.Method.POST -> pathItem.getPost();
-            case RestRequest.Method.GET -> pathItem.getGet();
-            case RestRequest.Method.PUT -> pathItem.getPut();
-            case RestRequest.Method.DELETE -> pathItem.getDelete();
-            default -> throw new IllegalArgumentException("Unsupported HTTP method: " + method);
-        };
+        Operation operation;
+        switch (method) {
+            case POST:
+                operation = pathItem.getPost();
+                break;
+            case GET:
+                operation = pathItem.getGet();
+                break;
+            case PUT:
+                operation = pathItem.getPut();
+                break;
+            case DELETE:
+                operation = pathItem.getDelete();
+                break;
+            default:
+                throw new IllegalArgumentException("Unsupported HTTP method: " + method);
+        }
 
         if (operation == null) {
             throw new IllegalArgumentException("No operation found for the specified method: " + method);

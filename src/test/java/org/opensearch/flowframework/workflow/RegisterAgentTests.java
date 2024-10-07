@@ -158,15 +158,14 @@ public class RegisterAgentTests extends OpenSearchTestCase {
     public void testApiSpecRegisterAgentInputParamComparison() throws Exception {
         List<String> requiredEnumParams = WorkflowStepFactory.WorkflowSteps.REGISTER_AGENT.inputs();
 
-        ApiSpecFetcher apiSpecFetcher = new ApiSpecFetcher();
-        boolean isMatch = apiSpecFetcher.compareRequiredFields(
+        boolean isMatch = ApiSpecFetcher.compareRequiredFields(
             requiredEnumParams,
             ML_COMMONS_API_SPEC_YAML_URI,
             "/_plugins/_ml/agents/_register",
             RestRequest.Method.POST
         );
 
-        assertTrue("API spec input params do match enum required params", isMatch);
+        assertTrue(isMatch);
     }
 
 }

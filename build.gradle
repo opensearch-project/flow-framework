@@ -33,7 +33,7 @@ buildscript {
         bwcFilePath = "src/test/resources/org/opensearch/flowframework/bwc/"
         bwcFlowFrameworkPath = bwcFilePath + "flowframework/"
 
-        isSameMajorVersion = opensearch_version.split("\\.")[0] == bwcVersionShort.split("\\.")
+        isSameMajorVersion = opensearch_version.split("\\.")[0] == bwcVersionShort.split("\\.")[0]
         swaggerVersion = "2.1.22"
         jacksonVersion = "2.18.0"
         swaggerCoreVersion = "2.2.23"

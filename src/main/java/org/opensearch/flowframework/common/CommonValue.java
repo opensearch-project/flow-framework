@@ -234,10 +234,7 @@ public class CommonValue {
     /** The field name for reindex source index substitution */
     public static final String REINDEX_SOURCE_INDEX = "reindex.source_index";
 
-    /*
-     * Constants associated with API specification
-     */
-
+    /**URI for the YAML file of the ML Commons API specification.*/
     public static final String ML_COMMONS_API_SPEC_YAML_URI =
         "https://raw.githubusercontent.com/opensearch-project/opensearch-api-specification/refs/heads/main/spec/namespaces/ml.yaml";
 
