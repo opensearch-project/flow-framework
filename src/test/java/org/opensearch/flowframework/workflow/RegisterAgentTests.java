@@ -13,6 +13,7 @@ import org.opensearch.core.action.ActionListener;
 import org.opensearch.core.rest.RestStatus;
 import org.opensearch.flowframework.exception.FlowFrameworkException;
 import org.opensearch.flowframework.indices.FlowFrameworkIndicesHandler;
+import org.opensearch.flowframework.util.ApiSpecFetcher;
 import org.opensearch.ml.client.MachineLearningNodeClient;
 import org.opensearch.ml.common.MLAgentType;
 import org.opensearch.ml.common.agent.LLMSpec;
@@ -20,10 +21,12 @@ import org.opensearch.ml.common.agent.MLAgent;
 import org.opensearch.ml.common.agent.MLMemorySpec;
 import org.opensearch.ml.common.agent.MLToolSpec;
 import org.opensearch.ml.common.transport.agent.MLRegisterAgentResponse;
+import org.opensearch.rest.RestRequest;
 import org.opensearch.test.OpenSearchTestCase;
 
 import java.io.IOException;
 import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutionException;
 
@@ -31,6 +34,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
+import static org.opensearch.flowframework.common.CommonValue.ML_COMMONS_API_SPEC_YAML_URI;
 import static org.opensearch.flowframework.common.WorkflowResources.AGENT_ID;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -150,4 +154,18 @@ public class RegisterAgentTests extends OpenSearchTestCase {
         assertTrue(ex.getCause() instanceof FlowFrameworkException);
         assertEquals("Failed to register the agent", ex.getCause().getMessage());
     }
+
+    public void testApiSpecRegisterAgentInputParamComparison() throws Exception {
+        List<String> requiredEnumParams = WorkflowStepFactory.WorkflowSteps.REGISTER_AGENT.inputs();
+
+        boolean isMatch = ApiSpecFetcher.compareRequiredFields(
+            requiredEnumParams,
+            ML_COMMONS_API_SPEC_YAML_URI,
+            "/_plugins/_ml/agents/_register",
+            RestRequest.Method.POST
+        );
+
+        assertTrue(isMatch);
+    }
+
 }
