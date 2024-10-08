@@ -33,12 +33,12 @@ import io.swagger.v3.parser.core.models.SwaggerParseResult;
  */
 public class ApiSpecFetcher {
     private static final Logger logger = LogManager.getLogger(ApiSpecFetcher.class);
-    private static final ParseOptions OPENAPI_PARSER = new ParseOptions();
-    private static final OpenAPIV3Parser PARSER = new OpenAPIV3Parser();
+    private static final ParseOptions PARSE_OPTIONS = new ParseOptions();
+    private static final OpenAPIV3Parser OPENAPI_PARSER = new OpenAPIV3Parser();
 
     static {
-        OPENAPI_PARSER.setResolve(true);
-        OPENAPI_PARSER.setResolveFully(true);
+        PARSE_OPTIONS.setResolve(true);
+        PARSE_OPTIONS.setResolveFully(true);
     }
 
     /**
@@ -50,7 +50,7 @@ public class ApiSpecFetcher {
      */
     public static OpenAPI fetchApiSpec(String apiSpecUri) {
         logger.info("Parsing API spec from URI: {}", apiSpecUri);
-        SwaggerParseResult result = PARSER.readLocation(apiSpecUri, null, OPENAPI_PARSER);
+        SwaggerParseResult result = OPENAPI_PARSER.readLocation(apiSpecUri, null, PARSE_OPTIONS);
         OpenAPI openApi = result.getOpenAPI();
 
         if (openApi == null) {

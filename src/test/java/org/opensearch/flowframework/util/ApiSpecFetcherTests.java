@@ -19,6 +19,10 @@ import java.util.List;
 import io.swagger.v3.oas.models.OpenAPI;
 
 import static org.opensearch.flowframework.common.CommonValue.ML_COMMONS_API_SPEC_YAML_URI;
+import static org.opensearch.rest.RestRequest.Method.DELETE;
+import static org.opensearch.rest.RestRequest.Method.PATCH;
+import static org.opensearch.rest.RestRequest.Method.POST;
+import static org.opensearch.rest.RestRequest.Method.PUT;
 
 public class ApiSpecFetcherTests extends OpenSearchTestCase {
 
@@ -48,7 +52,7 @@ public class ApiSpecFetcherTests extends OpenSearchTestCase {
     public void testCompareRequiredFieldsSuccess() throws Exception {
 
         String path = "/_plugins/_ml/agents/_register";
-        RestRequest.Method method = RestRequest.Method.POST;
+        RestRequest.Method method = POST;
 
         // Assuming REGISTER_AGENT step in the enum has these required fields
         List<String> expectedRequiredParams = Arrays.asList("name", "type");
@@ -61,7 +65,7 @@ public class ApiSpecFetcherTests extends OpenSearchTestCase {
     public void testCompareRequiredFieldsFailure() throws Exception {
 
         String path = "/_plugins/_ml/agents/_register";
-        RestRequest.Method method = RestRequest.Method.POST;
+        RestRequest.Method method = POST;
 
         List<String> wrongRequiredParams = Arrays.asList("nonexistent_param");
 
@@ -73,7 +77,7 @@ public class ApiSpecFetcherTests extends OpenSearchTestCase {
     public void testCompareRequiredFieldsThrowsException() throws Exception {
         String invalidUri = "http://invalid-url.com/fail.yaml";
         String path = "/_plugins/_ml/agents/_register";
-        RestRequest.Method method = RestRequest.Method.POST;
+        RestRequest.Method method = PUT;
 
         Exception exception = expectThrows(
             Exception.class,
@@ -90,7 +94,7 @@ public class ApiSpecFetcherTests extends OpenSearchTestCase {
                 List.of("name", "type"),
                 ML_COMMONS_API_SPEC_YAML_URI,
                 "/_plugins/_ml/agents/_register",
-                RestRequest.Method.PATCH
+                PATCH
             );
         });
 
@@ -103,7 +107,7 @@ public class ApiSpecFetcherTests extends OpenSearchTestCase {
                 List.of("name", "type"),
                 ML_COMMONS_API_SPEC_YAML_URI,
                 "/_plugins/_ml/agents/_register",
-                RestRequest.Method.DELETE // PATCH should be unsupported
+                DELETE
             );
         });
 
