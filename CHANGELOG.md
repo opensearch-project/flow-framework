@@ -22,6 +22,8 @@ Inspired from [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 - Add ApiSpecFetcher for Fetching and Comparing API Specifications ([#651](https://github.com/opensearch-project/flow-framework/issues/651))
 
 ### Enhancements
+- Incrementally remove resources from workflow state during deprovisioning ([#898](https://github.com/opensearch-project/flow-framework/pull/898))
+
 ### Bug Fixes
 ### Infrastructure
 ### Documentation
