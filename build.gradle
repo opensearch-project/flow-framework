@@ -189,9 +189,16 @@ dependencies {
     implementation "io.swagger.parser.v3:swagger-parser-core:${swaggerVersion}"
     implementation "io.swagger.parser.v3:swagger-parser:${swaggerVersion}"
     implementation "io.swagger.parser.v3:swagger-parser-v3:${swaggerVersion}"
-    implementation "com.fasterxml.jackson.core:jackson-databind:${jacksonVersion}"
-    implementation "com.fasterxml.jackson.datatype:jackson-datatype-jsr310:${jacksonVersion}"
-    implementation "com.fasterxml.jackson.core:jackson-annotations:${jacksonVersion}"
+    // Declare and force Jackson dependencies for tests
+    testImplementation("com.fasterxml.jackson.core:jackson-databind") {
+        version { strictly("2.18.0") }
+    }
+    testImplementation("com.fasterxml.jackson.datatype:jackson-datatype-jsr310") {
+        version { strictly("2.18.0") }
+    }
+    testImplementation("com.fasterxml.jackson.core:jackson-annotations") {
+        version { strictly("2.18.0") }
+    }
 
     // ZipArchive dependencies used for integration tests
     zipArchive group: 'org.opensearch.plugin', name:'opensearch-ml-plugin', version: "${opensearch_build}"
