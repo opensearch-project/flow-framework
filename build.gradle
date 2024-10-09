@@ -171,6 +171,7 @@ dependencies {
     implementation 'org.junit.jupiter:junit-jupiter:5.11.2'
     api group: 'org.opensearch', name:'opensearch-ml-client', version: "${opensearch_build}"
     api group: 'org.opensearch.client', name: 'opensearch-rest-client', version: "${opensearch_version}"
+    api group: 'org.slf4j', name: 'slf4j-api', version: '1.7.36'
     implementation group: 'org.apache.commons', name: 'commons-lang3', version: '3.17.0'
     implementation "org.opensearch:common-utils:${common_utils_version}"
     implementation "com.amazonaws:aws-encryption-sdk-java:3.0.1"
@@ -188,6 +189,7 @@ dependencies {
     implementation "io.swagger.parser.v3:swagger-parser-core:${swaggerVersion}"
     implementation "io.swagger.parser.v3:swagger-parser:${swaggerVersion}"
     implementation "io.swagger.parser.v3:swagger-parser-v3:${swaggerVersion}"
+    implementation "com.fasterxml.jackson.core:jackson-core:${jacksonVersion}"
     implementation "com.fasterxml.jackson.core:jackson-databind:${jacksonVersion}"
     implementation "com.fasterxml.jackson.datatype:jackson-datatype-jsr310:${jacksonVersion}"
     implementation "com.fasterxml.jackson.core:jackson-annotations:${jacksonVersion}"
@@ -201,7 +203,7 @@ dependencies {
     configurations.all {
         resolutionStrategy {
             force("com.google.guava:guava:33.3.1-jre") // CVE for 31.1, keep to force transitive dependencies
-            force("com.fasterxml.jackson.core:jackson-core:2.17.2") // Dependency Jar Hell
+            force("com.fasterxml.jackson.core:jackson-core:${jacksonVersion}") // Dependency Jar Hell
         }
     }
 }
