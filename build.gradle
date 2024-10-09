@@ -24,7 +24,7 @@ buildscript {
         opensearch_no_snapshot = opensearch_build.replace("-SNAPSHOT","")
         System.setProperty('tests.security.manager', 'false')
         common_utils_version = System.getProperty("common_utils.version", opensearch_build)
-
+        swaggerCoreVersion = "2.2.23"
         bwcVersionShort = "2.12.0"
         bwcVersion = bwcVersionShort + ".0"
         bwcOpenSearchFFDownload = 'https://ci.opensearch.org/ci/dbc/distribution-build-opensearch/' + bwcVersionShort + '/latest/linux/x64/tar/builds/' +
@@ -34,6 +34,10 @@ buildscript {
         bwcFlowFrameworkPath = bwcFilePath + "flowframework/"
 
         isSameMajorVersion = opensearch_version.split("\\.")[0] == bwcVersionShort.split("\\.")[0]
+        swaggerVersion = "2.1.22"
+        jacksonVersion = "2.18.0"
+        swaggerCoreVersion = "2.2.23"
+
     }
 
     repositories {
@@ -167,6 +171,7 @@ dependencies {
     implementation 'org.junit.jupiter:junit-jupiter:5.11.2'
     api group: 'org.opensearch', name:'opensearch-ml-client', version: "${opensearch_build}"
     api group: 'org.opensearch.client', name: 'opensearch-rest-client', version: "${opensearch_version}"
+    api group: 'org.slf4j', name: 'slf4j-api', version: '1.7.36'
     implementation group: 'org.apache.commons', name: 'commons-lang3', version: '3.17.0'
     implementation "org.opensearch:common-utils:${common_utils_version}"
     implementation "com.amazonaws:aws-encryption-sdk-java:3.0.1"
@@ -178,6 +183,16 @@ dependencies {
     implementation "org.glassfish:jakarta.json:2.0.1"
     implementation "org.eclipse:yasson:3.0.4"
     implementation "com.google.code.gson:gson:2.11.0"
+    // Swagger-Parser dependencies for API consistency tests
+    implementation "io.swagger.core.v3:swagger-models:${swaggerCoreVersion}"
+    implementation "io.swagger.core.v3:swagger-core:${swaggerCoreVersion}"
+    implementation "io.swagger.parser.v3:swagger-parser-core:${swaggerVersion}"
+    implementation "io.swagger.parser.v3:swagger-parser:${swaggerVersion}"
+    implementation "io.swagger.parser.v3:swagger-parser-v3:${swaggerVersion}"
+    implementation "com.fasterxml.jackson.core:jackson-core:${jacksonVersion}"
+    implementation "com.fasterxml.jackson.core:jackson-databind:${jacksonVersion}"
+    implementation "com.fasterxml.jackson.datatype:jackson-datatype-jsr310:${jacksonVersion}"
+    implementation "com.fasterxml.jackson.core:jackson-annotations:${jacksonVersion}"
 
     // ZipArchive dependencies used for integration tests
     zipArchive group: 'org.opensearch.plugin', name:'opensearch-ml-plugin', version: "${opensearch_build}"
@@ -188,7 +203,7 @@ dependencies {
     configurations.all {
         resolutionStrategy {
             force("com.google.guava:guava:33.3.1-jre") // CVE for 31.1, keep to force transitive dependencies
-            force("com.fasterxml.jackson.core:jackson-core:2.17.2") // Dependency Jar Hell
+            force("com.fasterxml.jackson.core:jackson-core:${jacksonVersion}") // Dependency Jar Hell
         }
     }
 }
