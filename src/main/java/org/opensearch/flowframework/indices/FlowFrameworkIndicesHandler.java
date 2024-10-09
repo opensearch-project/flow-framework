@@ -10,7 +10,9 @@ package org.opensearch.flowframework.indices;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.apache.logging.log4j.message.ParameterizedMessageFactory;
 import org.opensearch.ExceptionsHelper;
+import org.opensearch.action.DocWriteRequest.OpType;
 import org.opensearch.action.admin.indices.create.CreateIndexRequest;
 import org.opensearch.action.admin.indices.create.CreateIndexResponse;
 import org.opensearch.action.admin.indices.mapping.put.PutMappingRequest;
@@ -693,6 +695,7 @@ public class FlowFrameworkIndicesHandler {
                 getAndUpdateResourceInStateDocumentWithRetries(
                     workflowId,
                     newResource,
+                    OpType.INDEX,
                     RETRIES,
                     ActionListener.runBefore(listener, context::restore)
                 );
@@ -701,15 +704,41 @@ public class FlowFrameworkIndicesHandler {
     }
 
     /**
-     * Performs a get and update of a State Index document adding a new resource with strong consistency and retries
+     * Removes a resource from the state index, including common exception handling
+     * @param workflowId The workflow document id in the state index
+     * @param resourceToDelete The resource to delete
+     * @param listener the ActionListener for this step to handle completing the future after update
+     */
+    public void deleteResourceFromStateIndex(String workflowId, ResourceCreated resourceToDelete, ActionListener<WorkflowData> listener) {
+        if (!doesIndexExist(WORKFLOW_STATE_INDEX)) {
+            String errorMessage = "Failed to update state for " + workflowId + " due to missing " + WORKFLOW_STATE_INDEX + " index";
+            logger.error(errorMessage);
+            listener.onFailure(new FlowFrameworkException(errorMessage, RestStatus.NOT_FOUND));
+        } else {
+            try (ThreadContext.StoredContext context = client.threadPool().getThreadContext().stashContext()) {
+                getAndUpdateResourceInStateDocumentWithRetries(
+                    workflowId,
+                    resourceToDelete,
+                    OpType.DELETE,
+                    RETRIES,
+                    ActionListener.runBefore(listener, context::restore)
+                );
+            }
+        }
+    }
+
+    /**
+     * Performs a get and update of a State Index document adding or removing a resource with strong consistency and retries
      * @param workflowId The document id to update
-     * @param newResource The resource to add to the resources created list
+     * @param resource The resource to add or remove from the resources created list
+     * @param operation The operation to perform on the resource (INDEX to append to the list or DELETE to remove)
      * @param retries The number of retries on update version conflicts
      * @param listener The listener to complete on success or failure
      */
     private void getAndUpdateResourceInStateDocumentWithRetries(
         String workflowId,
-        ResourceCreated newResource,
+        ResourceCreated resource,
+        OpType operation,
         int retries,
         ActionListener<WorkflowData> listener
     ) {
@@ -721,7 +750,11 @@ public class FlowFrameworkIndicesHandler {
             }
             WorkflowState currentState = WorkflowState.parse(getResponse.getSourceAsString());
             List<ResourceCreated> resourcesCreated = new ArrayList<>(currentState.resourcesCreated());
-            resourcesCreated.add(newResource);
+            if (operation == OpType.DELETE) {
+                resourcesCreated.removeIf(r -> r.resourceMap().equals(resource.resourceMap()));
+            } else {
+                resourcesCreated.add(resource);
+            }
             XContentBuilder builder = XContentFactory.jsonBuilder();
             WorkflowState newState = WorkflowState.builder(currentState).resourcesCreated(resourcesCreated).build();
             newState.toXContent(builder, null);
@@ -732,41 +765,54 @@ public class FlowFrameworkIndicesHandler {
             client.update(
                 updateRequest,
                 ActionListener.wrap(
-                    r -> handleStateUpdateSuccess(workflowId, newResource, listener),
-                    e -> handleStateUpdateException(workflowId, newResource, retries, listener, e)
+                    r -> handleStateUpdateSuccess(workflowId, resource, operation, listener),
+                    e -> handleStateUpdateException(workflowId, resource, operation, retries, listener, e)
                 )
             );
-        }, ex -> handleStateUpdateException(workflowId, newResource, 0, listener, ex)));
+        }, ex -> handleStateUpdateException(workflowId, resource, operation, 0, listener, ex)));
     }
 
-    private void handleStateUpdateSuccess(String workflowId, ResourceCreated newResource, ActionListener<WorkflowData> listener) {
+    private void handleStateUpdateSuccess(
+        String workflowId,
+        ResourceCreated newResource,
+        OpType operation,
+        ActionListener<WorkflowData> listener
+    ) {
         String resourceName = newResource.resourceType();
         String resourceId = newResource.resourceId();
         String nodeId = newResource.workflowStepId();
-        logger.info("Updated resources created for {} on step {} with {} {}", workflowId, nodeId, resourceName, resourceId);
+        logger.info(
+            "Updated resources created for {} on step {} to {} resource {} {}",
+            workflowId,
+            nodeId,
+            operation.equals(OpType.DELETE) ? "delete" : "add",
+            resourceName,
+            resourceId
+        );
         listener.onResponse(new WorkflowData(Map.of(resourceName, resourceId), workflowId, nodeId));
     }
 
     private void handleStateUpdateException(
         String workflowId,
         ResourceCreated newResource,
+        OpType operation,
         int retries,
         ActionListener<WorkflowData> listener,
         Exception e
     ) {
         if (e instanceof VersionConflictEngineException && retries > 0) {
             // Retry if we haven't exhausted retries
-            getAndUpdateResourceInStateDocumentWithRetries(workflowId, newResource, retries - 1, listener);
+            getAndUpdateResourceInStateDocumentWithRetries(workflowId, newResource, operation, retries - 1, listener);
             return;
         }
-        String errorMessage = "Failed to update workflow state for "
-            + workflowId
-            + " on step "
-            + newResource.workflowStepId()
-            + " with "
-            + newResource.resourceType()
-            + " "
-            + newResource.resourceId();
+        String errorMessage = ParameterizedMessageFactory.INSTANCE.newMessage(
+            "Failed to update workflow state for {} on step {} to {} resource {} {}",
+            workflowId,
+            newResource.workflowStepId(),
+            operation.equals(OpType.DELETE) ? "delete" : "add",
+            newResource.resourceType(),
+            newResource.resourceId()
+        ).getFormattedMessage();
         logger.error(errorMessage, e);
         listener.onFailure(new FlowFrameworkException(errorMessage, ExceptionsHelper.status(e)));
     }

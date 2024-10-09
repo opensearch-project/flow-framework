@@ -299,8 +299,13 @@ public class FlowFrameworkRestApiIT extends FlowFrameworkRestTestCase {
         assertNotNull(resourcesCreated.get(0).resourceId());
 
         // Hit Deprovision API
-        // By design, this may not completely deprovision the first time if it takes >2s to process removals
         Response deprovisionResponse = deprovisionWorkflow(client(), workflowId);
+        // Test for incremental removal
+        assertBusy(() -> {
+            List<ResourceCreated> resourcesRemaining = getResourcesCreated(client(), workflowId);
+            assertTrue(resourcesRemaining.size() < 5);
+        }, 30, TimeUnit.SECONDS);
+        // By design, this may not completely deprovision the first time if it takes >2s to process removals
         try {
             assertBusy(
                 () -> { getAndAssertWorkflowStatus(client(), workflowId, State.NOT_STARTED, ProvisioningProgress.NOT_STARTED); },
