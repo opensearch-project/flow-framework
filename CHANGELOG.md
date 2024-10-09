@@ -19,6 +19,8 @@ Inspired from [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 ## [Unreleased 2.x](https://github.com/opensearch-project/flow-framework/compare/2.17...2.x)
 ### Features
 ### Enhancements
+- Incrementally remove resources from workflow state during deprovisioning ([#898](https://github.com/opensearch-project/flow-framework/pull/898))
+
 ### Bug Fixes
 ### Infrastructure
 ### Documentation
