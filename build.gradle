@@ -36,7 +36,7 @@ buildscript {
         isSameMajorVersion = opensearch_version.split("\\.")[0] == bwcVersionShort.split("\\.")[0]
         swaggerVersion = "2.1.22"
         jacksonVersion = "2.18.0"
-        swaggerCoreVersion = "2.2.23"
+        swaggerCoreVersion = "2.2.25"
 
     }
 
