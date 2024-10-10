@@ -82,7 +82,7 @@ public class FlowFrameworkIndicesHandler {
     private final ClusterService clusterService;
     private final EncryptorUtils encryptorUtils;
     private static final Map<String, AtomicBoolean> indexMappingUpdated = new HashMap<>();
-    private static final Map<String, Object> indexSettings = Map.of("index.auto_expand_replicas", "0-1");
+    private static final Map<String, Object> indexSettings = Map.of("index.auto_expand_replicas", "0-5");
     private final NamedXContentRegistry xContentRegistry;
     // Retries in case of simultaneous updates
     private static final int RETRIES = 5;
