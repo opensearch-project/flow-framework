@@ -7,10 +7,10 @@ Inspired from [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 ### Features
 ### Enhancements
 ### Bug Fixes
+- Fixed Template Update Location and Improved Logger Statements in ReprovisionWorkflowTransportAction ([#918](https://github.com/opensearch-project/flow-framework/pull/918))
 ### Infrastructure
 - Set Java target compatibility to JDK 21 ([#730](https://github.com/opensearch-project/flow-framework/pull/730))
 - Add knowledge base alert agent into sample templates ([#874](https://github.com/opensearch-project/flow-framework/pull/874))
-
 ### Documentation
 - Add alert summary agent template ([#873](https://github.com/opensearch-project/flow-framework/pull/873))
 
@@ -25,6 +25,7 @@ Inspired from [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 - Incrementally remove resources from workflow state during deprovisioning ([#898](https://github.com/opensearch-project/flow-framework/pull/898))
 
 ### Bug Fixes
+- Fixed Template Update Location and Improved Logger Statements in ReprovisionWorkflowTransportAction ([#918](https://github.com/opensearch-project/flow-framework/pull/918))
 ### Infrastructure
 ### Documentation
 - Add query assist data summary agent into sample templates ([#875](https://github.com/opensearch-project/flow-framework/pull/875))
