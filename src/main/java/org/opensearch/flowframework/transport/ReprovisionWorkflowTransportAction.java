@@ -270,19 +270,37 @@ public class ReprovisionWorkflowTransportAction extends HandledTransportAction<R
         ActionListener<WorkflowResponse> listener
     ) {
         try {
-            threadPool.executor(PROVISION_WORKFLOW_THREAD_POOL).execute(() -> { executeWorkflow(template, workflowSequence, workflowId); });
+            threadPool.executor(PROVISION_WORKFLOW_THREAD_POOL).execute(() -> {
+                updateTemplate(template, workflowId);
+                executeWorkflow(workflowSequence, workflowId);
+            });
         } catch (Exception exception) {
             listener.onFailure(new FlowFrameworkException("Failed to execute workflow " + workflowId, ExceptionsHelper.status(exception)));
         }
     }
 
     /**
-     * Executes the given workflow sequence
+     * Replace template document
      * @param template The template to store after reprovisioning completes successfully
+     * @param workflowId The workflowId associated with the workflow that is executing
+     */
+    private void updateTemplate(Template template, String workflowId) {
+        flowFrameworkIndicesHandler.updateTemplateInGlobalContext(workflowId, template, ActionListener.wrap(templateResponse -> {
+            logger.info("Updated template for {}", workflowId, State.COMPLETED);
+        }, exception -> {
+            String errorMessage = "Failed to update use case template for " + workflowId;
+            logger.error(errorMessage, exception);
+        }),
+            true  // ignores NOT_STARTED state if request is to reprovision
+        );
+    }
+
+    /**
+     * Executes the given workflow sequence
      * @param workflowSequence The topologically sorted workflow to execute
      * @param workflowId The workflowId associated with the workflow that is executing
      */
-    private void executeWorkflow(Template template, List<ProcessNode> workflowSequence, String workflowId) {
+    private void executeWorkflow(List<ProcessNode> workflowSequence, String workflowId) {
         String currentStepId = "";
         try {
             Map<String, PlainActionFuture<?>> workflowFutureMap = new LinkedHashMap<>();
@@ -290,7 +308,7 @@ public class ReprovisionWorkflowTransportAction extends HandledTransportAction<R
                 List<ProcessNode> predecessors = processNode.predecessors();
                 logger.info(
                     "Queueing process [{}].{}",
-                    processNode.id(),
+                    processNode.id() + processNode.workflowStep().getName(),
                     predecessors.isEmpty()
                         ? " Can start immediately!"
                         : String.format(
@@ -321,18 +339,6 @@ public class ReprovisionWorkflowTransportAction extends HandledTransportAction<R
 
                     logger.info("updated workflow {} state to {}", workflowId, State.COMPLETED);
 
-                    // Replace template document
-                    flowFrameworkIndicesHandler.updateTemplateInGlobalContext(
-                        workflowId,
-                        template,
-                        ActionListener.wrap(templateResponse -> {
-                            logger.info("Updated template for {}", workflowId, State.COMPLETED);
-                        }, exception -> {
-                            String errorMessage = "Failed to update use case template for " + workflowId;
-                            logger.error(errorMessage, exception);
-                        }),
-                        true  // ignores NOT_STARTED state if request is to reprovision
-                    );
                 }, exception -> { logger.error("Failed to update workflow state for workflow {}", workflowId, exception); })
             );
         } catch (Exception ex) {
