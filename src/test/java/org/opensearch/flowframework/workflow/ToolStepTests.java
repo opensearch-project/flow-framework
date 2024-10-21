@@ -61,6 +61,7 @@ public class ToolStepTests extends OpenSearchTestCase {
                 Map.entry("name", "name"),
                 Map.entry("description", "description"),
                 Map.entry("parameters", Collections.emptyMap()),
+                Map.entry("config", Map.of("foo", "bar")),
                 Map.entry("include_output_in_agent_response", "false")
             ),
             "test-id",
@@ -102,6 +103,7 @@ public class ToolStepTests extends OpenSearchTestCase {
         );
         assertTrue(future.isDone());
         assertEquals(MLToolSpec.class, future.get().getContent().get("tools").getClass());
+        assertEquals(Map.of("foo", "bar"), ((MLToolSpec) future.get().getContent().get("tools")).getConfigMap());
     }
 
     public void testBoolParseFail() {
