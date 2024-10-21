@@ -88,6 +88,7 @@ public class ToolStep implements WorkflowStep {
                 outputs,
                 toolParameterKeys
             );
+            @SuppressWarnings("unchecked")
             Map<String, String> config = (Map<String, String>) inputs.getOrDefault(CONFIG_FIELD, Collections.emptyMap());
 
             MLToolSpec.MLToolSpecBuilder builder = MLToolSpec.builder();
@@ -105,8 +106,7 @@ public class ToolStep implements WorkflowStep {
             if (includeOutputInAgentResponse != null) {
                 builder.includeOutputInAgentResponse(includeOutputInAgentResponse);
             }
-            // TODO https://github.com/opensearch-project/ml-commons/pull/2977/files must be merged for this to compile
-            // builder.configMap(config);
+            builder.configMap(config);
 
             MLToolSpec mlToolSpec = builder.build();
 

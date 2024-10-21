@@ -103,8 +103,7 @@ public class ToolStepTests extends OpenSearchTestCase {
         );
         assertTrue(future.isDone());
         assertEquals(MLToolSpec.class, future.get().getContent().get("tools").getClass());
-        // TODO https://github.com/opensearch-project/ml-commons/pull/2977/files must be merged for this to compile
-        // assertEquals(Map.of("foo", "bar"), ((MLToolSpec) future.get().getContent().get("tools")).getConfigMap());
+        assertEquals(Map.of("foo", "bar"), ((MLToolSpec) future.get().getContent().get("tools")).getConfigMap());
     }
 
     public void testBoolParseFail() {
