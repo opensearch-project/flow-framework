@@ -271,8 +271,9 @@ public class ReprovisionWorkflowTransportAction extends HandledTransportAction<R
     ) {
         try {
             threadPool.executor(PROVISION_WORKFLOW_THREAD_POOL).execute(() -> {
-                updateTemplate( template,workflowId);
-                executeWorkflow(template, workflowSequence, workflowId); });
+                updateTemplate(template, workflowId);
+                executeWorkflow(template, workflowSequence, workflowId);
+            });
         } catch (Exception exception) {
             listener.onFailure(new FlowFrameworkException("Failed to execute workflow " + workflowId, ExceptionsHelper.status(exception)));
         }
@@ -283,16 +284,11 @@ public class ReprovisionWorkflowTransportAction extends HandledTransportAction<R
      * @param template The template to store after reprovisioning completes successfully
      * @param workflowId The workflowId associated with the workflow that is executing
      */
-    private void updateTemplate ( Template template, String workflowId) {
-        flowFrameworkIndicesHandler.updateTemplateInGlobalContext(
-                workflowId,
-                template,
-                ActionListener.wrap(templateResponse -> {
-                    logger.info("Updated template for {}", workflowId);
-                }, exception -> {
-                    logger.error("Failed to update use case template for {}", workflowId, exception);
-                }),
-                true  // ignores NOT_STARTED state if request is to reprovision
+    private void updateTemplate(Template template, String workflowId) {
+        flowFrameworkIndicesHandler.updateTemplateInGlobalContext(workflowId, template, ActionListener.wrap(templateResponse -> {
+            logger.info("Updated template for {}", workflowId);
+        }, exception -> { logger.error("Failed to update use case template for {}", workflowId, exception); }),
+            true  // ignores NOT_STARTED state if request is to reprovision
         );
     }
 
