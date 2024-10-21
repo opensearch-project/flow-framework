@@ -306,7 +306,7 @@ public class ReprovisionWorkflowTransportAction extends HandledTransportAction<R
                 List<ProcessNode> predecessors = processNode.predecessors();
                 logger.info(
                     "Queueing process [{}].{}",
-                    String.format("%s (type: %s)", processNode.id(), processNode.workflowStep().getName()),
+                    String.format(Locale.getDefault(), "%s (type: %s)", processNode.id(), processNode.workflowStep().getName()),
                     predecessors.isEmpty()
                         ? " Can start immediately!"
                         : String.format(
