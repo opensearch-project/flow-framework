@@ -178,7 +178,7 @@ dependencies {
     implementation "org.dafny:DafnyRuntime:4.8.1"
     implementation "software.amazon.smithy.dafny:conversion:0.1.1"
     implementation 'org.bouncycastle:bcprov-jdk18on:1.78.1'
-    api "org.apache.httpcomponents.core5:httpcore5:5.3"
+    api "org.apache.httpcomponents.core5:httpcore5:5.3.1"
     implementation "jakarta.json.bind:jakarta.json.bind-api:3.0.1"
     implementation "org.glassfish:jakarta.json:2.0.1"
     implementation "org.eclipse:yasson:3.0.4"
@@ -210,7 +210,7 @@ dependencies {
         resolutionStrategy {
             force("com.google.guava:guava:33.3.1-jre") // CVE for 31.1, keep to force transitive dependencies
             force("com.fasterxml.jackson.core:jackson-core:${jacksonVersion}") // Dependency Jar Hell
-            force("org.apache.httpcomponents.core5:httpcore5:5.3") // Dependency Jar Hell
+            force("org.apache.httpcomponents.core5:httpcore5:5.3.1") // Dependency Jar Hell
         }
     }
 }
