@@ -56,7 +56,13 @@ public class RegisterAgentTests extends OpenSearchTestCase {
         this.flowFrameworkIndicesHandler = mock(FlowFrameworkIndicesHandler.class);
         MockitoAnnotations.openMocks(this);
 
-        MLToolSpec tools = new MLToolSpec("tool1", "CatIndexTool", "desc", Collections.emptyMap(), false);
+        MLToolSpec tools = MLToolSpec.builder()
+            .type("tool1")
+            .name("CatIndexTool")
+            .description("desc")
+            .parameters(Collections.emptyMap())
+            .includeOutputInAgentResponse(false)
+            .build();
 
         LLMSpec llmSpec = new LLMSpec("xyz", Collections.emptyMap());
 
