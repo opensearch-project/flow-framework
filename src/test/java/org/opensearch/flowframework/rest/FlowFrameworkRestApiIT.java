@@ -451,7 +451,6 @@ public class FlowFrameworkRestApiIT extends FlowFrameworkRestTestCase {
         assertTrue(getPipelineResponse.pipelines().get(0).getConfigAsMap().toString().contains(modelId));
 
         // Reprovision template to add index which uses default ingest pipeline
-        Instant preUpdateTime = Instant.now(); // Store a timestamp
         template = TestHelpers.createTemplateFromFile("registerremotemodel-ingestpipeline-createindex.json");
         response = reprovisionWorkflow(client(), workflowId, template);
         assertEquals(RestStatus.CREATED, TestHelpers.restStatus(response));
@@ -468,17 +467,6 @@ public class FlowFrameworkRestApiIT extends FlowFrameworkRestTestCase {
         String indexName = resourceMap.get("create_index").resourceId();
         Map<String, Object> indexSettings = getIndexSettingsAsMap(indexName);
         assertEquals(pipelineId, indexSettings.get("index.default_pipeline"));
-
-        // The template doesn't get updated until after the resources are created which can cause a race condition and flaky failure
-        // See https://github.com/opensearch-project/flow-framework/issues/870
-        // Making sure the template got updated before reprovisioning again.
-        // Quick fix to stop this from being flaky, needs a more permanent fix to synchronize template update with COMPLETED provisioning
-        assertBusy(() -> {
-            Response r = getWorkflow(client(), workflowId);
-            assertEquals(RestStatus.OK.getStatus(), r.getStatusLine().getStatusCode());
-            Template t = Template.parse(EntityUtils.toString(r.getEntity(), StandardCharsets.UTF_8));
-            assertTrue(t.lastUpdatedTime().isAfter(preUpdateTime));
-        }, 30, TimeUnit.SECONDS);
 
         // Reprovision template to remove default ingest pipeline
         template = TestHelpers.createTemplateFromFile("registerremotemodel-ingestpipeline-updateindex.json");
