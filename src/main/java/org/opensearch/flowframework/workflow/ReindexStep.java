@@ -10,6 +10,7 @@ package org.opensearch.flowframework.workflow;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.apache.logging.log4j.message.ParameterizedMessageFactory;
 import org.opensearch.ExceptionsHelper;
 import org.opensearch.action.support.PlainActionFuture;
 import org.opensearch.client.Client;
@@ -150,7 +151,9 @@ public class ReindexStep implements WorkflowStep {
                             reIndexFuture.onFailure(new FlowFrameworkException(errorMessage, RestStatus.BAD_REQUEST));
                         }
                     } catch (Exception e) {
-                        String errorMessage = "Failed to parse and update new created resource";
+                        String errorMessage = ParameterizedMessageFactory.INSTANCE.newMessage(
+                            "Failed to parse and update new created resource"
+                        ).getFormattedMessage();
                         logger.error(errorMessage, e);
                         reIndexFuture.onFailure(new FlowFrameworkException(errorMessage, ExceptionsHelper.status(e)));
                     }
@@ -158,7 +161,11 @@ public class ReindexStep implements WorkflowStep {
 
                 @Override
                 public void onFailure(Exception e) {
-                    String errorMessage = "Failed to reindex from source " + sourceIndices + " to " + destinationIndex;
+                    String errorMessage = ParameterizedMessageFactory.INSTANCE.newMessage(
+                        "Failed to reindex from source {} to {}",
+                        sourceIndices,
+                        destinationIndex
+                    ).getFormattedMessage();
                     logger.error(errorMessage, e);
                     reIndexFuture.onFailure(new WorkflowStepException(errorMessage, ExceptionsHelper.status(e)));
                 }
