@@ -142,10 +142,10 @@ public class CreateConnectorStepTests extends OpenSearchTestCase {
         List<String> requiredEnumParams = WorkflowStepFactory.WorkflowSteps.CREATE_CONNECTOR.inputs();
 
         boolean isMatch = ApiSpecFetcher.compareRequiredFields(
-                requiredEnumParams,
-                ML_COMMONS_API_SPEC_YAML_URI,
-                "/_plugins/_ml/connectors/_create",
-                RestRequest.Method.POST
+            requiredEnumParams,
+            ML_COMMONS_API_SPEC_YAML_URI,
+            "/_plugins/_ml/connectors/_create",
+            RestRequest.Method.POST
         );
 
         assertTrue(isMatch);

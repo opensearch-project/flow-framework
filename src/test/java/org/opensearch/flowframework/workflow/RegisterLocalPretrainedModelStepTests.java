@@ -307,10 +307,10 @@ public class RegisterLocalPretrainedModelStepTests extends OpenSearchTestCase {
         List<String> requiredEnumParams = WorkflowStepFactory.WorkflowSteps.REGISTER_LOCAL_PRETRAINED_MODEL.inputs();
 
         boolean isMatch = ApiSpecFetcher.compareRequiredFields(
-                requiredEnumParams,
-                ML_COMMONS_API_SPEC_YAML_URI,
-                "/_plugins/_ml/models/_register",
-                RestRequest.Method.POST
+            requiredEnumParams,
+            ML_COMMONS_API_SPEC_YAML_URI,
+            "/_plugins/_ml/models/_register",
+            RestRequest.Method.POST
         );
 
         assertTrue(isMatch);

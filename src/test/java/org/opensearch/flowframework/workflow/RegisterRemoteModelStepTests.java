@@ -422,10 +422,10 @@ public class RegisterRemoteModelStepTests extends OpenSearchTestCase {
         List<String> requiredEnumParams = WorkflowStepFactory.WorkflowSteps.REGISTER_REMOTE_MODEL.inputs();
 
         boolean isMatch = ApiSpecFetcher.compareRequiredFields(
-                requiredEnumParams,
-                ML_COMMONS_API_SPEC_YAML_URI,
-                "/_plugins/_ml/model_groups/_register",
-                RestRequest.Method.POST
+            requiredEnumParams,
+            ML_COMMONS_API_SPEC_YAML_URI,
+            "/_plugins/_ml/model_groups/_register",
+            RestRequest.Method.POST
         );
 
         assertTrue(isMatch);
