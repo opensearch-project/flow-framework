@@ -81,7 +81,7 @@ public class ApiSpecFetcher {
 
             List<String> requiredApiParams = schema.getRequired();
             if (requiredApiParams != null && !requiredApiParams.isEmpty()) {
-                return new HashSet<>(requiredEnumParams).equals(new HashSet<>(requiredApiParams));
+                return new HashSet<>(requiredEnumParams).containsAll(new HashSet<>(requiredApiParams));
             }
         }
         return false;

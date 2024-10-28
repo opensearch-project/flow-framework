@@ -14,11 +14,13 @@ import org.opensearch.core.rest.RestStatus;
 import org.opensearch.flowframework.exception.FlowFrameworkException;
 import org.opensearch.flowframework.exception.WorkflowStepException;
 import org.opensearch.flowframework.indices.FlowFrameworkIndicesHandler;
+import org.opensearch.flowframework.util.ApiSpecFetcher;
 import org.opensearch.ml.client.MachineLearningNodeClient;
 import org.opensearch.ml.common.AccessMode;
 import org.opensearch.ml.common.MLTaskState;
 import org.opensearch.ml.common.transport.model_group.MLRegisterModelGroupInput;
 import org.opensearch.ml.common.transport.model_group.MLRegisterModelGroupResponse;
+import org.opensearch.rest.RestRequest;
 import org.opensearch.test.OpenSearchTestCase;
 
 import java.io.IOException;
@@ -31,6 +33,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
+import static org.opensearch.flowframework.common.CommonValue.ML_COMMONS_API_SPEC_YAML_URI;
 import static org.opensearch.flowframework.common.CommonValue.MODEL_GROUP_STATUS;
 import static org.opensearch.flowframework.common.WorkflowResources.MODEL_GROUP_ID;
 import static org.mockito.ArgumentMatchers.any;
@@ -203,5 +206,18 @@ public class RegisterModelGroupStepTests extends OpenSearchTestCase {
         WorkflowStepException w = (WorkflowStepException) e.getCause();
         assertEquals("Failed to parse value [no] as only [true] or [false] are allowed.", w.getMessage());
         assertEquals(RestStatus.BAD_REQUEST, w.getRestStatus());
+    }
+
+    public void testApiSpecRegisterModelGroupInputParamComparison() throws Exception {
+        List<String> requiredEnumParams = WorkflowStepFactory.WorkflowSteps.REGISTER_MODEL_GROUP.inputs();
+
+        boolean isMatch = ApiSpecFetcher.compareRequiredFields(
+                requiredEnumParams,
+                ML_COMMONS_API_SPEC_YAML_URI,
+                "/_plugins/_ml/model_groups/_register",
+                RestRequest.Method.POST
+        );
+
+        assertTrue(isMatch);
     }
 }

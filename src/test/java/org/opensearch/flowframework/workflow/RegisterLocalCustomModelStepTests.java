@@ -20,11 +20,13 @@ import org.opensearch.flowframework.common.FlowFrameworkSettings;
 import org.opensearch.flowframework.exception.FlowFrameworkException;
 import org.opensearch.flowframework.exception.WorkflowStepException;
 import org.opensearch.flowframework.indices.FlowFrameworkIndicesHandler;
+import org.opensearch.flowframework.util.ApiSpecFetcher;
 import org.opensearch.ml.client.MachineLearningNodeClient;
 import org.opensearch.ml.common.MLTask;
 import org.opensearch.ml.common.MLTaskState;
 import org.opensearch.ml.common.transport.register.MLRegisterModelInput;
 import org.opensearch.ml.common.transport.register.MLRegisterModelResponse;
+import org.opensearch.rest.RestRequest;
 import org.opensearch.test.OpenSearchTestCase;
 import org.opensearch.threadpool.ScalingExecutorBuilder;
 import org.opensearch.threadpool.TestThreadPool;
@@ -33,6 +35,7 @@ import org.junit.AfterClass;
 
 import java.io.IOException;
 import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
@@ -41,11 +44,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
-import static org.opensearch.flowframework.common.CommonValue.DEPLOY_FIELD;
-import static org.opensearch.flowframework.common.CommonValue.FLOW_FRAMEWORK_THREAD_POOL_PREFIX;
-import static org.opensearch.flowframework.common.CommonValue.PROVISION_WORKFLOW_THREAD_POOL;
-import static org.opensearch.flowframework.common.CommonValue.REGISTER_MODEL_STATUS;
-import static org.opensearch.flowframework.common.CommonValue.WORKFLOW_THREAD_POOL;
+import static org.opensearch.flowframework.common.CommonValue.*;
 import static org.opensearch.flowframework.common.WorkflowResources.MODEL_GROUP_ID;
 import static org.opensearch.flowframework.common.WorkflowResources.MODEL_ID;
 import static org.mockito.ArgumentMatchers.any;
@@ -397,5 +396,18 @@ public class RegisterLocalCustomModelStepTests extends OpenSearchTestCase {
         WorkflowStepException w = (WorkflowStepException) e.getCause();
         assertEquals("Failed to parse value [no] as only [true] or [false] are allowed.", w.getMessage());
         assertEquals(RestStatus.BAD_REQUEST, w.getRestStatus());
+    }
+
+    public void testApiSpecRegisterLocalCustomModelInputParamComparison() throws Exception {
+        List<String> requiredEnumParams = WorkflowStepFactory.WorkflowSteps.REGISTER_LOCAL_CUSTOM_MODEL.inputs();
+
+        boolean isMatch = ApiSpecFetcher.compareRequiredFields(
+                requiredEnumParams,
+                ML_COMMONS_API_SPEC_YAML_URI,
+                "/_plugins/_ml/models/_register",
+                RestRequest.Method.POST
+        );
+
+        assertTrue(isMatch);
     }
 }
