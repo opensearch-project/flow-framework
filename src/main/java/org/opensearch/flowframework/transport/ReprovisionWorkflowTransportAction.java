@@ -10,6 +10,7 @@ package org.opensearch.flowframework.transport;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.apache.logging.log4j.message.ParameterizedMessageFactory;
 import org.opensearch.ExceptionsHelper;
 import org.opensearch.action.support.ActionFilters;
 import org.opensearch.action.support.HandledTransportAction;
@@ -145,7 +146,10 @@ public class ReprovisionWorkflowTransportAction extends HandledTransportAction<R
                 xContentRegistry
             );
         } catch (Exception e) {
-            String errorMessage = "Failed to get workflow state for workflow " + workflowId;
+            String errorMessage = ParameterizedMessageFactory.INSTANCE.newMessage(
+                "Failed to get workflow state for workflow {}",
+                workflowId
+            ).getFormattedMessage();
             logger.error(errorMessage, e);
             listener.onFailure(new FlowFrameworkException(errorMessage, ExceptionsHelper.status(e)));
         }
@@ -195,9 +199,12 @@ public class ReprovisionWorkflowTransportAction extends HandledTransportAction<R
             try {
                 workflowProcessSorter.validate(updatedProcessSequence, pluginsService);
             } catch (Exception e) {
-                String errormessage = "Workflow validation failed for workflow " + request.getWorkflowId();
-                logger.error(errormessage, e);
-                listener.onFailure(new FlowFrameworkException(errormessage, RestStatus.BAD_REQUEST));
+                String errorMessage = ParameterizedMessageFactory.INSTANCE.newMessage(
+                    "Workflow validation failed for workflow {}",
+                    request.getWorkflowId()
+                ).getFormattedMessage();
+                logger.error(errorMessage, e);
+                listener.onFailure(new FlowFrameworkException(errorMessage, RestStatus.BAD_REQUEST));
             }
             List<ProcessNode> reprovisionProcessSequence = workflowProcessSorter.createReprovisionSequence(
                 workflowId,
@@ -212,7 +219,8 @@ public class ReprovisionWorkflowTransportAction extends HandledTransportAction<R
                 flowFrameworkIndicesHandler.updateFlowFrameworkSystemIndexDoc(workflowId, newState, ActionListener.wrap(updateResponse -> {
 
                 }, exception -> {
-                    String errorMessage = "Failed to update workflow state: " + workflowId;
+                    String errorMessage = ParameterizedMessageFactory.INSTANCE.newMessage("Failed to update workflow state: {}", workflowId)
+                        .getFormattedMessage();
                     logger.error(errorMessage, exception);
                     listener.onFailure(new FlowFrameworkException(errorMessage, ExceptionsHelper.status(exception)));
                 }));
@@ -240,7 +248,8 @@ public class ReprovisionWorkflowTransportAction extends HandledTransportAction<R
                     listener.onResponse(new WorkflowResponse(workflowId));
 
                 }, exception -> {
-                    String errorMessage = "Failed to update workflow state: " + workflowId;
+                    String errorMessage = ParameterizedMessageFactory.INSTANCE.newMessage("Failed to update workflow state: {}", workflowId)
+                        .getFormattedMessage();
                     logger.error(errorMessage, exception);
                     listener.onFailure(new FlowFrameworkException(errorMessage, ExceptionsHelper.status(exception)));
                 })
@@ -249,7 +258,10 @@ public class ReprovisionWorkflowTransportAction extends HandledTransportAction<R
             if (exception instanceof FlowFrameworkException) {
                 listener.onFailure(exception);
             } else {
-                String errorMessage = "Failed to get workflow state for workflow " + workflowId;
+                String errorMessage = ParameterizedMessageFactory.INSTANCE.newMessage(
+                    "Failed to get workflow state for workflow {}",
+                    workflowId
+                ).getFormattedMessage();
                 logger.error(errorMessage, exception);
                 listener.onFailure(new FlowFrameworkException(errorMessage, ExceptionsHelper.status(exception)));
             }
