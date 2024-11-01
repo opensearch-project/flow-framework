@@ -14,20 +14,24 @@ import org.opensearch.core.rest.RestStatus;
 import org.opensearch.flowframework.common.CommonValue;
 import org.opensearch.flowframework.exception.FlowFrameworkException;
 import org.opensearch.flowframework.indices.FlowFrameworkIndicesHandler;
+import org.opensearch.flowframework.util.ApiSpecFetcher;
 import org.opensearch.ml.client.MachineLearningNodeClient;
 import org.opensearch.ml.common.connector.ConnectorAction;
 import org.opensearch.ml.common.transport.connector.MLCreateConnectorInput;
 import org.opensearch.ml.common.transport.connector.MLCreateConnectorResponse;
+import org.opensearch.rest.RestRequest;
 import org.opensearch.test.OpenSearchTestCase;
 
 import java.io.IOException;
 import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutionException;
 
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
+import static org.opensearch.flowframework.common.CommonValue.ML_COMMONS_API_SPEC_YAML_URI;
 import static org.opensearch.flowframework.common.WorkflowResources.CONNECTOR_ID;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -132,6 +136,19 @@ public class CreateConnectorStepTests extends OpenSearchTestCase {
         ExecutionException ex = assertThrows(ExecutionException.class, () -> future.get().getContent());
         assertTrue(ex.getCause() instanceof FlowFrameworkException);
         assertEquals("Failed to create connector", ex.getCause().getMessage());
+    }
+
+    public void testApiSpecCreateConnectorInputParamComparison() throws Exception {
+        List<String> requiredEnumParams = WorkflowStepFactory.WorkflowSteps.CREATE_CONNECTOR.inputs();
+
+        boolean isMatch = ApiSpecFetcher.compareRequiredFields(
+            requiredEnumParams,
+            ML_COMMONS_API_SPEC_YAML_URI,
+            "/_plugins/_ml/connectors/_create",
+            RestRequest.Method.POST
+        );
+
+        assertTrue(isMatch);
     }
 
 }

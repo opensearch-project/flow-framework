@@ -20,6 +20,7 @@ Inspired from [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 ### Features
 - Add ApiSpecFetcher for Fetching and Comparing API Specifications ([#651](https://github.com/opensearch-project/flow-framework/issues/651))
 - Add optional config field to tool step ([#899](https://github.com/opensearch-project/flow-framework/pull/899))
+- Add API Consistency Tests with ML-Common and Set Up Daily GitHub Action Trigger([#908](https://github.com/opensearch-project/flow-framework/issues/908))
 
 ### Enhancements
 - Incrementally remove resources from workflow state during deprovisioning ([#898](https://github.com/opensearch-project/flow-framework/pull/898))
