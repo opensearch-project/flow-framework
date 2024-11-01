@@ -14,7 +14,6 @@ import org.opensearch.common.xcontent.XContentType;
 import org.opensearch.flowframework.exception.ApiSpecParseException;
 import org.opensearch.rest.RestRequest;
 
-import java.util.HashSet;
 import java.util.List;
 
 import io.swagger.v3.oas.models.OpenAPI;
@@ -81,7 +80,7 @@ public class ApiSpecFetcher {
 
             List<String> requiredApiParams = schema.getRequired();
             if (requiredApiParams != null && !requiredApiParams.isEmpty()) {
-                return new HashSet<>(requiredEnumParams).equals(new HashSet<>(requiredApiParams));
+                return requiredApiParams.stream().allMatch(requiredEnumParams::contains);
             }
         }
         return false;
