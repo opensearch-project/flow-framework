@@ -3,6 +3,7 @@ name: Daily API Consistency Test
 on:
   schedule:
     - cron: '0 8 * * *'  # Runs daily at 8 AM UTC
+  workflow_dispatch:
 
 jobs:
   API-consistency-test:
