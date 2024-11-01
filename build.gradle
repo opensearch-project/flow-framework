@@ -177,7 +177,7 @@ dependencies {
     implementation "software.amazon.cryptography:aws-cryptographic-material-providers:1.7.0"
     implementation "org.dafny:DafnyRuntime:4.8.1"
     implementation "software.amazon.smithy.dafny:conversion:0.1.1"
-    implementation 'org.bouncycastle:bcprov-jdk18on:1.78.1'
+    implementation 'org.bouncycastle:bcprov-jdk18on:1.79'
     api "org.apache.httpcomponents.core5:httpcore5:5.3.1"
     implementation "jakarta.json.bind:jakarta.json.bind-api:3.0.1"
     implementation "org.glassfish:jakarta.json:2.0.1"
