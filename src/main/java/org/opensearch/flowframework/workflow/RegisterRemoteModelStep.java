@@ -10,6 +10,7 @@ package org.opensearch.flowframework.workflow;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.apache.logging.log4j.message.ParameterizedMessageFactory;
 import org.opensearch.ExceptionsHelper;
 import org.opensearch.action.support.PlainActionFuture;
 import org.opensearch.common.xcontent.XContentHelper;
@@ -132,7 +133,8 @@ public class RegisterRemoteModelStep implements WorkflowStep {
                     builder.modelInterface(parameters);
 
                 } catch (Exception ex) {
-                    String errorMessage = "Failed to create model interface";
+                    String errorMessage = ParameterizedMessageFactory.INSTANCE.newMessage("Failed to create model interface")
+                        .getFormattedMessage();
                     logger.error(errorMessage, ex);
                     registerRemoteModelFuture.onFailure(new WorkflowStepException(errorMessage, RestStatus.BAD_REQUEST));
                 }
@@ -209,7 +211,9 @@ public class RegisterRemoteModelStep implements WorkflowStep {
                 @Override
                 public void onFailure(Exception ex) {
                     Exception e = getSafeException(ex);
-                    String errorMessage = (e == null ? "Failed to register remote model" : e.getMessage());
+                    String errorMessage = (e == null
+                        ? ParameterizedMessageFactory.INSTANCE.newMessage("Failed to register remote model").getFormattedMessage()
+                        : e.getMessage());
                     logger.error(errorMessage, e);
                     registerRemoteModelFuture.onFailure(new WorkflowStepException(errorMessage, ExceptionsHelper.status(e)));
                 }

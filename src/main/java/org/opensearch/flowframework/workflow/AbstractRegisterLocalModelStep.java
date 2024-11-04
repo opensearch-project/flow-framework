@@ -10,6 +10,7 @@ package org.opensearch.flowframework.workflow;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.apache.logging.log4j.message.ParameterizedMessageFactory;
 import org.opensearch.ExceptionsHelper;
 import org.opensearch.action.support.PlainActionFuture;
 import org.opensearch.common.xcontent.XContentHelper;
@@ -169,7 +170,8 @@ public abstract class AbstractRegisterLocalModelStep extends AbstractRetryableWo
                     mlInputBuilder.modelInterface(parameters);
 
                 } catch (Exception ex) {
-                    String errorMessage = "Failed to create model interface";
+                    String errorMessage = ParameterizedMessageFactory.INSTANCE.newMessage("Failed to create model interface")
+                        .getFormattedMessage();
                     logger.error(errorMessage, ex);
                     registerLocalModelFuture.onFailure(new WorkflowStepException(errorMessage, RestStatus.BAD_REQUEST));
                 }
@@ -201,7 +203,10 @@ public abstract class AbstractRegisterLocalModelStep extends AbstractRetryableWo
                             ActionListener<WorkflowData> deployUpdateListener = ActionListener.wrap(
                                 deployUpdateResponse -> registerLocalModelFuture.onResponse(mlTaskWorkflowData),
                                 deployUpdateException -> {
-                                    String errorMessage = "Failed to update simulated deploy step resource " + id;
+                                    String errorMessage = ParameterizedMessageFactory.INSTANCE.newMessage(
+                                        "Failed to update simulated deploy step resource {}",
+                                        id
+                                    ).getFormattedMessage();
                                     logger.error(errorMessage, deployUpdateException);
                                     registerLocalModelFuture.onFailure(
                                         new FlowFrameworkException(errorMessage, ExceptionsHelper.status(deployUpdateException))
@@ -223,7 +228,10 @@ public abstract class AbstractRegisterLocalModelStep extends AbstractRetryableWo
                 );
             }, exception -> {
                 Exception e = getSafeException(exception);
-                String errorMessage = (e == null ? "Failed to register local model in step " + currentNodeId : e.getMessage());
+                String errorMessage = (e == null
+                    ? ParameterizedMessageFactory.INSTANCE.newMessage("Failed to register local model in step {}", currentNodeId)
+                        .getFormattedMessage()
+                    : e.getMessage());
                 logger.error(errorMessage, e);
                 registerLocalModelFuture.onFailure(new WorkflowStepException(errorMessage, ExceptionsHelper.status(e)));
             }));

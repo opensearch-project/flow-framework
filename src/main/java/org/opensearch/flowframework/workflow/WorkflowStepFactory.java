@@ -10,6 +10,7 @@ package org.opensearch.flowframework.workflow;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.apache.logging.log4j.message.ParameterizedMessageFactory;
 import org.opensearch.client.Client;
 import org.opensearch.common.unit.TimeValue;
 import org.opensearch.core.common.Strings;
@@ -371,7 +372,10 @@ public class WorkflowStepFactory {
                     }
                 }
             }
-            String errorMessage = "Unable to find workflow timeout for step: " + workflowStep;
+            String errorMessage = ParameterizedMessageFactory.INSTANCE.newMessage(
+                "Unable to find workflow timeout for step: {}",
+                workflowStep
+            ).getFormattedMessage();
             logger.error(errorMessage);
             throw new FlowFrameworkException(errorMessage, RestStatus.BAD_REQUEST);
         }
@@ -390,7 +394,10 @@ public class WorkflowStepFactory {
                     }
                 }
             }
-            String errorMessage = "Unable to find workflow required plugins for step: " + workflowStep;
+            String errorMessage = ParameterizedMessageFactory.INSTANCE.newMessage(
+                "Unable to find workflow required plugins for step: {}",
+                workflowStep
+            ).getFormattedMessage();
             logger.error(errorMessage);
             throw new FlowFrameworkException(errorMessage, RestStatus.BAD_REQUEST);
         }
@@ -409,7 +416,10 @@ public class WorkflowStepFactory {
                     }
                 }
             }
-            String errorMessage = "Unable to find workflow output for step " + workflowStep;
+            String errorMessage = ParameterizedMessageFactory.INSTANCE.newMessage(
+                "Unable to find workflow output for step {}",
+                workflowStep
+            ).getFormattedMessage();
             logger.error(errorMessage);
             throw new FlowFrameworkException(errorMessage, RestStatus.BAD_REQUEST);
         }
@@ -428,7 +438,10 @@ public class WorkflowStepFactory {
                     }
                 }
             }
-            String errorMessage = "Unable to find workflow input for step: " + workflowStep;
+            String errorMessage = ParameterizedMessageFactory.INSTANCE.newMessage(
+                "Unable to find workflow input for step: {}",
+                workflowStep
+            ).getFormattedMessage();
             logger.error(errorMessage);
             throw new FlowFrameworkException(errorMessage, RestStatus.BAD_REQUEST);
         }

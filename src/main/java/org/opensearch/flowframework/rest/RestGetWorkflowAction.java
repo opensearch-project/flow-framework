@@ -10,6 +10,7 @@ package org.opensearch.flowframework.rest;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.apache.logging.log4j.message.ParameterizedMessageFactory;
 import org.opensearch.ExceptionsHelper;
 import org.opensearch.client.node.NodeClient;
 import org.opensearch.core.action.ActionListener;
@@ -91,7 +92,9 @@ public class RestGetWorkflowAction extends BaseRestHandler {
                     XContentBuilder exceptionBuilder = ex.toXContent(channel.newErrorBuilder(), ToXContent.EMPTY_PARAMS);
                     channel.sendResponse(new BytesRestResponse(ex.getRestStatus(), exceptionBuilder));
                 } catch (IOException e) {
-                    String errorMessage = "IOException: Failed to send back get workflow exception";
+                    String errorMessage = ParameterizedMessageFactory.INSTANCE.newMessage(
+                        "IOException: Failed to send back get workflow exception"
+                    ).getFormattedMessage();
                     logger.error(errorMessage, e);
                     channel.sendResponse(new BytesRestResponse(ExceptionsHelper.status(e), errorMessage));
                 }

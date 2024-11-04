@@ -10,6 +10,7 @@ package org.opensearch.flowframework.workflow;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.apache.logging.log4j.message.ParameterizedMessageFactory;
 import org.opensearch.ExceptionsHelper;
 import org.opensearch.action.support.PlainActionFuture;
 import org.opensearch.common.Nullable;
@@ -107,7 +108,9 @@ public class RegisterAgentStep implements WorkflowStep {
             @Override
             public void onFailure(Exception ex) {
                 Exception e = getSafeException(ex);
-                String errorMessage = (e == null ? "Failed to register the agent" : e.getMessage());
+                String errorMessage = (e == null
+                    ? ParameterizedMessageFactory.INSTANCE.newMessage("Failed to register the agent").getFormattedMessage()
+                    : e.getMessage());
                 logger.error(errorMessage, e);
                 registerAgentModelFuture.onFailure(new WorkflowStepException(errorMessage, ExceptionsHelper.status(e)));
             }

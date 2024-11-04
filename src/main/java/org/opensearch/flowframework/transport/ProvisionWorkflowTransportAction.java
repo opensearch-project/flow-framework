@@ -10,6 +10,7 @@ package org.opensearch.flowframework.transport;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.apache.logging.log4j.message.ParameterizedMessageFactory;
 import org.opensearch.ExceptionsHelper;
 import org.opensearch.action.get.GetRequest;
 import org.opensearch.action.support.ActionFilters;
@@ -138,7 +139,10 @@ public class ProvisionWorkflowTransportAction extends HandledTransportAction<Wor
                 xContentRegistry
             );
         } catch (Exception e) {
-            String errorMessage = "Failed to retrieve template from global context for workflow " + workflowId;
+            String errorMessage = ParameterizedMessageFactory.INSTANCE.newMessage(
+                "Failed to retrieve template from global context for workflow {}",
+                workflowId
+            ).getFormattedMessage();
             logger.error(errorMessage, e);
             listener.onFailure(new FlowFrameworkException(errorMessage, ExceptionsHelper.status(e)));
         }
@@ -169,7 +173,10 @@ public class ProvisionWorkflowTransportAction extends HandledTransportAction<Wor
             context.restore();
 
             if (!response.isExists()) {
-                String errorMessage = "Failed to retrieve template (" + workflowId + ") from global context.";
+                String errorMessage = ParameterizedMessageFactory.INSTANCE.newMessage(
+                    "Failed to retrieve template ({}) from global context.",
+                    workflowId
+                ).getFormattedMessage();
                 logger.error(errorMessage);
                 listener.onFailure(new FlowFrameworkException(errorMessage, RestStatus.NOT_FOUND));
                 return;
@@ -212,7 +219,10 @@ public class ProvisionWorkflowTransportAction extends HandledTransportAction<Wor
                                 ActionListener.wrap(templateResponse -> {
                                     listener.onResponse(new WorkflowResponse(request.getWorkflowId()));
                                 }, exception -> {
-                                    String errorMessage = "Failed to update use case template " + request.getWorkflowId();
+                                    String errorMessage = ParameterizedMessageFactory.INSTANCE.newMessage(
+                                        "Failed to update use case template {}",
+                                        request.getWorkflowId()
+                                    ).getFormattedMessage();
                                     logger.error(errorMessage, exception);
                                     if (exception instanceof FlowFrameworkException) {
                                         listener.onFailure(exception);
@@ -224,7 +234,10 @@ public class ProvisionWorkflowTransportAction extends HandledTransportAction<Wor
                                 true
                             );
                         }, exception -> {
-                            String errorMessage = "Failed to update workflow state: " + workflowId;
+                            String errorMessage = ParameterizedMessageFactory.INSTANCE.newMessage(
+                                "Failed to update workflow state: {}",
+                                workflowId
+                            ).getFormattedMessage();
                             logger.error(errorMessage, exception);
                             listener.onFailure(new FlowFrameworkException(errorMessage, ExceptionsHelper.status(exception)));
                         })
@@ -244,7 +257,10 @@ public class ProvisionWorkflowTransportAction extends HandledTransportAction<Wor
                 logger.error("Workflow validation failed for workflow {}", workflowId);
                 listener.onFailure(exception);
             } else {
-                String errorMessage = "Failed to retrieve template from global context for workflow " + workflowId;
+                String errorMessage = ParameterizedMessageFactory.INSTANCE.newMessage(
+                    "Failed to retrieve template from global context for workflow {}",
+                    workflowId
+                ).getFormattedMessage();
                 logger.error(errorMessage, exception);
                 listener.onFailure(new FlowFrameworkException(errorMessage, ExceptionsHelper.status(exception)));
             }

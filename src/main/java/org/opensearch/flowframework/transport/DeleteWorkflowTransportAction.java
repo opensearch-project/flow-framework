@@ -11,6 +11,7 @@ package org.opensearch.flowframework.transport;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.core.util.Booleans;
+import org.apache.logging.log4j.message.ParameterizedMessageFactory;
 import org.opensearch.action.delete.DeleteRequest;
 import org.opensearch.action.delete.DeleteResponse;
 import org.opensearch.action.support.ActionFilters;
@@ -97,7 +98,8 @@ public class DeleteWorkflowTransportAction extends HandledTransportAction<Workfl
             );
 
         } else {
-            String errorMessage = "There are no templates in the global context";
+            String errorMessage = ParameterizedMessageFactory.INSTANCE.newMessage("There are no templates in the global context")
+                .getFormattedMessage();
             logger.error(errorMessage);
             listener.onFailure(new FlowFrameworkException(errorMessage, RestStatus.NOT_FOUND));
         }
