@@ -32,7 +32,7 @@ Inspired from [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 ### Infrastructure
 ### Documentation
 - Add query assist data summary agent into sample templates ([#875](https://github.com/opensearch-project/flow-framework/pull/875))
-- Add suggest anomaly detector agent into sample templates ([#875](https://github.com/opensearch-project/flow-framework/pull/875))
+- Add suggest anomaly detector agent into sample templates ([#944](https://github.com/opensearch-project/flow-framework/pull/944))
 
 ### Maintenance
 ### Refactoring
