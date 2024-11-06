@@ -93,20 +93,6 @@
             "description": "this is the anomaly detector suggestion agent"
           }
         }
-      ],
-      "edges": [
-        {
-          "source": "create_claude_connector",
-          "dest": "register_claude_model"
-        },
-        {
-          "source": "register_claude_model",
-          "dest": "create_anomoly_detectors_tool"
-        },
-        {
-          "source": "create_anomoly_detectors_tool",
-          "dest": "anomaly_detector_suggestion_agent"
-        }
       ]
     }
   }
