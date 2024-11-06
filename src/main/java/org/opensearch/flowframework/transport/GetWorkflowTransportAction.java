@@ -113,8 +113,7 @@ public class GetWorkflowTransportAction extends HandledTransportAction<WorkflowR
                 listener.onFailure(new FlowFrameworkException(errorMessage, ExceptionsHelper.status(e)));
             }
         } else {
-            String errorMessage = ParameterizedMessageFactory.INSTANCE.newMessage("There are no templates in the global_context")
-                .getFormattedMessage();
+            String errorMessage = "There are no templates in the global_context";
             logger.error(errorMessage);
             listener.onFailure(new FlowFrameworkException(errorMessage, RestStatus.NOT_FOUND));
         }

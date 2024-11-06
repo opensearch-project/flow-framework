@@ -342,8 +342,7 @@ public class FlowFrameworkIndicesHandler {
                     .setRefreshPolicy(WriteRequest.RefreshPolicy.IMMEDIATE);
                 client.index(request, ActionListener.runBefore(listener, context::restore));
             } catch (Exception e) {
-                String errorMessage = ParameterizedMessageFactory.INSTANCE.newMessage("Failed to index global_context index")
-                    .getFormattedMessage();
+                String errorMessage = "Failed to index global_context index";
                 logger.error(errorMessage, e);
                 listener.onFailure(new FlowFrameworkException(errorMessage, ExceptionsHelper.status(e)));
             }
@@ -400,15 +399,13 @@ public class FlowFrameworkIndicesHandler {
                 request.id(workflowId);
                 client.index(request, ActionListener.runBefore(listener, context::restore));
             } catch (Exception e) {
-                String errorMessage = ParameterizedMessageFactory.INSTANCE.newMessage("Failed to put state index document")
-                    .getFormattedMessage();
+                String errorMessage = "Failed to put state index document";
                 logger.error(errorMessage, e);
                 listener.onFailure(new FlowFrameworkException(errorMessage, ExceptionsHelper.status(e)));
             }
 
         }, e -> {
-            String errorMessage = ParameterizedMessageFactory.INSTANCE.newMessage("Failed to create workflow_state index")
-                .getFormattedMessage();
+            String errorMessage = "Failed to create workflow_state index";
             logger.error(errorMessage, e);
             listener.onFailure(new FlowFrameworkException(errorMessage, ExceptionsHelper.status(e)));
         }));
@@ -551,9 +548,7 @@ public class FlowFrameworkIndicesHandler {
                 provisioningProgressConsumer.accept(Optional.empty());
             }));
         } catch (Exception e) {
-            String errorMessage = ParameterizedMessageFactory.INSTANCE.newMessage(
-                "Failed to retrieve workflow state to check provisioning status"
-            ).getFormattedMessage();
+            String errorMessage = "Failed to retrieve workflow state to check provisioning status";
             logger.error(errorMessage, e);
             listener.onFailure(new FlowFrameworkException(errorMessage, ExceptionsHelper.status(e)));
         }
@@ -606,9 +601,7 @@ public class FlowFrameworkIndicesHandler {
                 canDeleteStateConsumer.accept(Boolean.FALSE);
             }));
         } catch (Exception e) {
-            String errorMessage = ParameterizedMessageFactory.INSTANCE.newMessage(
-                "Failed to retrieve workflow state to check provisioning status"
-            ).getFormattedMessage();
+            String errorMessage = "Failed to retrieve workflow state to check provisioning status";
             logger.error(errorMessage, e);
             listener.onFailure(new FlowFrameworkException(errorMessage, ExceptionsHelper.status(e)));
         }

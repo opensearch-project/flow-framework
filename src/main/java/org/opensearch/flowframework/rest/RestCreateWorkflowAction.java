@@ -10,7 +10,6 @@ package org.opensearch.flowframework.rest;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.apache.logging.log4j.message.ParameterizedMessageFactory;
 import org.opensearch.ExceptionsHelper;
 import org.opensearch.client.node.NodeClient;
 import org.opensearch.core.action.ActionListener;
@@ -194,9 +193,8 @@ public class RestCreateWorkflowAction extends BaseRestHandler {
                             throw ex;
                         } else {
                             RestStatus status = ex instanceof IOException ? RestStatus.BAD_REQUEST : ExceptionsHelper.status(ex);
-                            String errorMessage = ParameterizedMessageFactory.INSTANCE.newMessage(
-                                "failure parsing request body when a use case is given, make sure to provide a map with values that are either Strings, Arrays, or Map of Strings to Strings"
-                            ).getFormattedMessage();
+                            String errorMessage =
+                                "failure parsing request body when a use case is given, make sure to provide a map with values that are either Strings, Arrays, or Map of Strings to Strings";
                             logger.error(errorMessage, ex);
                             throw new FlowFrameworkException(errorMessage, status);
                         }
@@ -244,9 +242,7 @@ public class RestCreateWorkflowAction extends BaseRestHandler {
                     XContentBuilder exceptionBuilder = ex.toXContent(channel.newErrorBuilder(), ToXContent.EMPTY_PARAMS);
                     channel.sendResponse(new BytesRestResponse(ex.getRestStatus(), exceptionBuilder));
                 } catch (IOException e) {
-                    String errorMessage = ParameterizedMessageFactory.INSTANCE.newMessage(
-                        "IOException: Failed to send back create workflow exception"
-                    ).getFormattedMessage();
+                    String errorMessage = "IOException: Failed to send back create workflow exception";
                     logger.error(errorMessage, e);
                     channel.sendResponse(new BytesRestResponse(ExceptionsHelper.status(e), errorMessage));
                 }

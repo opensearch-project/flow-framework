@@ -10,7 +10,6 @@ package org.opensearch.flowframework.transport;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.apache.logging.log4j.message.ParameterizedMessageFactory;
 import org.opensearch.ExceptionsHelper;
 import org.opensearch.action.search.SearchRequest;
 import org.opensearch.action.search.SearchResponse;
@@ -49,8 +48,7 @@ public class SearchWorkflowStateTransportAction extends HandledTransportAction<S
         try {
             searchHandler.search(request, actionListener);
         } catch (Exception e) {
-            String errorMessage = ParameterizedMessageFactory.INSTANCE.newMessage("Failed to search workflow states in global context")
-                .getFormattedMessage();
+            String errorMessage = "Failed to search workflow states in global context";
             logger.error(errorMessage, e);
             actionListener.onFailure(new FlowFrameworkException(errorMessage, ExceptionsHelper.status(e)));
         }

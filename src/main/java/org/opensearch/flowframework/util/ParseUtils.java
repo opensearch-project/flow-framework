@@ -349,8 +349,7 @@ public class ParseUtils {
      */
     public static void checkFilterByBackendRoles(User requestedUser) {
         if (requestedUser == null) {
-            String errorMessage = ParameterizedMessageFactory.INSTANCE.newMessage("Filter by backend roles is enabled and User is null")
-                .getFormattedMessage();
+            String errorMessage = "Filter by backend roles is enabled and User is null";
             logger.error(errorMessage);
             throw new FlowFrameworkException(errorMessage, RestStatus.BAD_REQUEST);
         }

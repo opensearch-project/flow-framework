@@ -170,8 +170,7 @@ public abstract class AbstractRegisterLocalModelStep extends AbstractRetryableWo
                     mlInputBuilder.modelInterface(parameters);
 
                 } catch (Exception ex) {
-                    String errorMessage = ParameterizedMessageFactory.INSTANCE.newMessage("Failed to create model interface")
-                        .getFormattedMessage();
+                    String errorMessage = "Failed to create model interface";
                     logger.error(errorMessage, ex);
                     registerLocalModelFuture.onFailure(new WorkflowStepException(errorMessage, RestStatus.BAD_REQUEST));
                 }

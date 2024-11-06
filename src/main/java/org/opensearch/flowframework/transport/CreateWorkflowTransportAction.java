@@ -263,9 +263,7 @@ public class CreateWorkflowTransportAction extends HandledTransportAction<Workfl
                                                         ActionListener.wrap(provisionResponse -> {
                                                             listener.onResponse(new WorkflowResponse(provisionResponse.getWorkflowId()));
                                                         }, exception -> {
-                                                            String errorMessage = ParameterizedMessageFactory.INSTANCE.newMessage(
-                                                                "Provisioning failed."
-                                                            ).getFormattedMessage();
+                                                            String errorMessage = "Provisioning failed.";
                                                             logger.error(errorMessage, exception);
                                                             if (exception instanceof FlowFrameworkException) {
                                                                 listener.onFailure(exception);
@@ -283,9 +281,7 @@ public class CreateWorkflowTransportAction extends HandledTransportAction<Workfl
                                                     listener.onResponse(new WorkflowResponse(globalContextResponse.getId()));
                                                 }
                                             }, exception -> {
-                                                String errorMessage = ParameterizedMessageFactory.INSTANCE.newMessage(
-                                                    "Failed to save workflow state"
-                                                ).getFormattedMessage();
+                                                String errorMessage = "Failed to save workflow state";
                                                 logger.error(errorMessage, exception);
                                                 if (exception instanceof FlowFrameworkException) {
                                                     listener.onFailure(exception);
@@ -295,9 +291,7 @@ public class CreateWorkflowTransportAction extends HandledTransportAction<Workfl
                                             })
                                         );
                                     }, exception -> {
-                                        String errorMessage = ParameterizedMessageFactory.INSTANCE.newMessage(
-                                            "Failed to save use case template"
-                                        ).getFormattedMessage();
+                                        String errorMessage = "Failed to save use case template";
                                         logger.error(errorMessage, exception);
                                         if (exception instanceof FlowFrameworkException) {
                                             listener.onFailure(exception);
@@ -310,8 +304,7 @@ public class CreateWorkflowTransportAction extends HandledTransportAction<Workfl
                                 );
                             }
                         }, exception -> {
-                            String errorMessage = ParameterizedMessageFactory.INSTANCE.newMessage("Failed to initialize config index")
-                                .getFormattedMessage();
+                            String errorMessage = "Failed to initialize config index";
                             logger.error(errorMessage, exception);
                             if (exception instanceof FlowFrameworkException) {
                                 listener.onFailure(exception);
@@ -474,14 +467,12 @@ public class CreateWorkflowTransportAction extends HandledTransportAction<Workfl
                     context.restore();
                     internalListener.onResponse(searchResponse.getHits().getTotalHits().value < maxWorkflow);
                 }, exception -> {
-                    String errorMessage = ParameterizedMessageFactory.INSTANCE.newMessage("Unable to fetch the workflows")
-                        .getFormattedMessage();
+                    String errorMessage = "Unable to fetch the workflows";
                     logger.error(errorMessage, exception);
                     internalListener.onFailure(new FlowFrameworkException(errorMessage, ExceptionsHelper.status(exception)));
                 }));
             } catch (Exception e) {
-                String errorMessage = ParameterizedMessageFactory.INSTANCE.newMessage("Unable to fetch the workflows")
-                    .getFormattedMessage();
+                String errorMessage = "Unable to fetch the workflows";
                 logger.error(errorMessage, e);
                 internalListener.onFailure(new FlowFrameworkException(errorMessage, ExceptionsHelper.status(e)));
             }

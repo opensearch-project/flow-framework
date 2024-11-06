@@ -151,9 +151,7 @@ public class ReindexStep implements WorkflowStep {
                             reIndexFuture.onFailure(new FlowFrameworkException(errorMessage, RestStatus.BAD_REQUEST));
                         }
                     } catch (Exception e) {
-                        String errorMessage = ParameterizedMessageFactory.INSTANCE.newMessage(
-                            "Failed to parse and update new created resource"
-                        ).getFormattedMessage();
+                        String errorMessage = "Failed to parse and update new created resource";
                         logger.error(errorMessage, e);
                         reIndexFuture.onFailure(new FlowFrameworkException(errorMessage, ExceptionsHelper.status(e)));
                     }

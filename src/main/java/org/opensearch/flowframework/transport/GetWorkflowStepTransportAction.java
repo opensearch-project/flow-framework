@@ -10,7 +10,6 @@ package org.opensearch.flowframework.transport;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.apache.logging.log4j.message.ParameterizedMessageFactory;
 import org.opensearch.ExceptionsHelper;
 import org.opensearch.action.support.ActionFilters;
 import org.opensearch.action.support.HandledTransportAction;
@@ -69,8 +68,7 @@ public class GetWorkflowStepTransportAction extends HandledTransportAction<Workf
             }
             listener.onResponse(new GetWorkflowStepResponse(workflowValidator));
         } catch (Exception e) {
-            String errorMessage = ParameterizedMessageFactory.INSTANCE.newMessage("Failed to retrieve workflow step json.")
-                .getFormattedMessage();
+            String errorMessage = "Failed to retrieve workflow step json.";
             logger.error(errorMessage, e);
             listener.onFailure(new FlowFrameworkException(errorMessage, ExceptionsHelper.status(e)));
         }

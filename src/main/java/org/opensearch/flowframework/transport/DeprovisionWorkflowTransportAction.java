@@ -137,8 +137,7 @@ public class DeprovisionWorkflowTransportAction extends HandledTransportAction<W
             );
 
         } catch (Exception e) {
-            String errorMessage = ParameterizedMessageFactory.INSTANCE.newMessage("Failed to retrieve template from global context.")
-                .getFormattedMessage();
+            String errorMessage = "Failed to retrieve template from global context.";
             logger.error(errorMessage, e);
             listener.onFailure(new FlowFrameworkException(errorMessage, ExceptionsHelper.status(e)));
         }
