@@ -1,0 +1,94 @@
+---
+name: Anomaly detector suggestion agent
+description: Create an anomaly detector suggestion agent using Claude on BedRock
+use_case: REGISTER_AGENT
+version:
+  template: 1.0.0
+  compatibility:
+  - 2.16.0
+  - 2.17.0
+  - 3.0.0
+workflows:
+  provision:
+    user_params: {}
+    nodes:
+    - id: create_claude_connector
+      type: create_connector
+      previous_node_inputs: {}
+      user_inputs:
+        credential:
+          access_key: "<YOUR_ACCESS_KEY>"
+          secret_key: "<YOUR_SECRET_KEY>"
+          session_token: "<YOUR_SESSION_TOKEN>"
+        parameters:
+          endpoint: bedrock-runtime.us-west-2.amazonaws.com
+          content_type: application/json
+          auth: Sig_V4
+          max_tokens_to_sample: '8000'
+          service_name: bedrock
+          temperature: 0
+          response_filter: "$.completion"
+          region: us-west-2
+          anthropic_version: bedrock-2023-05-31
+        version: '1'
+        name: Claude instant runtime Connector
+        protocol: aws_sigv4
+        description: The connector to BedRock service for claude model
+        actions:
+        - headers:
+            x-amz-content-sha256: required
+            content-type: application/json
+          method: POST
+          request_body: '{"prompt":"${parameters.prompt}", "max_tokens_to_sample":${parameters.max_tokens_to_sample},
+            "temperature":${parameters.temperature},  "anthropic_version":"${parameters.anthropic_version}"
+            }'
+          action_type: predict
+          url: https://bedrock-runtime.us-west-2.amazonaws.com/model/anthropic.claude-instant-v1/invoke
+    - id: register_claude_model
+      type: register_remote_model
+      previous_node_inputs:
+        create_claude_connector: connector_id
+      user_inputs:
+        name: claude-instant
+        description: Claude model
+        deploy: true
+    - id: create_anomoly_detectors_tool
+      type: create_tool
+      previous_node_inputs:
+        register_claude_model: model_id
+      user_inputs:
+        parameters:
+          model_type: ''
+          prompt: "Human:\" turn\": Here are some examples of the create anomaly detector
+            API in OpenSearch: Example 1. POST _plugins/_anomaly_detection/detectors,
+            {\"time_field\":\"timestamp\",\"indices\":[\"ecommerce\"],\"feature_attributes\":[{\"feature_name\":\"feature1\",\"aggregation_query\":{\"avg_total_revenue\":{\"avg\":{\"field\":\"total_revenue_usd\"}}}},{\"feature_name\":\"feature2\",\"aggregation_query\":{\"max_total_revenue\":{\"max\":{\"field\":\"total_revenue_usd\"}}}}]},
+            Example 2. POST _plugins/_anomaly_detection/detectors, {\"time_field\":\"@timestamp\",\"indices\":[\"access_log*\"],\"feature_attributes\":[{\"feature_name\":\"feature1\",\"feature_enabled\":true,\"aggregation_query\":{\"latencyAvg\":{\"sum\":{\"field\":\"responseLatency\"}}}}]}
+            and here are the mapping info containing all the fields in the index ${indexInfo.indexName}:
+            ${indexInfo.indexMapping}, and the optional aggregation methods are value_count,
+            avg, min, max and sum, note that value_count can perform on both numeric
+            and keyword type fields, and other aggregation methods can only perform
+            on numeric type fields. Please give me some suggestion about creating
+            an anomaly detector for the index ${indexInfo.indexName}, you need to
+            give the key information: the top 3 suitable aggregation fields which
+            are numeric types(long, integer, double, float, short etc.) and the suitable
+            aggregation method for each field, you should give at most 3 aggregation
+            fields and corresponding aggregation methods, if there are no numeric
+            type fields, both the aggregation field and method are empty string, and
+            also give at most 1 category field if there exists a keyword type field
+            whose name is just like region, country, city or currency, if not exist,
+            the category field is empty string, note the category field must be keyword
+            type. Show me a format of keyed and pipe-delimited list wrapped in a curly
+            bracket just like {category_field=the category field if exists|aggregation_field=comma-delimited
+            list of all the aggregation field names|aggregation_method=comma-delimited
+            list of all the aggregation methods}. \n\nAssistant:\" turn\""
+        name: CreateAnomalyDetectorTool
+        type: CreateAnomalyDetectorTool
+    - id: anomaly_detector_suggestion_agent
+      type: register_agent
+      previous_node_inputs:
+        create_anomoly_detectors_tool: tools
+      user_inputs:
+        parameters: {}
+        type: flow
+        name: Anomaly detector suggestion agent
+        description: this is the anomaly detector suggestion agent
