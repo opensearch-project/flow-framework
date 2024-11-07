@@ -22,3 +22,4 @@ Inspired from [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 ### Documentation
 ### Maintenance
 ### Refactoring
+- Replace String concatenation with Log4j ParameterizedMessage for readability ([#943](https://github.com/opensearch-project/flow-framework/pull/943))
