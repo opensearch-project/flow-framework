@@ -82,16 +82,6 @@ public class WorkflowRequest extends ActionRequest {
     }
 
     /**
-     * Instantiates a new WorkflowRequest, set validation to all, sets reprovision flag
-     * @param workflowId the documentId of the workflow
-     * @param template the updated template
-     * @param reprovision the reprovision flag
-     */
-    public WorkflowRequest(String workflowId, Template template, boolean reprovision) {
-        this(workflowId, template, new String[] { "all" }, false, Collections.emptyMap(), reprovision);
-    }
-
-    /**
      * Instantiates a new WorkflowRequest
      * @param workflowId the documentId of the workflow
      * @param template the use case template which describes the workflow
