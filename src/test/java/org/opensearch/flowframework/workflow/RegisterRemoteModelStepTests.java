@@ -17,15 +17,18 @@ import org.opensearch.core.rest.RestStatus;
 import org.opensearch.flowframework.exception.FlowFrameworkException;
 import org.opensearch.flowframework.exception.WorkflowStepException;
 import org.opensearch.flowframework.indices.FlowFrameworkIndicesHandler;
+import org.opensearch.flowframework.util.ApiSpecFetcher;
 import org.opensearch.ml.client.MachineLearningNodeClient;
 import org.opensearch.ml.common.MLTaskState;
 import org.opensearch.ml.common.transport.register.MLRegisterModelInput;
 import org.opensearch.ml.common.transport.register.MLRegisterModelResponse;
+import org.opensearch.rest.RestRequest;
 import org.opensearch.test.OpenSearchTestCase;
 import org.opensearch.transport.RemoteTransportException;
 
 import java.io.IOException;
 import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -35,6 +38,7 @@ import org.mockito.MockitoAnnotations;
 
 import static org.opensearch.flowframework.common.CommonValue.DEPLOY_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.INTERFACE_FIELD;
+import static org.opensearch.flowframework.common.CommonValue.ML_COMMONS_API_SPEC_YAML_URI;
 import static org.opensearch.flowframework.common.CommonValue.REGISTER_MODEL_STATUS;
 import static org.opensearch.flowframework.common.WorkflowResources.CONNECTOR_ID;
 import static org.opensearch.flowframework.common.WorkflowResources.MODEL_ID;
@@ -415,5 +419,18 @@ public class RegisterRemoteModelStepTests extends OpenSearchTestCase {
         WorkflowStepException w = (WorkflowStepException) e.getCause();
         assertEquals("Failed to parse value [yes] as only [true] or [false] are allowed.", w.getMessage());
         assertEquals(RestStatus.BAD_REQUEST, w.getRestStatus());
+    }
+
+    public void testApiSpecRegisterRemoteModelInputParamComparison() throws Exception {
+        List<String> requiredEnumParams = WorkflowStepFactory.WorkflowSteps.REGISTER_REMOTE_MODEL.inputs();
+
+        boolean isMatch = ApiSpecFetcher.compareRequiredFields(
+            requiredEnumParams,
+            ML_COMMONS_API_SPEC_YAML_URI,
+            "/_plugins/_ml/model_groups/_register",
+            RestRequest.Method.POST
+        );
+
+        assertTrue(isMatch);
     }
 }

@@ -47,6 +47,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 import static org.opensearch.flowframework.common.CommonValue.ALLOW_DELETE;
@@ -214,19 +215,32 @@ public class DeprovisionWorkflowTransportAction extends HandledTransportAction<W
         // Repeat attempting to delete resources as long as at least one is successful
         int resourceCount = deprovisionProcessSequence.size();
         while (resourceCount > 0) {
+            PlainActionFuture<WorkflowData> stateUpdateFuture;
             Iterator<ProcessNode> iter = deprovisionProcessSequence.iterator();
-            while (iter.hasNext()) {
+            do {
                 ProcessNode deprovisionNode = iter.next();
                 ResourceCreated resource = getResourceFromDeprovisionNode(deprovisionNode, resourcesCreated);
                 String resourceNameAndId = getResourceNameAndId(resource);
                 PlainActionFuture<WorkflowData> deprovisionFuture = deprovisionNode.execute();
+                stateUpdateFuture = PlainActionFuture.newFuture();
                 try {
                     deprovisionFuture.get();
                     logger.info("Successful {} for {}", deprovisionNode.id(), resourceNameAndId);
+                    // Remove from state index resource list
+                    flowFrameworkIndicesHandler.deleteResourceFromStateIndex(workflowId, resource, stateUpdateFuture);
+                    try {
+                        // Wait at most 1 second for state index update.
+                        stateUpdateFuture.actionGet(1, TimeUnit.SECONDS);
+                    } catch (Exception e) {
+                        // Ignore incremental resource removal failures (or timeouts) as we catch up at the end with remainingResources
+                    }
                     // Remove from list so we don't try again
                     iter.remove();
                     // Pause briefly before next step
                     Thread.sleep(100);
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                    break;
                 } catch (Throwable t) {
                     // If any deprovision fails due to not found, it's a success
                     if (t.getCause() instanceof OpenSearchStatusException
@@ -238,7 +252,7 @@ public class DeprovisionWorkflowTransportAction extends HandledTransportAction<W
                         logger.info("Failed {} for {}", deprovisionNode.id(), resourceNameAndId);
                     }
                 }
-            }
+            } while (iter.hasNext());
             if (deprovisionProcessSequence.size() < resourceCount) {
                 // If we've deleted something, decrement and try again if not zero
                 resourceCount = deprovisionProcessSequence.size();
@@ -259,6 +273,7 @@ public class DeprovisionWorkflowTransportAction extends HandledTransportAction<W
                 try {
                     Thread.sleep(1000);
                 } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
                     break;
                 }
             } else {
@@ -274,6 +289,7 @@ public class DeprovisionWorkflowTransportAction extends HandledTransportAction<W
         if (!deleteNotAllowed.isEmpty()) {
             logger.info("Resources requiring allow_delete: {}.", deleteNotAllowed);
         }
+        // This is a redundant best-effort backup to the incremental deletion done earlier
         updateWorkflowState(workflowId, remainingResources, deleteNotAllowed, listener);
     }
 

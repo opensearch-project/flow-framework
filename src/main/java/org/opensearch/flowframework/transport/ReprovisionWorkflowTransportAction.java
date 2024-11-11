@@ -31,13 +31,12 @@ import org.opensearch.flowframework.model.ResourceCreated;
 import org.opensearch.flowframework.model.State;
 import org.opensearch.flowframework.model.Template;
 import org.opensearch.flowframework.model.Workflow;
+import org.opensearch.flowframework.model.WorkflowState;
 import org.opensearch.flowframework.util.EncryptorUtils;
 import org.opensearch.flowframework.workflow.ProcessNode;
 import org.opensearch.flowframework.workflow.WorkflowProcessSorter;
 import org.opensearch.flowframework.workflow.WorkflowStepFactory;
 import org.opensearch.plugins.PluginsService;
-import org.opensearch.script.Script;
-import org.opensearch.script.ScriptType;
 import org.opensearch.tasks.Task;
 import org.opensearch.threadpool.ThreadPool;
 import org.opensearch.transport.TransportService;
@@ -58,7 +57,6 @@ import static org.opensearch.flowframework.common.CommonValue.PROVISION_WORKFLOW
 import static org.opensearch.flowframework.common.CommonValue.PROVISION_WORKFLOW_THREAD_POOL;
 import static org.opensearch.flowframework.common.CommonValue.RESOURCES_CREATED_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.STATE_FIELD;
-import static org.opensearch.flowframework.common.CommonValue.WORKFLOW_STATE_INDEX;
 import static org.opensearch.flowframework.common.FlowFrameworkSettings.FILTER_BY_BACKEND_ROLES;
 import static org.opensearch.flowframework.util.ParseUtils.getUserContext;
 import static org.opensearch.flowframework.util.ParseUtils.resolveUserAndExecute;
@@ -210,24 +208,14 @@ public class ReprovisionWorkflowTransportAction extends HandledTransportAction<R
 
             // Remove error field if any prior to subsequent execution
             if (response.getWorkflowState().getError() != null) {
-                Script script = new Script(
-                    ScriptType.INLINE,
-                    "painless",
-                    "if(ctx._source.containsKey('error')){ctx._source.remove('error')}",
-                    Collections.emptyMap()
-                );
-                flowFrameworkIndicesHandler.updateFlowFrameworkSystemIndexDocWithScript(
-                    WORKFLOW_STATE_INDEX,
-                    workflowId,
-                    script,
-                    ActionListener.wrap(updateResponse -> {
+                WorkflowState newState = WorkflowState.builder(response.getWorkflowState()).error(null).build();
+                flowFrameworkIndicesHandler.updateFlowFrameworkSystemIndexDoc(workflowId, newState, ActionListener.wrap(updateResponse -> {
 
-                    }, exception -> {
-                        String errorMessage = "Failed to update workflow state: " + workflowId;
-                        logger.error(errorMessage, exception);
-                        listener.onFailure(new FlowFrameworkException(errorMessage, ExceptionsHelper.status(exception)));
-                    })
-                );
+                }, exception -> {
+                    String errorMessage = "Failed to update workflow state: " + workflowId;
+                    logger.error(errorMessage, exception);
+                    listener.onFailure(new FlowFrameworkException(errorMessage, ExceptionsHelper.status(exception)));
+                }));
             }
 
             // Update State Index, maintain resources created for subsequent execution
@@ -282,10 +270,26 @@ public class ReprovisionWorkflowTransportAction extends HandledTransportAction<R
         ActionListener<WorkflowResponse> listener
     ) {
         try {
-            threadPool.executor(PROVISION_WORKFLOW_THREAD_POOL).execute(() -> { executeWorkflow(template, workflowSequence, workflowId); });
+            threadPool.executor(PROVISION_WORKFLOW_THREAD_POOL).execute(() -> {
+                updateTemplate(template, workflowId);
+                executeWorkflow(template, workflowSequence, workflowId);
+            });
         } catch (Exception exception) {
             listener.onFailure(new FlowFrameworkException("Failed to execute workflow " + workflowId, ExceptionsHelper.status(exception)));
         }
+    }
+
+    /**
+     * Replace template document
+     * @param template The template to store after reprovisioning completes successfully
+     * @param workflowId The workflowId associated with the workflow that is executing
+     */
+    private void updateTemplate(Template template, String workflowId) {
+        flowFrameworkIndicesHandler.updateTemplateInGlobalContext(workflowId, template, ActionListener.wrap(templateResponse -> {
+            logger.info("Updated template for {}", workflowId);
+        }, exception -> { logger.error("Failed to update use case template for {}", workflowId, exception); }),
+            true  // ignores NOT_STARTED state if request is to reprovision
+        );
     }
 
     /**
@@ -301,8 +305,9 @@ public class ReprovisionWorkflowTransportAction extends HandledTransportAction<R
             for (ProcessNode processNode : workflowSequence) {
                 List<ProcessNode> predecessors = processNode.predecessors();
                 logger.info(
-                    "Queueing process [{}].{}",
+                    "Queueing Process [{} (type: {})].{}",
                     processNode.id(),
+                    processNode.workflowStep().getName(),
                     predecessors.isEmpty()
                         ? " Can start immediately!"
                         : String.format(
@@ -333,18 +338,6 @@ public class ReprovisionWorkflowTransportAction extends HandledTransportAction<R
 
                     logger.info("updated workflow {} state to {}", workflowId, State.COMPLETED);
 
-                    // Replace template document
-                    flowFrameworkIndicesHandler.updateTemplateInGlobalContext(
-                        workflowId,
-                        template,
-                        ActionListener.wrap(templateResponse -> {
-                            logger.info("Updated template for {}", workflowId, State.COMPLETED);
-                        }, exception -> {
-                            String errorMessage = "Failed to update use case template for " + workflowId;
-                            logger.error(errorMessage, exception);
-                        }),
-                        true  // ignores NOT_STARTED state if request is to reprovision
-                    );
                 }, exception -> { logger.error("Failed to update workflow state for workflow {}", workflowId, exception); })
             );
         } catch (Exception ex) {

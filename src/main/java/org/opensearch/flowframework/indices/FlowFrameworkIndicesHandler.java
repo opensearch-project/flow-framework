@@ -10,7 +10,9 @@ package org.opensearch.flowframework.indices;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.apache.logging.log4j.message.ParameterizedMessageFactory;
 import org.opensearch.ExceptionsHelper;
+import org.opensearch.action.DocWriteRequest.OpType;
 import org.opensearch.action.admin.indices.create.CreateIndexRequest;
 import org.opensearch.action.admin.indices.create.CreateIndexResponse;
 import org.opensearch.action.admin.indices.mapping.put.PutMappingRequest;
@@ -34,6 +36,7 @@ import org.opensearch.core.action.ActionListener;
 import org.opensearch.core.rest.RestStatus;
 import org.opensearch.core.xcontent.NamedXContentRegistry;
 import org.opensearch.core.xcontent.ToXContent;
+import org.opensearch.core.xcontent.ToXContentObject;
 import org.opensearch.core.xcontent.XContentBuilder;
 import org.opensearch.core.xcontent.XContentParser;
 import org.opensearch.flowframework.exception.FlowFrameworkException;
@@ -45,12 +48,13 @@ import org.opensearch.flowframework.model.WorkflowState;
 import org.opensearch.flowframework.util.EncryptorUtils;
 import org.opensearch.flowframework.util.ParseUtils;
 import org.opensearch.flowframework.workflow.WorkflowData;
-import org.opensearch.script.Script;
-import org.opensearch.script.ScriptType;
+import org.opensearch.index.engine.VersionConflictEngineException;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -80,6 +84,8 @@ public class FlowFrameworkIndicesHandler {
     private static final Map<String, AtomicBoolean> indexMappingUpdated = new HashMap<>();
     private static final Map<String, Object> indexSettings = Map.of("index.auto_expand_replicas", "0-1");
     private final NamedXContentRegistry xContentRegistry;
+    // Retries in case of simultaneous updates
+    private static final int RETRIES = 5;
 
     /**
      * constructor
@@ -576,7 +582,39 @@ public class FlowFrameworkIndicesHandler {
     }
 
     /**
-     * Updates a document in the workflow state index
+     * Updates a complete document in the workflow state index
+     * @param documentId the document ID
+     * @param updatedDocument a complete document to update the global state index with
+     * @param listener action listener
+     */
+    public void updateFlowFrameworkSystemIndexDoc(
+        String documentId,
+        ToXContentObject updatedDocument,
+        ActionListener<UpdateResponse> listener
+    ) {
+        if (!doesIndexExist(WORKFLOW_STATE_INDEX)) {
+            String errorMessage = "Failed to update document " + documentId + " due to missing " + WORKFLOW_STATE_INDEX + " index";
+            logger.error(errorMessage);
+            listener.onFailure(new FlowFrameworkException(errorMessage, RestStatus.BAD_REQUEST));
+        } else {
+            try (ThreadContext.StoredContext context = client.threadPool().getThreadContext().stashContext()) {
+                UpdateRequest updateRequest = new UpdateRequest(WORKFLOW_STATE_INDEX, documentId);
+                XContentBuilder builder = XContentFactory.jsonBuilder();
+                updatedDocument.toXContent(builder, null);
+                updateRequest.doc(builder);
+                updateRequest.setRefreshPolicy(WriteRequest.RefreshPolicy.IMMEDIATE);
+                updateRequest.retryOnConflict(RETRIES);
+                client.update(updateRequest, ActionListener.runBefore(listener, context::restore));
+            } catch (Exception e) {
+                String errorMessage = "Failed to update " + WORKFLOW_STATE_INDEX + " entry : " + documentId;
+                logger.error(errorMessage, e);
+                listener.onFailure(new FlowFrameworkException(errorMessage, ExceptionsHelper.status(e)));
+            }
+        }
+    }
+
+    /**
+     * Updates a partial document in the workflow state index
      * @param documentId the document ID
      * @param updatedFields the fields to update the global state index with
      * @param listener action listener
@@ -596,7 +634,7 @@ public class FlowFrameworkIndicesHandler {
                 Map<String, Object> updatedContent = new HashMap<>(updatedFields);
                 updateRequest.doc(updatedContent);
                 updateRequest.setRefreshPolicy(WriteRequest.RefreshPolicy.IMMEDIATE);
-                updateRequest.retryOnConflict(5);
+                updateRequest.retryOnConflict(RETRIES);
                 // TODO: decide what condition can be considered as an update conflict and add retry strategy
                 client.update(updateRequest, ActionListener.runBefore(listener, context::restore));
             } catch (Exception e) {
@@ -631,77 +669,6 @@ public class FlowFrameworkIndicesHandler {
     }
 
     /**
-     * Updates a document in the workflow state index
-     * @param indexName the index that we will be updating a document of.
-     * @param documentId the document ID
-     * @param script the given script to update doc
-     * @param listener action listener
-     */
-    public void updateFlowFrameworkSystemIndexDocWithScript(
-        String indexName,
-        String documentId,
-        Script script,
-        ActionListener<UpdateResponse> listener
-    ) {
-        if (!doesIndexExist(indexName)) {
-            String errorMessage = "Failed to update document for given workflow due to missing " + indexName + " index";
-            logger.error(errorMessage);
-            listener.onFailure(new Exception(errorMessage));
-        } else {
-            try (ThreadContext.StoredContext context = client.threadPool().getThreadContext().stashContext()) {
-                UpdateRequest updateRequest = new UpdateRequest(indexName, documentId);
-                // TODO: Also add ability to change other fields at the same time when adding detailed provision progress
-                updateRequest.script(script);
-                updateRequest.setRefreshPolicy(WriteRequest.RefreshPolicy.IMMEDIATE);
-                updateRequest.retryOnConflict(3);
-                // TODO: Implement our own concurrency control to improve on retry mechanism
-                client.update(updateRequest, ActionListener.runBefore(listener, context::restore));
-            } catch (Exception e) {
-                String errorMessage = "Failed to update " + indexName + " entry : " + documentId;
-                logger.error(errorMessage, e);
-                listener.onFailure(new FlowFrameworkException(errorMessage, ExceptionsHelper.status(e)));
-            }
-        }
-    }
-
-    /**
-     * Creates a new ResourceCreated object and a script to update the state index
-     * @param workflowId workflowId for the relevant step
-     * @param nodeId current process node (workflow step) id
-     * @param workflowStepName the workflowstep name that created the resource
-     * @param resourceId the id of the newly created resource
-     * @param listener the ActionListener for this step to handle completing the future after update
-     * @throws IOException if parsing fails on new resource
-     */
-    private void updateResourceInStateIndex(
-        String workflowId,
-        String nodeId,
-        String workflowStepName,
-        String resourceId,
-        ActionListener<UpdateResponse> listener
-    ) throws IOException {
-        ResourceCreated newResource = new ResourceCreated(
-            workflowStepName,
-            nodeId,
-            getResourceByWorkflowStep(workflowStepName),
-            resourceId
-        );
-
-        // The script to append a new object to the resources_created array
-        Script script = new Script(
-            ScriptType.INLINE,
-            "painless",
-            "ctx._source.resources_created.add(params.newResource);",
-            Collections.singletonMap("newResource", newResource.resourceMap())
-        );
-
-        updateFlowFrameworkSystemIndexDocWithScript(WORKFLOW_STATE_INDEX, workflowId, script, ActionListener.wrap(updateResponse -> {
-            logger.info("updated resources created of {}", workflowId);
-            listener.onResponse(updateResponse);
-        }, listener::onFailure));
-    }
-
-    /**
      * Adds a resource to the state index, including common exception handling
      * @param currentNodeInputs Inputs to the current node
      * @param nodeId current process node (workflow step) id
@@ -716,26 +683,137 @@ public class FlowFrameworkIndicesHandler {
         String resourceId,
         ActionListener<WorkflowData> listener
     ) {
+        String workflowId = currentNodeInputs.getWorkflowId();
         String resourceName = getResourceByWorkflowStep(workflowStepName);
-        try {
-            updateResourceInStateIndex(
-                currentNodeInputs.getWorkflowId(),
-                nodeId,
-                workflowStepName,
-                resourceId,
-                ActionListener.wrap(updateResponse -> {
-                    logger.info("successfully updated resources created in state index: {}", updateResponse.getIndex());
-                    listener.onResponse(new WorkflowData(Map.of(resourceName, resourceId), currentNodeInputs.getWorkflowId(), nodeId));
-                }, exception -> {
-                    String errorMessage = "Failed to update new created " + nodeId + " resource " + workflowStepName + " id " + resourceId;
-                    logger.error(errorMessage, exception);
-                    listener.onFailure(new FlowFrameworkException(errorMessage, ExceptionsHelper.status(exception)));
-                })
-            );
-        } catch (Exception e) {
-            String errorMessage = "Failed to parse and update new created resource";
-            logger.error(errorMessage, e);
-            listener.onFailure(new FlowFrameworkException(errorMessage, ExceptionsHelper.status(e)));
+        ResourceCreated newResource = new ResourceCreated(workflowStepName, nodeId, resourceName, resourceId);
+        if (!doesIndexExist(WORKFLOW_STATE_INDEX)) {
+            String errorMessage = "Failed to update state for " + workflowId + " due to missing " + WORKFLOW_STATE_INDEX + " index";
+            logger.error(errorMessage);
+            listener.onFailure(new FlowFrameworkException(errorMessage, RestStatus.NOT_FOUND));
+        } else {
+            try (ThreadContext.StoredContext context = client.threadPool().getThreadContext().stashContext()) {
+                getAndUpdateResourceInStateDocumentWithRetries(
+                    workflowId,
+                    newResource,
+                    OpType.INDEX,
+                    RETRIES,
+                    ActionListener.runBefore(listener, context::restore)
+                );
+            }
         }
+    }
+
+    /**
+     * Removes a resource from the state index, including common exception handling
+     * @param workflowId The workflow document id in the state index
+     * @param resourceToDelete The resource to delete
+     * @param listener the ActionListener for this step to handle completing the future after update
+     */
+    public void deleteResourceFromStateIndex(String workflowId, ResourceCreated resourceToDelete, ActionListener<WorkflowData> listener) {
+        if (!doesIndexExist(WORKFLOW_STATE_INDEX)) {
+            String errorMessage = "Failed to update state for " + workflowId + " due to missing " + WORKFLOW_STATE_INDEX + " index";
+            logger.error(errorMessage);
+            listener.onFailure(new FlowFrameworkException(errorMessage, RestStatus.NOT_FOUND));
+        } else {
+            try (ThreadContext.StoredContext context = client.threadPool().getThreadContext().stashContext()) {
+                getAndUpdateResourceInStateDocumentWithRetries(
+                    workflowId,
+                    resourceToDelete,
+                    OpType.DELETE,
+                    RETRIES,
+                    ActionListener.runBefore(listener, context::restore)
+                );
+            }
+        }
+    }
+
+    /**
+     * Performs a get and update of a State Index document adding or removing a resource with strong consistency and retries
+     * @param workflowId The document id to update
+     * @param resource The resource to add or remove from the resources created list
+     * @param operation The operation to perform on the resource (INDEX to append to the list or DELETE to remove)
+     * @param retries The number of retries on update version conflicts
+     * @param listener The listener to complete on success or failure
+     */
+    private void getAndUpdateResourceInStateDocumentWithRetries(
+        String workflowId,
+        ResourceCreated resource,
+        OpType operation,
+        int retries,
+        ActionListener<WorkflowData> listener
+    ) {
+        GetRequest getRequest = new GetRequest(WORKFLOW_STATE_INDEX, workflowId);
+        client.get(getRequest, ActionListener.wrap(getResponse -> {
+            if (!getResponse.isExists()) {
+                listener.onFailure(new FlowFrameworkException("Workflow state not found for " + workflowId, RestStatus.NOT_FOUND));
+                return;
+            }
+            WorkflowState currentState = WorkflowState.parse(getResponse.getSourceAsString());
+            List<ResourceCreated> resourcesCreated = new ArrayList<>(currentState.resourcesCreated());
+            if (operation == OpType.DELETE) {
+                resourcesCreated.removeIf(r -> r.resourceMap().equals(resource.resourceMap()));
+            } else {
+                resourcesCreated.add(resource);
+            }
+            XContentBuilder builder = XContentFactory.jsonBuilder();
+            WorkflowState newState = WorkflowState.builder(currentState).resourcesCreated(resourcesCreated).build();
+            newState.toXContent(builder, null);
+            UpdateRequest updateRequest = new UpdateRequest(WORKFLOW_STATE_INDEX, workflowId).doc(builder)
+                .setRefreshPolicy(WriteRequest.RefreshPolicy.IMMEDIATE)
+                .setIfSeqNo(getResponse.getSeqNo())
+                .setIfPrimaryTerm(getResponse.getPrimaryTerm());
+            client.update(
+                updateRequest,
+                ActionListener.wrap(
+                    r -> handleStateUpdateSuccess(workflowId, resource, operation, listener),
+                    e -> handleStateUpdateException(workflowId, resource, operation, retries, listener, e)
+                )
+            );
+        }, ex -> handleStateUpdateException(workflowId, resource, operation, 0, listener, ex)));
+    }
+
+    private void handleStateUpdateSuccess(
+        String workflowId,
+        ResourceCreated newResource,
+        OpType operation,
+        ActionListener<WorkflowData> listener
+    ) {
+        String resourceName = newResource.resourceType();
+        String resourceId = newResource.resourceId();
+        String nodeId = newResource.workflowStepId();
+        logger.info(
+            "Updated resources created for {} on step {} to {} resource {} {}",
+            workflowId,
+            nodeId,
+            operation.equals(OpType.DELETE) ? "delete" : "add",
+            resourceName,
+            resourceId
+        );
+        listener.onResponse(new WorkflowData(Map.of(resourceName, resourceId), workflowId, nodeId));
+    }
+
+    private void handleStateUpdateException(
+        String workflowId,
+        ResourceCreated newResource,
+        OpType operation,
+        int retries,
+        ActionListener<WorkflowData> listener,
+        Exception e
+    ) {
+        if (e instanceof VersionConflictEngineException && retries > 0) {
+            // Retry if we haven't exhausted retries
+            getAndUpdateResourceInStateDocumentWithRetries(workflowId, newResource, operation, retries - 1, listener);
+            return;
+        }
+        String errorMessage = ParameterizedMessageFactory.INSTANCE.newMessage(
+            "Failed to update workflow state for {} on step {} to {} resource {} {}",
+            workflowId,
+            newResource.workflowStepId(),
+            operation.equals(OpType.DELETE) ? "delete" : "add",
+            newResource.resourceType(),
+            newResource.resourceId()
+        ).getFormattedMessage();
+        logger.error(errorMessage, e);
+        listener.onFailure(new FlowFrameworkException(errorMessage, ExceptionsHelper.status(e)));
     }
 }

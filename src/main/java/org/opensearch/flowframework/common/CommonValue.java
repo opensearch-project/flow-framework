@@ -164,6 +164,8 @@ public class CommonValue {
     public static final String TOOLS_FIELD = "tools";
     /** The tools order field for an agent */
     public static final String TOOLS_ORDER_FIELD = "tools_order";
+    /** The tools config field */
+    public static final String CONFIG_FIELD = "config";
     /** The memory field for an agent */
     public static final String MEMORY_FIELD = "memory";
     /** The app type field for an agent */
@@ -233,4 +235,9 @@ public class CommonValue {
     public static final String CREATE_INGEST_PIPELINE_MODEL_ID = "create_ingest_pipeline.model_id";
     /** The field name for reindex source index substitution */
     public static final String REINDEX_SOURCE_INDEX = "reindex.source_index";
+
+    /**URI for the YAML file of the ML Commons API specification.*/
+    public static final String ML_COMMONS_API_SPEC_YAML_URI =
+        "https://raw.githubusercontent.com/opensearch-project/opensearch-api-specification/refs/heads/main/spec/namespaces/ml.yaml";
+
 }
