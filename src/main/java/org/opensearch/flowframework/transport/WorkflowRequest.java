@@ -63,22 +63,12 @@ public class WorkflowRequest extends ActionRequest {
     private Map<String, String> params;
 
     /**
-     * use case flag
-     */
-    private String useCase;
-
-    /**
-     * Deafult params map from use case
-     */
-    private Map<String, String> defaultParams;
-
-    /**
      * Instantiates a new WorkflowRequest, set validation to all, no provisioning
      * @param workflowId the documentId of the workflow
      * @param template the use case template which describes the workflow
      */
     public WorkflowRequest(@Nullable String workflowId, @Nullable Template template) {
-        this(workflowId, template, new String[] { "all" }, false, Collections.emptyMap(), null, Collections.emptyMap(), false);
+        this(workflowId, template, new String[] { "all" }, false, Collections.emptyMap(), false);
     }
 
     /**
@@ -88,28 +78,7 @@ public class WorkflowRequest extends ActionRequest {
      * @param params The parameters from the REST path
      */
     public WorkflowRequest(@Nullable String workflowId, @Nullable Template template, Map<String, String> params) {
-        this(workflowId, template, new String[] { "all" }, true, params, null, Collections.emptyMap(), false);
-    }
-
-    /**
-     * Instantiates a new WorkflowRequest with params map, set validation to all, provisioning to true
-     * @param workflowId the documentId of the workflow
-     * @param template the use case template which describes the workflow
-     * @param useCase the default use case give by user
-     * @param defaultParams The parameters from the REST body when a use case is given
-     */
-    public WorkflowRequest(@Nullable String workflowId, @Nullable Template template, String useCase, Map<String, String> defaultParams) {
-        this(workflowId, template, new String[] { "all" }, false, Collections.emptyMap(), useCase, defaultParams, false);
-    }
-
-    /**
-     * Instantiates a new WorkflowRequest, set validation to all, sets reprovision flag
-     * @param workflowId the documentId of the workflow
-     * @param template the updated template
-     * @param reprovision the reprovision flag
-     */
-    public WorkflowRequest(String workflowId, Template template, boolean reprovision) {
-        this(workflowId, template, new String[] { "all" }, false, Collections.emptyMap(), null, Collections.emptyMap(), reprovision);
+        this(workflowId, template, new String[] { "all" }, true, params, false);
     }
 
     /**
@@ -119,8 +88,6 @@ public class WorkflowRequest extends ActionRequest {
      * @param validation flag to indicate if validation is necessary
      * @param provisionOrUpdate provision or updateFields flag. Only one may be true, the presence of update_fields key in map indicates if updating fields, otherwise true means it's provisioning.
      * @param params map of REST path params. If provisionOrUpdate is false, must be an empty map. If update_fields key is present, must be only key.
-     * @param useCase default use case given
-     * @param defaultParams the params to be used in the substitution based on the default use case.
      * @param reprovision flag to indicate if request is to reprovision
      */
     public WorkflowRequest(
@@ -129,8 +96,6 @@ public class WorkflowRequest extends ActionRequest {
         String[] validation,
         boolean provisionOrUpdate,
         Map<String, String> params,
-        String useCase,
-        Map<String, String> defaultParams,
         boolean reprovision
     ) {
         this.workflowId = workflowId;
@@ -142,8 +107,6 @@ public class WorkflowRequest extends ActionRequest {
             throw new IllegalArgumentException("Params may only be included when provisioning.");
         }
         this.params = this.updateFields ? Collections.emptyMap() : params;
-        this.useCase = useCase;
-        this.defaultParams = defaultParams;
         this.reprovision = reprovision;
     }
 
@@ -220,22 +183,6 @@ public class WorkflowRequest extends ActionRequest {
      */
     public Map<String, String> getParams() {
         return Map.copyOf(this.params);
-    }
-
-    /**
-     * Gets the use case
-     * @return the use case
-     */
-    public String getUseCase() {
-        return this.useCase;
-    }
-
-    /**
-     * Gets the params map
-     * @return the params map
-     */
-    public Map<String, String> getDefaultParams() {
-        return Map.copyOf(this.defaultParams);
     }
 
     /**

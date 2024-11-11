@@ -226,8 +226,6 @@ public class RestCreateWorkflowAction extends BaseRestHandler {
                 validation,
                 provision || updateFields,
                 params,
-                useCase,
-                useCaseDefaultsMap,
                 reprovision
             );
 
