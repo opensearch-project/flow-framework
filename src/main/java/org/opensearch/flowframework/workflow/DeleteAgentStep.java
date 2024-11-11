@@ -10,6 +10,7 @@ package org.opensearch.flowframework.workflow;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.apache.logging.log4j.message.ParameterizedMessageFactory;
 import org.opensearch.ExceptionsHelper;
 import org.opensearch.OpenSearchStatusException;
 import org.opensearch.action.delete.DeleteResponse;
@@ -98,7 +99,9 @@ public class DeleteAgentStep implements WorkflowStep {
                             )
                         );
                     } else {
-                        String errorMessage = (e == null ? "Failed to delete agent " + agentId : e.getMessage());
+                        String errorMessage = (e == null
+                            ? ParameterizedMessageFactory.INSTANCE.newMessage("Failed to delete agent {}", agentId).getFormattedMessage()
+                            : e.getMessage());
                         logger.error(errorMessage, e);
                         deleteAgentFuture.onFailure(new WorkflowStepException(errorMessage, ExceptionsHelper.status(e)));
                     }

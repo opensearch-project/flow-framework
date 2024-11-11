@@ -40,3 +40,4 @@ Inspired from [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 ### Maintenance
 ### Refactoring
 - Update workflow state without using painless script ([#894](https://github.com/opensearch-project/flow-framework/pull/894))
+- Replace String concatenation with Log4j ParameterizedMessage for readability ([#943](https://github.com/opensearch-project/flow-framework/pull/943))

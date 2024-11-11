@@ -10,6 +10,7 @@ package org.opensearch.flowframework.transport;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.apache.logging.log4j.message.ParameterizedMessageFactory;
 import org.opensearch.ExceptionsHelper;
 import org.opensearch.action.get.GetRequest;
 import org.opensearch.action.support.ActionFilters;
@@ -104,7 +105,10 @@ public class GetWorkflowTransportAction extends HandledTransportAction<WorkflowR
                     xContentRegistry
                 );
             } catch (Exception e) {
-                String errorMessage = "Failed to retrieve template (" + workflowId + ") from global context.";
+                String errorMessage = ParameterizedMessageFactory.INSTANCE.newMessage(
+                    "Failed to retrieve template ({}) from global context.",
+                    workflowId
+                ).getFormattedMessage();
                 logger.error(errorMessage, e);
                 listener.onFailure(new FlowFrameworkException(errorMessage, ExceptionsHelper.status(e)));
             }
@@ -134,7 +138,10 @@ public class GetWorkflowTransportAction extends HandledTransportAction<WorkflowR
             context.restore();
 
             if (!response.isExists()) {
-                String errorMessage = "Failed to retrieve template (" + workflowId + ") from global context.";
+                String errorMessage = ParameterizedMessageFactory.INSTANCE.newMessage(
+                    "Failed to retrieve template ({}) from global context.",
+                    workflowId
+                ).getFormattedMessage();
                 logger.error(errorMessage);
                 listener.onFailure(new FlowFrameworkException(errorMessage, RestStatus.NOT_FOUND));
             } else {
@@ -144,7 +151,10 @@ public class GetWorkflowTransportAction extends HandledTransportAction<WorkflowR
                 listener.onResponse(new GetWorkflowResponse(template));
             }
         }, exception -> {
-            String errorMessage = "Failed to retrieve template (" + workflowId + ") from global context.";
+            String errorMessage = ParameterizedMessageFactory.INSTANCE.newMessage(
+                "Failed to retrieve template ({}) from global context.",
+                workflowId
+            ).getFormattedMessage();
             logger.error(errorMessage, exception);
             listener.onFailure(new FlowFrameworkException(errorMessage, ExceptionsHelper.status(exception)));
         }));

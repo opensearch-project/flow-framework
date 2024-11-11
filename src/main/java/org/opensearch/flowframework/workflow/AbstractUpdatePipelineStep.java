@@ -10,6 +10,7 @@ package org.opensearch.flowframework.workflow;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.apache.logging.log4j.message.ParameterizedMessageFactory;
 import org.opensearch.ExceptionsHelper;
 import org.opensearch.action.support.PlainActionFuture;
 import org.opensearch.action.support.master.AcknowledgedResponse;
@@ -115,7 +116,9 @@ public abstract class AbstractUpdatePipelineStep implements WorkflowStep {
                 @Override
                 public void onFailure(Exception ex) {
                     Exception e = getSafeException(ex);
-                    String errorMessage = (e == null ? "Failed step " + pipelineToBeCreated : e.getMessage());
+                    String errorMessage = (e == null
+                        ? ParameterizedMessageFactory.INSTANCE.newMessage("Failed step {}", pipelineToBeCreated).getFormattedMessage()
+                        : e.getMessage());
                     logger.error(errorMessage, e);
                     createPipelineFuture.onFailure(new WorkflowStepException(errorMessage, ExceptionsHelper.status(e)));
                 }

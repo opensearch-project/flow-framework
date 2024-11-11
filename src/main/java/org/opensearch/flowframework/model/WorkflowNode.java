@@ -10,6 +10,7 @@ package org.opensearch.flowframework.model;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.apache.logging.log4j.message.ParameterizedMessageFactory;
 import org.opensearch.common.unit.TimeValue;
 import org.opensearch.core.rest.RestStatus;
 import org.opensearch.core.xcontent.ToXContentObject;
@@ -171,7 +172,10 @@ public class WorkflowNode implements ToXContentObject {
                                         String configurationsString = ParseUtils.parseArbitraryStringToObjectMapToString(configurationsMap);
                                         userInputs.put(inputFieldName, configurationsString);
                                     } catch (Exception ex) {
-                                        String errorMessage = "Failed to parse" + inputFieldName + "map";
+                                        String errorMessage = ParameterizedMessageFactory.INSTANCE.newMessage(
+                                            "Failed to parse {} map",
+                                            inputFieldName
+                                        ).getFormattedMessage();
                                         logger.error(errorMessage, ex);
                                         throw new FlowFrameworkException(errorMessage, RestStatus.BAD_REQUEST);
                                     }

@@ -10,6 +10,7 @@ package org.opensearch.flowframework.workflow;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.apache.logging.log4j.message.ParameterizedMessageFactory;
 import org.opensearch.ExceptionsHelper;
 import org.opensearch.action.admin.indices.delete.DeleteIndexRequest;
 import org.opensearch.action.support.PlainActionFuture;
@@ -86,7 +87,9 @@ public class DeleteIndexStep implements WorkflowStep {
                 );
             }, ex -> {
                 Exception e = getSafeException(ex);
-                String errorMessage = (e == null ? "Failed to delete the index " + indexName : e.getMessage());
+                String errorMessage = (e == null
+                    ? ParameterizedMessageFactory.INSTANCE.newMessage("Failed to delete the index {}", indexName).getFormattedMessage()
+                    : e.getMessage());
                 logger.error(errorMessage, e);
                 deleteIndexFuture.onFailure(new WorkflowStepException(errorMessage, ExceptionsHelper.status(e)));
             }));
