@@ -10,6 +10,7 @@ package org.opensearch.flowframework.workflow;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.apache.logging.log4j.message.ParameterizedMessageFactory;
 import org.opensearch.ExceptionsHelper;
 import org.opensearch.action.admin.indices.settings.get.GetSettingsRequest;
 import org.opensearch.action.admin.indices.settings.put.UpdateSettingsRequest;
@@ -155,7 +156,10 @@ public class UpdateIndexStep implements WorkflowStep {
                             }, ex -> {
                                 Exception e = getSafeException(ex);
                                 String errorMessage = (e == null
-                                    ? "Failed to update the index settings for index " + indexName
+                                    ? ParameterizedMessageFactory.INSTANCE.newMessage(
+                                        "Failed to update the index settings for index {}",
+                                        indexName
+                                    ).getFormattedMessage()
                                     : e.getMessage());
                                 logger.error(errorMessage, e);
                                 updateIndexFuture.onFailure(new WorkflowStepException(errorMessage, ExceptionsHelper.status(e)));
@@ -163,7 +167,12 @@ public class UpdateIndexStep implements WorkflowStep {
                         }
                     }, ex -> {
                         Exception e = getSafeException(ex);
-                        String errorMessage = (e == null ? "Failed to retrieve the index settings for index " + indexName : e.getMessage());
+                        String errorMessage = (e == null
+                            ? ParameterizedMessageFactory.INSTANCE.newMessage(
+                                "Failed to retrieve the index settings for index {}",
+                                indexName
+                            ).getFormattedMessage()
+                            : e.getMessage());
                         logger.error(errorMessage, e);
                         updateIndexFuture.onFailure(new WorkflowStepException(errorMessage, ExceptionsHelper.status(e)));
                     }));

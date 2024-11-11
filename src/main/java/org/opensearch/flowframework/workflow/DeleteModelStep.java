@@ -10,6 +10,7 @@ package org.opensearch.flowframework.workflow;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.apache.logging.log4j.message.ParameterizedMessageFactory;
 import org.opensearch.ExceptionsHelper;
 import org.opensearch.OpenSearchStatusException;
 import org.opensearch.action.delete.DeleteResponse;
@@ -99,7 +100,9 @@ public class DeleteModelStep implements WorkflowStep {
                             )
                         );
                     } else {
-                        String errorMessage = (e == null ? "Failed to delete model " + modelId : e.getMessage());
+                        String errorMessage = (e == null
+                            ? ParameterizedMessageFactory.INSTANCE.newMessage("Failed to delete model {}", modelId).getFormattedMessage()
+                            : e.getMessage());
                         logger.error(errorMessage, e);
                         deleteModelFuture.onFailure(new WorkflowStepException(errorMessage, ExceptionsHelper.status(e)));
                     }

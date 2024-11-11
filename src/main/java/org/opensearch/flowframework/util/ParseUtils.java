@@ -12,6 +12,7 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonParser;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.apache.logging.log4j.message.ParameterizedMessageFactory;
 import org.apache.lucene.search.join.ScoreMode;
 import org.opensearch.action.get.GetRequest;
 import org.opensearch.action.get.GetResponse;
@@ -406,7 +407,10 @@ public class ParseUtils {
                 );
             }
         } else {
-            String errorMessage = "Failed to retrieve template (" + workflowId + ") from global context.";
+            String errorMessage = ParameterizedMessageFactory.INSTANCE.newMessage(
+                "Failed to retrieve template ({}) from global context.",
+                workflowId
+            ).getFormattedMessage();
             logger.error(errorMessage);
             listener.onFailure(new FlowFrameworkException(errorMessage, RestStatus.NOT_FOUND));
         }
@@ -455,7 +459,10 @@ public class ParseUtils {
                 listener.onFailure(e);
             }
         } else {
-            String errorMessage = "Failed to retrieve template (" + workflowId + ") from global context.";
+            String errorMessage = ParameterizedMessageFactory.INSTANCE.newMessage(
+                "Failed to retrieve template ({}) from global context.",
+                workflowId
+            ).getFormattedMessage();
             logger.error(errorMessage);
             listener.onFailure(new FlowFrameworkException(errorMessage, RestStatus.NOT_FOUND));
         }

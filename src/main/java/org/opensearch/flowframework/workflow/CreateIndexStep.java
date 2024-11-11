@@ -10,6 +10,7 @@ package org.opensearch.flowframework.workflow;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.apache.logging.log4j.message.ParameterizedMessageFactory;
 import org.opensearch.ExceptionsHelper;
 import org.opensearch.action.admin.indices.create.CreateIndexRequest;
 import org.opensearch.action.support.PlainActionFuture;
@@ -99,7 +100,10 @@ public class CreateIndexStep implements WorkflowStep {
                     createIndexRequest.source(sourceAsMap, LoggingDeprecationHandler.INSTANCE);
                 }
             } catch (Exception ex) {
-                String errorMessage = "Failed to create the index" + indexName + ", _doc is not permitted in mapping";
+                String errorMessage = ParameterizedMessageFactory.INSTANCE.newMessage(
+                    "Failed to create the index {}, _doc is not permitted in mapping",
+                    indexName
+                ).getFormattedMessage();
                 logger.error(errorMessage, ex);
                 createIndexFuture.onFailure(new WorkflowStepException(errorMessage, RestStatus.BAD_REQUEST));
             }
@@ -115,7 +119,9 @@ public class CreateIndexStep implements WorkflowStep {
                 );
             }, ex -> {
                 Exception e = getSafeException(ex);
-                String errorMessage = (e == null ? "Failed to create the index " + indexName : e.getMessage());
+                String errorMessage = (e == null
+                    ? ParameterizedMessageFactory.INSTANCE.newMessage("Failed to create the index {}", indexName).getFormattedMessage()
+                    : e.getMessage());
                 logger.error(errorMessage, e);
                 createIndexFuture.onFailure(new WorkflowStepException(errorMessage, ExceptionsHelper.status(e)));
             }));
