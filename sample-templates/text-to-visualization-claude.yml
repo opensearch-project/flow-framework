@@ -420,25 +420,110 @@ workflows:
             prompt: |
               You're an expert at creating vega-lite visualization. No matter what the user asks, you should reply with a valid vega-lite specification in json.
               Your task is to generate Vega-Lite specification in json based on the given sample data, the schema of the data, the PPL query to get the data and the user's input.
-
+              Now I will give you some examples about how to create vega-lite
+              Simple description:
+              A bar chart encodes quantitative values as the extent of rectangular bars.
+              result vega-lite
+              {'mark': 'bar', 'encoding': {'x': {'field': 'X', 'type': 'nominal'}, 'y': {'field': 'Y', 'type': 'quantitative'}}}
+              Simple description:
+              A bar chart showing the US population distribution of age groups in 2000.
+              result vega-lite
+              {'mark': 'bar', 'encoding': {'x': {'aggregate': 'sum', 'field': 'X'}, 'y': {'field': 'Y'}}}
+              Simple description:
+              A bar chart that sorts the y-values by the x-values
+              result vega-lite
+              {'mark': 'bar', 'encoding': {'x': {'aggregate': 'sum', 'field': 'X'}, 'y': {'field': 'Y', 'type': 'ordinal', 'sort': '-x'}}}
+              Simple description:
+              A bar chart with bars grouped by field X, and colored by field C
+              result vega-lite
+              {'mark': 'bar', 'encoding': {'x': {'field': 'X'}, 'y': {'field': 'Y', 'type': 'quantitative'}, 'color': {'field': 'C'}, 'xOffset': {'field': 'C'}}}
+              Simple description:
+              A vertical bar chart with multiple bars for each X colored by field C, stacked on each other
+              result vega-lite
+              {'mark': 'bar', 'encoding': {'x': {'timeUnit': '...', 'field': 'X', 'type': 'ordinal'}, 'y': {'aggregate': 'count', 'type': 'quantitative'}, 'color': {'field': 'C', 'type': 'nominal'}}}
+              Simple description:
+              A horizontal bar chart with multiple bars for each X colored by field C, stacked next to each other
+              result vega-lite
+              {'mark': 'bar', 'encoding': {'x': {'aggregate': 'sum', 'field': 'X'}, 'y': {'field': 'Y'}, 'color': {'field': 'C'}}}
+              Simple description:
+              A stacked bar chart, where all stacks are normalized to sum to 100%
+              result vega-lite
+              {'mark': 'bar', 'encoding': {'x': {'field': 'X'}, 'y': {'aggregate': 'sum', 'field': 'Y', 'stack': 'normalize'}, 'color': {'field': 'C'}}}
+              Simple description:
+              A bar chart with overlayed bars by group and transparency
+              result vega-lite
+              {'mark': 'bar', 'encoding': {'x': {'field': 'X', 'type': 'ordinal'}, 'y': {'aggregate': 'sum', 'field': 'Y', 'stack': None}, 'color': {'field': 'C'}, 'opacity': {'value': 0.7}}}
+              Simple description:
+              A histogram is like a bar chart, after binning one field and aggregating the other
+              result vega-lite
+              {'mark': 'bar', 'encoding': {'x': {'bin': True, 'field': 'X'}, 'y': {'aggregate': 'count'}}}
+              Simple description:
+              A pie chart encodes proportional differences among a set of numeric values as the angular extent and area of a circular slice.
+              result vega-lite
+              {'mark': 'arc', 'encoding': {'theta': {'field': 'T', 'type': 'quantitative'}, 'color': {'field': 'C', 'type': 'nominal'}}}
+              Simple description:
+              Heatmap with binned quantitative variables on both axes
+              result vega-lite
+              {'mark': 'rect', 'encoding': {'x': {'bin': {'maxbins': 60}, 'field': 'X', 'type': 'quantitative'}, 'y': {'bin': {'maxbins': 40}, 'field': 'Y', 'type': 'quantitative'}, 'color': {'aggregate': 'count', 'type': 'quantitative'}}}
+              Simple description:
+              A scatterplot shows the relationship between two quantitative variables X and Y
+              result vega-lite
+              {'mark': 'point', 'encoding': {'x': {'field': 'X', 'type': 'quantitative'}, 'y': {'field': 'Y', 'type': 'quantitative'}}}
+              Simple description:
+              A scatterplot with data points from different groups having a different color and shape
+              result vega-lite
+              {'mark': 'point', 'encoding': {'x': {'field': 'X', 'type': 'quantitative'}, 'y': {'field': 'Y', 'type': 'quantitative'}, 'color': {'field': 'C', 'type': 'nominal'}, 'shape': {'field': 'C', 'type': 'nominal'}}}
+              Simple description:
+              A scatter plot where the marker size is proportional to a quantitative field
+              result vega-lite
+              {'mark': 'point', 'encoding': {'x': {'field': 'X', 'type': 'quantitative'}, 'y': {'field': 'Y', 'type': 'quantitative'}, 'size': {'field': 'S', 'type': 'quantitative'}}}
+              Simple description:
+              Show a quantitative variable over time, for different groups
+              result vega-lite
+              {'mark': 'line', 'encoding': {'x': {'field': 'X', 'type': 'temporal'}, 'y': {'field': 'Y', 'type': 'quantitative'}, 'color': {'field': 'C', 'type': 'nominal'}}}
+              Simple description:
+              Heatmap with ordinal or nominal variables on both axes
+              result vega-lite
+              {'mark': 'rect', 'encoding': {'y': {'field': 'Y', 'type': 'nominal'}, 'x': {'field': 'X', 'type': 'ordinal'}, 'color': {'aggregate': 'mean', 'field': 'C'}}}
+              Simple description:
+              Multiple line charts arranged next to each other horizontally
+              result vega-lite
+              {'mark': 'line', 'encoding': {'x': {'field': 'X', 'type': 'temporal'}, 'y': {'field': 'Y', 'type': 'quantitative'}, 'color': {'field': 'C', 'type': 'nominal'}, 'column': {'field': 'F'}}}
+              Simple description:
+              Multiple line charts arranged next to each other vertically
+              result vega-lite
+              {'mark': 'bar', 'encoding': {'x': {'field': 'X'}, 'y': {'aggregate': 'sum', 'field': 'Y'}, 'row': {'field': 'F'}}}
+              Simple description:
+              A line chart layed over a stacked bar chart, with independent y axes to accomodate different scales
+              result vega-lite
+              {'layer': [{'mark': 'bar', 'encoding': {'x': {'field': 'X', 'type': 'ordinal'}, 'y': {'field': 'Y1', 'type': 'quantitative'}, 'color': {'field': 'C', 'type': 'nominal'}}}, {'mark': 'line', 'encoding': {'x': {'field': 'X', 'type': 'temporal'}, 'y': {'field': 'Y2', 'type': 'quantitative'}, 'color': {'field': 'C', 'type': 'nominal'}}}], 'resolve': {'scale': {'y': 'independent'}}}
+              Simple description:
+              A line chart with highlighting two regions of time with rectangles
+              result vega-lite
+              {'layer': [{'mark': 'rect', 'data': {'values': [{'start': '...', 'end': '...', 'event': '...'}, {'start': '...', 'end': '...', 'event': '...'}]}, 'encoding': {'x': {'field': 'start', 'type': 'temporal'}, 'x2': {'field': 'end', 'type': 'temporal'}, 'color': {'field': 'event', 'type': 'nominal'}}}, {'mark': 'line', 'encoding': {'x': {'field': 'X', 'type': 'temporal'}, 'y': {'field': 'Y', 'type': 'quantitative'}, 'color': {'value': '#333'}}}]}
+              Simple description:
+              Placing a horizontal dashed rule at a specific y value, on top of a line chart
+              result vega-lite
+              {'layer': [{'mark': 'line', 'encoding': {'x': {'field': 'X', 'type': 'temporal'}, 'y': {'field': 'Y', 'type': 'quantitative'}, 'color': {'field': 'C', 'type': 'nominal'}}}, {'mark': {'type': 'rule', 'strokeDash': [2, 2], 'size': 2}, 'encoding': {'y': {'datum': '...', 'type': 'quantitative'}}}]}
+              Simple description:
+              Placing a vertical dashed rule at a specific x value, on top of a line chart
+              result vega-lite
+              {'layer': [{'mark': 'line', 'encoding': {'x': {'field': 'X', 'type': 'temporal'}, 'y': {'field': 'Y', 'type': 'quantitative'}, 'color': {'field': 'C', 'type': 'nominal'}}}, {'mark': {'type': 'rule', 'strokeDash': [2, 2], 'size': 2}, 'encoding': {'x': {'datum': {'year': '...', 'month': '...', 'date': '...', 'hours': '...', 'minutes': '...'}, 'type': 'temporal'}}}]}
               Besides, here are some requirements:
               1. Do not contain the key called 'data' in vega-lite specification.
               2. If mark.type = point and shape.field is a field of the data, the definition of the shape should be inside the root "encoding" object, NOT in the "mark" object, for example, {"encoding": {"shape": {"field": "field_name"}}}
               3. Please also generate title and description
-
               The sample data in json format:
               ${parameters.sampleData}
-
               This is the schema of the data:
               ${parameters.dataSchema}
-
               The user used this PPL query to get the data: ${parameters.ppl}
-
               The user's input question is: ${parameters.input_question}
               The user's instruction on the visualization is: ${parameters.input_instruction}
-
               Now please reply a valid vega-lite specification in json based on above instructions.
               Please only contain vega-lite in your response.
+              For each x, y, don't use list. 
+              For all key 'encoding', use key 'layer' to include it, like {"layer": [{"encoding": ...}, ...]}
           name: Text2Vega
           type: MLModelTool
       - id: t2vega_agent
