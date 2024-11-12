@@ -57,11 +57,11 @@ workflows:
             prompt: |
               You're an expert at creating vega-lite visualization. No matter what the user asks, you should reply with a valid vega-lite specification in json.
               Your task is to generate Vega-Lite specification in json based on the given sample data, the schema of the data, the PPL query to get the data and the user's input.
-              Let's start from dimension and metric/date. Now I have a question, I already transfer it to PPL and query my Opensearch cluster. 
-              Then I get data. For the PPL, it will do aggregation like "stats AVG(field_1) as avg, COUNT(field_2) by field_3, field_4, field_5". 
+              Let's start from dimension and metric/date. Now I have a question, I already transfer it to PPL and query my Opensearch cluster.
+              Then I get data. For the PPL, it will do aggregation like "stats AVG(field_1) as avg, COUNT(field_2) by field_3, field_4, field_5".
               In this aggregation, the metric is [avg, COUNT(field_2)] , and then we judge the type of field_3,4,5. If only field_5 is type related to date, the dimension is [field_3, field_4], and date is [field_5]
               For example, stats SUM(bytes) by span(timestamp, 1w), machine.os, response, then SUM(bytes) is metric and span(timestamp, 1w) is date, while machine.os, response are dimensions.
-              Notice: Some fields like 'span()....' will be the date, but not metric and dimension. 
+              Notice: Some fields like 'span()....' will be the date, but not metric and dimension.
               And one field will only count once in dimension count. You should always pick field name from schema
               To summarize,
               A dimension is a categorical variable that is used to group, segment, or categorize data. It is typically a qualitative attribute that provides context for metrics and is used to slice and dice data to see how different categories perform in relation to each other.
@@ -272,7 +272,7 @@ workflows:
                       }
                     }
                   }
-                  
+
               Type 7:
               Entrance code: <1, 0, 1>
               Defined Attributes:
@@ -388,21 +388,21 @@ workflows:
 
               The user's question is: ${parameters.input_question}
 
-              Notice: Some fields like 'span()....' will be the date, but not metric and dimension. 
+              Notice: Some fields like 'span()....' will be the date, but not metric and dimension.
               And one field will only count once in dimension count.  You should always pick field name from schema.
                And when you code is <2, 1, 0>, it belongs type 4.
                 And when you code is <1, 2, 0>, it belongs type 9.
 
 
               Now please reply a valid vega-lite specification in json based on above instructions.
-              Please return the number of dimension, metric and date. Then choose the type. 
+              Please return the number of dimension, metric and date. Then choose the type.
               Please also return the type.
               Finally return the vega-lite specification according to the type.
-              Please make sure all the key in the schema matches the word I given. 
+              Please make sure all the key in the schema matches the word I given.
               Your answer format should be:
-              Number of metrics:[list the metric name here, Don't use duplicate name]  <number of metrics {a}>  
-              Number of dimensions:[list the dimension name here]  <number of dimension {b}> 
-              Number of dates:[list the date name here]  <number of dates {c}> 
+              Number of metrics:[list the metric name here, Don't use duplicate name]  <number of metrics {a}>
+              Number of dimensions:[list the dimension name here]  <number of dimension {b}>
+              Number of dates:[list the date name here]  <number of dates {c}>
               Then format the entrance code by: <Number of metrics, Number of dimensions, Number of dates>
               Type and its entrance code: <type number>: <its entrance code>
               Then apply the vega-lite requirements of the type.
@@ -522,7 +522,7 @@ workflows:
               The user's instruction on the visualization is: ${parameters.input_instruction}
               Now please reply a valid vega-lite specification in json based on above instructions.
               Please only contain vega-lite in your response.
-              For each x, y, don't use list. 
+              For each x, y, don't use list.
               For all key 'encoding', use key 'layer' to include it, like {"layer": [{"encoding": ...}, ...]}
           name: Text2Vega
           type: MLModelTool
