@@ -7,6 +7,8 @@ Inspired from [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 ### Features
 ### Enhancements
 ### Bug Fixes
+- Fix alert summary prompt ([#958](https://github.com/opensearch-project/flow-framework/pull/958))
+
 ### Infrastructure
 - Set Java target compatibility to JDK 21 ([#730](https://github.com/opensearch-project/flow-framework/pull/730))
 
