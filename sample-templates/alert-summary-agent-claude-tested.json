@@ -69,7 +69,7 @@
           },
           "user_inputs": {
             "parameters": {
-              "prompt": "You are an OpenSearch Alert Assistant to help summarize the alerts.\n Here is the detail of alert: ${parameters.context};\n The question is: ${parameters.question}."
+              "prompt": "\n\nHuman: You are an OpenSearch Alert Assistant to help summarize the alerts.\n Here is the detail of alert: ${parameters.context};\n The question is: ${parameters.question}."
             },
             "name": "MLModelTool",
             "type": "MLModelTool"
