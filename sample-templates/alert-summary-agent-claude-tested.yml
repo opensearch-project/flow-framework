@@ -24,7 +24,7 @@ workflows:
             x-amz-content-sha256: required
             content-type: application/json
           method: POST
-          request_body: '{"prompt":"${parameters.prompt}", "max_tokens_to_sample":${parameters.max_tokens_to_sample},
+          request_body: '{"prompt":"\n\nHuman: ${parameters.prompt}\n\nAssistant:", "max_tokens_to_sample":${parameters.max_tokens_to_sample},
             "temperature":${parameters.temperature},  "anthropic_version":"${parameters.anthropic_version}"
             }'
           action_type: predict
@@ -57,7 +57,7 @@ workflows:
         register_claude_model: model_id
       user_inputs:
         parameters:
-          prompt:  "\n\nHuman: You are an OpenSearch Alert Assistant to help summarize the alerts.\n Here is the detail of alert: ${parameters.context};\n The question is: ${parameters.question}."
+          prompt:  "You are an OpenSearch Alert Assistant to help summarize the alerts.\n Here is the detail of alert: ${parameters.context};\n The question is: ${parameters.question}."
         name: MLModelTool
         type: MLModelTool
     - id: create_alert_summary_agent
