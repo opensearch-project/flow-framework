@@ -58,7 +58,6 @@ workflows:
         register_claude_model: model_id
       user_inputs:
         parameters:
-          model_type: ''
           prompt: "Human:\" turn\": Here are some examples of the create anomaly detector
             API in OpenSearch: Example 1. POST _plugins/_anomaly_detection/detectors,
             {\"time_field\":\"timestamp\",\"indices\":[\"ecommerce\"],\"feature_attributes\":[{\"feature_name\":\"feature1\",\"aggregation_query\":{\"avg_total_revenue\":{\"avg\":{\"field\":\"total_revenue_usd\"}}}},{\"feature_name\":\"feature2\",\"aggregation_query\":{\"max_total_revenue\":{\"max\":{\"field\":\"total_revenue_usd\"}}}}]},
