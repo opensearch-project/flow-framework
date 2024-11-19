@@ -24,7 +24,7 @@ workflows:
             x-amz-content-sha256: required
             content-type: application/json
           method: POST
-          request_body: '{"prompt":"${parameters.prompt}", "max_tokens_to_sample":${parameters.max_tokens_to_sample},
+          request_body: '{"prompt":"\n\nHuman: ${parameters.prompt}\n\nAssistant:", "max_tokens_to_sample":${parameters.max_tokens_to_sample},
             "temperature":${parameters.temperature},  "anthropic_version":"${parameters.anthropic_version}"
             }'
           action_type: predict
