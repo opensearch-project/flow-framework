@@ -10,8 +10,14 @@ package org.opensearch.flowframework.common;
 
 import org.opensearch.cluster.service.ClusterService;
 import org.opensearch.common.settings.Setting;
+import org.opensearch.common.settings.Setting.Property;
 import org.opensearch.common.settings.Settings;
 import org.opensearch.common.unit.TimeValue;
+
+import static org.opensearch.remote.metadata.common.CommonValue.REMOTE_METADATA_ENDPOINT_KEY;
+import static org.opensearch.remote.metadata.common.CommonValue.REMOTE_METADATA_REGION_KEY;
+import static org.opensearch.remote.metadata.common.CommonValue.REMOTE_METADATA_SERVICE_NAME_KEY;
+import static org.opensearch.remote.metadata.common.CommonValue.REMOTE_METADATA_TYPE_KEY;
 
 /** The common settings of flow framework  */
 public class FlowFrameworkSettings {
@@ -81,6 +87,53 @@ public class FlowFrameworkSettings {
         false,
         Setting.Property.NodeScope,
         Setting.Property.Dynamic
+    );
+
+    // Whether multi-tenancy is enabled in Flow Framework.
+    // This is a static setting which must be set before starting OpenSearch by (in priority order):
+    // 1. As a command-line argument using the -E flag (overrides other options):
+    // ./bin/opensearch -Eplugins.flow_framework.multi_tenancy_enabled=true
+    // 2. As a system property using OPENSEARCH_JAVA_OPTS (overrides opensearch.yml):
+    // export OPENSEARCH_JAVA_OPTS="-Dplugins.flow_framework.multi_tenancy_enabled=true"
+    // ./bin/opensearch
+    // Or inline when starting OpenSearch:
+    // OPENSEARCH_JAVA_OPTS="-Dplugins.flow_framework.multi_tenancy_enabled=true" ./bin/opensearch
+    // 3. In the opensearch.yml configuration file:
+    // plugins.flow_framework.multi_tenancy_enabled: true
+    // After setting it, a full cluster restart is required for the changes to take effect.
+    /** This setting determines if multitenancy is enabled */
+    public static final Setting<Boolean> FLOW_FRAMEWORK_MULTI_TENANCY_ENABLED = Setting.boolSetting(
+        "plugins.flow_framework.multi_tenancy_enabled",
+        false,
+        Setting.Property.NodeScope
+    );
+
+    /** This setting sets the remote metadata type */
+    public static final Setting<String> REMOTE_METADATA_TYPE = Setting.simpleString(
+        "plugins.flow_framework." + REMOTE_METADATA_TYPE_KEY,
+        Property.NodeScope,
+        Property.Final
+    );
+
+    /** This setting sets the remote metadata endpoint */
+    public static final Setting<String> REMOTE_METADATA_ENDPOINT = Setting.simpleString(
+        "plugins.flow_framework." + REMOTE_METADATA_ENDPOINT_KEY,
+        Property.NodeScope,
+        Property.Final
+    );
+
+    /** This setting sets the remote metadata region */
+    public static final Setting<String> REMOTE_METADATA_REGION = Setting.simpleString(
+        "plugins.flow_framework." + REMOTE_METADATA_REGION_KEY,
+        Property.NodeScope,
+        Property.Final
+    );
+
+    /** This setting sets the remote metadata service name */
+    public static final Setting<String> REMOTE_METADATA_SERVICE_NAME = Setting.simpleString(
+        "plugins.flow_framework." + REMOTE_METADATA_SERVICE_NAME_KEY,
+        Property.NodeScope,
+        Property.Final
     );
 
     /**
