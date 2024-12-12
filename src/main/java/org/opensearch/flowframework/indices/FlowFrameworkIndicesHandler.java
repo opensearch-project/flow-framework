@@ -49,6 +49,7 @@ import org.opensearch.flowframework.util.EncryptorUtils;
 import org.opensearch.flowframework.util.ParseUtils;
 import org.opensearch.flowframework.workflow.WorkflowData;
 import org.opensearch.index.engine.VersionConflictEngineException;
+import org.opensearch.remote.metadata.client.SdkClient;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -79,6 +80,7 @@ import static org.opensearch.flowframework.common.WorkflowResources.getResourceB
 public class FlowFrameworkIndicesHandler {
     private static final Logger logger = LogManager.getLogger(FlowFrameworkIndicesHandler.class);
     private final Client client;
+    private final SdkClient sdkClient;
     private final ClusterService clusterService;
     private final EncryptorUtils encryptorUtils;
     private static final Map<String, AtomicBoolean> indexMappingUpdated = new HashMap<>();
@@ -90,17 +92,20 @@ public class FlowFrameworkIndicesHandler {
     /**
      * constructor
      * @param client the open search client
+     * @param sdkClient the remote metadata client
      * @param clusterService ClusterService
      * @param encryptorUtils encryption utility
      * @param xContentRegistry contentRegister to parse any response
      */
     public FlowFrameworkIndicesHandler(
         Client client,
+        SdkClient sdkClient,
         ClusterService clusterService,
         EncryptorUtils encryptorUtils,
         NamedXContentRegistry xContentRegistry
     ) {
         this.client = client;
+        this.sdkClient = sdkClient;
         this.clusterService = clusterService;
         this.encryptorUtils = encryptorUtils;
         for (FlowFrameworkIndex mlIndex : FlowFrameworkIndex.values()) {

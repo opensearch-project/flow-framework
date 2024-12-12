@@ -32,6 +32,8 @@ import org.opensearch.flowframework.model.Config;
 import org.opensearch.flowframework.model.Template;
 import org.opensearch.flowframework.model.Workflow;
 import org.opensearch.flowframework.model.WorkflowNode;
+import org.opensearch.remote.metadata.client.SdkClient;
+import org.opensearch.remote.metadata.client.impl.SdkClientFactory;
 import org.opensearch.test.OpenSearchTestCase;
 import org.opensearch.threadpool.ThreadPool;
 
@@ -53,6 +55,7 @@ public class EncryptorUtilsTests extends OpenSearchTestCase {
 
     private ClusterService clusterService;
     private Client client;
+    private SdkClient sdkClient;
     private NamedXContentRegistry xContentRegistry;
     private EncryptorUtils encryptorUtils;
     private String testMasterKey;
@@ -66,7 +69,8 @@ public class EncryptorUtilsTests extends OpenSearchTestCase {
         this.clusterService = mock(ClusterService.class);
         this.client = mock(Client.class);
         this.xContentRegistry = mock(NamedXContentRegistry.class);
-        this.encryptorUtils = new EncryptorUtils(clusterService, client, xContentRegistry);
+        this.sdkClient = SdkClientFactory.createSdkClient(client, xContentRegistry, Collections.emptyMap());
+        this.encryptorUtils = new EncryptorUtils(clusterService, client, sdkClient, xContentRegistry);
         this.testMasterKey = encryptorUtils.generateMasterKey();
         this.testCredentialKey = "credential_key";
         this.testCredentialValue = "12345";
