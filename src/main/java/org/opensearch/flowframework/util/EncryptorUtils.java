@@ -30,6 +30,7 @@ import org.opensearch.flowframework.model.Config;
 import org.opensearch.flowframework.model.Template;
 import org.opensearch.flowframework.model.Workflow;
 import org.opensearch.flowframework.model.WorkflowNode;
+import org.opensearch.remote.metadata.client.SdkClient;
 
 import javax.crypto.spec.SecretKeySpec;
 
@@ -68,6 +69,7 @@ public class EncryptorUtils {
 
     private final ClusterService clusterService;
     private final Client client;
+    private final SdkClient sdkClient;
     private String masterKey;
     private final NamedXContentRegistry xContentRegistry;
 
@@ -77,10 +79,11 @@ public class EncryptorUtils {
      * @param client the node client
      * @param xContentRegistry the OpenSearch XContent Registry
      */
-    public EncryptorUtils(ClusterService clusterService, Client client, NamedXContentRegistry xContentRegistry) {
+    public EncryptorUtils(ClusterService clusterService, Client client, SdkClient sdkClient, NamedXContentRegistry xContentRegistry) {
         this.masterKey = null;
         this.clusterService = clusterService;
         this.client = client;
+        this.sdkClient = sdkClient;
         this.xContentRegistry = xContentRegistry;
     }
 

@@ -135,7 +135,6 @@ public class FlowFrameworkPlugin extends Plugin implements ActionPlugin, SystemI
         Settings settings = environment.settings();
         flowFrameworkSettings = new FlowFrameworkSettings(clusterService, settings);
         MachineLearningNodeClient mlClient = new MachineLearningNodeClient(client);
-        EncryptorUtils encryptorUtils = new EncryptorUtils(clusterService, client, xContentRegistry);
         SdkClient sdkClient = SdkClientFactory.createSdkClient(
             client,
             xContentRegistry,
@@ -149,8 +148,10 @@ public class FlowFrameworkPlugin extends Plugin implements ActionPlugin, SystemI
                 )
                 : Collections.emptyMap()
         );
+        EncryptorUtils encryptorUtils = new EncryptorUtils(clusterService, client, sdkClient, xContentRegistry);
         FlowFrameworkIndicesHandler flowFrameworkIndicesHandler = new FlowFrameworkIndicesHandler(
             client,
+            sdkClient,
             clusterService,
             encryptorUtils,
             xContentRegistry
