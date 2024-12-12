@@ -179,7 +179,7 @@ dependencies {
     implementation 'org.bouncycastle:bcprov-jdk18on:1.80'
     api "org.apache.httpcomponents.core5:httpcore5:5.3.2"
     implementation "jakarta.json.bind:jakarta.json.bind-api:3.0.1"
-    implementation "org.glassfish:jakarta.json:2.0.1"
+    implementation "jakarta.json:jakarta.json-api:2.1.3"
     implementation "org.eclipse:yasson:3.0.4"
     implementation "com.google.code.gson:gson:2.11.0"
     // Swagger-Parser dependencies for API consistency tests
@@ -192,6 +192,8 @@ dependencies {
     testImplementation "com.fasterxml.jackson.core:jackson-annotations:${versions.jackson}"
     testImplementation "com.fasterxml.jackson.core:jackson-databind:${versions.jackson_databind}"
     testImplementation "com.fasterxml.jackson.datatype:jackson-datatype-jsr310:${versions.jackson_databind}"
+    // Multi-tenant SDK Client
+    implementation "org.opensearch:opensearch-remote-metadata-sdk:${opensearch_version}"
 
     // ZipArchive dependencies used for integration tests
     zipArchive group: 'org.opensearch.plugin', name:'opensearch-ml-plugin', version: "${opensearch_build}"
