@@ -34,6 +34,7 @@ import org.opensearch.flowframework.model.Template;
 import org.opensearch.flowframework.model.Workflow;
 import org.opensearch.flowframework.model.WorkflowState;
 import org.opensearch.flowframework.util.EncryptorUtils;
+import org.opensearch.flowframework.util.TenantAwareHelper;
 import org.opensearch.flowframework.workflow.ProcessNode;
 import org.opensearch.flowframework.workflow.WorkflowProcessSorter;
 import org.opensearch.flowframework.workflow.WorkflowStepFactory;
@@ -130,7 +131,10 @@ public class ReprovisionWorkflowTransportAction extends HandledTransportAction<R
 
     @Override
     protected void doExecute(Task task, ReprovisionWorkflowRequest request, ActionListener<WorkflowResponse> listener) {
-
+        String tenantId = request.getUpdatedTemplate() == null ? null : request.getUpdatedTemplate().getTenantId();
+        if (!TenantAwareHelper.validateTenantId(flowFrameworkSettings.isMultiTenancyEnabled(), tenantId, listener)) {
+            return;
+        }
         String workflowId = request.getWorkflowId();
         User user = getUserContext(client);
 

@@ -46,12 +46,14 @@ public class DeleteWorkflowTransportActionTests extends OpenSearchTestCase {
     private Client client;
     private DeleteWorkflowTransportAction deleteWorkflowTransportAction;
     private FlowFrameworkIndicesHandler flowFrameworkIndicesHandler;
+    private FlowFrameworkSettings flowFrameworkSettings;
 
     @Override
     public void setUp() throws Exception {
         super.setUp();
         this.client = mock(Client.class);
         this.flowFrameworkIndicesHandler = mock(FlowFrameworkIndicesHandler.class);
+        this.flowFrameworkSettings = mock(FlowFrameworkSettings.class);
 
         ClusterService clusterService = mock(ClusterService.class);
         ClusterSettings clusterSettings = new ClusterSettings(
@@ -64,6 +66,7 @@ public class DeleteWorkflowTransportActionTests extends OpenSearchTestCase {
             mock(TransportService.class),
             mock(ActionFilters.class),
             flowFrameworkIndicesHandler,
+            flowFrameworkSettings,
             client,
             clusterService,
             xContentRegistry(),

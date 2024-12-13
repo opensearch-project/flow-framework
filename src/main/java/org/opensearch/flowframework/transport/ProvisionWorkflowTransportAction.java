@@ -25,6 +25,7 @@ import org.opensearch.commons.authuser.User;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.core.rest.RestStatus;
 import org.opensearch.core.xcontent.NamedXContentRegistry;
+import org.opensearch.flowframework.common.FlowFrameworkSettings;
 import org.opensearch.flowframework.exception.FlowFrameworkException;
 import org.opensearch.flowframework.indices.FlowFrameworkIndicesHandler;
 import org.opensearch.flowframework.model.ProvisioningProgress;
@@ -32,6 +33,7 @@ import org.opensearch.flowframework.model.State;
 import org.opensearch.flowframework.model.Template;
 import org.opensearch.flowframework.model.Workflow;
 import org.opensearch.flowframework.util.EncryptorUtils;
+import org.opensearch.flowframework.util.TenantAwareHelper;
 import org.opensearch.flowframework.workflow.ProcessNode;
 import org.opensearch.flowframework.workflow.WorkflowProcessSorter;
 import org.opensearch.plugins.PluginsService;
@@ -71,6 +73,7 @@ public class ProvisionWorkflowTransportAction extends HandledTransportAction<Wor
     private final Client client;
     private final WorkflowProcessSorter workflowProcessSorter;
     private final FlowFrameworkIndicesHandler flowFrameworkIndicesHandler;
+    private final FlowFrameworkSettings flowFrameworkSettings;
     private final EncryptorUtils encryptorUtils;
     private final PluginsService pluginsService;
     private volatile Boolean filterByEnabled;
@@ -85,6 +88,7 @@ public class ProvisionWorkflowTransportAction extends HandledTransportAction<Wor
      * @param client The node client to retrieve a stored use case template
      * @param workflowProcessSorter Utility class to generate a togologically sorted list of Process nodes
      * @param flowFrameworkIndicesHandler Class to handle all internal system indices actions
+     * @param flowFrameworkSettings The Flow Framework settings
      * @param encryptorUtils Utility class to handle encryption/decryption
      * @param pluginsService The Plugins Service
      * @param clusterService the cluster service
@@ -99,6 +103,7 @@ public class ProvisionWorkflowTransportAction extends HandledTransportAction<Wor
         Client client,
         WorkflowProcessSorter workflowProcessSorter,
         FlowFrameworkIndicesHandler flowFrameworkIndicesHandler,
+        FlowFrameworkSettings flowFrameworkSettings,
         EncryptorUtils encryptorUtils,
         PluginsService pluginsService,
         ClusterService clusterService,
@@ -110,6 +115,7 @@ public class ProvisionWorkflowTransportAction extends HandledTransportAction<Wor
         this.client = client;
         this.workflowProcessSorter = workflowProcessSorter;
         this.flowFrameworkIndicesHandler = flowFrameworkIndicesHandler;
+        this.flowFrameworkSettings = flowFrameworkSettings;
         this.encryptorUtils = encryptorUtils;
         this.pluginsService = pluginsService;
         filterByEnabled = FILTER_BY_BACKEND_ROLES.get(settings);
@@ -121,8 +127,11 @@ public class ProvisionWorkflowTransportAction extends HandledTransportAction<Wor
     @Override
     protected void doExecute(Task task, WorkflowRequest request, ActionListener<WorkflowResponse> listener) {
         // Retrieve use case template from global context
+        String tenantId = request.getTemplate() == null ? null : request.getTemplate().getTenantId();
+        if (!TenantAwareHelper.validateTenantId(flowFrameworkSettings.isMultiTenancyEnabled(), tenantId, listener)) {
+            return;
+        }
         String workflowId = request.getWorkflowId();
-
         User user = getUserContext(client);
 
         // Stash thread context to interact with system index
