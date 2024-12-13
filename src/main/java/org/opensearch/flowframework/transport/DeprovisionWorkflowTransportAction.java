@@ -32,6 +32,7 @@ import org.opensearch.flowframework.indices.FlowFrameworkIndicesHandler;
 import org.opensearch.flowframework.model.ProvisioningProgress;
 import org.opensearch.flowframework.model.ResourceCreated;
 import org.opensearch.flowframework.model.State;
+import org.opensearch.flowframework.util.TenantAwareHelper;
 import org.opensearch.flowframework.workflow.ProcessNode;
 import org.opensearch.flowframework.workflow.WorkflowData;
 import org.opensearch.flowframework.workflow.WorkflowStep;
@@ -150,6 +151,10 @@ public class DeprovisionWorkflowTransportAction extends HandledTransportAction<W
         ThreadContext.StoredContext context,
         User user
     ) {
+        String tenantId = request.getTemplate() == null ? null : request.getTemplate().getTenantId();
+        if (!TenantAwareHelper.validateTenantId(flowFrameworkSettings.isMultiTenancyEnabled(), tenantId, listener)) {
+            return;
+        }
         String workflowId = request.getWorkflowId();
         String allowDelete = request.getParams().get(ALLOW_DELETE);
         GetWorkflowStateRequest getStateRequest = new GetWorkflowStateRequest(workflowId, true);

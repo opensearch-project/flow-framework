@@ -79,6 +79,7 @@ public class ReprovisionWorkflowTransportActionTests extends OpenSearchTestCase 
         this.workflowStepFactory = mock(WorkflowStepFactory.class);
         this.workflowProcessSorter = mock(WorkflowProcessSorter.class);
         this.flowFrameworkIndicesHandler = mock(FlowFrameworkIndicesHandler.class);
+        this.flowFrameworkSettings = mock(FlowFrameworkSettings.class);
         this.encryptorUtils = mock(EncryptorUtils.class);
         this.pluginsService = mock(PluginsService.class);
 

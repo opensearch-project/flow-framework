@@ -69,6 +69,7 @@ public class ProvisionWorkflowTransportActionTests extends OpenSearchTestCase {
     private ProvisionWorkflowTransportAction provisionWorkflowTransportAction;
     private Template template;
     private FlowFrameworkIndicesHandler flowFrameworkIndicesHandler;
+    private FlowFrameworkSettings flowFrameworkSettings;
     private EncryptorUtils encryptorUtils;
     private PluginsService pluginsService;
 
@@ -79,6 +80,7 @@ public class ProvisionWorkflowTransportActionTests extends OpenSearchTestCase {
         this.client = mock(Client.class);
         this.workflowProcessSorter = mock(WorkflowProcessSorter.class);
         this.flowFrameworkIndicesHandler = mock(FlowFrameworkIndicesHandler.class);
+        this.flowFrameworkSettings = mock(FlowFrameworkSettings.class);
         this.encryptorUtils = mock(EncryptorUtils.class);
         this.pluginsService = mock(PluginsService.class);
         ClusterService clusterService = mock(ClusterService.class);
@@ -95,6 +97,7 @@ public class ProvisionWorkflowTransportActionTests extends OpenSearchTestCase {
             client,
             workflowProcessSorter,
             flowFrameworkIndicesHandler,
+            flowFrameworkSettings,
             encryptorUtils,
             pluginsService,
             clusterService,
