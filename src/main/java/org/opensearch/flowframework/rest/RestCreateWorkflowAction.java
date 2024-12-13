@@ -24,6 +24,7 @@ import org.opensearch.flowframework.model.Template;
 import org.opensearch.flowframework.transport.CreateWorkflowAction;
 import org.opensearch.flowframework.transport.WorkflowRequest;
 import org.opensearch.flowframework.util.ParseUtils;
+import org.opensearch.flowframework.util.RestActionUtils;
 import org.opensearch.rest.BaseRestHandler;
 import org.opensearch.rest.BytesRestResponse;
 import org.opensearch.rest.RestRequest;
@@ -145,6 +146,7 @@ public class RestCreateWorkflowAction extends BaseRestHandler {
             );
             return processError(ffe, params, request);
         }
+        String tenantId = RestActionUtils.getTenantID(flowFrameworkSettings.isMultiTenancyEnabled(), request);
         try {
             Template template;
             Map<String, String> useCaseDefaultsMap = Collections.emptyMap();
