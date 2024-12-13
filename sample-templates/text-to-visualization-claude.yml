@@ -175,6 +175,7 @@ workflows:
                         "encoding": {
                           "x": {
                             "field": "<date 1>",
+                            "timeUnit": <smallest unit of the date according to query, for e.g. span(timestamp, 1d) ,then it should be day>,
                             "type": "temporal"
                           },
                           "y": {
@@ -198,6 +199,7 @@ workflows:
                         "encoding": {
                           "x": {
                             "field": "<date 1>",
+                            "timeUnit": <smallest unit of the date according to query, for e.g. span(timestamp, 1d) ,then it should be day>,
                             "type": "temporal"
                           },
                           "y": {
@@ -234,6 +236,7 @@ workflows:
                         "encoding": {
                           "x": {
                             "field": "<date 1>",
+                            "timeUnit": <smallest unit of the date according to query, for e.g. span(timestamp, 1d) ,then it should be day>,
                             "type": "temporal"
                           },
                           "y": {
@@ -283,6 +286,7 @@ workflows:
                     "encoding": {
                       "x": {
                         "field": "<date 1>",
+                        "timeUnit": <smallest unit of the date according to query, for e.g. span(timestamp, 1d) ,then it should be day>,
                         "type": "temporal",
                         "axis": {
                           "title": "<date name>"
@@ -308,6 +312,7 @@ workflows:
                     "encoding": {
                       "x": {
                         "field": "<date 1>",
+                        "timeUnit": <smallest unit of the date according to query, for e.g. span(timestamp, 1d) ,then it should be day>,
                         "type": "temporal",
                         "axis": {
                           "title": "<date name>"
@@ -341,6 +346,7 @@ workflows:
                       "x": {
                         "field": "<date 1>",
                         "type": "temporal",
+                        "timeUnit": <smallest unit of the date according to query, for e.g. span(timestamp, 1d) ,then it should be day>,
                         "axis": {
                           "title": "<date name>"
                         }
@@ -368,6 +374,24 @@ workflows:
                   }
 
               Type 10:
+              Entrance code: <1, 0, 0>
+              Defined Attributes:
+                    {
+                    "title": "<title>",
+                    "description": "<description>",
+                    "mark": "text",
+                    "encoding": {
+                      "text": {
+                        "field": "<metric name>",
+                        "type": "quantitative",
+                        "axis": {
+                          "title": "<metric name>"
+                        }
+                      }
+                    },
+                  }
+
+              Type 11:
               Entrance code: all other code
               All others type.
               Use a table to show the result
@@ -390,8 +414,8 @@ workflows:
 
               Notice: Some fields like 'span()....' will be the date, but not metric and dimension.
               And one field will only count once in dimension count.  You should always pick field name from schema.
-               And when you code is <2, 1, 0>, it belongs type 4.
-                And when you code is <1, 2, 0>, it belongs type 9.
+              And when you code is <2, 1, 0>, it belongs type 4.
+              And when you code is <1, 2, 0>, it belongs type 9.
 
 
               Now please reply a valid vega-lite specification in json based on above instructions.
