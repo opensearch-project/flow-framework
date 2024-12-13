@@ -32,6 +32,7 @@ import java.util.Locale;
 import static org.opensearch.flowframework.common.CommonValue.WORKFLOW_ID;
 import static org.opensearch.flowframework.common.CommonValue.WORKFLOW_URI;
 import static org.opensearch.flowframework.common.FlowFrameworkSettings.FLOW_FRAMEWORK_ENABLED;
+import static org.opensearch.flowframework.model.Template.createEmptyTemplateWithTenantId;
 
 /**
  * Rest Action to facilitate requests to get a stored template
@@ -71,7 +72,6 @@ public class RestGetWorkflowAction extends BaseRestHandler {
                 );
             }
             String tenantId = RestActionUtils.getTenantID(flowFrameworkFeatureEnabledSetting.isMultiTenancyEnabled(), request);
-
             // Always consume content to silently ignore it
             // https://github.com/opensearch-project/flow-framework/issues/578
             request.content();
@@ -81,7 +81,7 @@ public class RestGetWorkflowAction extends BaseRestHandler {
                 throw new FlowFrameworkException("workflow_id cannot be null", RestStatus.BAD_REQUEST);
             }
 
-            WorkflowRequest workflowRequest = new WorkflowRequest(workflowId, null);
+            WorkflowRequest workflowRequest = new WorkflowRequest(workflowId, createEmptyTemplateWithTenantId(tenantId));
             return channel -> client.execute(GetWorkflowAction.INSTANCE, workflowRequest, ActionListener.wrap(response -> {
                 XContentBuilder builder = response.toXContent(channel.newBuilder(), ToXContent.EMPTY_PARAMS);
                 channel.sendResponse(new BytesRestResponse(RestStatus.OK, builder));
