@@ -31,6 +31,8 @@ public class FlowFrameworkSettings {
     protected volatile Integer maxWorkflows;
     /** Timeout for internal requests*/
     protected volatile TimeValue requestTimeout;
+    /** Whether multitenancy is enabled */
+    private final Boolean isMultiTenancyEnabled;
 
     /** The upper limit of max workflows that can be created  */
     public static final int MAX_WORKFLOWS_LIMIT = 10000;
@@ -150,6 +152,7 @@ public class FlowFrameworkSettings {
         this.maxWorkflowSteps = MAX_WORKFLOW_STEPS.get(settings);
         this.maxWorkflows = MAX_WORKFLOWS.get(settings);
         this.requestTimeout = WORKFLOW_REQUEST_TIMEOUT.get(settings);
+        this.isMultiTenancyEnabled = FLOW_FRAMEWORK_MULTI_TENANCY_ENABLED.get(settings);
         clusterService.getClusterSettings().addSettingsUpdateConsumer(FLOW_FRAMEWORK_ENABLED, it -> isFlowFrameworkEnabled = it);
         clusterService.getClusterSettings().addSettingsUpdateConsumer(TASK_REQUEST_RETRY_DURATION, it -> retryDuration = it);
         clusterService.getClusterSettings().addSettingsUpdateConsumer(MAX_WORKFLOW_STEPS, it -> maxWorkflowSteps = it);
@@ -195,5 +198,13 @@ public class FlowFrameworkSettings {
      */
     public TimeValue getRequestTimeout() {
         return requestTimeout;
+    }
+
+    /**
+     * Whether multitenancy is enabled.
+     * @return whether Flow Framework multitenancy is enabled.
+     */
+    public boolean isMultiTenancyEnabled() {
+        return isMultiTenancyEnabled;
     }
 }

@@ -22,6 +22,7 @@ import org.opensearch.flowframework.common.FlowFrameworkSettings;
 import org.opensearch.flowframework.exception.FlowFrameworkException;
 import org.opensearch.flowframework.transport.ProvisionWorkflowAction;
 import org.opensearch.flowframework.transport.WorkflowRequest;
+import org.opensearch.flowframework.util.RestActionUtils;
 import org.opensearch.rest.BaseRestHandler;
 import org.opensearch.rest.BytesRestResponse;
 import org.opensearch.rest.RestRequest;
@@ -88,6 +89,7 @@ public class RestProvisionWorkflowAction extends BaseRestHandler {
             if (workflowId == null) {
                 throw new FlowFrameworkException("workflow_id cannot be null", RestStatus.BAD_REQUEST);
             }
+            String tenantId = RestActionUtils.getTenantID(flowFrameworkFeatureEnabledSetting.isMultiTenancyEnabled(), request);
             // Create request and provision
             WorkflowRequest workflowRequest = new WorkflowRequest(workflowId, null, params, waitForCompletionTimeout);
             return channel -> client.execute(ProvisionWorkflowAction.INSTANCE, workflowRequest, ActionListener.wrap(response -> {

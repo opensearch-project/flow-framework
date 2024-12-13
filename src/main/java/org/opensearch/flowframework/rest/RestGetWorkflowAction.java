@@ -20,6 +20,7 @@ import org.opensearch.flowframework.common.FlowFrameworkSettings;
 import org.opensearch.flowframework.exception.FlowFrameworkException;
 import org.opensearch.flowframework.transport.GetWorkflowAction;
 import org.opensearch.flowframework.transport.WorkflowRequest;
+import org.opensearch.flowframework.util.RestActionUtils;
 import org.opensearch.rest.BaseRestHandler;
 import org.opensearch.rest.BytesRestResponse;
 import org.opensearch.rest.RestRequest;
@@ -69,6 +70,7 @@ public class RestGetWorkflowAction extends BaseRestHandler {
                     RestStatus.FORBIDDEN
                 );
             }
+            String tenantId = RestActionUtils.getTenantID(flowFrameworkFeatureEnabledSetting.isMultiTenancyEnabled(), request);
 
             // Always consume content to silently ignore it
             // https://github.com/opensearch-project/flow-framework/issues/578

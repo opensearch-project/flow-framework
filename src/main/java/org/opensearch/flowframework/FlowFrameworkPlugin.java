@@ -87,6 +87,7 @@ import static org.opensearch.flowframework.common.CommonValue.DEPROVISION_WORKFL
 import static org.opensearch.flowframework.common.CommonValue.FLOW_FRAMEWORK_THREAD_POOL_PREFIX;
 import static org.opensearch.flowframework.common.CommonValue.GLOBAL_CONTEXT_INDEX;
 import static org.opensearch.flowframework.common.CommonValue.PROVISION_WORKFLOW_THREAD_POOL;
+import static org.opensearch.flowframework.common.CommonValue.TENANT_ID_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.WORKFLOW_STATE_INDEX;
 import static org.opensearch.flowframework.common.CommonValue.WORKFLOW_THREAD_POOL;
 import static org.opensearch.flowframework.common.FlowFrameworkSettings.FILTER_BY_BACKEND_ROLES;
@@ -147,7 +148,6 @@ public class FlowFrameworkPlugin extends Plugin implements ActionPlugin, SystemI
                     Map.entry(REMOTE_METADATA_ENDPOINT_KEY, REMOTE_METADATA_ENDPOINT.get(settings)),
                     Map.entry(REMOTE_METADATA_REGION_KEY, REMOTE_METADATA_REGION.get(settings)),
                     Map.entry(REMOTE_METADATA_SERVICE_NAME_KEY, REMOTE_METADATA_SERVICE_NAME.get(settings)),
-                    Map.entry(TENANT_ID_FIELD_KEY, "tenant_id")
                     Map.entry(TENANT_AWARE_KEY, "true"),
                     Map.entry(TENANT_ID_FIELD_KEY, TENANT_ID_FIELD)
                 )

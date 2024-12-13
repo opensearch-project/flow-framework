@@ -82,6 +82,10 @@ public class CommonValue {
     public static final String USE_CASE = "use_case";
     /** The param name for reprovisioning, used by the create workflow API */
     public static final String REPROVISION_WORKFLOW = "reprovision";
+    /** The Rest header containing the tenant id */
+    public static final String TENANT_ID_HEADER = "x-tenant-id";
+    /** The field name containing the tenant id */
+    public static final String TENANT_ID_FIELD = "tenant_id";
 
     /*
      * Constants associated with plugin configuration
