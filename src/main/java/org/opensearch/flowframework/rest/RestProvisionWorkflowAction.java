@@ -39,6 +39,7 @@ import static org.opensearch.flowframework.common.CommonValue.WAIT_FOR_COMPLETIO
 import static org.opensearch.flowframework.common.CommonValue.WORKFLOW_ID;
 import static org.opensearch.flowframework.common.CommonValue.WORKFLOW_URI;
 import static org.opensearch.flowframework.common.FlowFrameworkSettings.FLOW_FRAMEWORK_ENABLED;
+import static org.opensearch.flowframework.model.Template.createEmptyTemplateWithTenantId;
 
 /**
  * Rest action to facilitate requests to provision a workflow from an inline defined or stored use case template
@@ -85,13 +86,13 @@ public class RestProvisionWorkflowAction extends BaseRestHandler {
                     RestStatus.FORBIDDEN
                 );
             }
+            String tenantId = RestActionUtils.getTenantID(flowFrameworkFeatureEnabledSetting.isMultiTenancyEnabled(), request);
             // Validate params
             if (workflowId == null) {
                 throw new FlowFrameworkException("workflow_id cannot be null", RestStatus.BAD_REQUEST);
             }
-            String tenantId = RestActionUtils.getTenantID(flowFrameworkFeatureEnabledSetting.isMultiTenancyEnabled(), request);
             // Create request and provision
-            WorkflowRequest workflowRequest = new WorkflowRequest(workflowId, null, params, waitForCompletionTimeout);
+            WorkflowRequest workflowRequest = new WorkflowRequest(workflowId, createEmptyTemplateWithTenantId(tenantId), params, waitForCompletionTimeout);
             return channel -> client.execute(ProvisionWorkflowAction.INSTANCE, workflowRequest, ActionListener.wrap(response -> {
                 XContentBuilder builder = response.toXContent(channel.newBuilder(), ToXContent.EMPTY_PARAMS);
                 channel.sendResponse(new BytesRestResponse(RestStatus.OK, builder));

@@ -35,6 +35,7 @@ import static org.opensearch.flowframework.common.CommonValue.ALLOW_DELETE;
 import static org.opensearch.flowframework.common.CommonValue.WORKFLOW_ID;
 import static org.opensearch.flowframework.common.CommonValue.WORKFLOW_URI;
 import static org.opensearch.flowframework.common.FlowFrameworkSettings.FLOW_FRAMEWORK_ENABLED;
+import static org.opensearch.flowframework.model.Template.createEmptyTemplateWithTenantId;
 
 /**
  * Rest Action to facilitate requests to de-provision a workflow
@@ -81,7 +82,7 @@ public class RestDeprovisionWorkflowAction extends BaseRestHandler {
             }
             WorkflowRequest workflowRequest = new WorkflowRequest(
                 workflowId,
-                null,
+                createEmptyTemplateWithTenantId(tenantId),
                 allowDelete == null ? Collections.emptyMap() : Map.of(ALLOW_DELETE, allowDelete)
             );
 

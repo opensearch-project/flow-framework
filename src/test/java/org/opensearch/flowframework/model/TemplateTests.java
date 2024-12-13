@@ -19,6 +19,7 @@ import org.opensearch.test.OpenSearchTestCase;
 
 import java.io.IOException;
 import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -47,7 +48,7 @@ public class TemplateTests extends OpenSearchTestCase {
         Workflow workflow = new Workflow(Map.of("key", "value"), nodes, edges);
         Map<String, Object> uiMetadata = null;
 
-        Instant now = Instant.now();
+        Instant now = Instant.now().truncatedTo(ChronoUnit.MILLIS);
         Template template = new Template(
             "test",
             "a test template",
@@ -74,6 +75,9 @@ public class TemplateTests extends OpenSearchTestCase {
         assertEquals(now, template.lastUpdatedTime());
         assertNull(template.lastProvisionedTime());
         assertEquals("Workflow [userParams={key=value}, nodes=[A, B], edges=[A->B]]", wf.toString());
+        assertNull(template.getTenantId());
+        template.setTenantId("tenant-id");
+        assertEquals("tenant-id", template.getTenantId());
 
         String json = TemplateTestJsonUtil.parseToJson(template);
 
@@ -86,10 +90,11 @@ public class TemplateTests extends OpenSearchTestCase {
         assertEquals(uiMetadata, templateX.getUiMetadata());
         Workflow wfX = templateX.workflows().get("workflow");
         assertNotNull(wfX);
-        assertEquals(now, template.createdTime());
-        assertEquals(now, template.lastUpdatedTime());
-        assertNull(template.lastProvisionedTime());
+        assertEquals(now, templateX.createdTime());
+        assertEquals(now, templateX.lastUpdatedTime());
+        assertNull(templateX.lastProvisionedTime());
         assertEquals("Workflow [userParams={key=value}, nodes=[A, B], edges=[A->B]]", wfX.toString());
+        assertEquals("tenant-id", templateX.getTenantId());
 
         // Test invalid field if updating
         XContentParser parser = JsonXContent.jsonXContent.createParser(
@@ -183,5 +188,17 @@ public class TemplateTests extends OpenSearchTestCase {
         assertTrue(json.contains("\"name\":\"test\""));
         assertTrue(json.contains("\"description\":\"\""));
         assertTrue(json.contains("\"use_case\":\"\""));
+    }
+
+    public void testCreateEmptyTemplateWithTenantId() {
+        String tenantId = "test-tenant";
+        Template t = Template.createEmptyTemplateWithTenantId(tenantId);
+        assertNotNull(t);
+        assertEquals(tenantId, t.getTenantId());
+    }
+
+    public void testCreateEmptyTemplateWithTenantId_NullTenantId() {
+        Template t = Template.createEmptyTemplateWithTenantId(null);
+        assertNull(t);
     }
 }

@@ -114,6 +114,7 @@ public class RestCreateWorkflowAction extends BaseRestHandler {
                 new BytesRestResponse(ffe.getRestStatus(), ffe.toXContent(channel.newErrorBuilder(), ToXContent.EMPTY_PARAMS))
             );
         }
+        String tenantId = RestActionUtils.getTenantID(flowFrameworkSettings.isMultiTenancyEnabled(), request);
         if (!provision && !params.isEmpty()) {
             FlowFrameworkException ffe = new FlowFrameworkException(
                 "Only the parameters " + request.consumedParams() + " are permitted unless the provision parameter is set to true.",
@@ -157,7 +158,6 @@ public class RestCreateWorkflowAction extends BaseRestHandler {
             );
             return processError(ffe, params, request);
         }
-        String tenantId = RestActionUtils.getTenantID(flowFrameworkSettings.isMultiTenancyEnabled(), request);
         try {
             Template template;
             Map<String, String> useCaseDefaultsMap = Collections.emptyMap();
@@ -234,6 +234,9 @@ public class RestCreateWorkflowAction extends BaseRestHandler {
             }
             if (waitForCompletionTimeout != TimeValue.MINUS_ONE) {
                 params = Map.of(WAIT_FOR_COMPLETION_TIMEOUT, waitForCompletionTimeout.toString());
+            }
+            if (tenantId != null) {
+                template.setTenantId(tenantId);
             }
             WorkflowRequest workflowRequest = new WorkflowRequest(
                 workflowId,
