@@ -23,6 +23,7 @@ import org.opensearch.common.xcontent.XContentFactory;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.core.common.bytes.BytesReference;
 import org.opensearch.core.index.shard.ShardId;
+import org.opensearch.core.xcontent.NamedXContentRegistry;
 import org.opensearch.core.xcontent.XContentBuilder;
 import org.opensearch.flowframework.TestHelpers;
 import org.opensearch.flowframework.common.FlowFrameworkSettings;
@@ -36,6 +37,8 @@ import org.opensearch.flowframework.util.EncryptorUtils;
 import org.opensearch.flowframework.workflow.WorkflowProcessSorter;
 import org.opensearch.index.get.GetResult;
 import org.opensearch.plugins.PluginsService;
+import org.opensearch.remote.metadata.client.SdkClient;
+import org.opensearch.remote.metadata.client.impl.SdkClientFactory;
 import org.opensearch.tasks.Task;
 import org.opensearch.test.OpenSearchTestCase;
 import org.opensearch.threadpool.ThreadPool;
@@ -65,6 +68,7 @@ public class ProvisionWorkflowTransportActionTests extends OpenSearchTestCase {
 
     private ThreadPool threadPool;
     private Client client;
+    private SdkClient sdkClient;
     private WorkflowProcessSorter workflowProcessSorter;
     private ProvisionWorkflowTransportAction provisionWorkflowTransportAction;
     private Template template;
@@ -78,6 +82,7 @@ public class ProvisionWorkflowTransportActionTests extends OpenSearchTestCase {
         super.setUp();
         this.threadPool = mock(ThreadPool.class);
         this.client = mock(Client.class);
+        this.sdkClient = SdkClientFactory.createSdkClient(client, NamedXContentRegistry.EMPTY, Collections.emptyMap());
         this.workflowProcessSorter = mock(WorkflowProcessSorter.class);
         this.flowFrameworkIndicesHandler = mock(FlowFrameworkIndicesHandler.class);
         this.flowFrameworkSettings = mock(FlowFrameworkSettings.class);
@@ -95,6 +100,7 @@ public class ProvisionWorkflowTransportActionTests extends OpenSearchTestCase {
             mock(ActionFilters.class),
             threadPool,
             client,
+            sdkClient,
             workflowProcessSorter,
             flowFrameworkIndicesHandler,
             flowFrameworkSettings,

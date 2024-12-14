@@ -30,6 +30,7 @@ import org.opensearch.common.util.concurrent.ThreadContext;
 import org.opensearch.commons.ConfigConstants;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.core.index.shard.ShardId;
+import org.opensearch.core.xcontent.NamedXContentRegistry;
 import org.opensearch.flowframework.TestHelpers;
 import org.opensearch.flowframework.common.FlowFrameworkSettings;
 import org.opensearch.flowframework.indices.FlowFrameworkIndex;
@@ -40,6 +41,8 @@ import org.opensearch.flowframework.model.WorkflowEdge;
 import org.opensearch.flowframework.model.WorkflowNode;
 import org.opensearch.flowframework.workflow.WorkflowProcessSorter;
 import org.opensearch.plugins.PluginsService;
+import org.opensearch.remote.metadata.client.SdkClient;
+import org.opensearch.remote.metadata.client.impl.SdkClientFactory;
 import org.opensearch.search.SearchHit;
 import org.opensearch.search.SearchHits;
 import org.opensearch.tasks.Task;
@@ -90,6 +93,7 @@ public class CreateWorkflowTransportActionTests extends OpenSearchTestCase {
     private WorkflowProcessSorter workflowProcessSorter;
     private Template template;
     private Client client;
+    private SdkClient sdkClient;
     private ThreadPool threadPool;
     private FlowFrameworkSettings flowFrameworkSettings;
     private PluginsService pluginsService;
@@ -100,6 +104,7 @@ public class CreateWorkflowTransportActionTests extends OpenSearchTestCase {
     public void setUp() throws Exception {
         super.setUp();
         client = mock(Client.class);
+        this.sdkClient = SdkClientFactory.createSdkClient(client, NamedXContentRegistry.EMPTY, Collections.emptyMap());
 
         threadPool = mock(ThreadPool.class);
         this.flowFrameworkSettings = mock(FlowFrameworkSettings.class);
@@ -140,6 +145,7 @@ public class CreateWorkflowTransportActionTests extends OpenSearchTestCase {
                 flowFrameworkIndicesHandler,
                 flowFrameworkSettings,
                 client,
+                sdkClient,
                 pluginsService,
                 clusterService,
                 xContentRegistry(),
@@ -376,6 +382,7 @@ public class CreateWorkflowTransportActionTests extends OpenSearchTestCase {
                 flowFrameworkIndicesHandler,
                 flowFrameworkSettings,
                 client,
+                sdkClient,
                 pluginsService,
                 clusterService,
                 xContentRegistry(),
@@ -439,6 +446,7 @@ public class CreateWorkflowTransportActionTests extends OpenSearchTestCase {
                 flowFrameworkIndicesHandler,
                 flowFrameworkSettings,
                 client,
+                sdkClient,
                 pluginsService,
                 clusterService,
                 xContentRegistry(),
@@ -474,6 +482,7 @@ public class CreateWorkflowTransportActionTests extends OpenSearchTestCase {
                 flowFrameworkIndicesHandler,
                 flowFrameworkSettings,
                 client,
+                sdkClient,
                 pluginsService,
                 clusterService,
                 xContentRegistry(),
