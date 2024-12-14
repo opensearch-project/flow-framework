@@ -40,6 +40,7 @@ import org.opensearch.flowframework.workflow.WorkflowProcessSorter;
 import org.opensearch.index.query.QueryBuilder;
 import org.opensearch.index.query.QueryBuilders;
 import org.opensearch.plugins.PluginsService;
+import org.opensearch.remote.metadata.client.SdkClient;
 import org.opensearch.search.builder.SearchSourceBuilder;
 import org.opensearch.tasks.Task;
 import org.opensearch.transport.TransportService;
@@ -70,6 +71,7 @@ public class CreateWorkflowTransportAction extends HandledTransportAction<Workfl
     private final WorkflowProcessSorter workflowProcessSorter;
     private final FlowFrameworkIndicesHandler flowFrameworkIndicesHandler;
     private final Client client;
+    private final SdkClient sdkClient;
     private final FlowFrameworkSettings flowFrameworkSettings;
     private final PluginsService pluginsService;
     private volatile Boolean filterByEnabled;
@@ -97,6 +99,7 @@ public class CreateWorkflowTransportAction extends HandledTransportAction<Workfl
         FlowFrameworkIndicesHandler flowFrameworkIndicesHandler,
         FlowFrameworkSettings flowFrameworkSettings,
         Client client,
+        SdkClient sdkClient,
         PluginsService pluginsService,
         ClusterService clusterService,
         NamedXContentRegistry xContentRegistry,
@@ -107,6 +110,7 @@ public class CreateWorkflowTransportAction extends HandledTransportAction<Workfl
         this.flowFrameworkIndicesHandler = flowFrameworkIndicesHandler;
         this.flowFrameworkSettings = flowFrameworkSettings;
         this.client = client;
+        this.sdkClient = sdkClient;
         this.pluginsService = pluginsService;
         filterByEnabled = FILTER_BY_BACKEND_ROLES.get(settings);
         this.clusterService = clusterService;

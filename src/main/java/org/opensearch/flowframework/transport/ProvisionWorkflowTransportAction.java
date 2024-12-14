@@ -39,6 +39,7 @@ import org.opensearch.flowframework.util.WorkflowTimeoutUtility;
 import org.opensearch.flowframework.workflow.ProcessNode;
 import org.opensearch.flowframework.workflow.WorkflowProcessSorter;
 import org.opensearch.plugins.PluginsService;
+import org.opensearch.remote.metadata.client.SdkClient;
 import org.opensearch.tasks.Task;
 import org.opensearch.threadpool.ThreadPool;
 import org.opensearch.transport.TransportService;
@@ -75,6 +76,7 @@ public class ProvisionWorkflowTransportAction extends HandledTransportAction<Wor
 
     private final ThreadPool threadPool;
     private final Client client;
+    private final SdkClient sdkClient;
     private final WorkflowProcessSorter workflowProcessSorter;
     private final FlowFrameworkIndicesHandler flowFrameworkIndicesHandler;
     private final FlowFrameworkSettings flowFrameworkSettings;
@@ -105,6 +107,7 @@ public class ProvisionWorkflowTransportAction extends HandledTransportAction<Wor
         ActionFilters actionFilters,
         ThreadPool threadPool,
         Client client,
+        SdkClient sdkClient,
         WorkflowProcessSorter workflowProcessSorter,
         FlowFrameworkIndicesHandler flowFrameworkIndicesHandler,
         FlowFrameworkSettings flowFrameworkSettings,
@@ -117,6 +120,7 @@ public class ProvisionWorkflowTransportAction extends HandledTransportAction<Wor
         super(ProvisionWorkflowAction.NAME, transportService, actionFilters, WorkflowRequest::new);
         this.threadPool = threadPool;
         this.client = client;
+        this.sdkClient = sdkClient;
         this.workflowProcessSorter = workflowProcessSorter;
         this.flowFrameworkIndicesHandler = flowFrameworkIndicesHandler;
         this.flowFrameworkSettings = flowFrameworkSettings;
@@ -144,11 +148,14 @@ public class ProvisionWorkflowTransportAction extends HandledTransportAction<Wor
             resolveUserAndExecute(
                 user,
                 workflowId,
+                tenantId,
                 filterByEnabled,
                 false,
+                flowFrameworkSettings.isMultiTenancyEnabled(),
                 listener,
                 () -> executeProvisionRequest(request, listener, context),
                 client,
+                sdkClient,
                 clusterService,
                 xContentRegistry
             );

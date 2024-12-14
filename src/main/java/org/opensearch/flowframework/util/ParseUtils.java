@@ -45,6 +45,7 @@ import org.opensearch.index.query.QueryBuilder;
 import org.opensearch.index.query.QueryBuilders;
 import org.opensearch.index.query.TermsQueryBuilder;
 import org.opensearch.ml.repackage.com.google.common.collect.ImmutableList;
+import org.opensearch.remote.metadata.client.SdkClient;
 import org.opensearch.search.builder.SearchSourceBuilder;
 
 import java.io.FileNotFoundException;
@@ -285,22 +286,31 @@ public class ParseUtils {
      * Resolve user and execute the function
      * @param requestedUser the user to execute the request
      * @param workflowId workflow id
+     * @param tenantId tenant id
      * @param filterByEnabled filter by enabled setting
+<<<<<<< HEAD
      * @param statePresent state present for the transport action
+=======
+     * @param isMultitenancyEnabled whether multitenancy is enabled
+>>>>>>> 4026563 (Pass SdkClient and tenant id to util used for access control checks)
      * @param listener action listener
      * @param function workflow function
      * @param client node client
+     * @param sdkClient multitenant client
      * @param clusterService cluster service
      * @param xContentRegistry contentRegister to parse get response
      */
     public static void resolveUserAndExecute(
         User requestedUser,
         String workflowId,
+        String tenantId,
         Boolean filterByEnabled,
         Boolean statePresent,
+        boolean isMultitenancyEnabled,
         ActionListener<? extends ActionResponse> listener,
         Runnable function,
         Client client,
+        SdkClient sdkClient,
         ClusterService clusterService,
         NamedXContentRegistry xContentRegistry
     ) {

@@ -28,6 +28,7 @@ import org.opensearch.flowframework.common.FlowFrameworkSettings;
 import org.opensearch.flowframework.exception.FlowFrameworkException;
 import org.opensearch.flowframework.indices.FlowFrameworkIndicesHandler;
 import org.opensearch.flowframework.util.TenantAwareHelper;
+import org.opensearch.remote.metadata.client.SdkClient;
 import org.opensearch.tasks.Task;
 import org.opensearch.transport.TransportService;
 
@@ -47,6 +48,7 @@ public class DeleteWorkflowTransportAction extends HandledTransportAction<Workfl
     private final FlowFrameworkIndicesHandler flowFrameworkIndicesHandler;
     private final FlowFrameworkSettings flowFrameworkSettings;
     private final Client client;
+    private final SdkClient sdkClient;
     private volatile Boolean filterByEnabled;
     private final ClusterService clusterService;
     private final NamedXContentRegistry xContentRegistry;
@@ -69,6 +71,7 @@ public class DeleteWorkflowTransportAction extends HandledTransportAction<Workfl
         FlowFrameworkIndicesHandler flowFrameworkIndicesHandler,
         FlowFrameworkSettings flowFrameworkSettings,
         Client client,
+        SdkClient sdkClient,
         ClusterService clusterService,
         NamedXContentRegistry xContentRegistry,
         Settings settings
@@ -77,6 +80,7 @@ public class DeleteWorkflowTransportAction extends HandledTransportAction<Workfl
         this.flowFrameworkIndicesHandler = flowFrameworkIndicesHandler;
         this.flowFrameworkSettings = flowFrameworkSettings;
         this.client = client;
+        this.sdkClient = sdkClient;
         filterByEnabled = FILTER_BY_BACKEND_ROLES.get(settings);
         this.xContentRegistry = xContentRegistry;
         this.clusterService = clusterService;
@@ -100,11 +104,14 @@ public class DeleteWorkflowTransportAction extends HandledTransportAction<Workfl
             resolveUserAndExecute(
                 user,
                 workflowId,
+                tenantId,
                 filterByEnabled,
                 clearStatus,
+                flowFrameworkSettings.isMultiTenancyEnabled(),
                 listener,
                 () -> executeDeleteRequest(request, listener, context),
                 client,
+                sdkClient,
                 clusterService,
                 xContentRegistry
             );

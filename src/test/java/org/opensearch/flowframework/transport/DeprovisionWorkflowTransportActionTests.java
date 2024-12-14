@@ -20,6 +20,7 @@ import org.opensearch.common.util.concurrent.OpenSearchExecutors;
 import org.opensearch.common.util.concurrent.ThreadContext;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.core.rest.RestStatus;
+import org.opensearch.core.xcontent.NamedXContentRegistry;
 import org.opensearch.flowframework.common.FlowFrameworkSettings;
 import org.opensearch.flowframework.exception.FlowFrameworkException;
 import org.opensearch.flowframework.indices.FlowFrameworkIndicesHandler;
@@ -31,6 +32,8 @@ import org.opensearch.flowframework.workflow.DeleteIngestPipelineStep;
 import org.opensearch.flowframework.workflow.UndeployModelStep;
 import org.opensearch.flowframework.workflow.WorkflowData;
 import org.opensearch.flowframework.workflow.WorkflowStepFactory;
+import org.opensearch.remote.metadata.client.SdkClient;
+import org.opensearch.remote.metadata.client.impl.SdkClientFactory;
 import org.opensearch.tasks.Task;
 import org.opensearch.test.OpenSearchTestCase;
 import org.opensearch.threadpool.ScalingExecutorBuilder;
@@ -81,6 +84,7 @@ public class DeprovisionWorkflowTransportActionTests extends OpenSearchTestCase 
         )
     );
     private Client client;
+    private SdkClient sdkClient;
     private WorkflowStepFactory workflowStepFactory;
     private DeleteConnectorStep deleteConnectorStep;
     private UndeployModelStep undeployModelStep;
@@ -94,6 +98,7 @@ public class DeprovisionWorkflowTransportActionTests extends OpenSearchTestCase 
     public void setUp() throws Exception {
         super.setUp();
         this.client = mock(Client.class);
+        this.sdkClient = SdkClientFactory.createSdkClient(client, NamedXContentRegistry.EMPTY, Collections.emptyMap());
         ThreadPool clientThreadPool = spy(threadPool);
         when(client.threadPool()).thenReturn(clientThreadPool);
         ThreadContext threadContext = new ThreadContext(Settings.EMPTY);
@@ -127,6 +132,7 @@ public class DeprovisionWorkflowTransportActionTests extends OpenSearchTestCase 
             mock(ActionFilters.class),
             clientThreadPool,
             client,
+            sdkClient,
             workflowStepFactory,
             flowFrameworkIndicesHandler,
             flowFrameworkSettings,

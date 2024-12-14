@@ -31,6 +31,7 @@ import org.opensearch.flowframework.model.Template;
 import org.opensearch.flowframework.util.EncryptorUtils;
 import org.opensearch.flowframework.util.ParseUtils;
 import org.opensearch.flowframework.util.TenantAwareHelper;
+import org.opensearch.remote.metadata.client.SdkClient;
 import org.opensearch.tasks.Task;
 import org.opensearch.transport.TransportService;
 
@@ -49,6 +50,7 @@ public class GetWorkflowTransportAction extends HandledTransportAction<WorkflowR
     private final FlowFrameworkIndicesHandler flowFrameworkIndicesHandler;
     private final FlowFrameworkSettings flowFrameworkSettings;
     private final Client client;
+    private final SdkClient sdkClient;
     private final EncryptorUtils encryptorUtils;
     private volatile Boolean filterByEnabled;
     private final ClusterService clusterService;
@@ -73,6 +75,7 @@ public class GetWorkflowTransportAction extends HandledTransportAction<WorkflowR
         FlowFrameworkIndicesHandler flowFrameworkIndicesHandler,
         FlowFrameworkSettings flowFrameworkSettings,
         Client client,
+        SdkClient sdkClient,
         EncryptorUtils encryptorUtils,
         ClusterService clusterService,
         NamedXContentRegistry xContentRegistry,
@@ -82,6 +85,7 @@ public class GetWorkflowTransportAction extends HandledTransportAction<WorkflowR
         this.flowFrameworkIndicesHandler = flowFrameworkIndicesHandler;
         this.flowFrameworkSettings = flowFrameworkSettings;
         this.client = client;
+        this.sdkClient = sdkClient;
         this.encryptorUtils = encryptorUtils;
         filterByEnabled = FILTER_BY_BACKEND_ROLES.get(settings);
         this.xContentRegistry = xContentRegistry;
@@ -105,11 +109,14 @@ public class GetWorkflowTransportAction extends HandledTransportAction<WorkflowR
                 resolveUserAndExecute(
                     user,
                     workflowId,
+                    tenantId,
                     filterByEnabled,
                     false,
+                    flowFrameworkSettings.isMultiTenancyEnabled(),
                     listener,
                     () -> executeGetRequest(request, listener, context),
                     client,
+                    sdkClient,
                     clusterService,
                     xContentRegistry
                 );

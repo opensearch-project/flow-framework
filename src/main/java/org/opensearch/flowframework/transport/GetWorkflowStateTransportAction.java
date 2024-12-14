@@ -25,10 +25,12 @@ import org.opensearch.core.action.ActionListener;
 import org.opensearch.core.rest.RestStatus;
 import org.opensearch.core.xcontent.NamedXContentRegistry;
 import org.opensearch.core.xcontent.XContentParser;
+import org.opensearch.flowframework.common.FlowFrameworkSettings;
 import org.opensearch.flowframework.exception.FlowFrameworkException;
 import org.opensearch.flowframework.model.WorkflowState;
 import org.opensearch.flowframework.util.ParseUtils;
 import org.opensearch.index.IndexNotFoundException;
+import org.opensearch.remote.metadata.client.SdkClient;
 import org.opensearch.tasks.Task;
 import org.opensearch.transport.TransportService;
 
@@ -47,7 +49,9 @@ public class GetWorkflowStateTransportAction extends HandledTransportAction<GetW
 
     private final Logger logger = LogManager.getLogger(GetWorkflowStateTransportAction.class);
 
+    private final FlowFrameworkSettings flowFrameworkSettings;
     private final Client client;
+    private final SdkClient sdkClient;
     private final NamedXContentRegistry xContentRegistry;
     private volatile Boolean filterByEnabled;
     private final ClusterService clusterService;
@@ -65,13 +69,17 @@ public class GetWorkflowStateTransportAction extends HandledTransportAction<GetW
     public GetWorkflowStateTransportAction(
         TransportService transportService,
         ActionFilters actionFilters,
+        FlowFrameworkSettings flowFrameworkSettings,
         Client client,
+        SdkClient sdkClient,
         NamedXContentRegistry xContentRegistry,
         ClusterService clusterService,
         Settings settings
     ) {
         super(GetWorkflowStateAction.NAME, transportService, actionFilters, GetWorkflowStateRequest::new);
+        this.flowFrameworkSettings = flowFrameworkSettings;
         this.client = client;
+        this.sdkClient = sdkClient;
         this.xContentRegistry = xContentRegistry;
         filterByEnabled = FILTER_BY_BACKEND_ROLES.get(settings);
         this.clusterService = clusterService;
@@ -88,11 +96,14 @@ public class GetWorkflowStateTransportAction extends HandledTransportAction<GetW
             resolveUserAndExecute(
                 user,
                 workflowId,
+                null, // TODO: Get Tenant ID in through this request
                 filterByEnabled,
                 true,
+                flowFrameworkSettings.isMultiTenancyEnabled(),
                 listener,
                 () -> executeGetWorkflowStateRequest(request, listener, context),
                 client,
+                sdkClient,
                 clusterService,
                 xContentRegistry
             );

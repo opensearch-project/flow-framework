@@ -22,6 +22,7 @@ import org.opensearch.core.action.ActionListener;
 import org.opensearch.core.common.bytes.BytesReference;
 import org.opensearch.core.common.io.stream.NamedWriteableAwareStreamInput;
 import org.opensearch.core.common.io.stream.StreamInput;
+import org.opensearch.core.xcontent.NamedXContentRegistry;
 import org.opensearch.core.xcontent.ToXContent;
 import org.opensearch.core.xcontent.XContentBuilder;
 import org.opensearch.flowframework.TestHelpers;
@@ -31,6 +32,8 @@ import org.opensearch.flowframework.indices.FlowFrameworkIndicesHandler;
 import org.opensearch.flowframework.model.WorkflowState;
 import org.opensearch.index.IndexNotFoundException;
 import org.opensearch.index.get.GetResult;
+import org.opensearch.remote.metadata.client.SdkClient;
+import org.opensearch.remote.metadata.client.impl.SdkClientFactory;
 import org.opensearch.tasks.Task;
 import org.opensearch.test.OpenSearchTestCase;
 import org.opensearch.threadpool.ThreadPool;
@@ -60,7 +63,9 @@ public class GetWorkflowStateTransportActionTests extends OpenSearchTestCase {
 
     private GetWorkflowStateTransportAction getWorkflowStateTransportAction;
     private FlowFrameworkIndicesHandler flowFrameworkIndicesHandler;
+    private FlowFrameworkSettings flowFrameworkSettings;
     private Client client;
+    private SdkClient sdkClient;
     private ThreadPool threadPool;
     private ThreadContext threadContext;
     private ActionListener<GetWorkflowStateResponse> response;
@@ -69,7 +74,9 @@ public class GetWorkflowStateTransportActionTests extends OpenSearchTestCase {
     @Override
     public void setUp() throws Exception {
         super.setUp();
+        this.flowFrameworkSettings = mock(FlowFrameworkSettings.class);
         this.client = mock(Client.class);
+        this.sdkClient = SdkClientFactory.createSdkClient(client, NamedXContentRegistry.EMPTY, Collections.emptyMap());
         this.threadPool = mock(ThreadPool.class);
         ClusterService clusterService = mock(ClusterService.class);
         ClusterSettings clusterSettings = new ClusterSettings(
@@ -81,7 +88,9 @@ public class GetWorkflowStateTransportActionTests extends OpenSearchTestCase {
         this.getWorkflowStateTransportAction = new GetWorkflowStateTransportAction(
             mock(TransportService.class),
             mock(ActionFilters.class),
+            flowFrameworkSettings,
             client,
+            sdkClient,
             xContentRegistry(),
             clusterService,
             Settings.EMPTY

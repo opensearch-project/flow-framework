@@ -70,6 +70,7 @@ public class GetWorkflowTransportActionTests extends OpenSearchTestCase {
     public void setUp() throws Exception {
         super.setUp();
         this.client = mock(Client.class);
+        this.sdkClient = SdkClientFactory.createSdkClient(client, NamedXContentRegistry.EMPTY, Collections.emptyMap());
         this.xContentRegistry = mock(NamedXContentRegistry.class);
         this.flowFrameworkIndicesHandler = mock(FlowFrameworkIndicesHandler.class);
         this.flowFrameworkSettings = mock(FlowFrameworkSettings.class);
@@ -88,6 +89,7 @@ public class GetWorkflowTransportActionTests extends OpenSearchTestCase {
             flowFrameworkIndicesHandler,
             flowFrameworkSettings,
             client,
+            sdkClient,
             encryptorUtils,
             clusterService,
             xContentRegistry,
