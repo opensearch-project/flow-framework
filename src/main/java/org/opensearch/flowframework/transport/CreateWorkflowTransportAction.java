@@ -127,7 +127,14 @@ public class CreateWorkflowTransportAction extends HandledTransportAction<Workfl
         User user = getUserContext(client);
         String workflowId = request.getWorkflowId();
         try {
-            resolveUserAndExecute(user, workflowId, listener, () -> createExecute(request, user, listener));
+            resolveUserAndExecute(
+                user,
+                workflowId,
+                tenantId,
+                flowFrameworkSettings.isMultiTenancyEnabled(),
+                listener,
+                () -> createExecute(request, user, listener)
+            );
         } catch (Exception e) {
             logger.error("Failed to create workflow", e);
             listener.onFailure(e);
@@ -138,12 +145,15 @@ public class CreateWorkflowTransportAction extends HandledTransportAction<Workfl
      * Resolve user and execute the workflow function
      * @param requestedUser the user making the request
      * @param workflowId the workflow id
+     * @param tenantId the tenant id
      * @param listener the action listener
      * @param function the workflow function to execute
      */
     private void resolveUserAndExecute(
         User requestedUser,
         String workflowId,
+        String tenantId,
+        boolean isMultitenancyEnabled,
         ActionListener<WorkflowResponse> listener,
         Runnable function
     ) {
@@ -169,11 +179,14 @@ public class CreateWorkflowTransportAction extends HandledTransportAction<Workfl
                 getWorkflow(
                     requestedUser,
                     workflowId,
+                    tenantId,
                     filterByBackendRole,
                     false,
+                    isMultitenancyEnabled,
                     listener,
                     function,
                     client,
+                    sdkClient,
                     clusterService,
                     xContentRegistry
                 );
