@@ -14,7 +14,6 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.message.ParameterizedMessageFactory;
 import org.apache.lucene.search.join.ScoreMode;
-import org.opensearch.action.get.GetRequest;
 import org.opensearch.action.get.GetResponse;
 import org.opensearch.client.Client;
 import org.opensearch.cluster.service.ClusterService;
@@ -36,7 +35,6 @@ import org.opensearch.core.xcontent.XContentBuilder;
 import org.opensearch.core.xcontent.XContentParser;
 import org.opensearch.flowframework.exception.FlowFrameworkException;
 import org.opensearch.flowframework.model.Template;
-import org.opensearch.flowframework.transport.WorkflowResponse;
 import org.opensearch.flowframework.workflow.WorkflowData;
 import org.opensearch.index.query.BoolQueryBuilder;
 import org.opensearch.index.query.NestedQueryBuilder;
@@ -44,7 +42,9 @@ import org.opensearch.index.query.QueryBuilder;
 import org.opensearch.index.query.QueryBuilders;
 import org.opensearch.index.query.TermsQueryBuilder;
 import org.opensearch.ml.repackage.com.google.common.collect.ImmutableList;
+import org.opensearch.remote.metadata.client.GetDataObjectRequest;
 import org.opensearch.remote.metadata.client.SdkClient;
+import org.opensearch.remote.metadata.common.SdkClientUtils;
 import org.opensearch.search.builder.SearchSourceBuilder;
 
 import java.io.FileNotFoundException;
@@ -68,6 +68,7 @@ import jakarta.json.bind.JsonbBuilder;
 
 import static org.opensearch.core.xcontent.XContentParserUtils.ensureExpectedToken;
 import static org.opensearch.flowframework.common.CommonValue.GLOBAL_CONTEXT_INDEX;
+import static org.opensearch.flowframework.common.CommonValue.WORKFLOW_THREAD_POOL;
 
 /**
  * Utility methods for Template parsing
@@ -308,13 +309,26 @@ public class ParseUtils {
         NamedXContentRegistry xContentRegistry
     ) {
         try {
-            if (requestedUser == null || filterByEnabled == Boolean.FALSE) {
+            if (!isMultitenancyEnabled && (requestedUser == null || filterByEnabled == Boolean.FALSE)) {
                 // requestedUser == null means security is disabled or user is superadmin. In this case we don't need to
-                // check if request user have access to the workflow or not.
+                // check if request user have access to the workflow or not unless we have multitenancy
                 // !filterByEnabled means security is enabled and filterByEnabled is disabled
                 function.run();
             } else {
-                getWorkflow(requestedUser, workflowId, filterByEnabled, listener, function, client, clusterService, xContentRegistry);
+                // we need to validate either user access, multitenancy, or both, which requires getting the workflow
+                getWorkflow(
+                    requestedUser,
+                    workflowId,
+                    tenantId,
+                    filterByEnabled,
+                    isMultitenancyEnabled,
+                    listener,
+                    function,
+                    client,
+                    sdkClient,
+                    clusterService,
+                    xContentRegistry
+                );
             }
         } catch (Exception e) {
             listener.onFailure(e);
@@ -374,44 +388,63 @@ public class ParseUtils {
      * Get workflow
      * @param requestUser the user to execute the request
      * @param workflowId workflow id
+     * @param tenantId tenant id
      * @param filterByEnabled filter by enabled setting
+     * @param isMultitenancyEnabled if multi tenancy is enabled
      * @param listener action listener
      * @param function workflow function
      * @param client node client
+     * @param sdkclient the tenant aware client
      * @param clusterService cluster service
      * @param xContentRegistry contentRegister to parse get response
      */
     public static void getWorkflow(
         User requestUser,
         String workflowId,
+        String tenantId,
         Boolean filterByEnabled,
-        ActionListener listener,
+        boolean isMultitenancyEnabled,
+        ActionListener<? extends ActionResponse> listener,
         Runnable function,
         Client client,
+        SdkClient sdkClient,
         ClusterService clusterService,
         NamedXContentRegistry xContentRegistry
     ) {
         if (clusterService.state().metadata().hasIndex(GLOBAL_CONTEXT_INDEX)) {
             try (ThreadContext.StoredContext context = client.threadPool().getThreadContext().stashContext()) {
-                GetRequest request = new GetRequest(GLOBAL_CONTEXT_INDEX, workflowId);
-                client.get(
-                    request,
-                    ActionListener.wrap(
-                        response -> onGetWorkflowResponse(
-                            response,
-                            requestUser,
-                            workflowId,
-                            filterByEnabled,
-                            listener,
-                            function,
-                            xContentRegistry
-                        ),
-                        exception -> {
-                            logger.error("Failed to get workflow: {}", workflowId, exception);
-                            listener.onFailure(exception);
+                GetDataObjectRequest request = GetDataObjectRequest.builder()
+                    .index(GLOBAL_CONTEXT_INDEX)
+                    .id(workflowId)
+                    .tenantId(tenantId)
+                    .build();
+                sdkClient.getDataObjectAsync(request, client.threadPool().executor(WORKFLOW_THREAD_POOL)).whenComplete((r, throwable) -> {
+                    if (throwable == null) {
+                        GetResponse getResponse;
+                        try {
+                            getResponse = r.parser() == null ? null : GetResponse.fromXContent(r.parser());
+                            onGetWorkflowResponse(
+                                getResponse,
+                                requestUser,
+                                workflowId,
+                                tenantId,
+                                filterByEnabled,
+                                isMultitenancyEnabled,
+                                listener,
+                                function,
+                                xContentRegistry
+                            );
+                        } catch (IOException e) {
+                            logger.error("Failed to parse workflow getResponse: {}", workflowId, e);
+                            listener.onFailure(e);
                         }
-                    )
-                );
+                    } else {
+                        Exception exception = SdkClientUtils.unwrapAndConvertToException(throwable);
+                        System.err.println("E " + exception.toString());
+                        logger.error("Failed to get workflow: {}", workflowId, exception);
+                        listener.onFailure(exception);
+                    }
+                });
             }
         } else {
             String errorMessage = ParameterizedMessageFactory.INSTANCE.newMessage(
@@ -428,7 +461,9 @@ public class ParseUtils {
      * @param requestUser the user to execute the request
      * @param response get response
      * @param workflowId workflow id
+     * @param tenantId tenant id
      * @param filterByEnabled filter by enabled setting
+     * @param isMultitenancyEnabled if multi tenancy is enabled
      * @param listener action listener
      * @param function workflow function
      * @param xContentRegistry contentRegister to parse get response
@@ -437,8 +472,10 @@ public class ParseUtils {
         GetResponse response,
         User requestUser,
         String workflowId,
+        String tenantId,
         Boolean filterByEnabled,
-        ActionListener<WorkflowResponse> listener,
+        boolean isMultitenancyEnabled,
+        ActionListener<? extends ActionResponse> listener,
         Runnable function,
         NamedXContentRegistry xContentRegistry
     ) {
@@ -449,7 +486,9 @@ public class ParseUtils {
                 ensureExpectedToken(XContentParser.Token.START_OBJECT, parser.nextToken(), parser);
                 Template template = Template.parse(parser);
                 User resourceUser = template.getUser();
-
+                if (!TenantAwareHelper.validateTenantResource(isMultitenancyEnabled, tenantId, template.getTenantId(), listener)) {
+                    return;
+                }
                 if (!filterByEnabled || checkUserPermissions(requestUser, resourceUser, workflowId) || isAdmin(requestUser)) {
                     function.run();
                 } else {
