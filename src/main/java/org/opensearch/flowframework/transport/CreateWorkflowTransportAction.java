@@ -12,7 +12,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.message.ParameterizedMessageFactory;
 import org.opensearch.ExceptionsHelper;
-import org.opensearch.action.get.GetRequest;
+import org.opensearch.action.get.GetResponse;
 import org.opensearch.action.search.SearchRequest;
 import org.opensearch.action.support.ActionFilters;
 import org.opensearch.action.support.HandledTransportAction;
@@ -40,11 +40,14 @@ import org.opensearch.flowframework.workflow.WorkflowProcessSorter;
 import org.opensearch.index.query.QueryBuilder;
 import org.opensearch.index.query.QueryBuilders;
 import org.opensearch.plugins.PluginsService;
+import org.opensearch.remote.metadata.client.GetDataObjectRequest;
 import org.opensearch.remote.metadata.client.SdkClient;
+import org.opensearch.remote.metadata.common.SdkClientUtils;
 import org.opensearch.search.builder.SearchSourceBuilder;
 import org.opensearch.tasks.Task;
 import org.opensearch.transport.TransportService;
 
+import java.io.IOException;
 import java.time.Instant;
 import java.util.Arrays;
 import java.util.Collections;
@@ -56,6 +59,7 @@ import static org.opensearch.flowframework.common.CommonValue.GLOBAL_CONTEXT_IND
 import static org.opensearch.flowframework.common.CommonValue.PROVISIONING_PROGRESS_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.STATE_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.WAIT_FOR_COMPLETION_TIMEOUT;
+import static org.opensearch.flowframework.common.CommonValue.WORKFLOW_THREAD_POOL;
 import static org.opensearch.flowframework.common.FlowFrameworkSettings.FILTER_BY_BACKEND_ROLES;
 import static org.opensearch.flowframework.util.ParseUtils.checkFilterByBackendRoles;
 import static org.opensearch.flowframework.util.ParseUtils.getUserContext;
@@ -133,7 +137,7 @@ public class CreateWorkflowTransportAction extends HandledTransportAction<Workfl
                 tenantId,
                 flowFrameworkSettings.isMultiTenancyEnabled(),
                 listener,
-                () -> createExecute(request, user, listener)
+                () -> createExecute(request, user, tenantId, listener)
             );
         } catch (Exception e) {
             logger.error("Failed to create workflow", e);
@@ -212,9 +216,10 @@ public class CreateWorkflowTransportAction extends HandledTransportAction<Workfl
      * 4. Create or update provisioning progress index
      * @param request the workflow request
      * @param user the user making the request
+     * @param tenantId the tenant id
      * @param listener the action listener
      */
-    private void createExecute(WorkflowRequest request, User user, ActionListener<WorkflowResponse> listener) {
+    private void createExecute(WorkflowRequest request, User user, String tenantId, ActionListener<WorkflowResponse> listener) {
         Instant creationTime = Instant.now();
         Template templateWithUser = new Template(
             request.getTemplate().name(),
@@ -379,130 +384,136 @@ public class CreateWorkflowTransportAction extends HandledTransportAction<Workfl
             );
         } else {
             // This is an existing workflow (PUT)
-            final boolean isFieldUpdate = request.isUpdateFields();
             // Fetch existing entry for time stamps
             logger.info("Querying existing workflow from global context: {}", workflowId);
             try (ThreadContext.StoredContext context = client.threadPool().getThreadContext().stashContext()) {
-                client.get(new GetRequest(GLOBAL_CONTEXT_INDEX, workflowId), ActionListener.wrap(getResponse -> {
-                    context.restore();
-                    if (getResponse.isExists()) {
-
-                        Template existingTemplate = Template.parse(getResponse.getSourceAsString());
-                        Template template = isFieldUpdate
-                            ? Template.updateExistingTemplate(existingTemplate, templateWithUser)
-                            : Template.builder(templateWithUser)
-                                .createdTime(existingTemplate.createdTime())
-                                .lastUpdatedTime(Instant.now())
-                                .lastProvisionedTime(existingTemplate.lastProvisionedTime())
-                                .build();
-
-                        if (request.isReprovision()) {
-                            // Reprovision request
-                            ReprovisionWorkflowRequest reprovisionRequest = new ReprovisionWorkflowRequest(
-                                getResponse.getId(),
-                                existingTemplate,
-                                template,
-                                waitForTimeCompletion
-                            );
-                            logger.info("Reprovisioning parameter is set, continuing to reprovision workflow {}", getResponse.getId());
-                            client.execute(
-                                ReprovisionWorkflowAction.INSTANCE,
-                                reprovisionRequest,
-                                ActionListener.wrap(reprovisionResponse -> {
-                                    listener.onResponse(
-                                        reprovisionRequest.getWaitForCompletionTimeout() == TimeValue.MINUS_ONE
-                                            ? new WorkflowResponse(reprovisionResponse.getWorkflowId())
-                                            : new WorkflowResponse(
-                                                reprovisionResponse.getWorkflowId(),
-                                                reprovisionResponse.getWorkflowState()
-                                            )
-                                    );
-                                }, exception -> {
-                                    String errorMessage = ParameterizedMessageFactory.INSTANCE.newMessage(
-                                        "Reprovisioning failed for workflow {}",
-                                        workflowId
-                                    ).getFormattedMessage();
-                                    logger.error(errorMessage, exception);
-                                    if (exception instanceof FlowFrameworkException) {
-                                        listener.onFailure(exception);
-                                    } else {
-                                        listener.onFailure(new FlowFrameworkException(errorMessage, ExceptionsHelper.status(exception)));
-                                    }
-                                })
-                            );
-                        } else {
-
-                            // Update existing entry, full document replacement
-                            flowFrameworkIndicesHandler.updateTemplateInGlobalContext(
-                                request.getWorkflowId(),
-                                template,
-                                ActionListener.wrap(response -> {
-                                    // Regular update, reset provisioning status, ignore state index if updating fields
-                                    if (!isFieldUpdate) {
-                                        flowFrameworkIndicesHandler.updateFlowFrameworkSystemIndexDoc(
-                                            request.getWorkflowId(),
-                                            Map.ofEntries(
-                                                Map.entry(STATE_FIELD, State.NOT_STARTED),
-                                                Map.entry(PROVISIONING_PROGRESS_FIELD, ProvisioningProgress.NOT_STARTED)
-                                            ),
-                                            ActionListener.wrap(updateResponse -> {
-                                                logger.info(
-                                                    "updated workflow {} state to {}",
-                                                    request.getWorkflowId(),
-                                                    State.NOT_STARTED.name()
-                                                );
-                                                listener.onResponse(new WorkflowResponse(request.getWorkflowId()));
-                                            }, exception -> {
-                                                String errorMessage = ParameterizedMessageFactory.INSTANCE.newMessage(
-                                                    "Failed to update workflow {} in template index",
-                                                    request.getWorkflowId()
-                                                ).getFormattedMessage();
-                                                logger.error(errorMessage, exception);
-                                                if (exception instanceof FlowFrameworkException) {
-                                                    listener.onFailure(exception);
-                                                } else {
-                                                    listener.onFailure(
-                                                        new FlowFrameworkException(errorMessage, ExceptionsHelper.status(exception))
-                                                    );
-                                                }
-                                            })
-                                        );
-                                    } else {
-                                        listener.onResponse(new WorkflowResponse(request.getWorkflowId()));
-                                    }
-                                }, exception -> {
-                                    String errorMessage = ParameterizedMessageFactory.INSTANCE.newMessage(
-                                        "Failed to update use case template {}",
-                                        request.getWorkflowId()
-                                    ).getFormattedMessage();
-                                    logger.error(errorMessage, exception);
-                                    if (exception instanceof FlowFrameworkException) {
-                                        listener.onFailure(exception);
-                                    } else {
-                                        listener.onFailure(new FlowFrameworkException(errorMessage, ExceptionsHelper.status(exception)));
-                                    }
-                                }),
-                                isFieldUpdate
-                            );
+                sdkClient.getDataObjectAsync(
+                    GetDataObjectRequest.builder().index(GLOBAL_CONTEXT_INDEX).id(workflowId).tenantId(tenantId).build(),
+                    client.threadPool().executor(WORKFLOW_THREAD_POOL)
+                ).whenComplete((r, throwable) -> {
+                    if (throwable == null) {
+                        context.restore();
+                        try {
+                            GetResponse getResponse = r.parser() == null ? null : GetResponse.fromXContent(r.parser());
+                            if (getResponse.isExists()) {
+                                handleWorkflowExists(request, templateWithUser, getResponse, waitForTimeCompletion, listener);
+                            } else {
+                                String errorMessage = ParameterizedMessageFactory.INSTANCE.newMessage(
+                                    "Failed to retrieve template ({}) from global context.",
+                                    workflowId
+                                ).getFormattedMessage();
+                                logger.error(errorMessage);
+                                listener.onFailure(new FlowFrameworkException(errorMessage, RestStatus.NOT_FOUND));
+                            }
+                        } catch (IOException e) {
+                            logger.error("Failed to parse workflow getResponse: {}", workflowId, e);
+                            listener.onFailure(e);
                         }
                     } else {
+                        Exception exception = SdkClientUtils.unwrapAndConvertToException(throwable);
                         String errorMessage = ParameterizedMessageFactory.INSTANCE.newMessage(
                             "Failed to retrieve template ({}) from global context.",
                             workflowId
                         ).getFormattedMessage();
-                        logger.error(errorMessage);
-                        listener.onFailure(new FlowFrameworkException(errorMessage, RestStatus.NOT_FOUND));
+                        logger.error(errorMessage, exception);
+                        listener.onFailure(new FlowFrameworkException(errorMessage, ExceptionsHelper.status(exception)));
                     }
-                }, exception -> {
-                    String errorMessage = ParameterizedMessageFactory.INSTANCE.newMessage(
-                        "Failed to retrieve template ({}) from global context.",
-                        workflowId
-                    ).getFormattedMessage();
-                    logger.error(errorMessage, exception);
-                    listener.onFailure(new FlowFrameworkException(errorMessage, ExceptionsHelper.status(exception)));
-                }));
+                });
             }
         }
+    }
+
+    private void handleWorkflowExists(
+        WorkflowRequest request,
+        Template templateWithUser,
+        GetResponse getResponse,
+        TimeValue waitForTimeCompletion,
+        ActionListener<WorkflowResponse> listener
+    ) throws IOException {
+        Template existingTemplate = Template.parse(getResponse.getSourceAsString());
+        Template template = request.isUpdateFields()
+            ? Template.updateExistingTemplate(existingTemplate, templateWithUser)
+            : Template.builder(templateWithUser)
+                .createdTime(existingTemplate.createdTime())
+                .lastUpdatedTime(Instant.now())
+                .lastProvisionedTime(existingTemplate.lastProvisionedTime())
+                .build();
+        template.setTenantId(existingTemplate.getTenantId());
+
+        if (request.isReprovision()) {
+            handleReprovision(request.getWorkflowId(), existingTemplate, template, waitForTimeCompletion, listener);
+        } else {
+            // Update existing entry, full document replacement
+            handleFullDocUpdate(request, template, listener);
+        }
+    }
+
+    private void handleReprovision(
+        String workflowId,
+        Template existingTemplate,
+        Template template,
+        TimeValue waitForTimeCompletion,
+        ActionListener<WorkflowResponse> listener
+    ) {
+        ReprovisionWorkflowRequest reprovisionRequest = new ReprovisionWorkflowRequest(workflowId, existingTemplate, template,
+            waitForTimeCompletion);
+        logger.info("Reprovisioning parameter is set, continuing to reprovision workflow {}", workflowId);
+        client.execute(ReprovisionWorkflowAction.INSTANCE, reprovisionRequest, ActionListener.wrap(reprovisionResponse -> {
+            listener.onResponse(new WorkflowResponse(reprovisionResponse.getWorkflowId()));
+        }, exception -> {
+            String errorMessage = ParameterizedMessageFactory.INSTANCE.newMessage("Reprovisioning failed for workflow {}", workflowId)
+                .getFormattedMessage();
+            logger.error(errorMessage, exception);
+            if (exception instanceof FlowFrameworkException) {
+                listener.onFailure(exception);
+            } else {
+                listener.onFailure(new FlowFrameworkException(errorMessage, ExceptionsHelper.status(exception)));
+            }
+        }));
+    }
+
+    private void handleFullDocUpdate(WorkflowRequest request, Template template, ActionListener<WorkflowResponse> listener) {
+        final boolean isFieldUpdate = request.isUpdateFields();
+        flowFrameworkIndicesHandler.updateTemplateInGlobalContext(request.getWorkflowId(), template, ActionListener.wrap(response -> {
+            // Regular update, reset provisioning status, ignore state index if updating fields
+            if (!isFieldUpdate) {
+                flowFrameworkIndicesHandler.updateFlowFrameworkSystemIndexDoc(
+                    request.getWorkflowId(),
+                    Map.ofEntries(
+                        Map.entry(STATE_FIELD, State.NOT_STARTED),
+                        Map.entry(PROVISIONING_PROGRESS_FIELD, ProvisioningProgress.NOT_STARTED)
+                    ),
+                    ActionListener.wrap(updateResponse -> {
+                        logger.info("updated workflow {} state to {}", request.getWorkflowId(), State.NOT_STARTED.name());
+                        listener.onResponse(new WorkflowResponse(request.getWorkflowId()));
+                    }, exception -> {
+                        String errorMessage = ParameterizedMessageFactory.INSTANCE.newMessage(
+                            "Failed to update workflow {} in template index",
+                            request.getWorkflowId()
+                        ).getFormattedMessage();
+                        logger.error(errorMessage, exception);
+                        if (exception instanceof FlowFrameworkException) {
+                            listener.onFailure(exception);
+                        } else {
+                            listener.onFailure(new FlowFrameworkException(errorMessage, ExceptionsHelper.status(exception)));
+                        }
+                    })
+                );
+            } else {
+                listener.onResponse(new WorkflowResponse(request.getWorkflowId()));
+            }
+        }, exception -> {
+            String errorMessage = ParameterizedMessageFactory.INSTANCE.newMessage(
+                "Failed to update use case template {}",
+                request.getWorkflowId()
+            ).getFormattedMessage();
+            logger.error(errorMessage, exception);
+            if (exception instanceof FlowFrameworkException) {
+                listener.onFailure(exception);
+            } else {
+                listener.onFailure(new FlowFrameworkException(errorMessage, ExceptionsHelper.status(exception)));
+            }
+        }), isFieldUpdate);
     }
 
     /**

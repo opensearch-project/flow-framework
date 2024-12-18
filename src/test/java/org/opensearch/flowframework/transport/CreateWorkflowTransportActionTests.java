@@ -588,12 +588,6 @@ public class CreateWorkflowTransportActionTests extends OpenSearchTestCase {
         PlainActionFuture<GetResponse> future = PlainActionFuture.newFuture();
         future.onResponse(getWorkflowResponse);
         when(client.get(any(GetRequest.class))).thenReturn(future);
-        // for the createExecute() method get (not yet migrated)
-        doAnswer(invocation -> {
-            ActionListener<GetResponse> getListener = (ActionListener<GetResponse>) invocation.getArguments()[1];
-            getListener.onResponse(getWorkflowResponse);
-            return null;
-        }).when(client).get(any(GetRequest.class), any());
 
         doAnswer(invocation -> {
             ActionListener<WorkflowResponse> responseListener = invocation.getArgument(2);
@@ -630,12 +624,6 @@ public class CreateWorkflowTransportActionTests extends OpenSearchTestCase {
         PlainActionFuture<GetResponse> future = PlainActionFuture.newFuture();
         future.onResponse(getWorkflowResponse);
         when(client.get(any(GetRequest.class))).thenReturn(future);
-        // for the createExecute() method get (not yet migrated)
-        doAnswer(invocation -> {
-            ActionListener<GetResponse> getListener = (ActionListener<GetResponse>) invocation.getArguments()[1];
-            getListener.onResponse(getWorkflowResponse);
-            return null;
-        }).when(client).get(any(GetRequest.class), any());
 
         doAnswer(invocation -> {
             ActionListener<WorkflowResponse> responseListener = invocation.getArgument(2);
@@ -664,12 +652,6 @@ public class CreateWorkflowTransportActionTests extends OpenSearchTestCase {
         PlainActionFuture<GetResponse> future = PlainActionFuture.newFuture();
         future.onResponse(getWorkflowResponse);
         when(client.get(any(GetRequest.class))).thenReturn(future);
-        // for the createExecute() method get (not yet migrated)
-        doAnswer(invocation -> {
-            ActionListener<GetResponse> getListener = (ActionListener<GetResponse>) invocation.getArguments()[1];
-            getListener.onResponse(getWorkflowResponse);
-            return null;
-        }).when(client).get(any(GetRequest.class), any());
 
         doAnswer(invocation -> {
             ActionListener<IndexResponse> responseListener = invocation.getArgument(2);
@@ -697,12 +679,13 @@ public class CreateWorkflowTransportActionTests extends OpenSearchTestCase {
         future.onFailure(new Exception("Failed to retrieve template (2) from global context."));
         when(client.get(any(GetRequest.class))).thenReturn(future);
         // for the createExecute() method get (not yet migrated)
+        /*
         doAnswer(invocation -> {
             ActionListener<GetResponse> getListener = (ActionListener<GetResponse>) invocation.getArguments()[1];
             getListener.onFailure(new Exception("Failed to retrieve template (2) from global context."));
             return null;
         }).when(client).get(any(GetRequest.class), any());
-
+        */
         doAnswer(invocation -> {
             ActionListener<IndexResponse> responseListener = invocation.getArgument(2);
             responseListener.onFailure(new Exception("failed"));
@@ -735,12 +718,6 @@ public class CreateWorkflowTransportActionTests extends OpenSearchTestCase {
         PlainActionFuture<GetResponse> future = PlainActionFuture.newFuture();
         future.onResponse(getWorkflowResponse);
         when(client.get(any(GetRequest.class))).thenReturn(future);
-        // for the createExecute() method get (not yet migrated)
-        doAnswer(invocation -> {
-            ActionListener<GetResponse> getListener = (ActionListener<GetResponse>) invocation.getArguments()[1];
-            getListener.onResponse(getWorkflowResponse);
-            return null;
-        }).when(client).get(any(GetRequest.class), any());
 
         doAnswer(invocation -> {
             ActionListener<UpdateResponse> updateResponseListener = invocation.getArgument(2);
@@ -772,12 +749,6 @@ public class CreateWorkflowTransportActionTests extends OpenSearchTestCase {
         PlainActionFuture<GetResponse> future = PlainActionFuture.newFuture();
         future.onResponse(getWorkflowResponse);
         when(client.get(any(GetRequest.class))).thenReturn(future);
-        // for the createExecute() method get (not yet migrated)
-        doAnswer(invocation -> {
-            ActionListener<GetResponse> getListener = (ActionListener<GetResponse>) invocation.getArguments()[1];
-            getListener.onResponse(getWorkflowResponse);
-            return null;
-        }).when(client).get(any(GetRequest.class), any());
 
         doAnswer(invocation -> {
             ActionListener<IndexResponse> responseListener = invocation.getArgument(2);
@@ -821,12 +792,6 @@ public class CreateWorkflowTransportActionTests extends OpenSearchTestCase {
         future = PlainActionFuture.newFuture();
         future.onResponse(getWorkflowResponse1);
         when(client.get(any(GetRequest.class))).thenReturn(future);
-        // for the createExecute() method get (not yet migrated)
-        doAnswer(invocation -> {
-            ActionListener<GetResponse> getListener = (ActionListener<GetResponse>) invocation.getArguments()[1];
-            getListener.onResponse(getWorkflowResponse1);
-            return null;
-        }).when(client).get(any(GetRequest.class), any());
 
         latch = new CountDownLatch(1);
         latchedActionListener = new LatchedActionListener<>(listener, latch);
