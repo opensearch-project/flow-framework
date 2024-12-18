@@ -359,15 +359,16 @@ public class FlowFrameworkIndicesHandler {
 
     /**
      * Initializes config index and EncryptorUtils
+     * @param tenantId the tenant id
      * @param listener action listener
      */
-    public void initializeConfigIndex(ActionListener<Boolean> listener) {
+    public void initializeConfigIndex(String tenantId, ActionListener<Boolean> listener) {
         initConfigIndexIfAbsent(ActionListener.wrap(indexCreated -> {
             if (!indexCreated) {
                 listener.onFailure(new FlowFrameworkException("No response to create config index", INTERNAL_SERVER_ERROR));
                 return;
             }
-            encryptorUtils.initializeMasterKey(listener);
+            encryptorUtils.initializeMasterKey(tenantId, listener);
         }, createIndexException -> {
             logger.error("Failed to create config index");
             listener.onFailure(createIndexException);
