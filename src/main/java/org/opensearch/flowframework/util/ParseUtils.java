@@ -440,7 +440,6 @@ public class ParseUtils {
                         }
                     } else {
                         Exception exception = SdkClientUtils.unwrapAndConvertToException(throwable);
-                        System.err.println("E " + exception.toString());
                         logger.error("Failed to get workflow: {}", workflowId, exception);
                         listener.onFailure(exception);
                     }
