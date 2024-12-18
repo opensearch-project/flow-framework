@@ -32,10 +32,12 @@ import org.opensearch.flowframework.indices.FlowFrameworkIndicesHandler;
 import org.opensearch.flowframework.model.ProvisioningProgress;
 import org.opensearch.flowframework.model.ResourceCreated;
 import org.opensearch.flowframework.model.State;
+import org.opensearch.flowframework.util.TenantAwareHelper;
 import org.opensearch.flowframework.workflow.ProcessNode;
 import org.opensearch.flowframework.workflow.WorkflowData;
 import org.opensearch.flowframework.workflow.WorkflowStep;
 import org.opensearch.flowframework.workflow.WorkflowStepFactory;
+import org.opensearch.remote.metadata.client.SdkClient;
 import org.opensearch.tasks.Task;
 import org.opensearch.threadpool.ThreadPool;
 import org.opensearch.transport.TransportService;
@@ -72,6 +74,7 @@ public class DeprovisionWorkflowTransportAction extends HandledTransportAction<W
 
     private final ThreadPool threadPool;
     private final Client client;
+    private final SdkClient sdkClient;
     private final WorkflowStepFactory workflowStepFactory;
     private final FlowFrameworkIndicesHandler flowFrameworkIndicesHandler;
     private final FlowFrameworkSettings flowFrameworkSettings;
@@ -98,6 +101,7 @@ public class DeprovisionWorkflowTransportAction extends HandledTransportAction<W
         ActionFilters actionFilters,
         ThreadPool threadPool,
         Client client,
+        SdkClient sdkClient,
         WorkflowStepFactory workflowStepFactory,
         FlowFrameworkIndicesHandler flowFrameworkIndicesHandler,
         FlowFrameworkSettings flowFrameworkSettings,
@@ -108,6 +112,7 @@ public class DeprovisionWorkflowTransportAction extends HandledTransportAction<W
         super(DeprovisionWorkflowAction.NAME, transportService, actionFilters, WorkflowRequest::new);
         this.threadPool = threadPool;
         this.client = client;
+        this.sdkClient = sdkClient;
         this.workflowStepFactory = workflowStepFactory;
         this.flowFrameworkIndicesHandler = flowFrameworkIndicesHandler;
         this.flowFrameworkSettings = flowFrameworkSettings;
@@ -119,8 +124,11 @@ public class DeprovisionWorkflowTransportAction extends HandledTransportAction<W
 
     @Override
     protected void doExecute(Task task, WorkflowRequest request, ActionListener<WorkflowResponse> listener) {
+        String tenantId = request.getTemplate() == null ? null : request.getTemplate().getTenantId();
+        if (!TenantAwareHelper.validateTenantId(flowFrameworkSettings.isMultiTenancyEnabled(), tenantId, listener)) {
+            return;
+        }
         String workflowId = request.getWorkflowId();
-
         User user = getUserContext(client);
 
         // Stash thread context to interact with system index
@@ -128,10 +136,13 @@ public class DeprovisionWorkflowTransportAction extends HandledTransportAction<W
             resolveUserAndExecute(
                 user,
                 workflowId,
+                tenantId,
                 filterByEnabled,
+                flowFrameworkSettings.isMultiTenancyEnabled(),
                 listener,
                 () -> executeDeprovisionRequest(request, listener, context),
                 client,
+                sdkClient,
                 clusterService,
                 xContentRegistry
             );

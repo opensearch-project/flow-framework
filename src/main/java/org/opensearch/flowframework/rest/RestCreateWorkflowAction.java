@@ -24,6 +24,7 @@ import org.opensearch.flowframework.model.Template;
 import org.opensearch.flowframework.transport.CreateWorkflowAction;
 import org.opensearch.flowframework.transport.WorkflowRequest;
 import org.opensearch.flowframework.util.ParseUtils;
+import org.opensearch.flowframework.util.RestActionUtils;
 import org.opensearch.rest.BaseRestHandler;
 import org.opensearch.rest.BytesRestResponse;
 import org.opensearch.rest.RestRequest;
@@ -110,6 +111,7 @@ public class RestCreateWorkflowAction extends BaseRestHandler {
                 new BytesRestResponse(ffe.getRestStatus(), ffe.toXContent(channel.newErrorBuilder(), ToXContent.EMPTY_PARAMS))
             );
         }
+        String tenantId = RestActionUtils.getTenantID(flowFrameworkSettings.isMultiTenancyEnabled(), request);
         if (!provision && !params.isEmpty()) {
             FlowFrameworkException ffe = new FlowFrameworkException(
                 "Only the parameters " + request.consumedParams() + " are permitted unless the provision parameter is set to true.",
@@ -218,6 +220,9 @@ public class RestCreateWorkflowAction extends BaseRestHandler {
             // If not provisioning, params map is empty. Use it to pass updateFields flag to WorkflowRequest
             if (updateFields) {
                 params = Map.of(UPDATE_WORKFLOW_FIELDS, "true");
+            }
+            if (tenantId != null) {
+                template.setTenantId(tenantId);
             }
 
             WorkflowRequest workflowRequest = new WorkflowRequest(

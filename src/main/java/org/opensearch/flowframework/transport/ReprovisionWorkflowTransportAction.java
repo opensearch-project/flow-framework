@@ -34,10 +34,12 @@ import org.opensearch.flowframework.model.Template;
 import org.opensearch.flowframework.model.Workflow;
 import org.opensearch.flowframework.model.WorkflowState;
 import org.opensearch.flowframework.util.EncryptorUtils;
+import org.opensearch.flowframework.util.TenantAwareHelper;
 import org.opensearch.flowframework.workflow.ProcessNode;
 import org.opensearch.flowframework.workflow.WorkflowProcessSorter;
 import org.opensearch.flowframework.workflow.WorkflowStepFactory;
 import org.opensearch.plugins.PluginsService;
+import org.opensearch.remote.metadata.client.SdkClient;
 import org.opensearch.tasks.Task;
 import org.opensearch.threadpool.ThreadPool;
 import org.opensearch.transport.TransportService;
@@ -71,6 +73,7 @@ public class ReprovisionWorkflowTransportAction extends HandledTransportAction<R
 
     private final ThreadPool threadPool;
     private final Client client;
+    private final SdkClient sdkClient;
     private final WorkflowStepFactory workflowStepFactory;
     private final WorkflowProcessSorter workflowProcessSorter;
     private final FlowFrameworkIndicesHandler flowFrameworkIndicesHandler;
@@ -103,6 +106,7 @@ public class ReprovisionWorkflowTransportAction extends HandledTransportAction<R
         ActionFilters actionFilters,
         ThreadPool threadPool,
         Client client,
+        SdkClient sdkClient,
         WorkflowStepFactory workflowStepFactory,
         WorkflowProcessSorter workflowProcessSorter,
         FlowFrameworkIndicesHandler flowFrameworkIndicesHandler,
@@ -116,6 +120,7 @@ public class ReprovisionWorkflowTransportAction extends HandledTransportAction<R
         super(ReprovisionWorkflowAction.NAME, transportService, actionFilters, ReprovisionWorkflowRequest::new);
         this.threadPool = threadPool;
         this.client = client;
+        this.sdkClient = sdkClient;
         this.workflowStepFactory = workflowStepFactory;
         this.workflowProcessSorter = workflowProcessSorter;
         this.flowFrameworkIndicesHandler = flowFrameworkIndicesHandler;
@@ -130,7 +135,10 @@ public class ReprovisionWorkflowTransportAction extends HandledTransportAction<R
 
     @Override
     protected void doExecute(Task task, ReprovisionWorkflowRequest request, ActionListener<WorkflowResponse> listener) {
-
+        String tenantId = request.getUpdatedTemplate() == null ? null : request.getUpdatedTemplate().getTenantId();
+        if (!TenantAwareHelper.validateTenantId(flowFrameworkSettings.isMultiTenancyEnabled(), tenantId, listener)) {
+            return;
+        }
         String workflowId = request.getWorkflowId();
         User user = getUserContext(client);
 
@@ -138,10 +146,13 @@ public class ReprovisionWorkflowTransportAction extends HandledTransportAction<R
             resolveUserAndExecute(
                 user,
                 workflowId,
+                tenantId,
                 filterByEnabled,
+                flowFrameworkSettings.isMultiTenancyEnabled(),
                 listener,
                 () -> executeReprovisionRequest(request, listener, context),
                 client,
+                sdkClient,
                 clusterService,
                 xContentRegistry
             );

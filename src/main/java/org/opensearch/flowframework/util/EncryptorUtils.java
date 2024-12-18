@@ -16,6 +16,7 @@ import org.opensearch.action.index.IndexRequest;
 import org.opensearch.action.support.WriteRequest;
 import org.opensearch.client.Client;
 import org.opensearch.cluster.service.ClusterService;
+import org.opensearch.common.Nullable;
 import org.opensearch.common.util.concurrent.ThreadContext;
 import org.opensearch.common.xcontent.XContentFactory;
 import org.opensearch.commons.authuser.User;
@@ -30,6 +31,7 @@ import org.opensearch.flowframework.model.Config;
 import org.opensearch.flowframework.model.Template;
 import org.opensearch.flowframework.model.Workflow;
 import org.opensearch.flowframework.model.WorkflowNode;
+import org.opensearch.remote.metadata.client.SdkClient;
 
 import javax.crypto.spec.SecretKeySpec;
 
@@ -41,7 +43,9 @@ import java.util.Base64;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.function.Function;
+import java.util.Objects;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.BiFunction;
 
 import com.amazonaws.encryptionsdk.AwsCrypto;
 import com.amazonaws.encryptionsdk.CommitmentPolicy;
@@ -66,9 +70,13 @@ public class EncryptorUtils {
     // https://github.com/aws/aws-encryption-sdk-java/issues/1879
     private static final String WRAPPING_ALGORITHM = "AES/GCM/NOPADDING";
 
+    // concurrent map can't have null as a key. This key is to support single tenancy
+    public static final String DEFAULT_TENANT_ID = "03000200-0400-0500-0006-000700080009";
+
     private final ClusterService clusterService;
     private final Client client;
-    private String masterKey;
+    private final SdkClient sdkClient;
+    private final Map<String, String> tenantMasterKeys;
     private final NamedXContentRegistry xContentRegistry;
 
     /**
@@ -77,27 +85,30 @@ public class EncryptorUtils {
      * @param client the node client
      * @param xContentRegistry the OpenSearch XContent Registry
      */
-    public EncryptorUtils(ClusterService clusterService, Client client, NamedXContentRegistry xContentRegistry) {
-        this.masterKey = null;
+    public EncryptorUtils(ClusterService clusterService, Client client, SdkClient sdkClient, NamedXContentRegistry xContentRegistry) {
+        this.tenantMasterKeys = new ConcurrentHashMap<>();
         this.clusterService = clusterService;
         this.client = client;
+        this.sdkClient = sdkClient;
         this.xContentRegistry = xContentRegistry;
     }
 
     /**
      * Sets the master key
+     * @param tenantId The tenant id. If null, sets the key for the default id.
      * @param masterKey the master key
      */
-    void setMasterKey(String masterKey) {
-        this.masterKey = masterKey;
+    void setMasterKey(@Nullable String tenantId, String masterKey) {
+        this.tenantMasterKeys.put(Objects.requireNonNullElse(tenantId, DEFAULT_TENANT_ID), masterKey);
     }
 
     /**
      * Returns the master key
+     * @param tenantId The tenant id. If null, gets the key for the default id.
      * @return the master key
      */
-    String getMasterKey() {
-        return this.masterKey;
+    String getMasterKey(@Nullable String tenantId) {
+        return tenantMasterKeys.get(Objects.requireNonNullElse(tenantId, DEFAULT_TENANT_ID));
     }
 
     /**
@@ -135,7 +146,7 @@ public class EncryptorUtils {
      * @param cipherFunction the encryption/decryption function to apply on credential values
      * @return template with encrypted credentials
      */
-    private Template processTemplateCredentials(Template template, Function<String, String> cipherFunction) {
+    private Template processTemplateCredentials(Template template, BiFunction<String, String, String> cipherFunction) {
         Map<String, Workflow> processedWorkflows = new HashMap<>();
         for (Map.Entry<String, Workflow> entry : template.workflows().entrySet()) {
 
@@ -145,7 +156,7 @@ public class EncryptorUtils {
                     // Apply the cipher funcion on all values within credential field
                     @SuppressWarnings("unchecked")
                     Map<String, String> credentials = new HashMap<>((Map<String, String>) node.userInputs().get(CREDENTIAL_FIELD));
-                    credentials.replaceAll((key, cred) -> cipherFunction.apply(cred));
+                    credentials.replaceAll((key, cred) -> cipherFunction.apply(cred, template.getTenantId()));
 
                     // Replace credentials field in node user inputs
                     Map<String, Object> processedUserInputs = new HashMap<>();
@@ -175,12 +186,13 @@ public class EncryptorUtils {
     /**
      * Encrypts the given credential
      * @param credential the credential to encrypt
+     * @param tenantId The tenant id. If null, encrypts for the default tenant id.
      * @return the encrypted credential
      */
-    String encrypt(final String credential) {
-        initializeMasterKeyIfAbsent();
+    String encrypt(final String credential, @Nullable String tenantId) {
+        initializeMasterKeyIfAbsent(tenantId);
         final AwsCrypto crypto = AwsCrypto.builder().withCommitmentPolicy(CommitmentPolicy.RequireEncryptRequireDecrypt).build();
-        byte[] bytes = Base64.getDecoder().decode(masterKey);
+        byte[] bytes = Base64.getDecoder().decode(getMasterKey(tenantId));
         JceMasterKey jceMasterKey = JceMasterKey.getInstance(new SecretKeySpec(bytes, ALGORITHM), PROVIDER, "", WRAPPING_ALGORITHM);
         final CryptoResult<byte[], JceMasterKey> encryptResult = crypto.encryptData(
             jceMasterKey,
@@ -192,13 +204,13 @@ public class EncryptorUtils {
     /**
      * Decrypts the given credential
      * @param encryptedCredential the credential to decrypt
+     * @param tenantId The tenant id. If null, decrypts for the default tenant id.
      * @return the decrypted credential
      */
-    String decrypt(final String encryptedCredential) {
-        initializeMasterKeyIfAbsent();
+    String decrypt(final String encryptedCredential, @Nullable String tenantId) {
+        initializeMasterKeyIfAbsent(tenantId);
         final AwsCrypto crypto = AwsCrypto.builder().withCommitmentPolicy(CommitmentPolicy.RequireEncryptRequireDecrypt).build();
-
-        byte[] bytes = Base64.getDecoder().decode(masterKey);
+        byte[] bytes = Base64.getDecoder().decode(getMasterKey(tenantId));
         JceMasterKey jceMasterKey = JceMasterKey.getInstance(new SecretKeySpec(bytes, ALGORITHM), PROVIDER, "", WRAPPING_ALGORITHM);
 
         final CryptoResult<byte[], JceMasterKey> decryptedResult = crypto.decryptData(
@@ -248,9 +260,10 @@ public class EncryptorUtils {
 
     /**
      * Retrieves an existing master key or generates a new key to index
+     * @param tenantId The tenant id. If null, initializes the key for the default tenant id.
      * @param listener the action listener
      */
-    public void initializeMasterKey(ActionListener<Boolean> listener) {
+    public void initializeMasterKey(@Nullable String tenantId, ActionListener<Boolean> listener) {
         // Index has either been created or it already exists, need to check if master key has been initalized already, if not then
         // generate
         // This is necessary in case of global context index restoration from snapshot, will need to use the same master key to decrypt
@@ -270,7 +283,7 @@ public class EncryptorUtils {
                         context.restore();
                         // Set generated key to master
                         logger.info("Config has been initialized successfully");
-                        this.masterKey = config.masterKey();
+                        setMasterKey(tenantId, config.masterKey());
                         listener.onResponse(true);
                     }, indexException -> {
                         logger.error("Failed to index config", indexException);
@@ -289,7 +302,7 @@ public class EncryptorUtils {
                     ) {
                         ensureExpectedToken(XContentParser.Token.START_OBJECT, parser.nextToken(), parser);
                         Config config = Config.parse(parser);
-                        this.masterKey = config.masterKey();
+                        setMasterKey(tenantId, config.masterKey());
                         listener.onResponse(true);
                     } catch (FlowFrameworkException e) {
                         listener.onFailure(e);
@@ -308,9 +321,10 @@ public class EncryptorUtils {
 
     /**
      * Retrieves master key from system index if not yet set
+     * @param tenantId The tenant id. If null, initializes the key for the default id.
      */
-    void initializeMasterKeyIfAbsent() {
-        if (masterKey != null) {
+    void initializeMasterKeyIfAbsent(@Nullable String tenantId) {
+        if (this.tenantMasterKeys.containsKey(Objects.requireNonNullElse(tenantId, DEFAULT_TENANT_ID))) {
             return;
         }
 
@@ -330,7 +344,7 @@ public class EncryptorUtils {
                         ) {
                             ensureExpectedToken(XContentParser.Token.START_OBJECT, parser.nextToken(), parser);
                             Config config = Config.parse(parser);
-                            this.masterKey = config.masterKey();
+                            setMasterKey(tenantId, config.masterKey());
                         }
                     } else {
                         throw new FlowFrameworkException("Master key has not been initialized in config index", RestStatus.NOT_FOUND);

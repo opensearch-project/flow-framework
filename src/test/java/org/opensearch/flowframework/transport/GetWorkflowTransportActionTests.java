@@ -31,6 +31,8 @@ import org.opensearch.flowframework.model.WorkflowEdge;
 import org.opensearch.flowframework.model.WorkflowNode;
 import org.opensearch.flowframework.util.EncryptorUtils;
 import org.opensearch.index.get.GetResult;
+import org.opensearch.remote.metadata.client.SdkClient;
+import org.opensearch.remote.metadata.client.impl.SdkClientFactory;
 import org.opensearch.tasks.Task;
 import org.opensearch.test.OpenSearchTestCase;
 import org.opensearch.threadpool.ThreadPool;
@@ -56,9 +58,11 @@ import static org.mockito.Mockito.when;
 public class GetWorkflowTransportActionTests extends OpenSearchTestCase {
 
     private Client client;
+    private SdkClient sdkClient;
     private NamedXContentRegistry xContentRegistry;
     private GetWorkflowTransportAction getTemplateTransportAction;
     private FlowFrameworkIndicesHandler flowFrameworkIndicesHandler;
+    private FlowFrameworkSettings flowFrameworkSettings;
     private Template template;
     private EncryptorUtils encryptorUtils;
 
@@ -66,9 +70,12 @@ public class GetWorkflowTransportActionTests extends OpenSearchTestCase {
     public void setUp() throws Exception {
         super.setUp();
         this.client = mock(Client.class);
+        this.sdkClient = SdkClientFactory.createSdkClient(client, NamedXContentRegistry.EMPTY, Collections.emptyMap());
         this.xContentRegistry = mock(NamedXContentRegistry.class);
         this.flowFrameworkIndicesHandler = mock(FlowFrameworkIndicesHandler.class);
-        this.encryptorUtils = new EncryptorUtils(mock(ClusterService.class), client, xContentRegistry);
+        this.flowFrameworkSettings = mock(FlowFrameworkSettings.class);
+        this.sdkClient = SdkClientFactory.createSdkClient(client, xContentRegistry, Collections.emptyMap());
+        this.encryptorUtils = new EncryptorUtils(mock(ClusterService.class), client, sdkClient, xContentRegistry);
         ClusterService clusterService = mock(ClusterService.class);
         ClusterSettings clusterSettings = new ClusterSettings(
             Settings.EMPTY,
@@ -80,7 +87,9 @@ public class GetWorkflowTransportActionTests extends OpenSearchTestCase {
             mock(TransportService.class),
             mock(ActionFilters.class),
             flowFrameworkIndicesHandler,
+            flowFrameworkSettings,
             client,
+            sdkClient,
             encryptorUtils,
             clusterService,
             xContentRegistry,

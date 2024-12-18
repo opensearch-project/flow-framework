@@ -24,8 +24,11 @@ import org.opensearch.commons.authuser.User;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.core.rest.RestStatus;
 import org.opensearch.core.xcontent.NamedXContentRegistry;
+import org.opensearch.flowframework.common.FlowFrameworkSettings;
 import org.opensearch.flowframework.exception.FlowFrameworkException;
 import org.opensearch.flowframework.indices.FlowFrameworkIndicesHandler;
+import org.opensearch.flowframework.util.TenantAwareHelper;
+import org.opensearch.remote.metadata.client.SdkClient;
 import org.opensearch.tasks.Task;
 import org.opensearch.transport.TransportService;
 
@@ -43,7 +46,9 @@ public class DeleteWorkflowTransportAction extends HandledTransportAction<Workfl
     private final Logger logger = LogManager.getLogger(DeleteWorkflowTransportAction.class);
 
     private final FlowFrameworkIndicesHandler flowFrameworkIndicesHandler;
+    private final FlowFrameworkSettings flowFrameworkSettings;
     private final Client client;
+    private final SdkClient sdkClient;
     private volatile Boolean filterByEnabled;
     private final ClusterService clusterService;
     private final NamedXContentRegistry xContentRegistry;
@@ -53,6 +58,7 @@ public class DeleteWorkflowTransportAction extends HandledTransportAction<Workfl
      * @param transportService the transport service
      * @param actionFilters action filters
      * @param flowFrameworkIndicesHandler The Flow Framework indices handler
+     * @param flowFrameworkSettings The Flow Framework settings
      * @param client the OpenSearch Client
      * @param clusterService the cluster service
      * @param xContentRegistry contentRegister to parse get response
@@ -63,14 +69,18 @@ public class DeleteWorkflowTransportAction extends HandledTransportAction<Workfl
         TransportService transportService,
         ActionFilters actionFilters,
         FlowFrameworkIndicesHandler flowFrameworkIndicesHandler,
+        FlowFrameworkSettings flowFrameworkSettings,
         Client client,
+        SdkClient sdkClient,
         ClusterService clusterService,
         NamedXContentRegistry xContentRegistry,
         Settings settings
     ) {
         super(DeleteWorkflowAction.NAME, transportService, actionFilters, WorkflowRequest::new);
         this.flowFrameworkIndicesHandler = flowFrameworkIndicesHandler;
+        this.flowFrameworkSettings = flowFrameworkSettings;
         this.client = client;
+        this.sdkClient = sdkClient;
         filterByEnabled = FILTER_BY_BACKEND_ROLES.get(settings);
         this.xContentRegistry = xContentRegistry;
         this.clusterService = clusterService;
@@ -80,6 +90,10 @@ public class DeleteWorkflowTransportAction extends HandledTransportAction<Workfl
     @Override
     protected void doExecute(Task task, WorkflowRequest request, ActionListener<DeleteResponse> listener) {
         if (flowFrameworkIndicesHandler.doesIndexExist(GLOBAL_CONTEXT_INDEX)) {
+            String tenantId = request.getTemplate() == null ? null : request.getTemplate().getTenantId();
+            if (!TenantAwareHelper.validateTenantId(flowFrameworkSettings.isMultiTenancyEnabled(), tenantId, listener)) {
+                return;
+            }
             String workflowId = request.getWorkflowId();
             User user = getUserContext(client);
 
@@ -88,10 +102,13 @@ public class DeleteWorkflowTransportAction extends HandledTransportAction<Workfl
             resolveUserAndExecute(
                 user,
                 workflowId,
+                tenantId,
                 filterByEnabled,
+                flowFrameworkSettings.isMultiTenancyEnabled(),
                 listener,
                 () -> executeDeleteRequest(request, listener, context),
                 client,
+                sdkClient,
                 clusterService,
                 xContentRegistry
             );

@@ -35,6 +35,7 @@ import org.opensearch.common.xcontent.XContentFactory;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.core.common.bytes.BytesReference;
 import org.opensearch.core.index.shard.ShardId;
+import org.opensearch.core.xcontent.NamedXContentRegistry;
 import org.opensearch.core.xcontent.ToXContentObject;
 import org.opensearch.core.xcontent.XContentBuilder;
 import org.opensearch.flowframework.TestHelpers;
@@ -50,6 +51,8 @@ import org.opensearch.flowframework.workflow.CreateIndexStep;
 import org.opensearch.flowframework.workflow.WorkflowData;
 import org.opensearch.index.engine.VersionConflictEngineException;
 import org.opensearch.index.get.GetResult;
+import org.opensearch.remote.metadata.client.SdkClient;
+import org.opensearch.remote.metadata.client.impl.SdkClientFactory;
 import org.opensearch.test.OpenSearchTestCase;
 import org.opensearch.threadpool.ThreadPool;
 
@@ -81,6 +84,7 @@ import static org.mockito.Mockito.when;
 public class FlowFrameworkIndicesHandlerTests extends OpenSearchTestCase {
     @Mock
     private Client client;
+    private SdkClient sdkClient;
     @Mock
     private CreateIndexStep createIndexStep;
     @Mock
@@ -93,6 +97,8 @@ public class FlowFrameworkIndicesHandlerTests extends OpenSearchTestCase {
     private ThreadContext threadContext;
     @Mock
     protected ClusterService clusterService;
+    @Mock
+    protected NamedXContentRegistry namedXContentRegistry;
     @Mock
     private FlowFrameworkIndicesHandler flowMock;
     private static final String META = "_meta";
@@ -112,7 +118,14 @@ public class FlowFrameworkIndicesHandlerTests extends OpenSearchTestCase {
         threadContext = new ThreadContext(settings);
         when(client.threadPool()).thenReturn(threadPool);
         when(threadPool.getThreadContext()).thenReturn(threadContext);
-        flowFrameworkIndicesHandler = new FlowFrameworkIndicesHandler(client, clusterService, encryptorUtils, xContentRegistry());
+        sdkClient = SdkClientFactory.createSdkClient(client, namedXContentRegistry, Collections.emptyMap());
+        flowFrameworkIndicesHandler = new FlowFrameworkIndicesHandler(
+            client,
+            sdkClient,
+            clusterService,
+            encryptorUtils,
+            xContentRegistry()
+        );
         adminClient = mock(AdminClient.class);
         indicesAdminClient = mock(IndicesAdminClient.class);
         metadata = mock(Metadata.class);
