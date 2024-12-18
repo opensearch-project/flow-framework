@@ -280,7 +280,7 @@ public class CreateWorkflowTransportAction extends HandledTransportAction<Workfl
                         return;
                     } else {
                         // Initialize config index and create new global context and state index entries
-                        flowFrameworkIndicesHandler.initializeConfigIndex(ActionListener.wrap(isInitialized -> {
+                        flowFrameworkIndicesHandler.initializeConfigIndex(tenantId, ActionListener.wrap(isInitialized -> {
                             if (FALSE.equals(isInitialized)) {
                                 listener.onFailure(
                                     new FlowFrameworkException("Failed to initalize config index", RestStatus.INTERNAL_SERVER_ERROR)

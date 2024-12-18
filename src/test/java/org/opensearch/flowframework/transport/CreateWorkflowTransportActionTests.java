@@ -88,6 +88,7 @@ import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.nullable;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doThrow;
@@ -341,10 +342,10 @@ public class CreateWorkflowTransportActionTests extends OpenSearchTestCase {
 
         // Bypass initializeConfigIndex and force onResponse
         doAnswer(invocation -> {
-            ActionListener<Boolean> initalizeMasterKeyIndexListener = invocation.getArgument(0);
+            ActionListener<Boolean> initalizeMasterKeyIndexListener = invocation.getArgument(1);
             initalizeMasterKeyIndexListener.onResponse(true);
             return null;
-        }).when(flowFrameworkIndicesHandler).initializeConfigIndex(any());
+        }).when(flowFrameworkIndicesHandler).initializeConfigIndex(nullable(String.class), any());
 
         doAnswer(invocation -> {
             ActionListener<IndexResponse> responseListener = invocation.getArgument(1);
@@ -380,10 +381,10 @@ public class CreateWorkflowTransportActionTests extends OpenSearchTestCase {
 
         // Bypass initializeConfigIndex and force onResponse
         doAnswer(invocation -> {
-            ActionListener<Boolean> initalizeMasterKeyIndexListener = invocation.getArgument(0);
+            ActionListener<Boolean> initalizeMasterKeyIndexListener = invocation.getArgument(1);
             initalizeMasterKeyIndexListener.onResponse(true);
             return null;
-        }).when(flowFrameworkIndicesHandler).initializeConfigIndex(any());
+        }).when(flowFrameworkIndicesHandler).initializeConfigIndex(nullable(String.class), any());
 
         // Bypass putTemplateToGlobalContext and force onResponse
         doAnswer(invocation -> {
@@ -453,10 +454,10 @@ public class CreateWorkflowTransportActionTests extends OpenSearchTestCase {
 
         // Bypass initializeConfigIndex and force onResponse
         doAnswer(invocation -> {
-            ActionListener<Boolean> initalizeMasterKeyIndexListener = invocation.getArgument(0);
+            ActionListener<Boolean> initalizeMasterKeyIndexListener = invocation.getArgument(1);
             initalizeMasterKeyIndexListener.onResponse(true);
             return null;
-        }).when(flowFrameworkIndicesHandler).initializeConfigIndex(any());
+        }).when(flowFrameworkIndicesHandler).initializeConfigIndex(nullable(String.class), any());
 
         // Bypass putTemplateToGlobalContext and force onResponse
         doAnswer(invocation -> {
@@ -678,14 +679,7 @@ public class CreateWorkflowTransportActionTests extends OpenSearchTestCase {
         PlainActionFuture<GetResponse> future = PlainActionFuture.newFuture();
         future.onFailure(new Exception("Failed to retrieve template (2) from global context."));
         when(client.get(any(GetRequest.class))).thenReturn(future);
-        // for the createExecute() method get (not yet migrated)
-        /*
-        doAnswer(invocation -> {
-            ActionListener<GetResponse> getListener = (ActionListener<GetResponse>) invocation.getArguments()[1];
-            getListener.onFailure(new Exception("Failed to retrieve template (2) from global context."));
-            return null;
-        }).when(client).get(any(GetRequest.class), any());
-        */
+
         doAnswer(invocation -> {
             ActionListener<IndexResponse> responseListener = invocation.getArgument(2);
             responseListener.onFailure(new Exception("failed"));
@@ -842,10 +836,10 @@ public class CreateWorkflowTransportActionTests extends OpenSearchTestCase {
 
         // Bypass initializeConfigIndex and force onResponse
         doAnswer(invocation -> {
-            ActionListener<Boolean> initalizeMasterKeyIndexListener = invocation.getArgument(0);
+            ActionListener<Boolean> initalizeMasterKeyIndexListener = invocation.getArgument(1);
             initalizeMasterKeyIndexListener.onResponse(true);
             return null;
-        }).when(flowFrameworkIndicesHandler).initializeConfigIndex(any());
+        }).when(flowFrameworkIndicesHandler).initializeConfigIndex(nullable(String.class), any());
 
         // Bypass putTemplateToGlobalContext and force onResponse
         doAnswer(invocation -> {
@@ -1053,10 +1047,10 @@ public class CreateWorkflowTransportActionTests extends OpenSearchTestCase {
 
         // Bypass initializeConfigIndex and force onResponse
         doAnswer(invocation -> {
-            ActionListener<Boolean> initalizeMasterKeyIndexListener = invocation.getArgument(0);
+            ActionListener<Boolean> initalizeMasterKeyIndexListener = invocation.getArgument(1);
             initalizeMasterKeyIndexListener.onResponse(true);
             return null;
-        }).when(flowFrameworkIndicesHandler).initializeConfigIndex(any());
+        }).when(flowFrameworkIndicesHandler).initializeConfigIndex(nullable(String.class), any());
 
         // Bypass putTemplateToGlobalContext and force onResponse
         doAnswer(invocation -> {
