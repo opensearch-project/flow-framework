@@ -12,6 +12,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.opensearch.ExceptionsHelper;
 import org.opensearch.action.get.GetRequest;
+import org.opensearch.action.get.GetResponse;
 import org.opensearch.action.index.IndexRequest;
 import org.opensearch.action.support.WriteRequest;
 import org.opensearch.client.Client;
@@ -31,11 +32,17 @@ import org.opensearch.flowframework.model.Config;
 import org.opensearch.flowframework.model.Template;
 import org.opensearch.flowframework.model.Workflow;
 import org.opensearch.flowframework.model.WorkflowNode;
+import org.opensearch.remote.metadata.client.GetDataObjectRequest;
 import org.opensearch.remote.metadata.client.SdkClient;
+import org.opensearch.remote.metadata.common.SdkClientUtils;
+import org.opensearch.search.fetch.subphase.FetchSourceContext;
 
 import javax.crypto.spec.SecretKeySpec;
 
+import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -44,7 +51,10 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 import java.util.function.BiFunction;
 
 import com.amazonaws.encryptionsdk.AwsCrypto;
@@ -56,6 +66,7 @@ import static org.opensearch.core.xcontent.XContentParserUtils.ensureExpectedTok
 import static org.opensearch.flowframework.common.CommonValue.CONFIG_INDEX;
 import static org.opensearch.flowframework.common.CommonValue.CREDENTIAL_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.MASTER_KEY;
+import static org.opensearch.flowframework.common.CommonValue.WORKFLOW_THREAD_POOL;
 
 /**
  * Encryption utility class
@@ -190,7 +201,17 @@ public class EncryptorUtils {
      * @return the encrypted credential
      */
     String encrypt(final String credential, @Nullable String tenantId) {
-        initializeMasterKeyIfAbsent(tenantId);
+        CountDownLatch latch = new CountDownLatch(1);
+        initializeMasterKeyIfAbsent(tenantId).whenComplete((v, throwable) -> latch.countDown());
+        try {
+            if (!latch.await(5, TimeUnit.SECONDS)) {
+                throw new FlowFrameworkException("Timeout while initializing master key", RestStatus.INTERNAL_SERVER_ERROR);
+            }
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new FlowFrameworkException("Interrupted while initializing master key", RestStatus.REQUEST_TIMEOUT);
+        }
+
         final AwsCrypto crypto = AwsCrypto.builder().withCommitmentPolicy(CommitmentPolicy.RequireEncryptRequireDecrypt).build();
         byte[] bytes = Base64.getDecoder().decode(getMasterKey(tenantId));
         JceMasterKey jceMasterKey = JceMasterKey.getInstance(new SecretKeySpec(bytes, ALGORITHM), PROVIDER, "", WRAPPING_ALGORITHM);
@@ -208,7 +229,16 @@ public class EncryptorUtils {
      * @return the decrypted credential
      */
     String decrypt(final String encryptedCredential, @Nullable String tenantId) {
-        initializeMasterKeyIfAbsent(tenantId);
+        CountDownLatch latch = new CountDownLatch(1);
+        initializeMasterKeyIfAbsent(tenantId).whenComplete((v, throwable) -> latch.countDown());
+        try {
+            if (!latch.await(5, TimeUnit.SECONDS)) {
+                throw new FlowFrameworkException("Timeout while initializing master key", RestStatus.INTERNAL_SERVER_ERROR);
+            }
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new FlowFrameworkException("Interrupted while initializing master key", RestStatus.REQUEST_TIMEOUT);
+        }
         final AwsCrypto crypto = AwsCrypto.builder().withCommitmentPolicy(CommitmentPolicy.RequireEncryptRequireDecrypt).build();
         byte[] bytes = Base64.getDecoder().decode(getMasterKey(tenantId));
         JceMasterKey jceMasterKey = JceMasterKey.getInstance(new SecretKeySpec(bytes, ALGORITHM), PROVIDER, "", WRAPPING_ALGORITHM);
@@ -269,7 +299,6 @@ public class EncryptorUtils {
         // This is necessary in case of global context index restoration from snapshot, will need to use the same master key to decrypt
         // stored credentials
         try (ThreadContext.StoredContext context = client.threadPool().getThreadContext().stashContext()) {
-            // Using the master_key string as the document id
             GetRequest getRequest = new GetRequest(CONFIG_INDEX).id(MASTER_KEY);
             client.get(getRequest, ActionListener.wrap(getResponse -> {
                 if (!getResponse.isExists()) {
@@ -320,41 +349,91 @@ public class EncryptorUtils {
     }
 
     /**
-     * Retrieves master key from system index if not yet set
+     * Retrieves master key from system index and puts in tenantMasterKeys map if not yet set
      * @param tenantId The tenant id. If null, initializes the key for the default id.
+     * @return a future that will complete when the key is initialized (or throws an exception)
      */
-    void initializeMasterKeyIfAbsent(@Nullable String tenantId) {
+    CompletableFuture<Void> initializeMasterKeyIfAbsent(@Nullable String tenantId) {
         if (this.tenantMasterKeys.containsKey(Objects.requireNonNullElse(tenantId, DEFAULT_TENANT_ID))) {
-            return;
+            CompletableFuture.completedFuture(null);
         }
 
         if (!clusterService.state().metadata().hasIndex(CONFIG_INDEX)) {
-            throw new FlowFrameworkException("Config Index has not been initialized", RestStatus.INTERNAL_SERVER_ERROR);
+            return CompletableFuture.failedFuture(
+                new FlowFrameworkException("Config Index has not been initialized", RestStatus.INTERNAL_SERVER_ERROR)
+            );
         } else {
+            final CompletableFuture<Void> resultFuture = new CompletableFuture<>();
             try (ThreadContext.StoredContext context = client.threadPool().getThreadContext().stashContext()) {
-                GetRequest getRequest = new GetRequest(CONFIG_INDEX).id(MASTER_KEY);
-                client.get(getRequest, ActionListener.wrap(response -> {
+                FetchSourceContext fetchSourceContext = new FetchSourceContext(true);
+                String masterKeyId = MASTER_KEY;
+                if (tenantId != null) {
+                    masterKeyId = MASTER_KEY + "_" + hashString(tenantId);
+                }
+                sdkClient.getDataObjectAsync(
+                    GetDataObjectRequest.builder()
+                        .index(CONFIG_INDEX)
+                        .id(masterKeyId)
+                        .tenantId(tenantId)
+                        .fetchSourceContext(fetchSourceContext)
+                        .build(),
+                    client.threadPool().executor(WORKFLOW_THREAD_POOL)
+                ).whenComplete((r, throwable) -> {
                     context.restore();
-                    if (response.isExists()) {
-                        try (
-                            XContentParser parser = ParseUtils.createXContentParserFromRegistry(
-                                xContentRegistry,
-                                response.getSourceAsBytesRef()
-                            )
-                        ) {
-                            ensureExpectedToken(XContentParser.Token.START_OBJECT, parser.nextToken(), parser);
-                            Config config = Config.parse(parser);
-                            setMasterKey(tenantId, config.masterKey());
+                    if (throwable == null) {
+                        GetResponse response;
+                        try {
+                            response = r.parser() == null ? null : GetResponse.fromXContent(r.parser());
+                            if (response.isExists()) {
+                                try (
+                                    XContentParser parser = ParseUtils.createXContentParserFromRegistry(
+                                        xContentRegistry,
+                                        response.getSourceAsBytesRef()
+                                    )
+                                ) {
+                                    ensureExpectedToken(XContentParser.Token.START_OBJECT, parser.nextToken(), parser);
+                                    Config config = Config.parse(parser);
+                                    setMasterKey(tenantId, config.masterKey());
+                                    resultFuture.complete(null);
+                                }
+                            } else {
+                                // This doesn't actually cause an exception in the whenComplete
+                                resultFuture.completeExceptionally(
+                                    new FlowFrameworkException("Master key has not been initialized in config index", RestStatus.NOT_FOUND)
+                                );
+                            }
+                        } catch (IOException e) {
+                            logger.error("Failed to parse config index getResponse", e);
+                            resultFuture.completeExceptionally(
+                                new FlowFrameworkException("Failed to parse config index getResponse", RestStatus.INTERNAL_SERVER_ERROR)
+                            );
                         }
                     } else {
-                        throw new FlowFrameworkException("Master key has not been initialized in config index", RestStatus.NOT_FOUND);
+                        Exception exception = SdkClientUtils.unwrapAndConvertToException(throwable);
+                        logger.error("Failed to get master key from config index", exception);
+                        resultFuture.completeExceptionally(
+                            new FlowFrameworkException("Failed to get master key from config index", ExceptionsHelper.status(exception))
+                        );
                     }
-                },
-                    exception -> {
-                        throw new FlowFrameworkException("Failed to get master key from config index", ExceptionsHelper.status(exception));
-                    }
-                ));
+                });
+                return resultFuture;
             }
+        }
+    }
+
+    private String hashString(String input) {
+        try {
+            // Create a MessageDigest instance for SHA-256
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+
+            // Perform the hashing and get the byte array
+            byte[] hashBytes = digest.digest(input.getBytes());
+
+            // Convert the byte array to a Base64 encoded string
+            return Base64.getUrlEncoder().encodeToString(hashBytes);
+
+        } catch (NoSuchAlgorithmException e) {
+            throw new RuntimeException("Error: Unable to compute hash", e);
         }
     }
 

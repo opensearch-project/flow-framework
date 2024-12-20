@@ -414,7 +414,7 @@ public class CreateWorkflowTransportActionTests extends OpenSearchTestCase {
         ThreadContext threadContext = new ThreadContext(settings);
         threadContext.putTransient(ConfigConstants.OPENSEARCH_SECURITY_USER_INFO_THREAD_CONTEXT, "alice|odfe,aes|engineering,operations");
         when(clusterService.getClusterSettings()).thenReturn(clusterSettings);
-        org.opensearch.threadpool.ThreadPool mockThreadPool = mock(ThreadPool.class);
+        ThreadPool mockThreadPool = mock(ThreadPool.class);
         when(client.threadPool()).thenReturn(mockThreadPool);
         when(mockThreadPool.getThreadContext()).thenReturn(threadContext);
 

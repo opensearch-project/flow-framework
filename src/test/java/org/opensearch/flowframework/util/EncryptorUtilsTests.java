@@ -13,16 +13,19 @@ import org.opensearch.action.get.GetRequest;
 import org.opensearch.action.get.GetResponse;
 import org.opensearch.action.index.IndexRequest;
 import org.opensearch.action.index.IndexResponse;
+import org.opensearch.action.support.PlainActionFuture;
 import org.opensearch.client.Client;
 import org.opensearch.cluster.ClusterState;
 import org.opensearch.cluster.metadata.Metadata;
 import org.opensearch.cluster.service.ClusterService;
 import org.opensearch.common.settings.Settings;
-import org.opensearch.common.util.concurrent.ThreadContext;
+import org.opensearch.common.unit.TimeValue;
+import org.opensearch.common.util.concurrent.OpenSearchExecutors;
 import org.opensearch.common.xcontent.XContentFactory;
 import org.opensearch.commons.authuser.User;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.core.common.bytes.BytesReference;
+import org.opensearch.core.rest.RestStatus;
 import org.opensearch.core.xcontent.NamedXContentRegistry;
 import org.opensearch.core.xcontent.ToXContent;
 import org.opensearch.core.xcontent.XContentBuilder;
@@ -35,7 +38,10 @@ import org.opensearch.flowframework.model.WorkflowNode;
 import org.opensearch.remote.metadata.client.SdkClient;
 import org.opensearch.remote.metadata.client.impl.SdkClientFactory;
 import org.opensearch.test.OpenSearchTestCase;
+import org.opensearch.threadpool.ScalingExecutorBuilder;
+import org.opensearch.threadpool.TestThreadPool;
 import org.opensearch.threadpool.ThreadPool;
+import org.junit.AfterClass;
 
 import java.io.IOException;
 import java.time.Instant;
@@ -43,8 +49,16 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
+import static org.opensearch.flowframework.common.CommonValue.CONFIG_INDEX;
 import static org.opensearch.flowframework.common.CommonValue.CREDENTIAL_FIELD;
+import static org.opensearch.flowframework.common.CommonValue.FLOW_FRAMEWORK_THREAD_POOL_PREFIX;
+import static org.opensearch.flowframework.common.CommonValue.MASTER_KEY;
+import static org.opensearch.flowframework.common.CommonValue.WORKFLOW_THREAD_POOL;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doAnswer;
@@ -52,6 +66,17 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 public class EncryptorUtilsTests extends OpenSearchTestCase {
+
+    private static final TestThreadPool testThreadPool = new TestThreadPool(
+        EncryptorUtilsTests.class.getName(),
+        new ScalingExecutorBuilder(
+            WORKFLOW_THREAD_POOL,
+            1,
+            Math.max(2, OpenSearchExecutors.allocatedProcessors(Settings.EMPTY) - 1),
+            TimeValue.timeValueMinutes(1),
+            FLOW_FRAMEWORK_THREAD_POOL_PREFIX + WORKFLOW_THREAD_POOL
+        )
+    );
 
     private ClusterService clusterService;
     private Client client;
@@ -67,7 +92,8 @@ public class EncryptorUtilsTests extends OpenSearchTestCase {
     public void setUp() throws Exception {
         super.setUp();
         this.clusterService = mock(ClusterService.class);
-        this.client = mock(Client.class);
+        client = mock(Client.class);
+        when(client.threadPool()).thenReturn(testThreadPool);
         this.xContentRegistry = mock(NamedXContentRegistry.class);
         this.sdkClient = SdkClientFactory.createSdkClient(client, xContentRegistry, Collections.emptyMap());
         this.encryptorUtils = new EncryptorUtils(clusterService, client, sdkClient, xContentRegistry);
@@ -105,11 +131,11 @@ public class EncryptorUtilsTests extends OpenSearchTestCase {
         when(clusterService.state()).thenReturn(clusterState);
         when(clusterState.metadata()).thenReturn(metadata);
         when(metadata.hasIndex(anyString())).thenReturn(true);
+    }
 
-        ThreadPool threadPool = mock(ThreadPool.class);
-        ThreadContext threadContext = new ThreadContext(Settings.EMPTY);
-        when(client.threadPool()).thenReturn(threadPool);
-        when(threadPool.getThreadContext()).thenReturn(threadContext);
+    @AfterClass
+    public static void cleanup() {
+        ThreadPool.terminate(testThreadPool, 500, TimeUnit.MILLISECONDS);
     }
 
     public void testGenerateMasterKey() {
@@ -142,7 +168,7 @@ public class EncryptorUtilsTests extends OpenSearchTestCase {
         assertNotEquals(encrypted1, encrypted2);
     }
 
-    public void testInitializeMasterKeySuccess() throws IOException {
+    public void testInitializeMasterKeySuccess() throws IOException, InterruptedException, ExecutionException, TimeoutException {
         String masterKey = encryptorUtils.generateMasterKey();
 
         // Index exists case
@@ -175,7 +201,13 @@ public class EncryptorUtilsTests extends OpenSearchTestCase {
         this.encryptorUtils = new EncryptorUtils(clusterService, client, sdkClient, xContentRegistry);
         assertNull(encryptorUtils.getMasterKey(null));
 
-        encryptorUtils.initializeMasterKeyIfAbsent(null);
+        GetResponse getMasterKeyResponse = TestHelpers.createGetResponse(new Config(masterKey, Instant.now()), MASTER_KEY, CONFIG_INDEX);
+        PlainActionFuture<GetResponse> future = PlainActionFuture.newFuture();
+        future.onResponse(getMasterKeyResponse);
+        when(client.get(any(GetRequest.class))).thenReturn(future);
+
+        CompletableFuture<Void> resultFuture = encryptorUtils.initializeMasterKeyIfAbsent(null);
+        resultFuture.get(5, TimeUnit.SECONDS);
         assertEquals(masterKey, encryptorUtils.getMasterKey(null));
 
         // No index exists case
@@ -200,22 +232,36 @@ public class EncryptorUtilsTests extends OpenSearchTestCase {
         assertEquals(masterKey.length(), encryptorUtils.getMasterKey(null).length());
     }
 
-    public void testInitializeMasterKeyFailure() {
+    public void testInitializeMasterKeyFailure() throws IOException {
         // reinitialize with blank master key
         this.encryptorUtils = new EncryptorUtils(clusterService, client, sdkClient, xContentRegistry);
 
-        doAnswer(invocation -> {
-            ActionListener<GetResponse> getRequestActionListener = invocation.getArgument(1);
+        GetResponse getResponse = mock(GetResponse.class);
+        when(getResponse.getId()).thenReturn(MASTER_KEY);
+        when(getResponse.getSource()).thenReturn(null);
+        when(getResponse.toXContent(any(XContentBuilder.class), any())).thenAnswer(invocation -> {
+            XContentBuilder builder = invocation.getArgument(0);
+            builder.startObject()
+                .field("_index", CONFIG_INDEX)
+                .field("_id", MASTER_KEY)
+                .field("found", false)
+                // .nullField("_source")
+                .endObject();
+            return builder;
+        });
+        PlainActionFuture<GetResponse> future = PlainActionFuture.newFuture();
+        future.onResponse(getResponse);
+        when(client.get(any(GetRequest.class))).thenReturn(future);
 
-            // Stub get response for failure case
-            GetResponse getResponse = mock(GetResponse.class);
-            when(getResponse.isExists()).thenReturn(false);
-            getRequestActionListener.onResponse(getResponse);
-            return null;
-        }).when(client).get(any(GetRequest.class), any());
+        CompletableFuture<Void> resultFuture = encryptorUtils.initializeMasterKeyIfAbsent(null);
+        ExecutionException executionException = assertThrows(ExecutionException.class, () -> resultFuture.get(5, TimeUnit.SECONDS));
 
-        FlowFrameworkException ex = expectThrows(FlowFrameworkException.class, () -> encryptorUtils.initializeMasterKeyIfAbsent(null));
-        assertEquals("Failed to get master key from config index", ex.getMessage());
+        Throwable cause = executionException.getCause();
+        assertNotNull(cause);
+        assertTrue(cause instanceof FlowFrameworkException);
+        FlowFrameworkException ffException = (FlowFrameworkException) cause;
+        assertEquals("Master key has not been initialized in config index", ffException.getMessage());
+        assertEquals(RestStatus.NOT_FOUND, ffException.status());
     }
 
     public void testEncryptDecryptTemplateCredential() {
