@@ -59,7 +59,6 @@ import static org.opensearch.flowframework.common.CommonValue.MASTER_KEY;
 import static org.opensearch.flowframework.common.CommonValue.WORKFLOW_THREAD_POOL;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -202,12 +201,10 @@ public class EncryptorUtilsTests extends OpenSearchTestCase {
         future.onResponse(getMasterKeyResponse);
         when(client.get(any(GetRequest.class))).thenReturn(future);
 
-        doAnswer(invocation -> {
-            ActionListener<IndexResponse> indexRequestActionListener = invocation.getArgument(1);
-            IndexResponse indexResponse = mock(IndexResponse.class);
-            indexRequestActionListener.onResponse(indexResponse);
-            return null;
-        }).when(client).index(any(IndexRequest.class), any());
+        IndexResponse indexResponse = mock(IndexResponse.class);
+        PlainActionFuture<IndexResponse> indexFuture = PlainActionFuture.newFuture();
+        indexFuture.onResponse(indexResponse);
+        when(client.index(any(IndexRequest.class))).thenReturn(indexFuture);
 
         listener = ActionListener.wrap(b -> {}, e -> {});
         latch = new CountDownLatch(1);

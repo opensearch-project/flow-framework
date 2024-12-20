@@ -11,21 +11,15 @@ package org.opensearch.flowframework.util;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.opensearch.ExceptionsHelper;
-import org.opensearch.action.get.GetRequest;
 import org.opensearch.action.get.GetResponse;
-import org.opensearch.action.index.IndexRequest;
-import org.opensearch.action.support.WriteRequest;
 import org.opensearch.client.Client;
 import org.opensearch.cluster.service.ClusterService;
 import org.opensearch.common.Nullable;
 import org.opensearch.common.util.concurrent.ThreadContext;
-import org.opensearch.common.xcontent.XContentFactory;
 import org.opensearch.commons.authuser.User;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.core.rest.RestStatus;
 import org.opensearch.core.xcontent.NamedXContentRegistry;
-import org.opensearch.core.xcontent.ToXContent;
-import org.opensearch.core.xcontent.XContentBuilder;
 import org.opensearch.core.xcontent.XContentParser;
 import org.opensearch.flowframework.exception.FlowFrameworkException;
 import org.opensearch.flowframework.model.Config;
@@ -33,6 +27,7 @@ import org.opensearch.flowframework.model.Template;
 import org.opensearch.flowframework.model.Workflow;
 import org.opensearch.flowframework.model.WorkflowNode;
 import org.opensearch.remote.metadata.client.GetDataObjectRequest;
+import org.opensearch.remote.metadata.client.PutDataObjectRequest;
 import org.opensearch.remote.metadata.client.SdkClient;
 import org.opensearch.remote.metadata.common.SdkClientUtils;
 import org.opensearch.search.fetch.subphase.FetchSourceContext;
@@ -319,78 +314,28 @@ public class EncryptorUtils {
     }
 
     private void generateAndIndexNewMasterKey(String tenantId, ActionListener<Boolean> listener) {
+        String masterKeyId = tenantId == null ? MASTER_KEY : MASTER_KEY + "_" + hashString(tenantId);
         Config config = new Config(generateMasterKey(), Instant.now());
-        IndexRequest masterKeyIndexRequest = new IndexRequest(CONFIG_INDEX).id(MASTER_KEY)
-            .setRefreshPolicy(WriteRequest.RefreshPolicy.IMMEDIATE);
-        try (
-            ThreadContext.StoredContext context = client.threadPool().getThreadContext().stashContext();
-            XContentBuilder builder = XContentFactory.jsonBuilder()
-        ) {
-            masterKeyIndexRequest.source(config.toXContent(builder, ToXContent.EMPTY_PARAMS));
-            client.index(masterKeyIndexRequest, ActionListener.wrap(indexResponse -> {
-                context.restore();
-                // Set generated key to master
-                logger.info("Config has been initialized successfully");
-                setMasterKey(tenantId, config.masterKey());
-                listener.onResponse(true);
-            }, indexException -> {
-                logger.error("Failed to index config", indexException);
-                listener.onFailure(indexException);
-            }));
-        } catch (Exception e) {
-            logger.error("Failed to index new key in config index", e);
-            listener.onFailure(new FlowFrameworkException("Failed to index new key in config index", RestStatus.INTERNAL_SERVER_ERROR));
-        }
-    }
-
-    public void initializeMasterKeyOld(@Nullable String tenantId, ActionListener<Boolean> listener) {
+        PutDataObjectRequest putRequest = PutDataObjectRequest.builder()
+            .index(CONFIG_INDEX)
+            .id(masterKeyId)
+            .tenantId(tenantId)
+            .dataObject(config)
+            .build();
         try (ThreadContext.StoredContext context = client.threadPool().getThreadContext().stashContext()) {
-            GetRequest getRequest = new GetRequest(CONFIG_INDEX).id(MASTER_KEY);
-            client.get(getRequest, ActionListener.wrap(getResponse -> {
-                if (!getResponse.isExists()) {
-                    Config config = new Config(generateMasterKey(), Instant.now());
-                    IndexRequest masterKeyIndexRequest = new IndexRequest(CONFIG_INDEX).id(MASTER_KEY)
-                        .setRefreshPolicy(WriteRequest.RefreshPolicy.IMMEDIATE);
-                    try (XContentBuilder builder = XContentFactory.jsonBuilder()) {
-                        masterKeyIndexRequest.source(config.toXContent(builder, ToXContent.EMPTY_PARAMS));
-                    }
-                    client.index(masterKeyIndexRequest, ActionListener.wrap(indexResponse -> {
-                        context.restore();
-                        // Set generated key to master
-                        logger.info("Config has been initialized successfully");
-                        setMasterKey(tenantId, config.masterKey());
-                        listener.onResponse(true);
-                    }, indexException -> {
-                        logger.error("Failed to index config", indexException);
-                        listener.onFailure(indexException);
-                    }));
-
-                } else {
+            sdkClient.putDataObjectAsync(putRequest, client.threadPool().executor(WORKFLOW_THREAD_POOL)).whenComplete((r, throwable) -> {
+                if (throwable == null) {
                     context.restore();
-                    // Set existing key to master
-                    logger.debug("Config has already been initialized, fetching key");
-                    try (
-                        XContentParser parser = ParseUtils.createXContentParserFromRegistry(
-                            xContentRegistry,
-                            getResponse.getSourceAsBytesRef()
-                        )
-                    ) {
-                        ensureExpectedToken(XContentParser.Token.START_OBJECT, parser.nextToken(), parser);
-                        Config config = Config.parse(parser);
-                        setMasterKey(tenantId, config.masterKey());
-                        listener.onResponse(true);
-                    } catch (FlowFrameworkException e) {
-                        listener.onFailure(e);
-                    }
+                    // Set generated key to master
+                    logger.info("Config has been initialized successfully");
+                    setMasterKey(tenantId, config.masterKey());
+                    listener.onResponse(true);
+                } else {
+                    Exception exception = SdkClientUtils.unwrapAndConvertToException(throwable);
+                    logger.error("Failed to index new master key in config", exception);
+                    listener.onFailure(exception);
                 }
-            }, getRequestException -> {
-                logger.error("Failed to search for config from config index", getRequestException);
-                listener.onFailure(getRequestException);
-            }));
-
-        } catch (Exception e) {
-            logger.error("Failed to retrieve config from config index", e);
-            listener.onFailure(e);
+            });
         }
     }
 
