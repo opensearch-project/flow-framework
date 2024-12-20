@@ -294,10 +294,56 @@ public class EncryptorUtils {
      * @param listener the action listener
      */
     public void initializeMasterKey(@Nullable String tenantId, ActionListener<Boolean> listener) {
-        // Index has either been created or it already exists, need to check if master key has been initalized already, if not then
-        // generate
-        // This is necessary in case of global context index restoration from snapshot, will need to use the same master key to decrypt
-        // stored credentials
+        // Config index has already been created or verified
+        cacheMasterKeyFromConfigIndex(tenantId).thenApply(v -> {
+            // Key exists and has been cached successfully
+            listener.onResponse(true);
+            return null;
+        }).exceptionally(throwable -> {
+            Exception exception = SdkClientUtils.unwrapAndConvertToException(throwable);
+            // The cacheMasterKey method only completes exceptionally with FFE
+            if (exception instanceof FlowFrameworkException) {
+                FlowFrameworkException ffe = (FlowFrameworkException) exception;
+                if (ffe.status() == RestStatus.NOT_FOUND) {
+                    // Key doesn't exist, need to generate and index a new one
+                    generateAndIndexNewMasterKey(tenantId, listener);
+                } else {
+                    listener.onFailure(ffe);
+                }
+            } else {
+                // Shouldn't get here
+                listener.onFailure(exception);
+            }
+            return null;
+        });
+    }
+
+    private void generateAndIndexNewMasterKey(String tenantId, ActionListener<Boolean> listener) {
+        Config config = new Config(generateMasterKey(), Instant.now());
+        IndexRequest masterKeyIndexRequest = new IndexRequest(CONFIG_INDEX).id(MASTER_KEY)
+            .setRefreshPolicy(WriteRequest.RefreshPolicy.IMMEDIATE);
+        try (
+            ThreadContext.StoredContext context = client.threadPool().getThreadContext().stashContext();
+            XContentBuilder builder = XContentFactory.jsonBuilder()
+        ) {
+            masterKeyIndexRequest.source(config.toXContent(builder, ToXContent.EMPTY_PARAMS));
+            client.index(masterKeyIndexRequest, ActionListener.wrap(indexResponse -> {
+                context.restore();
+                // Set generated key to master
+                logger.info("Config has been initialized successfully");
+                setMasterKey(tenantId, config.masterKey());
+                listener.onResponse(true);
+            }, indexException -> {
+                logger.error("Failed to index config", indexException);
+                listener.onFailure(indexException);
+            }));
+        } catch (Exception e) {
+            logger.error("Failed to index new key in config index", e);
+            listener.onFailure(new FlowFrameworkException("Failed to index new key in config index", RestStatus.INTERNAL_SERVER_ERROR));
+        }
+    }
+
+    public void initializeMasterKeyOld(@Nullable String tenantId, ActionListener<Boolean> listener) {
         try (ThreadContext.StoredContext context = client.threadPool().getThreadContext().stashContext()) {
             GetRequest getRequest = new GetRequest(CONFIG_INDEX).id(MASTER_KEY);
             client.get(getRequest, ActionListener.wrap(getResponse -> {
@@ -358,23 +404,22 @@ public class EncryptorUtils {
         if (this.tenantMasterKeys.containsKey(Objects.requireNonNullElse(tenantId, DEFAULT_TENANT_ID))) {
             return CompletableFuture.completedFuture(null);
         }
-        // Key not in map, fetch from config index and store in map
-        return cacheMasterKeyFromConfigIndex(tenantId);
-    }
-
-    private CompletableFuture<Void> cacheMasterKeyFromConfigIndex(String tenantId) {
+        // Key not in map
         if (!clusterService.state().metadata().hasIndex(CONFIG_INDEX)) {
             return CompletableFuture.failedFuture(
                 new FlowFrameworkException("Config Index has not been initialized", RestStatus.INTERNAL_SERVER_ERROR)
             );
         }
+        // Fetch from config index and store in map
+        return cacheMasterKeyFromConfigIndex(tenantId);
+    }
+
+    private CompletableFuture<Void> cacheMasterKeyFromConfigIndex(String tenantId) {
+        // This method assumes the config index must exist
         final CompletableFuture<Void> resultFuture = new CompletableFuture<>();
         try (ThreadContext.StoredContext context = client.threadPool().getThreadContext().stashContext()) {
             FetchSourceContext fetchSourceContext = new FetchSourceContext(true);
-            String masterKeyId = MASTER_KEY;
-            if (tenantId != null) {
-                masterKeyId = MASTER_KEY + "_" + hashString(tenantId);
-            }
+            String masterKeyId = tenantId == null ? MASTER_KEY : MASTER_KEY + "_" + hashString(tenantId);
             sdkClient.getDataObjectAsync(
                 GetDataObjectRequest.builder()
                     .index(CONFIG_INDEX)
@@ -390,6 +435,7 @@ public class EncryptorUtils {
                     try {
                         response = r.parser() == null ? null : GetResponse.fromXContent(r.parser());
                         if (response.isExists()) {
+                            System.err.println("B: EXISTS");
                             try (
                                 XContentParser parser = ParseUtils.createXContentParserFromRegistry(
                                     xContentRegistry,
@@ -402,6 +448,7 @@ public class EncryptorUtils {
                                 resultFuture.complete(null);
                             }
                         } else {
+                            System.err.println("C: NOT EXISTS");
                             resultFuture.completeExceptionally(
                                 new FlowFrameworkException("Master key has not been initialized in config index", RestStatus.NOT_FOUND)
                             );
