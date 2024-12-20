@@ -9,6 +9,7 @@
 package org.opensearch.flowframework.util;
 
 import org.opensearch.Version;
+import org.opensearch.action.LatchedActionListener;
 import org.opensearch.action.get.GetRequest;
 import org.opensearch.action.get.GetResponse;
 import org.opensearch.action.index.IndexRequest;
@@ -21,14 +22,10 @@ import org.opensearch.cluster.service.ClusterService;
 import org.opensearch.common.settings.Settings;
 import org.opensearch.common.unit.TimeValue;
 import org.opensearch.common.util.concurrent.OpenSearchExecutors;
-import org.opensearch.common.xcontent.XContentFactory;
 import org.opensearch.commons.authuser.User;
 import org.opensearch.core.action.ActionListener;
-import org.opensearch.core.common.bytes.BytesReference;
 import org.opensearch.core.rest.RestStatus;
 import org.opensearch.core.xcontent.NamedXContentRegistry;
-import org.opensearch.core.xcontent.ToXContent;
-import org.opensearch.core.xcontent.XContentBuilder;
 import org.opensearch.flowframework.TestHelpers;
 import org.opensearch.flowframework.exception.FlowFrameworkException;
 import org.opensearch.flowframework.model.Config;
@@ -50,6 +47,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
@@ -174,31 +172,6 @@ public class EncryptorUtilsTests extends OpenSearchTestCase {
         // Index exists case
         // reinitialize with blank master key
         this.encryptorUtils = new EncryptorUtils(clusterService, client, sdkClient, xContentRegistry);
-        BytesReference bytesRef;
-        try (XContentBuilder builder = XContentFactory.jsonBuilder()) {
-            Config config = new Config(masterKey, Instant.now());
-            XContentBuilder source = config.toXContent(builder, ToXContent.EMPTY_PARAMS);
-            bytesRef = BytesReference.bytes(source);
-        }
-        doAnswer(invocation -> {
-            ActionListener<GetResponse> getRequestActionListener = invocation.getArgument(1);
-
-            // Stub get response for success case
-            GetResponse getResponse = mock(GetResponse.class);
-            when(getResponse.isExists()).thenReturn(true);
-            when(getResponse.getSourceAsBytesRef()).thenReturn(bytesRef);
-
-            getRequestActionListener.onResponse(getResponse);
-            return null;
-        }).when(client).get(any(GetRequest.class), any());
-
-        ActionListener<Boolean> listener = ActionListener.wrap(b -> {}, e -> {});
-        encryptorUtils.initializeMasterKey(null, listener);
-        assertEquals(masterKey, encryptorUtils.getMasterKey(null));
-
-        // Test ifAbsent version
-        // reinitialize with blank master key
-        this.encryptorUtils = new EncryptorUtils(clusterService, client, sdkClient, xContentRegistry);
         assertNull(encryptorUtils.getMasterKey(null));
 
         GetResponse getMasterKeyResponse = TestHelpers.createGetResponse(new Config(masterKey, Instant.now()), MASTER_KEY, CONFIG_INDEX);
@@ -206,18 +179,29 @@ public class EncryptorUtilsTests extends OpenSearchTestCase {
         future.onResponse(getMasterKeyResponse);
         when(client.get(any(GetRequest.class))).thenReturn(future);
 
+        ActionListener<Boolean> listener = ActionListener.wrap(b -> {}, e -> {});
+
+        CountDownLatch latch = new CountDownLatch(1);
+        LatchedActionListener<Boolean> latchedActionListener = new LatchedActionListener<>(listener, latch);
+        encryptorUtils.initializeMasterKey(null, latchedActionListener);
+        latch.await(1, TimeUnit.SECONDS);
+        assertEquals(masterKey, encryptorUtils.getMasterKey(null));
+
+        // Test ifAbsent version
+        // reinitialize with blank master key
+        this.encryptorUtils = new EncryptorUtils(clusterService, client, sdkClient, xContentRegistry);
+        assertNull(encryptorUtils.getMasterKey(null));
+
         CompletableFuture<Void> resultFuture = encryptorUtils.initializeMasterKeyIfAbsent(null);
         resultFuture.get(5, TimeUnit.SECONDS);
         assertEquals(masterKey, encryptorUtils.getMasterKey(null));
 
-        // No index exists case
-        doAnswer(invocation -> {
-            ActionListener<GetResponse> getRequestActionListener = invocation.getArgument(1);
-            GetResponse getResponse = mock(GetResponse.class);
-            when(getResponse.isExists()).thenReturn(false);
-            getRequestActionListener.onResponse(getResponse);
-            return null;
-        }).when(client).get(any(GetRequest.class), any());
+        // No key exists case
+        getMasterKeyResponse = TestHelpers.createGetResponse(null, MASTER_KEY, CONFIG_INDEX);
+        future = PlainActionFuture.newFuture();
+        future.onResponse(getMasterKeyResponse);
+        when(client.get(any(GetRequest.class))).thenReturn(future);
+
         doAnswer(invocation -> {
             ActionListener<IndexResponse> indexRequestActionListener = invocation.getArgument(1);
             IndexResponse indexResponse = mock(IndexResponse.class);
@@ -226,8 +210,11 @@ public class EncryptorUtilsTests extends OpenSearchTestCase {
         }).when(client).index(any(IndexRequest.class), any());
 
         listener = ActionListener.wrap(b -> {}, e -> {});
-        encryptorUtils.initializeMasterKey(null, listener);
+        latch = new CountDownLatch(1);
+        latchedActionListener = new LatchedActionListener<>(listener, latch);
+        encryptorUtils.initializeMasterKey(null, latchedActionListener);
         // This will generate a new master key 32 bytes -> base64 encoded
+        latch.await(1, TimeUnit.SECONDS);
         assertNotEquals(masterKey, encryptorUtils.getMasterKey(null));
         assertEquals(masterKey.length(), encryptorUtils.getMasterKey(null).length());
     }
@@ -236,19 +223,7 @@ public class EncryptorUtilsTests extends OpenSearchTestCase {
         // reinitialize with blank master key
         this.encryptorUtils = new EncryptorUtils(clusterService, client, sdkClient, xContentRegistry);
 
-        GetResponse getResponse = mock(GetResponse.class);
-        when(getResponse.getId()).thenReturn(MASTER_KEY);
-        when(getResponse.getSource()).thenReturn(null);
-        when(getResponse.toXContent(any(XContentBuilder.class), any())).thenAnswer(invocation -> {
-            XContentBuilder builder = invocation.getArgument(0);
-            builder.startObject()
-                .field("_index", CONFIG_INDEX)
-                .field("_id", MASTER_KEY)
-                .field("found", false)
-                // .nullField("_source")
-                .endObject();
-            return builder;
-        });
+        GetResponse getResponse = TestHelpers.createGetResponse(null, MASTER_KEY, CONFIG_INDEX);
         PlainActionFuture<GetResponse> future = PlainActionFuture.newFuture();
         future.onResponse(getResponse);
         when(client.get(any(GetRequest.class))).thenReturn(future);
