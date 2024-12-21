@@ -12,7 +12,6 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.message.ParameterizedMessageFactory;
 import org.opensearch.ExceptionsHelper;
-import org.opensearch.action.get.GetRequest;
 import org.opensearch.action.support.ActionFilters;
 import org.opensearch.action.support.HandledTransportAction;
 import org.opensearch.action.support.PlainActionFuture;
@@ -39,7 +38,6 @@ import org.opensearch.flowframework.workflow.WorkflowProcessSorter;
 import org.opensearch.plugins.PluginsService;
 import org.opensearch.remote.metadata.client.SdkClient;
 import org.opensearch.tasks.Task;
-import org.opensearch.threadpool.ThreadPool;
 import org.opensearch.transport.TransportService;
 
 import java.time.Instant;
@@ -51,7 +49,6 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 import static org.opensearch.flowframework.common.CommonValue.ERROR_FIELD;
-import static org.opensearch.flowframework.common.CommonValue.GLOBAL_CONTEXT_INDEX;
 import static org.opensearch.flowframework.common.CommonValue.PROVISIONING_PROGRESS_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.PROVISION_END_TIME_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.PROVISION_START_TIME_FIELD;
@@ -70,7 +67,6 @@ public class ProvisionWorkflowTransportAction extends HandledTransportAction<Wor
 
     private final Logger logger = LogManager.getLogger(ProvisionWorkflowTransportAction.class);
 
-    private final ThreadPool threadPool;
     private final Client client;
     private final SdkClient sdkClient;
     private final WorkflowProcessSorter workflowProcessSorter;
@@ -101,7 +97,6 @@ public class ProvisionWorkflowTransportAction extends HandledTransportAction<Wor
     public ProvisionWorkflowTransportAction(
         TransportService transportService,
         ActionFilters actionFilters,
-        ThreadPool threadPool,
         Client client,
         SdkClient sdkClient,
         WorkflowProcessSorter workflowProcessSorter,
@@ -114,7 +109,6 @@ public class ProvisionWorkflowTransportAction extends HandledTransportAction<Wor
         Settings settings
     ) {
         super(ProvisionWorkflowAction.NAME, transportService, actionFilters, WorkflowRequest::new);
-        this.threadPool = threadPool;
         this.client = client;
         this.sdkClient = sdkClient;
         this.workflowProcessSorter = workflowProcessSorter;
@@ -148,7 +142,7 @@ public class ProvisionWorkflowTransportAction extends HandledTransportAction<Wor
                 filterByEnabled,
                 flowFrameworkSettings.isMultiTenancyEnabled(),
                 listener,
-                () -> executeProvisionRequest(request, listener, context),
+                () -> executeProvisionRequest(request, tenantId, listener, context),
                 client,
                 sdkClient,
                 clusterService,
@@ -174,18 +168,19 @@ public class ProvisionWorkflowTransportAction extends HandledTransportAction<Wor
      * 6. Update last provisioned field in template
      * 7. Return response
      * @param request the workflow request
+     * @param tenantId
      * @param listener the action listener
      * @param context the thread context
      */
     private void executeProvisionRequest(
         WorkflowRequest request,
+        String tenantId,
         ActionListener<WorkflowResponse> listener,
         ThreadContext.StoredContext context
     ) {
         String workflowId = request.getWorkflowId();
-        GetRequest getRequest = new GetRequest(GLOBAL_CONTEXT_INDEX, workflowId);
         logger.info("Querying workflow from global context: {}", workflowId);
-        client.get(getRequest, ActionListener.wrap(response -> {
+        flowFrameworkIndicesHandler.getTemplate(workflowId, tenantId, ActionListener.wrap(response -> {
             context.restore();
 
             if (!response.isExists()) {
@@ -280,7 +275,7 @@ public class ProvisionWorkflowTransportAction extends HandledTransportAction<Wor
                 logger.error(errorMessage, exception);
                 listener.onFailure(new FlowFrameworkException(errorMessage, ExceptionsHelper.status(exception)));
             }
-        }));
+        }), context);
     }
 
     /**
@@ -291,7 +286,7 @@ public class ProvisionWorkflowTransportAction extends HandledTransportAction<Wor
      */
     private void executeWorkflowAsync(String workflowId, List<ProcessNode> workflowSequence, ActionListener<WorkflowResponse> listener) {
         try {
-            threadPool.executor(PROVISION_WORKFLOW_THREAD_POOL).execute(() -> { executeWorkflow(workflowSequence, workflowId); });
+            client.threadPool().executor(PROVISION_WORKFLOW_THREAD_POOL).execute(() -> { executeWorkflow(workflowSequence, workflowId); });
         } catch (Exception exception) {
             listener.onFailure(new FlowFrameworkException("Failed to execute workflow " + workflowId, ExceptionsHelper.status(exception)));
         }
