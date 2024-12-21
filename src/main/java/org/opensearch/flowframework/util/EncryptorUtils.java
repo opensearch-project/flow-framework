@@ -376,9 +376,8 @@ public class EncryptorUtils {
             ).whenComplete((r, throwable) -> {
                 context.restore();
                 if (throwable == null) {
-                    GetResponse response;
                     try {
-                        response = r.parser() == null ? null : GetResponse.fromXContent(r.parser());
+                        GetResponse response = r.parser() == null ? null : GetResponse.fromXContent(r.parser());
                         if (response.isExists()) {
                             System.err.println("B: EXISTS");
                             try (

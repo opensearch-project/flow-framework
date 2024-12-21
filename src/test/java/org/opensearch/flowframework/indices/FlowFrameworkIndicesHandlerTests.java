@@ -181,7 +181,7 @@ public class FlowFrameworkIndicesHandlerTests extends OpenSearchTestCase {
         verify(listener, times(1)).onFailure(exceptionCaptor.capture());
 
         assertEquals(
-            "Failed to update template for workflow_id : 1, global_context index does not exist.",
+            "Failed to update template for workflow_id : 1, global context index does not exist.",
             exceptionCaptor.getValue().getMessage()
         );
     }
