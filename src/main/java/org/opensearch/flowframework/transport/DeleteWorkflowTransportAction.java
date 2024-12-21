@@ -11,7 +11,7 @@ package org.opensearch.flowframework.transport;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.core.util.Booleans;
-import org.opensearch.action.delete.DeleteRequest;
+import org.apache.logging.log4j.message.ParameterizedMessageFactory;
 import org.opensearch.action.delete.DeleteResponse;
 import org.opensearch.action.support.ActionFilters;
 import org.opensearch.action.support.HandledTransportAction;
@@ -28,12 +28,15 @@ import org.opensearch.flowframework.common.FlowFrameworkSettings;
 import org.opensearch.flowframework.exception.FlowFrameworkException;
 import org.opensearch.flowframework.indices.FlowFrameworkIndicesHandler;
 import org.opensearch.flowframework.util.TenantAwareHelper;
+import org.opensearch.remote.metadata.client.DeleteDataObjectRequest;
 import org.opensearch.remote.metadata.client.SdkClient;
+import org.opensearch.remote.metadata.common.SdkClientUtils;
 import org.opensearch.tasks.Task;
 import org.opensearch.transport.TransportService;
 
 import static org.opensearch.flowframework.common.CommonValue.CLEAR_STATUS;
 import static org.opensearch.flowframework.common.CommonValue.GLOBAL_CONTEXT_INDEX;
+import static org.opensearch.flowframework.common.CommonValue.WORKFLOW_THREAD_POOL;
 import static org.opensearch.flowframework.common.FlowFrameworkSettings.FILTER_BY_BACKEND_ROLES;
 import static org.opensearch.flowframework.util.ParseUtils.getUserContext;
 import static org.opensearch.flowframework.util.ParseUtils.resolveUserAndExecute;
@@ -109,7 +112,7 @@ public class DeleteWorkflowTransportAction extends HandledTransportAction<Workfl
                 clearStatus,
                 flowFrameworkSettings.isMultiTenancyEnabled(),
                 listener,
-                () -> executeDeleteRequest(request, listener, context),
+                () -> executeDeleteRequest(request, tenantId, listener, context),
                 client,
                 sdkClient,
                 clusterService,
@@ -126,18 +129,44 @@ public class DeleteWorkflowTransportAction extends HandledTransportAction<Workfl
     /**
      * Executes the delete request
      * @param request the workflow request
+     * @param tenantId
      * @param listener the action listener
      * @param context the thread context
      */
     private void executeDeleteRequest(
         WorkflowRequest request,
+        String tenantId,
         ActionListener<DeleteResponse> listener,
         ThreadContext.StoredContext context
     ) {
+        System.err.println("A");
         String workflowId = request.getWorkflowId();
-        DeleteRequest deleteRequest = new DeleteRequest(GLOBAL_CONTEXT_INDEX, workflowId);
-        logger.info("Deleting workflow doc: {}", workflowId);
-        client.delete(deleteRequest, ActionListener.runBefore(listener, context::restore));
+        DeleteDataObjectRequest deleteRequest = DeleteDataObjectRequest.builder()
+            .index(GLOBAL_CONTEXT_INDEX)
+            .id(workflowId)
+            .tenantId(tenantId)
+            .build();
+        sdkClient.deleteDataObjectAsync(deleteRequest, client.threadPool().executor(WORKFLOW_THREAD_POOL)).whenComplete((r, throwable) -> {
+            context.restore();
+            System.err.println("B");
+            if (throwable == null) {
+                System.err.println("C");
+                try {
+                    DeleteResponse response = DeleteResponse.fromXContent(r.parser());
+                    System.err.println("D " + response);
+                    listener.onResponse(response);
+                } catch (Exception e) {
+                    logger.error("Failed to parse delete response", e);
+                    listener.onFailure(new FlowFrameworkException("Failed to parse delete response", RestStatus.INTERNAL_SERVER_ERROR));
+                }
+            } else {
+                Exception exception = SdkClientUtils.unwrapAndConvertToException(throwable);
+                String errorMessage = ParameterizedMessageFactory.INSTANCE.newMessage("Failed to delete template {}", workflowId)
+                    .getFormattedMessage();
+                logger.error(errorMessage, exception);
+                listener.onFailure(new FlowFrameworkException(errorMessage, RestStatus.INTERNAL_SERVER_ERROR));
+            }
+        });
 
         // Whether to force deletion of corresponding state
         final boolean clearStatus = Booleans.parseBoolean(request.getParams().get(CLEAR_STATUS), false);
