@@ -20,6 +20,7 @@ import org.opensearch.action.admin.indices.settings.put.UpdateSettingsRequest;
 import org.opensearch.action.delete.DeleteRequest;
 import org.opensearch.action.delete.DeleteResponse;
 import org.opensearch.action.get.GetRequest;
+import org.opensearch.action.get.GetResponse;
 import org.opensearch.action.index.IndexRequest;
 import org.opensearch.action.index.IndexResponse;
 import org.opensearch.action.support.WriteRequest;
@@ -29,6 +30,7 @@ import org.opensearch.client.Client;
 import org.opensearch.cluster.metadata.IndexMetadata;
 import org.opensearch.cluster.service.ClusterService;
 import org.opensearch.common.util.concurrent.ThreadContext;
+import org.opensearch.common.util.concurrent.ThreadContext.StoredContext;
 import org.opensearch.common.xcontent.XContentFactory;
 import org.opensearch.common.xcontent.XContentType;
 import org.opensearch.commons.authuser.User;
@@ -49,6 +51,7 @@ import org.opensearch.flowframework.util.EncryptorUtils;
 import org.opensearch.flowframework.util.ParseUtils;
 import org.opensearch.flowframework.workflow.WorkflowData;
 import org.opensearch.index.engine.VersionConflictEngineException;
+import org.opensearch.remote.metadata.client.GetDataObjectRequest;
 import org.opensearch.remote.metadata.client.PutDataObjectRequest;
 import org.opensearch.remote.metadata.client.SdkClient;
 import org.opensearch.remote.metadata.common.SdkClientUtils;
@@ -499,23 +502,54 @@ public class FlowFrameworkIndicesHandler {
      * @param <T> action listener response type
      */
     public <T> void doesTemplateExist(String documentId, Consumer<Boolean> booleanResultConsumer, ActionListener<T> listener) {
-        GetRequest getRequest = new GetRequest(GLOBAL_CONTEXT_INDEX, documentId);
+        String tenantId = "TODO"; // TODO Actually pass this from caller(s)
         try (ThreadContext.StoredContext context = client.threadPool().getThreadContext().stashContext()) {
-            client.get(getRequest, ActionListener.wrap(response -> { booleanResultConsumer.accept(response.isExists()); }, exception -> {
-                context.restore();
+            getTemplate(
+                documentId,
+                tenantId,
+                ActionListener.wrap(response -> booleanResultConsumer.accept(response.isExists()), exception -> {
+                    String errorMessage = ParameterizedMessageFactory.INSTANCE.newMessage("Failed to get template {}", documentId)
+                        .getFormattedMessage();
+                    logger.error(errorMessage);
+                    listener.onFailure(new FlowFrameworkException(errorMessage, ExceptionsHelper.status(exception)));
+                }),
+                context
+            );
+        }
+    }
+
+    /**
+     * Get a template from the template index
+     *
+     * @param documentId document id
+     * @param tenantId tenant id
+     * @param listener action listener
+     * @param context the thread context
+     */
+    public void getTemplate(String documentId, String tenantId, ActionListener<GetResponse> listener, StoredContext context) {
+        GetDataObjectRequest getRequest = GetDataObjectRequest.builder()
+            .index(GLOBAL_CONTEXT_INDEX)
+            .id(documentId)
+            .tenantId(tenantId)
+            .build();
+        sdkClient.getDataObjectAsync(getRequest, client.threadPool().executor(WORKFLOW_THREAD_POOL)).whenComplete((r, throwable) -> {
+            context.restore();
+            if (throwable == null) {
+                try {
+                    GetResponse getResponse = GetResponse.fromXContent(r.parser());
+                    listener.onResponse(getResponse);
+                } catch (IOException e) {
+                    logger.error("Failed to parse get response", e);
+                    listener.onFailure(new FlowFrameworkException("Failed to parse get response", INTERNAL_SERVER_ERROR));
+                }
+            } else {
+                Exception exception = SdkClientUtils.unwrapAndConvertToException(throwable);
                 String errorMessage = ParameterizedMessageFactory.INSTANCE.newMessage("Failed to get template {}", documentId)
                     .getFormattedMessage();
-                logger.error(errorMessage);
+                logger.error(errorMessage, exception);
                 listener.onFailure(new FlowFrameworkException(errorMessage, ExceptionsHelper.status(exception)));
-            }));
-        } catch (Exception e) {
-            String errorMessage = ParameterizedMessageFactory.INSTANCE.newMessage(
-                "Failed to retrieve template from global context: {}",
-                documentId
-            ).getFormattedMessage();
-            logger.error(errorMessage, e);
-            listener.onFailure(new FlowFrameworkException(errorMessage, ExceptionsHelper.status(e)));
-        }
+            }
+        });
     }
 
     /**
