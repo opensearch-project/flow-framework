@@ -10,6 +10,7 @@ package org.opensearch.flowframework.indices;
 
 import org.opensearch.Version;
 import org.opensearch.action.DocWriteResponse.Result;
+import org.opensearch.action.LatchedActionListener;
 import org.opensearch.action.admin.indices.create.CreateIndexRequest;
 import org.opensearch.action.admin.indices.mapping.put.PutMappingRequest;
 import org.opensearch.action.delete.DeleteRequest;
@@ -17,6 +18,7 @@ import org.opensearch.action.delete.DeleteResponse;
 import org.opensearch.action.get.GetRequest;
 import org.opensearch.action.get.GetResponse;
 import org.opensearch.action.index.IndexResponse;
+import org.opensearch.action.support.PlainActionFuture;
 import org.opensearch.action.support.master.AcknowledgedResponse;
 import org.opensearch.action.update.UpdateRequest;
 import org.opensearch.action.update.UpdateResponse;
@@ -30,6 +32,8 @@ import org.opensearch.cluster.metadata.MappingMetadata;
 import org.opensearch.cluster.metadata.Metadata;
 import org.opensearch.cluster.service.ClusterService;
 import org.opensearch.common.settings.Settings;
+import org.opensearch.common.unit.TimeValue;
+import org.opensearch.common.util.concurrent.OpenSearchExecutors;
 import org.opensearch.common.util.concurrent.ThreadContext;
 import org.opensearch.common.xcontent.XContentFactory;
 import org.opensearch.core.action.ActionListener;
@@ -54,7 +58,10 @@ import org.opensearch.index.get.GetResult;
 import org.opensearch.remote.metadata.client.SdkClient;
 import org.opensearch.remote.metadata.client.impl.SdkClientFactory;
 import org.opensearch.test.OpenSearchTestCase;
+import org.opensearch.threadpool.ScalingExecutorBuilder;
+import org.opensearch.threadpool.TestThreadPool;
 import org.opensearch.threadpool.ThreadPool;
+import org.junit.AfterClass;
 
 import java.io.IOException;
 import java.time.Instant;
@@ -63,6 +70,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Consumer;
 
@@ -70,8 +79,10 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
+import static org.opensearch.flowframework.common.CommonValue.FLOW_FRAMEWORK_THREAD_POOL_PREFIX;
 import static org.opensearch.flowframework.common.CommonValue.GLOBAL_CONTEXT_INDEX;
 import static org.opensearch.flowframework.common.CommonValue.WORKFLOW_STATE_INDEX;
+import static org.opensearch.flowframework.common.CommonValue.WORKFLOW_THREAD_POOL;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doAnswer;
@@ -82,13 +93,23 @@ import static org.mockito.Mockito.when;
 
 @SuppressWarnings("deprecation")
 public class FlowFrameworkIndicesHandlerTests extends OpenSearchTestCase {
+
+    private static final TestThreadPool testThreadPool = new TestThreadPool(
+        FlowFrameworkIndicesHandlerTests.class.getName(),
+        new ScalingExecutorBuilder(
+            WORKFLOW_THREAD_POOL,
+            1,
+            Math.max(2, OpenSearchExecutors.allocatedProcessors(Settings.EMPTY) - 1),
+            TimeValue.timeValueMinutes(1),
+            FLOW_FRAMEWORK_THREAD_POOL_PREFIX + WORKFLOW_THREAD_POOL
+        )
+    );
+
     @Mock
     private Client client;
     private SdkClient sdkClient;
     @Mock
     private CreateIndexStep createIndexStep;
-    @Mock
-    private ThreadPool threadPool;
     @Mock
     private EncryptorUtils encryptorUtils;
     private FlowFrameworkIndicesHandler flowFrameworkIndicesHandler;
@@ -116,8 +137,7 @@ public class FlowFrameworkIndicesHandlerTests extends OpenSearchTestCase {
 
         Settings settings = Settings.builder().build();
         threadContext = new ThreadContext(settings);
-        when(client.threadPool()).thenReturn(threadPool);
-        when(threadPool.getThreadContext()).thenReturn(threadContext);
+        when(client.threadPool()).thenReturn(testThreadPool);
         sdkClient = SdkClientFactory.createSdkClient(client, namedXContentRegistry, Collections.emptyMap());
         flowFrameworkIndicesHandler = new FlowFrameworkIndicesHandler(
             client,
@@ -130,8 +150,6 @@ public class FlowFrameworkIndicesHandlerTests extends OpenSearchTestCase {
         indicesAdminClient = mock(IndicesAdminClient.class);
         metadata = mock(Metadata.class);
 
-        when(client.threadPool()).thenReturn(threadPool);
-        when(threadPool.getThreadContext()).thenReturn(threadContext);
         when(client.admin()).thenReturn(adminClient);
         when(adminClient.indices()).thenReturn(indicesAdminClient);
         when(clusterService.state()).thenReturn(ClusterState.builder(new ClusterName("test cluster")).build());
@@ -153,6 +171,11 @@ public class FlowFrameworkIndicesHandlerTests extends OpenSearchTestCase {
             null,
             null
         );
+    }
+
+    @AfterClass
+    public static void cleanup() {
+        ThreadPool.terminate(testThreadPool, 500, TimeUnit.MILLISECONDS);
     }
 
     public void testDoesIndexExist() {
@@ -186,7 +209,7 @@ public class FlowFrameworkIndicesHandlerTests extends OpenSearchTestCase {
         );
     }
 
-    public void testFailedUpdateTemplateInGlobalContextNotExisting() throws IOException {
+    public void testFailedUpdateTemplateInGlobalContextNotExisting() throws IOException, InterruptedException {
         Template template = mock(Template.class);
         @SuppressWarnings("unchecked")
         ActionListener<IndexResponse> listener = mock(ActionListener.class);
@@ -197,13 +220,15 @@ public class FlowFrameworkIndicesHandlerTests extends OpenSearchTestCase {
         when(mockClusterState.metadata()).thenReturn(mockMetadata);
         when(mockMetadata.hasIndex(index.getIndexName())).thenReturn(true);
         when(flowFrameworkIndicesHandler.doesIndexExist(GLOBAL_CONTEXT_INDEX)).thenReturn(true);
-        doAnswer(invocation -> {
-            ActionListener<GetResponse> responseListener = invocation.getArgument(1);
-            responseListener.onFailure(new Exception("Failed to get template"));
-            return null;
-        }).when(client).get(any(GetRequest.class), any());
 
+        PlainActionFuture<GetResponse> future = PlainActionFuture.newFuture();
+        future.onFailure(new Exception("Failed to get template"));
+        when(client.get(any(GetRequest.class))).thenReturn(future);
+
+        CountDownLatch latch = new CountDownLatch(1);
+        LatchedActionListener<IndexResponse> latchedActionListener = new LatchedActionListener<>(listener, latch);
         flowFrameworkIndicesHandler.updateTemplateInGlobalContext("1", template, listener);
+        latch.await(1, TimeUnit.SECONDS);
 
         ArgumentCaptor<Exception> exceptionCaptor = ArgumentCaptor.forClass(Exception.class);
         verify(listener, times(1)).onFailure(exceptionCaptor.capture());
@@ -393,23 +418,25 @@ public class FlowFrameworkIndicesHandlerTests extends OpenSearchTestCase {
         flowFrameworkIndicesHandler.canDeleteWorkflowStateDoc(documentId, true, canDelete -> { assertTrue(canDelete); }, listener);
     }
 
-    public void testDoesTemplateExist() {
+    public void testDoesTemplateExist() throws IOException, InterruptedException {
         String documentId = randomAlphaOfLength(5);
         @SuppressWarnings("unchecked")
         Consumer<Boolean> function = mock(Consumer.class);
         @SuppressWarnings("unchecked")
         ActionListener<GetResponse> listener = mock(ActionListener.class);
-        doAnswer(invocation -> {
-            ActionListener<GetResponse> responseListener = invocation.getArgument(1);
 
-            XContentBuilder builder = XContentFactory.jsonBuilder();
-            this.template.toXContent(builder, null);
-            BytesReference templateBytesRef = BytesReference.bytes(builder);
-            GetResult getResult = new GetResult(GLOBAL_CONTEXT_INDEX, documentId, 1, 1, 1, true, templateBytesRef, null, null);
-            responseListener.onResponse(new GetResponse(getResult));
-            return null;
-        }).when(client).get(any(GetRequest.class), any());
-        flowFrameworkIndicesHandler.doesTemplateExist(documentId, function, listener);
+        XContentBuilder builder = XContentFactory.jsonBuilder();
+        this.template.toXContent(builder, null);
+        BytesReference templateBytesRef = BytesReference.bytes(builder);
+        GetResult getResult = new GetResult(GLOBAL_CONTEXT_INDEX, documentId, 1, 1, 1, true, templateBytesRef, null, null);
+        PlainActionFuture<GetResponse> future = PlainActionFuture.newFuture();
+        future.onResponse(new GetResponse(getResult));
+        when(client.get(any(GetRequest.class))).thenReturn(future);
+
+        CountDownLatch latch = new CountDownLatch(1);
+        LatchedActionListener<GetResponse> latchedActionListener = new LatchedActionListener<>(listener, latch);
+        flowFrameworkIndicesHandler.doesTemplateExist(documentId, function, latchedActionListener);
+        latch.await(1, TimeUnit.SECONDS);
         verify(function).accept(true);
     }
 

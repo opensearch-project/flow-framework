@@ -12,7 +12,6 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.message.ParameterizedMessageFactory;
 import org.opensearch.ExceptionsHelper;
-import org.opensearch.action.get.GetRequest;
 import org.opensearch.action.support.ActionFilters;
 import org.opensearch.action.support.HandledTransportAction;
 import org.opensearch.client.Client;
@@ -113,7 +112,7 @@ public class GetWorkflowTransportAction extends HandledTransportAction<WorkflowR
                     filterByEnabled,
                     flowFrameworkSettings.isMultiTenancyEnabled(),
                     listener,
-                    () -> executeGetRequest(request, listener, context),
+                    () -> executeGetRequest(request, tenantId, listener, context),
                     client,
                     sdkClient,
                     clusterService,
@@ -143,15 +142,13 @@ public class GetWorkflowTransportAction extends HandledTransportAction<WorkflowR
      */
     private void executeGetRequest(
         WorkflowRequest request,
+        String tenantId,
         ActionListener<GetWorkflowResponse> listener,
         ThreadContext.StoredContext context
     ) {
         String workflowId = request.getWorkflowId();
-        GetRequest getRequest = new GetRequest(GLOBAL_CONTEXT_INDEX, workflowId);
         logger.info("Querying workflow from global context: {}", workflowId);
-        client.get(getRequest, ActionListener.wrap(response -> {
-            context.restore();
-
+        flowFrameworkIndicesHandler.getTemplate(workflowId, tenantId, ActionListener.wrap(response -> {
             if (!response.isExists()) {
                 String errorMessage = ParameterizedMessageFactory.INSTANCE.newMessage(
                     "Failed to retrieve template ({}) from global context.",
@@ -172,6 +169,6 @@ public class GetWorkflowTransportAction extends HandledTransportAction<WorkflowR
             ).getFormattedMessage();
             logger.error(errorMessage, exception);
             listener.onFailure(new FlowFrameworkException(errorMessage, ExceptionsHelper.status(exception)));
-        }));
+        }), context);
     }
 }
