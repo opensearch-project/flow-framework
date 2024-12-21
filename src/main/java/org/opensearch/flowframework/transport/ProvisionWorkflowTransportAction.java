@@ -12,7 +12,6 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.message.ParameterizedMessageFactory;
 import org.opensearch.ExceptionsHelper;
-import org.opensearch.action.get.GetRequest;
 import org.opensearch.action.support.ActionFilters;
 import org.opensearch.action.support.HandledTransportAction;
 import org.opensearch.action.support.PlainActionFuture;
@@ -25,6 +24,7 @@ import org.opensearch.commons.authuser.User;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.core.rest.RestStatus;
 import org.opensearch.core.xcontent.NamedXContentRegistry;
+import org.opensearch.flowframework.common.FlowFrameworkSettings;
 import org.opensearch.flowframework.exception.FlowFrameworkException;
 import org.opensearch.flowframework.indices.FlowFrameworkIndicesHandler;
 import org.opensearch.flowframework.model.ProvisioningProgress;
@@ -32,11 +32,12 @@ import org.opensearch.flowframework.model.State;
 import org.opensearch.flowframework.model.Template;
 import org.opensearch.flowframework.model.Workflow;
 import org.opensearch.flowframework.util.EncryptorUtils;
+import org.opensearch.flowframework.util.TenantAwareHelper;
 import org.opensearch.flowframework.workflow.ProcessNode;
 import org.opensearch.flowframework.workflow.WorkflowProcessSorter;
 import org.opensearch.plugins.PluginsService;
+import org.opensearch.remote.metadata.client.SdkClient;
 import org.opensearch.tasks.Task;
-import org.opensearch.threadpool.ThreadPool;
 import org.opensearch.transport.TransportService;
 
 import java.time.Instant;
@@ -48,7 +49,6 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 import static org.opensearch.flowframework.common.CommonValue.ERROR_FIELD;
-import static org.opensearch.flowframework.common.CommonValue.GLOBAL_CONTEXT_INDEX;
 import static org.opensearch.flowframework.common.CommonValue.PROVISIONING_PROGRESS_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.PROVISION_END_TIME_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.PROVISION_START_TIME_FIELD;
@@ -67,10 +67,11 @@ public class ProvisionWorkflowTransportAction extends HandledTransportAction<Wor
 
     private final Logger logger = LogManager.getLogger(ProvisionWorkflowTransportAction.class);
 
-    private final ThreadPool threadPool;
     private final Client client;
+    private final SdkClient sdkClient;
     private final WorkflowProcessSorter workflowProcessSorter;
     private final FlowFrameworkIndicesHandler flowFrameworkIndicesHandler;
+    private final FlowFrameworkSettings flowFrameworkSettings;
     private final EncryptorUtils encryptorUtils;
     private final PluginsService pluginsService;
     private volatile Boolean filterByEnabled;
@@ -85,6 +86,7 @@ public class ProvisionWorkflowTransportAction extends HandledTransportAction<Wor
      * @param client The node client to retrieve a stored use case template
      * @param workflowProcessSorter Utility class to generate a togologically sorted list of Process nodes
      * @param flowFrameworkIndicesHandler Class to handle all internal system indices actions
+     * @param flowFrameworkSettings The Flow Framework settings
      * @param encryptorUtils Utility class to handle encryption/decryption
      * @param pluginsService The Plugins Service
      * @param clusterService the cluster service
@@ -95,10 +97,11 @@ public class ProvisionWorkflowTransportAction extends HandledTransportAction<Wor
     public ProvisionWorkflowTransportAction(
         TransportService transportService,
         ActionFilters actionFilters,
-        ThreadPool threadPool,
         Client client,
+        SdkClient sdkClient,
         WorkflowProcessSorter workflowProcessSorter,
         FlowFrameworkIndicesHandler flowFrameworkIndicesHandler,
+        FlowFrameworkSettings flowFrameworkSettings,
         EncryptorUtils encryptorUtils,
         PluginsService pluginsService,
         ClusterService clusterService,
@@ -106,10 +109,11 @@ public class ProvisionWorkflowTransportAction extends HandledTransportAction<Wor
         Settings settings
     ) {
         super(ProvisionWorkflowAction.NAME, transportService, actionFilters, WorkflowRequest::new);
-        this.threadPool = threadPool;
         this.client = client;
+        this.sdkClient = sdkClient;
         this.workflowProcessSorter = workflowProcessSorter;
         this.flowFrameworkIndicesHandler = flowFrameworkIndicesHandler;
+        this.flowFrameworkSettings = flowFrameworkSettings;
         this.encryptorUtils = encryptorUtils;
         this.pluginsService = pluginsService;
         filterByEnabled = FILTER_BY_BACKEND_ROLES.get(settings);
@@ -121,8 +125,11 @@ public class ProvisionWorkflowTransportAction extends HandledTransportAction<Wor
     @Override
     protected void doExecute(Task task, WorkflowRequest request, ActionListener<WorkflowResponse> listener) {
         // Retrieve use case template from global context
+        String tenantId = request.getTemplate() == null ? null : request.getTemplate().getTenantId();
+        if (!TenantAwareHelper.validateTenantId(flowFrameworkSettings.isMultiTenancyEnabled(), tenantId, listener)) {
+            return;
+        }
         String workflowId = request.getWorkflowId();
-
         User user = getUserContext(client);
 
         // Stash thread context to interact with system index
@@ -131,10 +138,13 @@ public class ProvisionWorkflowTransportAction extends HandledTransportAction<Wor
             resolveUserAndExecute(
                 user,
                 workflowId,
+                tenantId,
                 filterByEnabled,
+                flowFrameworkSettings.isMultiTenancyEnabled(),
                 listener,
-                () -> executeProvisionRequest(request, listener, context),
+                () -> executeProvisionRequest(request, tenantId, listener, context),
                 client,
+                sdkClient,
                 clusterService,
                 xContentRegistry
             );
@@ -158,18 +168,19 @@ public class ProvisionWorkflowTransportAction extends HandledTransportAction<Wor
      * 6. Update last provisioned field in template
      * 7. Return response
      * @param request the workflow request
+     * @param tenantId
      * @param listener the action listener
      * @param context the thread context
      */
     private void executeProvisionRequest(
         WorkflowRequest request,
+        String tenantId,
         ActionListener<WorkflowResponse> listener,
         ThreadContext.StoredContext context
     ) {
         String workflowId = request.getWorkflowId();
-        GetRequest getRequest = new GetRequest(GLOBAL_CONTEXT_INDEX, workflowId);
         logger.info("Querying workflow from global context: {}", workflowId);
-        client.get(getRequest, ActionListener.wrap(response -> {
+        flowFrameworkIndicesHandler.getTemplate(workflowId, tenantId, ActionListener.wrap(response -> {
             context.restore();
 
             if (!response.isExists()) {
@@ -264,7 +275,7 @@ public class ProvisionWorkflowTransportAction extends HandledTransportAction<Wor
                 logger.error(errorMessage, exception);
                 listener.onFailure(new FlowFrameworkException(errorMessage, ExceptionsHelper.status(exception)));
             }
-        }));
+        }), context);
     }
 
     /**
@@ -275,7 +286,7 @@ public class ProvisionWorkflowTransportAction extends HandledTransportAction<Wor
      */
     private void executeWorkflowAsync(String workflowId, List<ProcessNode> workflowSequence, ActionListener<WorkflowResponse> listener) {
         try {
-            threadPool.executor(PROVISION_WORKFLOW_THREAD_POOL).execute(() -> { executeWorkflow(workflowSequence, workflowId); });
+            client.threadPool().executor(PROVISION_WORKFLOW_THREAD_POOL).execute(() -> { executeWorkflow(workflowSequence, workflowId); });
         } catch (Exception exception) {
             listener.onFailure(new FlowFrameworkException("Failed to execute workflow " + workflowId, ExceptionsHelper.status(exception)));
         }

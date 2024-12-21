@@ -180,7 +180,7 @@ dependencies {
     implementation 'org.bouncycastle:bcprov-jdk18on:1.79'
     api "org.apache.httpcomponents.core5:httpcore5:5.3.1"
     implementation "jakarta.json.bind:jakarta.json.bind-api:3.0.1"
-    implementation "org.glassfish:jakarta.json:2.0.1"
+    implementation "jakarta.json:jakarta.json-api:2.1.3"
     implementation "org.eclipse:yasson:3.0.4"
     implementation "com.google.code.gson:gson:2.11.0"
     // Swagger-Parser dependencies for API consistency tests
@@ -199,6 +199,8 @@ dependencies {
     testImplementation("com.fasterxml.jackson.core:jackson-annotations") {
         version { strictly("${jacksonVersion}") }
     }
+    // Multi-tenant SDK Client
+    implementation "org.opensearch:opensearch-remote-metadata-sdk:${opensearch_version}"
 
     // ZipArchive dependencies used for integration tests
     zipArchive group: 'org.opensearch.plugin', name:'opensearch-ml-plugin', version: "${opensearch_build}"
@@ -208,9 +210,25 @@ dependencies {
 
     configurations.all {
         resolutionStrategy {
-            force("com.google.guava:guava:33.3.1-jre") // CVE for 31.1, keep to force transitive dependencies
-            force("com.fasterxml.jackson.core:jackson-core:${jacksonVersion}") // Dependency Jar Hell
-            force("org.apache.httpcomponents.core5:httpcore5:5.3.1") // Dependency Jar Hell
+            force "com.google.guava:guava:33.3.1-jre" // CVE for 31.1, keep to force transitive dependencies
+            force "com.fasterxml.jackson.core:jackson-core:${jacksonVersion}"
+            force "com.fasterxml.jackson:jackson-bom:${jacksonVersion}"
+            force "com.fasterxml.jackson.core:jackson-databind:${jacksonVersion}"
+            force "com.fasterxml.jackson.core:jackson-annotations:${jacksonVersion}"
+            force "com.fasterxml.jackson.datatype:jackson-datatype-jsr310:${jacksonVersion}"
+            force "com.fasterxml.jackson.dataformat:jackson-dataformat-smile:${jacksonVersion}"
+            force "com.fasterxml.jackson.dataformat:jackson-dataformat-yaml:${jacksonVersion}"
+            force "com.fasterxml.jackson.dataformat:jackson-dataformat-cbor:${jacksonVersion}"
+            force "org.apache.httpcomponents.core5:httpcore5:5.3.1"
+            force "org.apache.httpcomponents.core5:httpcore5-h2:5.3.1"
+            force "org.opensearch.client:opensearch-rest-client:${opensearch_version}"
+            force "jakarta.json.bind:jakarta.json.bind-api:3.0.1"
+            force "org.eclipse:yasson:3.0.4"
+            force "commons-codec:commons-codec:1.16.1"
+            force "org.slf4j:slf4j-api:1.7.36"
+            force "org.apache.logging.log4j:log4j-api:2.24.2"
+            force "org.apache.logging.log4j:log4j-core:2.24.2"
+            force "org.eclipse.parsson:parsson:1.1.7"
         }
     }
 }
