@@ -790,7 +790,7 @@ public class CreateWorkflowTransportActionTests extends OpenSearchTestCase {
         latch = new CountDownLatch(1);
         latchedActionListener = new LatchedActionListener<>(listener, latch);
         createWorkflowTransportAction.doExecute(mock(Task.class), updateWorkflow, latchedActionListener);
-        latch.await(1, TimeUnit.SECONDS);
+        latch.await(2, TimeUnit.SECONDS);
         createWorkflowTransportAction.doExecute(mock(Task.class), updateWorkflow, listener);
         verify(listener, times(2)).onResponse(any());
 

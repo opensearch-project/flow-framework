@@ -139,7 +139,6 @@ public class DeleteWorkflowTransportAction extends HandledTransportAction<Workfl
         ActionListener<DeleteResponse> listener,
         ThreadContext.StoredContext context
     ) {
-        System.err.println("A");
         String workflowId = request.getWorkflowId();
         DeleteDataObjectRequest deleteRequest = DeleteDataObjectRequest.builder()
             .index(GLOBAL_CONTEXT_INDEX)
@@ -148,12 +147,9 @@ public class DeleteWorkflowTransportAction extends HandledTransportAction<Workfl
             .build();
         sdkClient.deleteDataObjectAsync(deleteRequest, client.threadPool().executor(WORKFLOW_THREAD_POOL)).whenComplete((r, throwable) -> {
             context.restore();
-            System.err.println("B");
             if (throwable == null) {
-                System.err.println("C");
                 try {
                     DeleteResponse response = DeleteResponse.fromXContent(r.parser());
-                    System.err.println("D " + response);
                     listener.onResponse(response);
                 } catch (Exception e) {
                     logger.error("Failed to parse delete response", e);

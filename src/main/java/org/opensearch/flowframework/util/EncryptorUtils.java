@@ -379,7 +379,6 @@ public class EncryptorUtils {
                     try {
                         GetResponse response = r.parser() == null ? null : GetResponse.fromXContent(r.parser());
                         if (response.isExists()) {
-                            System.err.println("B: EXISTS");
                             try (
                                 XContentParser parser = ParseUtils.createXContentParserFromRegistry(
                                     xContentRegistry,
@@ -392,7 +391,6 @@ public class EncryptorUtils {
                                 resultFuture.complete(null);
                             }
                         } else {
-                            System.err.println("C: NOT EXISTS");
                             resultFuture.completeExceptionally(
                                 new FlowFrameworkException("Master key has not been initialized in config index", RestStatus.NOT_FOUND)
                             );
