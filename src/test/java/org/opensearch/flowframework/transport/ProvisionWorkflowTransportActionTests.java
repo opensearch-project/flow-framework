@@ -203,7 +203,7 @@ public class ProvisionWorkflowTransportActionTests extends OpenSearchTestCase {
         CountDownLatch latch = new CountDownLatch(1);
         LatchedActionListener<WorkflowResponse> latchedActionListener = new LatchedActionListener<>(listener, latch);
         provisionWorkflowTransportAction.doExecute(mock(Task.class), workflowRequest, latchedActionListener);
-        latch.await(2, TimeUnit.SECONDS);
+        latch.await(5, TimeUnit.SECONDS);
 
         ArgumentCaptor<WorkflowResponse> responseCaptor = ArgumentCaptor.forClass(WorkflowResponse.class);
         verify(listener, times(1)).onResponse(responseCaptor.capture());

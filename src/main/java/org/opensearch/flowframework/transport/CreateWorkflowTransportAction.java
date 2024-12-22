@@ -13,7 +13,7 @@ import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.message.ParameterizedMessageFactory;
 import org.opensearch.ExceptionsHelper;
 import org.opensearch.action.get.GetResponse;
-import org.opensearch.action.search.SearchRequest;
+import org.opensearch.action.search.SearchResponse;
 import org.opensearch.action.support.ActionFilters;
 import org.opensearch.action.support.HandledTransportAction;
 import org.opensearch.client.Client;
@@ -26,7 +26,6 @@ import org.opensearch.commons.authuser.User;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.core.rest.RestStatus;
 import org.opensearch.core.xcontent.NamedXContentRegistry;
-import org.opensearch.flowframework.common.CommonValue;
 import org.opensearch.flowframework.common.FlowFrameworkSettings;
 import org.opensearch.flowframework.exception.FlowFrameworkException;
 import org.opensearch.flowframework.indices.FlowFrameworkIndicesHandler;
@@ -42,6 +41,7 @@ import org.opensearch.index.query.QueryBuilders;
 import org.opensearch.plugins.PluginsService;
 import org.opensearch.remote.metadata.client.GetDataObjectRequest;
 import org.opensearch.remote.metadata.client.SdkClient;
+import org.opensearch.remote.metadata.client.SearchDataObjectRequest;
 import org.opensearch.remote.metadata.common.SdkClientUtils;
 import org.opensearch.search.builder.SearchSourceBuilder;
 import org.opensearch.tasks.Task;
@@ -268,6 +268,7 @@ public class CreateWorkflowTransportAction extends HandledTransportAction<Workfl
             checkMaxWorkflows(
                 flowFrameworkSettings.getRequestTimeout(),
                 flowFrameworkSettings.getMaxWorkflows(),
+                tenantId,
                 ActionListener.wrap(max -> {
                     if (FALSE.equals(max)) {
                         String errorMessage = ParameterizedMessageFactory.INSTANCE.newMessage(
@@ -522,24 +523,36 @@ public class CreateWorkflowTransportAction extends HandledTransportAction<Workfl
      *  @param maxWorkflow max workflows
      *  @param internalListener listener for search request
      */
-    void checkMaxWorkflows(TimeValue requestTimeOut, Integer maxWorkflow, ActionListener<Boolean> internalListener) {
-        if (!flowFrameworkIndicesHandler.doesIndexExist(CommonValue.GLOBAL_CONTEXT_INDEX)) {
+    void checkMaxWorkflows(TimeValue requestTimeOut, Integer maxWorkflow, String tenantId, ActionListener<Boolean> internalListener) {
+        if (!flowFrameworkIndicesHandler.doesIndexExist(GLOBAL_CONTEXT_INDEX)) {
             internalListener.onResponse(true);
         } else {
             QueryBuilder query = QueryBuilders.matchAllQuery();
             SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder().query(query).size(0).timeout(requestTimeOut);
-
-            SearchRequest searchRequest = new SearchRequest(CommonValue.GLOBAL_CONTEXT_INDEX).source(searchSourceBuilder);
+            SearchDataObjectRequest searchRequest = SearchDataObjectRequest.builder()
+                .indices(GLOBAL_CONTEXT_INDEX)
+                .searchSourceBuilder(searchSourceBuilder)
+                .tenantId(tenantId)
+                .build();
             try (ThreadContext.StoredContext context = client.threadPool().getThreadContext().stashContext()) {
-                logger.info("Querying existing workflows to count the max");
-                client.search(searchRequest, ActionListener.wrap(searchResponse -> {
-                    context.restore();
-                    internalListener.onResponse(searchResponse.getHits().getTotalHits().value < maxWorkflow);
-                }, exception -> {
-                    String errorMessage = "Unable to fetch the workflows";
-                    logger.error(errorMessage, exception);
-                    internalListener.onFailure(new FlowFrameworkException(errorMessage, ExceptionsHelper.status(exception)));
-                }));
+                sdkClient.searchDataObjectAsync(searchRequest, client.threadPool().executor(WORKFLOW_THREAD_POOL))
+                    .whenComplete((r, throwable) -> {
+                        if (throwable == null) {
+                            context.restore();
+                            try {
+                                SearchResponse searchResponse = SearchResponse.fromXContent(r.parser());
+                                internalListener.onResponse(searchResponse.getHits().getTotalHits().value < maxWorkflow);
+                            } catch (Exception e) {
+                                logger.error("Failed to parse workflow searchResponse", e);
+                                internalListener.onFailure(e);
+                            }
+                        } else {
+                            Exception exception = SdkClientUtils.unwrapAndConvertToException(throwable);
+                            String errorMessage = "Unable to fetch the workflows";
+                            logger.error(errorMessage, exception);
+                            internalListener.onFailure(new FlowFrameworkException(errorMessage, ExceptionsHelper.status(exception)));
+                        }
+                    });
             } catch (Exception e) {
                 String errorMessage = "Unable to fetch the workflows";
                 logger.error(errorMessage, e);
