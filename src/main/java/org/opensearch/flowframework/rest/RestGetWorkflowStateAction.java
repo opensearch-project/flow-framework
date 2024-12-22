@@ -77,7 +77,7 @@ public class RestGetWorkflowStateAction extends BaseRestHandler {
                 throw new FlowFrameworkException("workflow_id cannot be null", RestStatus.BAD_REQUEST);
             }
 
-            GetWorkflowStateRequest getWorkflowRequest = new GetWorkflowStateRequest(workflowId, all);
+            GetWorkflowStateRequest getWorkflowRequest = new GetWorkflowStateRequest(workflowId, all, tenantId);
             return channel -> client.execute(GetWorkflowStateAction.INSTANCE, getWorkflowRequest, ActionListener.wrap(response -> {
                 XContentBuilder builder = response.toXContent(channel.newBuilder(), ToXContent.EMPTY_PARAMS);
                 channel.sendResponse(new BytesRestResponse(RestStatus.OK, builder));

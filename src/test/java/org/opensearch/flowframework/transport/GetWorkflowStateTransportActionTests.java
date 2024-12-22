@@ -115,7 +115,7 @@ public class GetWorkflowStateTransportActionTests extends OpenSearchTestCase {
     }
 
     public void testGetTransportAction() throws IOException {
-        GetWorkflowStateRequest getWorkflowRequest = new GetWorkflowStateRequest("1234", false);
+        GetWorkflowStateRequest getWorkflowRequest = new GetWorkflowStateRequest("1234", false, null);
         getWorkflowStateTransportAction.doExecute(task, getWorkflowRequest, response);
     }
 
@@ -125,7 +125,7 @@ public class GetWorkflowStateTransportActionTests extends OpenSearchTestCase {
     }
 
     public void testGetWorkflowStateRequest() throws IOException {
-        GetWorkflowStateRequest request = new GetWorkflowStateRequest("1234", false);
+        GetWorkflowStateRequest request = new GetWorkflowStateRequest("1234", false, null);
         BytesStreamOutput out = new BytesStreamOutput();
         request.writeTo(out);
         StreamInput input = out.bytes().streamInput();
@@ -164,7 +164,7 @@ public class GetWorkflowStateTransportActionTests extends OpenSearchTestCase {
 
     public void testExecuteGetWorkflowStateRequestFailure() throws IOException {
         String workflowId = "test-workflow";
-        GetWorkflowStateRequest request = new GetWorkflowStateRequest(workflowId, false);
+        GetWorkflowStateRequest request = new GetWorkflowStateRequest(workflowId, false, null);
         ActionListener<GetWorkflowStateResponse> listener = mock(ActionListener.class);
 
         // Stub client.get to force on failure
@@ -185,7 +185,7 @@ public class GetWorkflowStateTransportActionTests extends OpenSearchTestCase {
 
     public void testExecuteGetWorkflowStateRequestIndexNotFound() throws IOException {
         String workflowId = "test-workflow";
-        GetWorkflowStateRequest request = new GetWorkflowStateRequest(workflowId, false);
+        GetWorkflowStateRequest request = new GetWorkflowStateRequest(workflowId, false, null);
         ActionListener<GetWorkflowStateResponse> listener = mock(ActionListener.class);
 
         // Stub client.get to force on failure
@@ -206,7 +206,7 @@ public class GetWorkflowStateTransportActionTests extends OpenSearchTestCase {
 
     public void testExecuteGetWorkflowStateRequestParseFailure() throws IOException {
         String workflowId = "test-workflow";
-        GetWorkflowStateRequest request = new GetWorkflowStateRequest(workflowId, false);
+        GetWorkflowStateRequest request = new GetWorkflowStateRequest(workflowId, false, null);
         ActionListener<GetWorkflowStateResponse> listener = mock(ActionListener.class);
 
         // Stub client.get to force on response

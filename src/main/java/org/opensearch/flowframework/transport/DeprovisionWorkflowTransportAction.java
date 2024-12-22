@@ -141,7 +141,7 @@ public class DeprovisionWorkflowTransportAction extends HandledTransportAction<W
                 true,
                 flowFrameworkSettings.isMultiTenancyEnabled(),
                 listener,
-                () -> executeDeprovisionRequest(request, listener, context, user),
+                () -> executeDeprovisionRequest(request, tenantId, listener, context, user),
                 client,
                 sdkClient,
                 clusterService,
@@ -157,13 +157,14 @@ public class DeprovisionWorkflowTransportAction extends HandledTransportAction<W
 
     private void executeDeprovisionRequest(
         WorkflowRequest request,
+        String tenantId,
         ActionListener<WorkflowResponse> listener,
         ThreadContext.StoredContext context,
         User user
     ) {
         String workflowId = request.getWorkflowId();
         String allowDelete = request.getParams().get(ALLOW_DELETE);
-        GetWorkflowStateRequest getStateRequest = new GetWorkflowStateRequest(workflowId, true);
+        GetWorkflowStateRequest getStateRequest = new GetWorkflowStateRequest(workflowId, true, tenantId);
         logger.info("Querying state for workflow: {}", workflowId);
         client.execute(GetWorkflowStateAction.INSTANCE, getStateRequest, ActionListener.wrap(response -> {
             context.restore();

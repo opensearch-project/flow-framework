@@ -8,6 +8,7 @@
  */
 package org.opensearch.flowframework.transport;
 
+import org.opensearch.Version;
 import org.opensearch.action.ActionRequest;
 import org.opensearch.action.ActionRequestValidationException;
 import org.opensearch.common.Nullable;
@@ -32,14 +33,18 @@ public class GetWorkflowStateRequest extends ActionRequest {
      */
     private boolean all;
 
+    private String tenantId;
+
     /**
      * Instantiates a new GetWorkflowStateRequest
      * @param workflowId the documentId of the workflow
      * @param all whether the get request is looking for all fields in status
+     * @param tenantId the tenant id
      */
-    public GetWorkflowStateRequest(@Nullable String workflowId, boolean all) {
+    public GetWorkflowStateRequest(@Nullable String workflowId, boolean all, String tenantId) {
         this.workflowId = workflowId;
         this.all = all;
+        this.tenantId = tenantId;
     }
 
     /**
@@ -51,6 +56,10 @@ public class GetWorkflowStateRequest extends ActionRequest {
         super(in);
         this.workflowId = in.readString();
         this.all = in.readBoolean();
+        // TODO: After backport, change to next 2.x release
+        if (in.getVersion().onOrAfter(Version.CURRENT)) {
+            this.tenantId = in.readOptionalString();
+        }
     }
 
     /**
@@ -70,11 +79,23 @@ public class GetWorkflowStateRequest extends ActionRequest {
         return this.all;
     }
 
+    /**
+     * Gets the tenant Id
+     * @return the tenant id
+     */
+    public String getTenantId() {
+        return this.tenantId;
+    }
+
     @Override
     public void writeTo(StreamOutput out) throws IOException {
         super.writeTo(out);
         out.writeString(workflowId);
         out.writeBoolean(all);
+        // TODO: After backport, change to next 2.x release
+        if (out.getVersion().onOrAfter(Version.CURRENT)) {
+            out.writeOptionalString(tenantId);
+        }
     }
 
     @Override

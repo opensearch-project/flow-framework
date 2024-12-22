@@ -155,7 +155,7 @@ public class ReprovisionWorkflowTransportAction extends HandledTransportAction<R
                 false,
                 flowFrameworkSettings.isMultiTenancyEnabled(),
                 listener,
-                () -> executeReprovisionRequest(request, listener, context),
+                () -> executeReprovisionRequest(request, tenantId, listener, context),
                 client,
                 sdkClient,
                 clusterService,
@@ -175,18 +175,20 @@ public class ReprovisionWorkflowTransportAction extends HandledTransportAction<R
     /**
      * Execute the reprovision request
      * @param request the reprovision request
+     * @param tenantId
      * @param listener the action listener
      * @param context the thread context
      */
     private void executeReprovisionRequest(
         ReprovisionWorkflowRequest request,
+        String tenantId,
         ActionListener<WorkflowResponse> listener,
         ThreadContext.StoredContext context
     ) {
         String workflowId = request.getWorkflowId();
         logger.info("Querying state for workflow: {}", workflowId);
         // Retrieve state and resources created
-        GetWorkflowStateRequest getStateRequest = new GetWorkflowStateRequest(workflowId, true);
+        GetWorkflowStateRequest getStateRequest = new GetWorkflowStateRequest(workflowId, true, tenantId);
         client.execute(GetWorkflowStateAction.INSTANCE, getStateRequest, ActionListener.wrap(response -> {
             context.restore();
 
