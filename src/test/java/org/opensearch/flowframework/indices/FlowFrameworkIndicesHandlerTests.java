@@ -371,7 +371,7 @@ public class FlowFrameworkIndicesHandlerTests extends OpenSearchTestCase {
             return null;
         }).when(client).get(any(GetRequest.class), any());
 
-        flowFrameworkIndicesHandler.canDeleteWorkflowStateDoc(documentId, false, canDelete -> { assertTrue(canDelete); }, listener);
+        flowFrameworkIndicesHandler.canDeleteWorkflowStateDoc(documentId, null, false, canDelete -> { assertTrue(canDelete); }, listener);
     }
 
     public void testCanNotDeleteWorkflowStateDocInProgress() {
@@ -401,7 +401,7 @@ public class FlowFrameworkIndicesHandlerTests extends OpenSearchTestCase {
             return null;
         }).when(client).get(any(GetRequest.class), any());
 
-        flowFrameworkIndicesHandler.canDeleteWorkflowStateDoc(documentId, true, canDelete -> { assertFalse(canDelete); }, listener);
+        flowFrameworkIndicesHandler.canDeleteWorkflowStateDoc(documentId, null, true, canDelete -> { assertFalse(canDelete); }, listener);
     }
 
     public void testDeleteWorkflowStateDocResourcesExist() {
@@ -432,10 +432,10 @@ public class FlowFrameworkIndicesHandlerTests extends OpenSearchTestCase {
         }).when(client).get(any(GetRequest.class), any());
 
         // Can't delete because resources exist
-        flowFrameworkIndicesHandler.canDeleteWorkflowStateDoc(documentId, false, canDelete -> { assertFalse(canDelete); }, listener);
+        flowFrameworkIndicesHandler.canDeleteWorkflowStateDoc(documentId, null, false, canDelete -> { assertFalse(canDelete); }, listener);
 
         // But can delete if clearStatus set true
-        flowFrameworkIndicesHandler.canDeleteWorkflowStateDoc(documentId, true, canDelete -> { assertTrue(canDelete); }, listener);
+        flowFrameworkIndicesHandler.canDeleteWorkflowStateDoc(documentId, null, true, canDelete -> { assertTrue(canDelete); }, listener);
     }
 
     public void testDoesTemplateExist() throws IOException, InterruptedException {

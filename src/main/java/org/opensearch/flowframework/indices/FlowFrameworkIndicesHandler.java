@@ -686,61 +686,6 @@ public class FlowFrameworkIndicesHandler {
     }
 
     /**
-     * Check workflow provisioning state and resources to see if state can be deleted with template
-     *
-     * @param documentId document id
-     * @param clearStatus if set true, always deletes the state document unless status is IN_PROGRESS
-     * @param canDeleteStateConsumer consumer function which will be true if workflow state is not IN_PROGRESS and either no resources or true clearStatus
-     * @param listener action listener from caller to fail on error
-     * @param <T> action listener response type
-     * @deprecated TODO migrating all these to the tenant aware version above
-     */
-    @Deprecated
-    public <T> void canDeleteWorkflowStateDoc(
-        String documentId,
-        boolean clearStatus,
-        Consumer<Boolean> canDeleteStateConsumer,
-        ActionListener<T> listener
-    ) {
-        GetRequest getRequest = new GetRequest(WORKFLOW_STATE_INDEX, documentId);
-        try (ThreadContext.StoredContext context = client.threadPool().getThreadContext().stashContext()) {
-            client.get(getRequest, ActionListener.wrap(response -> {
-                context.restore();
-                if (!response.isExists()) {
-                    // no need to delete if it's not there to start with
-                    canDeleteStateConsumer.accept(Boolean.FALSE);
-                    return;
-                }
-                try (
-                    XContentParser parser = ParseUtils.createXContentParserFromRegistry(xContentRegistry, response.getSourceAsBytesRef())
-                ) {
-                    ensureExpectedToken(XContentParser.Token.START_OBJECT, parser.nextToken(), parser);
-                    WorkflowState workflowState = WorkflowState.parse(parser);
-                    canDeleteStateConsumer.accept(
-                        (clearStatus || workflowState.resourcesCreated().isEmpty())
-                            && !ProvisioningProgress.IN_PROGRESS.equals(
-                                ProvisioningProgress.valueOf(workflowState.getProvisioningProgress())
-                            )
-                    );
-                } catch (Exception e) {
-                    String errorMessage = ParameterizedMessageFactory.INSTANCE.newMessage("Failed to parse workflow state {}", documentId)
-                        .getFormattedMessage();
-                    ;
-                    logger.error(errorMessage, e);
-                    listener.onFailure(new FlowFrameworkException(errorMessage, RestStatus.INTERNAL_SERVER_ERROR));
-                }
-            }, exception -> {
-                logger.error("Failed to get workflow state for {} ", documentId);
-                canDeleteStateConsumer.accept(Boolean.FALSE);
-            }));
-        } catch (Exception e) {
-            String errorMessage = "Failed to retrieve workflow state to check provisioning status";
-            logger.error(errorMessage, e);
-            listener.onFailure(new FlowFrameworkException(errorMessage, ExceptionsHelper.status(e)));
-        }
-    }
-
-    /**
      * Updates a complete document in the workflow state index
      * @param documentId the document ID
      * @param updatedDocument a complete document to update the global state index with

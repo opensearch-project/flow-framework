@@ -169,7 +169,7 @@ public class DeleteWorkflowTransportAction extends HandledTransportAction<Workfl
         ActionListener<DeleteResponse> stateListener = ActionListener.wrap(response -> {
             logger.info("Deleted workflow state doc: {}", workflowId);
         }, exception -> { logger.info("Failed to delete workflow state doc: {}", workflowId, exception); });
-        flowFrameworkIndicesHandler.canDeleteWorkflowStateDoc(workflowId, clearStatus, canDelete -> {
+        flowFrameworkIndicesHandler.canDeleteWorkflowStateDoc(workflowId, tenantId, clearStatus, canDelete -> {
             if (Boolean.TRUE.equals(canDelete)) {
                 flowFrameworkIndicesHandler.deleteFlowFrameworkSystemIndexDoc(workflowId, stateListener);
             }
