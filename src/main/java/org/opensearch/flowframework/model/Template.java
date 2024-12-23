@@ -92,6 +92,7 @@ public class Template implements ToXContentObject {
      * @param createdTime Created time as an Instant
      * @param lastUpdatedTime Last Updated time as an Instant
      * @param lastProvisionedTime Last Provisioned time as an Instant
+     * @param tenantId The tenant id
      */
     public Template(
         String name,
@@ -104,7 +105,8 @@ public class Template implements ToXContentObject {
         User user,
         Instant createdTime,
         Instant lastUpdatedTime,
-        Instant lastProvisionedTime
+        Instant lastProvisionedTime,
+        String tenantId
     ) {
         this.name = name;
         this.description = description;
@@ -117,6 +119,7 @@ public class Template implements ToXContentObject {
         this.createdTime = createdTime;
         this.lastUpdatedTime = lastUpdatedTime;
         this.lastProvisionedTime = lastProvisionedTime;
+        this.tenantId = tenantId;
     }
 
     /**
@@ -134,6 +137,7 @@ public class Template implements ToXContentObject {
         private Instant createdTime = null;
         private Instant lastUpdatedTime = null;
         private Instant lastProvisionedTime = null;
+        private String tenantId = null;
 
         /**
          * Empty Constructor for the Builder object
@@ -275,6 +279,16 @@ public class Template implements ToXContentObject {
         }
 
         /**
+         * Builder method for adding user
+         * @param user user
+         * @return the Builder object
+         */
+        public Builder tenantId(String tenantId) {
+            this.tenantId = tenantId;
+            return this;
+        }
+
+        /**
          * Allows building a template
          * @return Template Object containing all needed fields
          */
@@ -290,7 +304,8 @@ public class Template implements ToXContentObject {
                 this.user,
                 this.createdTime,
                 this.lastUpdatedTime,
-                this.lastProvisionedTime
+                this.lastProvisionedTime,
+                this.tenantId
             );
         }
     }
@@ -528,10 +543,8 @@ public class Template implements ToXContentObject {
             .createdTime(createdTime)
             .lastUpdatedTime(lastUpdatedTime)
             .lastProvisionedTime(lastProvisionedTime)
+            .tenantId(tenantId)
             .build();
-        if (tenantId != null) {
-            template.setTenantId(tenantId);
-        }
         return template;
     }
 
@@ -565,8 +578,7 @@ public class Template implements ToXContentObject {
         if (tenantId == null) {
             return null;
         }
-        Template emptyTemplate = builder().name("").build();
-        emptyTemplate.setTenantId(tenantId);
+        Template emptyTemplate = builder().name("").tenantId(tenantId).build();
         return emptyTemplate;
     }
 

@@ -59,6 +59,7 @@ public class WorkflowRequestResponseTests extends OpenSearchTestCase {
             TestHelpers.randomUser(),
             null,
             null,
+            null,
             null
         );
     }

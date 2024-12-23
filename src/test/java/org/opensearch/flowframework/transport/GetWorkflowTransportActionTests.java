@@ -142,6 +142,7 @@ public class GetWorkflowTransportActionTests extends OpenSearchTestCase {
             TestHelpers.randomUser(),
             null,
             null,
+            null,
             null
         );
     }

@@ -8,6 +8,8 @@
  */
 package org.opensearch.flowframework.common;
 
+import org.opensearch.Version;
+
 /**
  * Representation of common values that are used across project
  */
@@ -248,4 +250,9 @@ public class CommonValue {
     public static final String ML_COMMONS_API_SPEC_YAML_URI =
         "https://raw.githubusercontent.com/opensearch-project/opensearch-api-specification/refs/heads/main/spec/namespaces/ml.yaml";
 
+    /*
+     * Constants associated with non-BWC features
+     */
+    /** Version 2.19.0 */
+    public static final Version VERSION_2_19_0 = Version.fromString("2.19.0");
 }

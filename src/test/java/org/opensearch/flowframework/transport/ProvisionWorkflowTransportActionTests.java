@@ -65,6 +65,7 @@ import org.mockito.ArgumentCaptor;
 
 import static org.opensearch.flowframework.common.CommonValue.FLOW_FRAMEWORK_THREAD_POOL_PREFIX;
 import static org.opensearch.flowframework.common.CommonValue.GLOBAL_CONTEXT_INDEX;
+import static org.opensearch.flowframework.common.CommonValue.PROVISION_WORKFLOW_THREAD_POOL;
 import static org.opensearch.flowframework.common.CommonValue.WORKFLOW_THREAD_POOL;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
@@ -86,6 +87,13 @@ public class ProvisionWorkflowTransportActionTests extends OpenSearchTestCase {
             Math.max(2, OpenSearchExecutors.allocatedProcessors(Settings.EMPTY) - 1),
             TimeValue.timeValueMinutes(1),
             FLOW_FRAMEWORK_THREAD_POOL_PREFIX + WORKFLOW_THREAD_POOL
+        ),
+        new ScalingExecutorBuilder(
+            PROVISION_WORKFLOW_THREAD_POOL,
+            1,
+            Math.max(4, OpenSearchExecutors.allocatedProcessors(Settings.EMPTY) - 1),
+            TimeValue.timeValueMinutes(5),
+            FLOW_FRAMEWORK_THREAD_POOL_PREFIX + PROVISION_WORKFLOW_THREAD_POOL
         )
     );
 
@@ -154,6 +162,7 @@ public class ProvisionWorkflowTransportActionTests extends OpenSearchTestCase {
             TestHelpers.randomUser(),
             null,
             null,
+            null,
             null
         );
     }
@@ -203,7 +212,7 @@ public class ProvisionWorkflowTransportActionTests extends OpenSearchTestCase {
         CountDownLatch latch = new CountDownLatch(1);
         LatchedActionListener<WorkflowResponse> latchedActionListener = new LatchedActionListener<>(listener, latch);
         provisionWorkflowTransportAction.doExecute(mock(Task.class), workflowRequest, latchedActionListener);
-        latch.await(5, TimeUnit.SECONDS);
+        latch.await(1, TimeUnit.SECONDS);
 
         ArgumentCaptor<WorkflowResponse> responseCaptor = ArgumentCaptor.forClass(WorkflowResponse.class);
         verify(listener, times(1)).onResponse(responseCaptor.capture());

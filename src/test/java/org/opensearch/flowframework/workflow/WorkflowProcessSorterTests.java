@@ -176,6 +176,7 @@ public class WorkflowProcessSorterTests extends OpenSearchTestCase {
             null,
             now,
             now,
+            null,
             null
         );
 
@@ -664,6 +665,7 @@ public class WorkflowProcessSorterTests extends OpenSearchTestCase {
             null,
             now,
             now,
+            null,
             null
         );
 
@@ -734,6 +736,7 @@ public class WorkflowProcessSorterTests extends OpenSearchTestCase {
             null,
             now,
             now,
+            null,
             null
         );
 
@@ -798,6 +801,7 @@ public class WorkflowProcessSorterTests extends OpenSearchTestCase {
             null,
             now,
             now,
+            null,
             null
         );
 

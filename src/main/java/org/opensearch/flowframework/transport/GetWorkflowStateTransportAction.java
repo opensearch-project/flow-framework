@@ -12,7 +12,6 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.message.ParameterizedMessageFactory;
 import org.opensearch.ExceptionsHelper;
-import org.opensearch.action.get.GetRequest;
 import org.opensearch.action.support.ActionFilters;
 import org.opensearch.action.support.HandledTransportAction;
 import org.opensearch.client.Client;
@@ -22,20 +21,16 @@ import org.opensearch.common.settings.Settings;
 import org.opensearch.common.util.concurrent.ThreadContext;
 import org.opensearch.commons.authuser.User;
 import org.opensearch.core.action.ActionListener;
-import org.opensearch.core.rest.RestStatus;
 import org.opensearch.core.xcontent.NamedXContentRegistry;
-import org.opensearch.core.xcontent.XContentParser;
 import org.opensearch.flowframework.common.FlowFrameworkSettings;
 import org.opensearch.flowframework.exception.FlowFrameworkException;
-import org.opensearch.flowframework.model.WorkflowState;
+import org.opensearch.flowframework.indices.FlowFrameworkIndicesHandler;
 import org.opensearch.flowframework.util.ParseUtils;
-import org.opensearch.index.IndexNotFoundException;
+import org.opensearch.flowframework.util.TenantAwareHelper;
 import org.opensearch.remote.metadata.client.SdkClient;
 import org.opensearch.tasks.Task;
 import org.opensearch.transport.TransportService;
 
-import static org.opensearch.core.xcontent.XContentParserUtils.ensureExpectedToken;
-import static org.opensearch.flowframework.common.CommonValue.WORKFLOW_STATE_INDEX;
 import static org.opensearch.flowframework.common.FlowFrameworkSettings.FILTER_BY_BACKEND_ROLES;
 import static org.opensearch.flowframework.util.ParseUtils.resolveUserAndExecute;
 
@@ -49,6 +44,7 @@ public class GetWorkflowStateTransportAction extends HandledTransportAction<GetW
 
     private final Logger logger = LogManager.getLogger(GetWorkflowStateTransportAction.class);
 
+    private final FlowFrameworkIndicesHandler flowFrameworkIndicesHandler;
     private final FlowFrameworkSettings flowFrameworkSettings;
     private final Client client;
     private final SdkClient sdkClient;
@@ -69,6 +65,7 @@ public class GetWorkflowStateTransportAction extends HandledTransportAction<GetW
     public GetWorkflowStateTransportAction(
         TransportService transportService,
         ActionFilters actionFilters,
+        FlowFrameworkIndicesHandler flowFrameworkIndicesHandler,
         FlowFrameworkSettings flowFrameworkSettings,
         Client client,
         SdkClient sdkClient,
@@ -77,6 +74,7 @@ public class GetWorkflowStateTransportAction extends HandledTransportAction<GetW
         Settings settings
     ) {
         super(GetWorkflowStateAction.NAME, transportService, actionFilters, GetWorkflowStateRequest::new);
+        this.flowFrameworkIndicesHandler = flowFrameworkIndicesHandler;
         this.flowFrameworkSettings = flowFrameworkSettings;
         this.client = client;
         this.sdkClient = sdkClient;
@@ -88,6 +86,10 @@ public class GetWorkflowStateTransportAction extends HandledTransportAction<GetW
 
     @Override
     protected void doExecute(Task task, GetWorkflowStateRequest request, ActionListener<GetWorkflowStateResponse> listener) {
+        String tenantId = request.getTenantId();
+        if (!TenantAwareHelper.validateTenantId(flowFrameworkSettings.isMultiTenancyEnabled(), tenantId, listener)) {
+            return;
+        }
         String workflowId = request.getWorkflowId();
         User user = ParseUtils.getUserContext(client);
 
@@ -96,12 +98,12 @@ public class GetWorkflowStateTransportAction extends HandledTransportAction<GetW
             resolveUserAndExecute(
                 user,
                 workflowId,
-                null, // TODO: Get Tenant ID in through this request
+                tenantId,
                 filterByEnabled,
                 true,
                 flowFrameworkSettings.isMultiTenancyEnabled(),
                 listener,
-                () -> executeGetWorkflowStateRequest(request, listener, context),
+                () -> executeGetWorkflowStateRequest(request, tenantId, listener, context),
                 client,
                 sdkClient,
                 clusterService,
@@ -119,41 +121,20 @@ public class GetWorkflowStateTransportAction extends HandledTransportAction<GetW
     /**
      * Execute the get workflow state request
      * @param request the get workflow state request
+     * @param tenantId the tenant id
      * @param listener the action listener
      * @param context the thread context
      */
     private void executeGetWorkflowStateRequest(
         GetWorkflowStateRequest request,
+        String tenantId,
         ActionListener<GetWorkflowStateResponse> listener,
         ThreadContext.StoredContext context
     ) {
         String workflowId = request.getWorkflowId();
-        GetRequest getRequest = new GetRequest(WORKFLOW_STATE_INDEX).id(workflowId);
-        logger.info("Querying state workflow doc: {}", workflowId);
-        client.get(getRequest, ActionListener.runBefore(ActionListener.wrap(r -> {
-            if (r != null && r.isExists()) {
-                try (XContentParser parser = ParseUtils.createXContentParserFromRegistry(xContentRegistry, r.getSourceAsBytesRef())) {
-                    ensureExpectedToken(XContentParser.Token.START_OBJECT, parser.nextToken(), parser);
-                    WorkflowState workflowState = WorkflowState.parse(parser);
-                    listener.onResponse(new GetWorkflowStateResponse(workflowState, request.getAll()));
-                } catch (Exception e) {
-                    String errorMessage = ParameterizedMessageFactory.INSTANCE.newMessage("Failed to parse workflowState: {}", r.getId())
-                        .getFormattedMessage();
-                    logger.error(errorMessage, e);
-                    listener.onFailure(new FlowFrameworkException(errorMessage, RestStatus.BAD_REQUEST));
-                }
-            } else {
-                listener.onFailure(new FlowFrameworkException("Fail to find workflow status of " + workflowId, RestStatus.NOT_FOUND));
-            }
-        }, e -> {
-            if (e instanceof IndexNotFoundException) {
-                listener.onFailure(new FlowFrameworkException("Fail to find workflow status of " + workflowId, RestStatus.NOT_FOUND));
-            } else {
-                String errorMessage = ParameterizedMessageFactory.INSTANCE.newMessage("Failed to get workflow status of: {}", workflowId)
-                    .getFormattedMessage();
-                logger.error(errorMessage, e);
-                listener.onFailure(new FlowFrameworkException(errorMessage, RestStatus.NOT_FOUND));
-            }
-        }), context::restore));
+        flowFrameworkIndicesHandler.getWorkflowState(workflowId, tenantId, ActionListener.wrap(workflowState -> {
+            GetWorkflowStateResponse workflowStateResponse = new GetWorkflowStateResponse(workflowState, request.getAll());
+            listener.onResponse(workflowStateResponse);
+        }, listener::onFailure), context);
     }
 }

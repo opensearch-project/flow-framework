@@ -8,12 +8,12 @@
  */
 package org.opensearch.flowframework.transport;
 
-import org.opensearch.Version;
 import org.opensearch.action.ActionRequest;
 import org.opensearch.action.ActionRequestValidationException;
 import org.opensearch.common.Nullable;
 import org.opensearch.core.common.io.stream.StreamInput;
 import org.opensearch.core.common.io.stream.StreamOutput;
+import org.opensearch.flowframework.common.CommonValue;
 
 import java.io.IOException;
 
@@ -56,8 +56,7 @@ public class GetWorkflowStateRequest extends ActionRequest {
         super(in);
         this.workflowId = in.readString();
         this.all = in.readBoolean();
-        // TODO: After backport, change to next 2.x release
-        if (in.getVersion().onOrAfter(Version.CURRENT)) {
+        if (in.getVersion().onOrAfter(CommonValue.VERSION_2_19_0)) {
             this.tenantId = in.readOptionalString();
         }
     }
@@ -92,8 +91,7 @@ public class GetWorkflowStateRequest extends ActionRequest {
         super.writeTo(out);
         out.writeString(workflowId);
         out.writeBoolean(all);
-        // TODO: After backport, change to next 2.x release
-        if (out.getVersion().onOrAfter(Version.CURRENT)) {
+        if (out.getVersion().onOrAfter(CommonValue.VERSION_2_19_0)) {
             out.writeOptionalString(tenantId);
         }
     }

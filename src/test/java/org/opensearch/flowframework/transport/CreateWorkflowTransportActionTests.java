@@ -193,6 +193,7 @@ public class CreateWorkflowTransportActionTests extends OpenSearchTestCase {
             TestHelpers.randomUser(),
             null,
             null,
+            null,
             null
         );
     }
@@ -261,6 +262,7 @@ public class CreateWorkflowTransportActionTests extends OpenSearchTestCase {
             Map.of("workflow", workflow),
             Collections.emptyMap(),
             TestHelpers.randomUser(),
+            null,
             null,
             null,
             null
@@ -1129,6 +1131,7 @@ public class CreateWorkflowTransportActionTests extends OpenSearchTestCase {
             Map.of("workflow", workflow),
             Collections.emptyMap(),
             TestHelpers.randomUser(),
+            null,
             null,
             null,
             null

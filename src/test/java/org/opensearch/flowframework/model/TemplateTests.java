@@ -60,6 +60,7 @@ public class TemplateTests extends OpenSearchTestCase {
             null,
             now,
             now,
+            null,
             null
         );
 
@@ -121,6 +122,7 @@ public class TemplateTests extends OpenSearchTestCase {
             null,
             now,
             now,
+            null,
             null
         );
         Template updated = Template.builder().name("name two").description("description two").useCase("use case two").build();

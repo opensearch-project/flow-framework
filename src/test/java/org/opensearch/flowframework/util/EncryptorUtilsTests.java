@@ -120,6 +120,7 @@ public class EncryptorUtilsTests extends OpenSearchTestCase {
             TestHelpers.randomUser(),
             null,
             null,
+            null,
             null
         );
 

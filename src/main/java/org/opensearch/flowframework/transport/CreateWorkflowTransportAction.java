@@ -232,7 +232,8 @@ public class CreateWorkflowTransportAction extends HandledTransportAction<Workfl
             user,
             creationTime,
             creationTime,
-            null
+            null,
+            request.getTemplate().getTenantId()
         );
 
         String[] validateAll = { "all" };
@@ -438,8 +439,8 @@ public class CreateWorkflowTransportAction extends HandledTransportAction<Workfl
                 .createdTime(existingTemplate.createdTime())
                 .lastUpdatedTime(Instant.now())
                 .lastProvisionedTime(existingTemplate.lastProvisionedTime())
+                .tenantId(existingTemplate.getTenantId())
                 .build();
-        template.setTenantId(existingTemplate.getTenantId());
 
         if (request.isReprovision()) {
             handleReprovision(request.getWorkflowId(), existingTemplate, template, waitForTimeCompletion, listener);

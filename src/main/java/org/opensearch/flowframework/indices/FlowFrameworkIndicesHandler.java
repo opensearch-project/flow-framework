@@ -50,6 +50,7 @@ import org.opensearch.flowframework.model.WorkflowState;
 import org.opensearch.flowframework.util.EncryptorUtils;
 import org.opensearch.flowframework.util.ParseUtils;
 import org.opensearch.flowframework.workflow.WorkflowData;
+import org.opensearch.index.IndexNotFoundException;
 import org.opensearch.index.engine.VersionConflictEngineException;
 import org.opensearch.remote.metadata.client.GetDataObjectRequest;
 import org.opensearch.remote.metadata.client.PutDataObjectRequest;
@@ -548,6 +549,68 @@ public class FlowFrameworkIndicesHandler {
                     .getFormattedMessage();
                 logger.error(errorMessage, exception);
                 listener.onFailure(new FlowFrameworkException(errorMessage, ExceptionsHelper.status(exception)));
+            }
+        });
+    }
+
+    /**
+     * Get a workflow state from the state index
+     *
+     * @param workflowId workflow id
+     * @param tenantId tenant id
+     * @param listener action listener
+     * @param context the thread context
+     */
+    public void getWorkflowState(String workflowId, String tenantId, ActionListener<WorkflowState> listener, StoredContext context) {
+        GetDataObjectRequest getRequest = GetDataObjectRequest.builder()
+            .index(WORKFLOW_STATE_INDEX)
+            .id(workflowId)
+            .tenantId(tenantId)
+            .build();
+        sdkClient.getDataObjectAsync(getRequest, client.threadPool().executor(WORKFLOW_THREAD_POOL)).whenComplete((r, throwable) -> {
+            context.restore();
+            if (throwable == null) {
+                try {
+                    GetResponse getResponse = GetResponse.fromXContent(r.parser());
+                    if (getResponse != null && getResponse.isExists()) {
+                        try (
+                            XContentParser parser = ParseUtils.createXContentParserFromRegistry(
+                                xContentRegistry,
+                                getResponse.getSourceAsBytesRef()
+                            )
+                        ) {
+                            ensureExpectedToken(XContentParser.Token.START_OBJECT, parser.nextToken(), parser);
+                            WorkflowState workflowState = WorkflowState.parse(parser);
+                            listener.onResponse(workflowState);
+                        } catch (Exception e) {
+                            String errorMessage = ParameterizedMessageFactory.INSTANCE.newMessage(
+                                "Failed to parse workflowState: {}",
+                                getResponse.getId()
+                            ).getFormattedMessage();
+                            logger.error(errorMessage, e);
+                            listener.onFailure(new FlowFrameworkException(errorMessage, RestStatus.BAD_REQUEST));
+                        }
+                    } else {
+                        listener.onFailure(
+                            new FlowFrameworkException("Fail to find workflow status of " + workflowId, RestStatus.NOT_FOUND)
+                        );
+                    }
+                } catch (Exception e) {
+                    logger.error("Failed to parse get response", e);
+                    listener.onFailure(new FlowFrameworkException("Failed to parse get response", INTERNAL_SERVER_ERROR));
+                }
+            } else {
+                Exception exception = SdkClientUtils.unwrapAndConvertToException(throwable);
+                if (exception instanceof IndexNotFoundException) {
+                    listener.onFailure(new FlowFrameworkException("Fail to find workflow status of " + workflowId, RestStatus.NOT_FOUND));
+                } else {
+                    String errorMessage = ParameterizedMessageFactory.INSTANCE.newMessage(
+                        "Failed to get workflow status of: {}",
+                        workflowId
+                    ).getFormattedMessage();
+                    logger.error(errorMessage, exception);
+                    listener.onFailure(new FlowFrameworkException(errorMessage, RestStatus.NOT_FOUND));
+                }
             }
         });
     }

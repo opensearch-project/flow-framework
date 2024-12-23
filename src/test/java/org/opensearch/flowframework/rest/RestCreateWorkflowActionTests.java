@@ -83,6 +83,7 @@ public class RestCreateWorkflowActionTests extends OpenSearchTestCase {
             TestHelpers.randomUser(),
             null,
             null,
+            null,
             null
         );
 
