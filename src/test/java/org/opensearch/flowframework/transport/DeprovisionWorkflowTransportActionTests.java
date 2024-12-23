@@ -165,10 +165,10 @@ public class DeprovisionWorkflowTransportActionTests extends OpenSearchTestCase 
         }).when(client).execute(any(GetWorkflowStateAction.class), any(GetWorkflowStateRequest.class), any());
 
         doAnswer(invocation -> {
-            Consumer<Boolean> booleanConsumer = invocation.getArgument(1);
+            Consumer<Boolean> booleanConsumer = invocation.getArgument(2);
             booleanConsumer.accept(Boolean.TRUE);
             return null;
-        }).when(flowFrameworkIndicesHandler).doesTemplateExist(anyString(), any(), any());
+        }).when(flowFrameworkIndicesHandler).doesTemplateExist(anyString(), any(), any(), any());
 
         PlainActionFuture<WorkflowData> future = PlainActionFuture.newFuture();
         future.onResponse(WorkflowData.EMPTY);
@@ -238,10 +238,10 @@ public class DeprovisionWorkflowTransportActionTests extends OpenSearchTestCase 
         }).when(client).execute(any(GetWorkflowStateAction.class), any(GetWorkflowStateRequest.class), any());
 
         doAnswer(invocation -> {
-            Consumer<Boolean> booleanConsumer = invocation.getArgument(1);
+            Consumer<Boolean> booleanConsumer = invocation.getArgument(2);
             booleanConsumer.accept(Boolean.FALSE);
             return null;
-        }).when(flowFrameworkIndicesHandler).doesTemplateExist(anyString(), any(), any());
+        }).when(flowFrameworkIndicesHandler).doesTemplateExist(anyString(), any(), any(), any());
 
         // Test failure with no param
         WorkflowRequest workflowRequest = new WorkflowRequest(workflowId, null);

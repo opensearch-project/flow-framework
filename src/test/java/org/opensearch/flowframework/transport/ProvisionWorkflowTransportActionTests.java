@@ -191,10 +191,10 @@ public class ProvisionWorkflowTransportActionTests extends OpenSearchTestCase {
 
         // Bypass isWorkflowNotStarted and force true response
         doAnswer(invocation -> {
-            Consumer<Optional<ProvisioningProgress>> progressConsumer = invocation.getArgument(1);
+            Consumer<Optional<ProvisioningProgress>> progressConsumer = invocation.getArgument(2);
             progressConsumer.accept(Optional.of(ProvisioningProgress.NOT_STARTED));
             return null;
-        }).when(flowFrameworkIndicesHandler).getProvisioningProgress(any(), any(), any());
+        }).when(flowFrameworkIndicesHandler).getProvisioningProgress(any(), any(), any(), any());
 
         // Bypass updateFlowFrameworkSystemIndexDoc and stub on response
         doAnswer(invocation -> {
@@ -238,10 +238,10 @@ public class ProvisionWorkflowTransportActionTests extends OpenSearchTestCase {
 
         // Bypass isWorkflowNotStarted and force false response
         doAnswer(invocation -> {
-            Consumer<Optional<ProvisioningProgress>> progressConsumer = invocation.getArgument(1);
+            Consumer<Optional<ProvisioningProgress>> progressConsumer = invocation.getArgument(2);
             progressConsumer.accept(Optional.of(ProvisioningProgress.DONE));
             return null;
-        }).when(flowFrameworkIndicesHandler).getProvisioningProgress(any(), any(), any());
+        }).when(flowFrameworkIndicesHandler).getProvisioningProgress(any(), any(), any(), any());
 
         // Bypass updateFlowFrameworkSystemIndexDoc and stub on response
         doAnswer(invocation -> {

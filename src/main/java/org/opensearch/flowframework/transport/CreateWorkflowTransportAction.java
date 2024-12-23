@@ -294,6 +294,7 @@ public class CreateWorkflowTransportAction extends HandledTransportAction<Workfl
                                     ActionListener.wrap(globalContextResponse -> {
                                         flowFrameworkIndicesHandler.putInitialStateToWorkflowState(
                                             globalContextResponse.getId(),
+                                            tenantId,
                                             user,
                                             ActionListener.wrap(stateResponse -> {
                                                 logger.info("Creating state workflow doc: {}", globalContextResponse.getId());

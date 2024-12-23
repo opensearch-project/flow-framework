@@ -399,11 +399,12 @@ public class FlowFrameworkIndicesHandler {
 
     /**
      * add document insert into global context index
-     * @param workflowId the workflowId, corresponds to document ID of
+     * @param workflowId the workflowId, corresponds to document ID
+     * @param tenantId the tenant id
      * @param user passes the user that created the workflow
      * @param listener action listener
      */
-    public void putInitialStateToWorkflowState(String workflowId, User user, ActionListener<IndexResponse> listener) {
+    public void putInitialStateToWorkflowState(String workflowId, String tenantId, User user, ActionListener<IndexResponse> listener) {
         WorkflowState state = WorkflowState.builder()
             .workflowId(workflowId)
             .state(State.NOT_STARTED.name())
@@ -411,6 +412,7 @@ public class FlowFrameworkIndicesHandler {
             .user(user)
             .resourcesCreated(Collections.emptyList())
             .userOutputs(Collections.emptyMap())
+            .tenantId(tenantId)
             .build();
         initWorkflowStateIndexIfAbsent(ActionListener.wrap(indexCreated -> {
             if (!indexCreated) {
@@ -462,6 +464,7 @@ public class FlowFrameworkIndicesHandler {
         ActionListener<IndexResponse> listener,
         boolean ignoreNotStartedCheck
     ) {
+        String tenantId = template.getTenantId();
         if (!doesIndexExist(GLOBAL_CONTEXT_INDEX)) {
             String errorMessage = ParameterizedMessageFactory.INSTANCE.newMessage(
                 "Failed to update template for workflow_id : {}, global context index does not exist.",
@@ -471,9 +474,9 @@ public class FlowFrameworkIndicesHandler {
             listener.onFailure(new FlowFrameworkException(errorMessage, RestStatus.BAD_REQUEST));
             return;
         }
-        doesTemplateExist(documentId, templateExists -> {
+        doesTemplateExist(documentId, tenantId, templateExists -> {
             if (templateExists) {
-                getProvisioningProgress(documentId, progress -> {
+                getProvisioningProgress(documentId, tenantId, progress -> {
                     if (ignoreNotStartedCheck || ProvisioningProgress.NOT_STARTED.equals(progress.orElse(null))) {
                         putOrReplaceTemplateInGlobalContextIndex(documentId, template, listener);
                     } else {
@@ -498,12 +501,17 @@ public class FlowFrameworkIndicesHandler {
      * Check if the given template exists in the template index
      *
      * @param documentId document id
+     * @param tenantID tenant id
      * @param booleanResultConsumer a consumer based on whether the template exist
      * @param listener action listener
      * @param <T> action listener response type
      */
-    public <T> void doesTemplateExist(String documentId, Consumer<Boolean> booleanResultConsumer, ActionListener<T> listener) {
-        String tenantId = "TODO"; // TODO Actually pass this from caller(s)
+    public <T> void doesTemplateExist(
+        String documentId,
+        String tenantId,
+        Consumer<Boolean> booleanResultConsumer,
+        ActionListener<T> listener
+    ) {
         try (ThreadContext.StoredContext context = client.threadPool().getThreadContext().stashContext()) {
             getTemplate(
                 documentId,
@@ -618,44 +626,62 @@ public class FlowFrameworkIndicesHandler {
     /**
      * Check workflow provisioning state and executes the consumer
      *
-     * @param documentId document id
+     * @param workflowId workflow id
+     * @param tenantId tenant id
      * @param provisioningProgressConsumer consumer function based on if workflow is provisioned.
      * @param listener action listener
      * @param <T> action listener response type
      */
     public <T> void getProvisioningProgress(
-        String documentId,
+        String workflowId,
+        String tenantId,
         Consumer<Optional<ProvisioningProgress>> provisioningProgressConsumer,
         ActionListener<T> listener
     ) {
-        GetRequest getRequest = new GetRequest(WORKFLOW_STATE_INDEX, documentId);
         try (ThreadContext.StoredContext context = client.threadPool().getThreadContext().stashContext()) {
-            client.get(getRequest, ActionListener.wrap(response -> {
-                context.restore();
-                if (!response.isExists()) {
-                    provisioningProgressConsumer.accept(Optional.empty());
-                    return;
-                }
-                try (
-                    XContentParser parser = ParseUtils.createXContentParserFromRegistry(xContentRegistry, response.getSourceAsBytesRef())
-                ) {
-                    ensureExpectedToken(XContentParser.Token.START_OBJECT, parser.nextToken(), parser);
-                    WorkflowState workflowState = WorkflowState.parse(parser);
-                    provisioningProgressConsumer.accept(Optional.of(ProvisioningProgress.valueOf(workflowState.getProvisioningProgress())));
-                } catch (Exception e) {
-                    String errorMessage = ParameterizedMessageFactory.INSTANCE.newMessage("Failed to parse workflow state {}", documentId)
-                        .getFormattedMessage();
-                    logger.error(errorMessage, e);
-                    listener.onFailure(new FlowFrameworkException(errorMessage, RestStatus.INTERNAL_SERVER_ERROR));
-                }
+            getWorkflowState(workflowId, tenantId, ActionListener.wrap(workflowState -> {
+                provisioningProgressConsumer.accept(Optional.of(ProvisioningProgress.valueOf(workflowState.getProvisioningProgress())));
             }, exception -> {
-                logger.error("Failed to get workflow state for {} ", documentId);
-                provisioningProgressConsumer.accept(Optional.empty());
-            }));
-        } catch (Exception e) {
-            String errorMessage = "Failed to retrieve workflow state to check provisioning status";
-            logger.error(errorMessage, e);
-            listener.onFailure(new FlowFrameworkException(errorMessage, ExceptionsHelper.status(e)));
+                if (exception instanceof FlowFrameworkException
+                    && ((FlowFrameworkException) exception).getRestStatus() == RestStatus.NOT_FOUND) {
+                    provisioningProgressConsumer.accept(Optional.empty());
+                } else {
+                    listener.onFailure(exception);
+                }
+            }), context);
+        }
+    }
+
+    /**
+     * Check workflow provisioning state and resources to see if state can be deleted with template
+     *
+     * @param workflowId workflow id
+     * @param clearStatus if set true, always deletes the state document unless status is IN_PROGRESS
+     * @param canDeleteStateConsumer consumer function which will be true if workflow state is not IN_PROGRESS and either no resources or true clearStatus
+     * @param listener action listener from caller to fail on error
+     * @param <T> action listener response type
+     */
+    public <T> void canDeleteWorkflowStateDoc(
+        String workflowId,
+        String tenantId,
+        boolean clearStatus,
+        Consumer<Boolean> canDeleteStateConsumer,
+        ActionListener<T> listener
+    ) {
+        try (ThreadContext.StoredContext context = client.threadPool().getThreadContext().stashContext()) {
+            getWorkflowState(workflowId, tenantId, ActionListener.wrap(workflowState -> {
+                canDeleteStateConsumer.accept(
+                    (clearStatus || workflowState.resourcesCreated().isEmpty())
+                        && !ProvisioningProgress.IN_PROGRESS.equals(ProvisioningProgress.valueOf(workflowState.getProvisioningProgress()))
+                );
+            }, exception -> {
+                if (exception instanceof FlowFrameworkException
+                    && ((FlowFrameworkException) exception).getRestStatus() == RestStatus.NOT_FOUND) {
+                    canDeleteStateConsumer.accept(Boolean.FALSE);
+                } else {
+                    listener.onFailure(exception);
+                }
+            }), context);
         }
     }
 
@@ -667,7 +693,9 @@ public class FlowFrameworkIndicesHandler {
      * @param canDeleteStateConsumer consumer function which will be true if workflow state is not IN_PROGRESS and either no resources or true clearStatus
      * @param listener action listener from caller to fail on error
      * @param <T> action listener response type
+     * @deprecated TODO migrating all these to the tenant aware version above
      */
+    @Deprecated
     public <T> void canDeleteWorkflowStateDoc(
         String documentId,
         boolean clearStatus,

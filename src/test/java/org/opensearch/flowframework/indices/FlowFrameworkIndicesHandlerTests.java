@@ -305,12 +305,13 @@ public class FlowFrameworkIndicesHandlerTests extends OpenSearchTestCase {
         verify(indicesAdminClient, times(1)).create(any(CreateIndexRequest.class), any());
     }
 
-    public void testIsWorkflowProvisionedFailedParsing() {
+    public void testIsWorkflowProvisionedFailedParsing() throws IOException, InterruptedException {
         String documentId = randomAlphaOfLength(5);
         @SuppressWarnings("unchecked")
         Consumer<Optional<ProvisioningProgress>> function = mock(Consumer.class);
         @SuppressWarnings("unchecked")
         ActionListener<GetResponse> listener = mock(ActionListener.class);
+        /*
         doAnswer(invocation -> {
             ActionListener<GetResponse> responseListener = invocation.getArgument(1);
 
@@ -322,10 +323,25 @@ public class FlowFrameworkIndicesHandlerTests extends OpenSearchTestCase {
             responseListener.onResponse(new GetResponse(getResult));
             return null;
         }).when(client).get(any(GetRequest.class), any());
-        flowFrameworkIndicesHandler.getProvisioningProgress(documentId, function, listener);
+        */
+
+        XContentBuilder builder = XContentFactory.jsonBuilder();
+        // workFlowState.toXContent(builder, null);
+        this.template.toXContent(builder, null);
+        BytesReference workflowBytesRef = BytesReference.bytes(builder);
+        GetResult getResult = new GetResult(WORKFLOW_STATE_INDEX, documentId, 1, 1, 1, true, workflowBytesRef, null, null);
+        PlainActionFuture<GetResponse> future = PlainActionFuture.newFuture();
+        future.onResponse(new GetResponse(getResult));
+        when(client.get(any(GetRequest.class))).thenReturn(future);
+
+        CountDownLatch latch = new CountDownLatch(1);
+        LatchedActionListener<GetResponse> latchedActionListener = new LatchedActionListener<>(listener, latch);
+        flowFrameworkIndicesHandler.getProvisioningProgress(documentId, null, function, latchedActionListener);
+        latch.await(1, TimeUnit.SECONDS);
+
         ArgumentCaptor<Exception> exceptionCaptor = ArgumentCaptor.forClass(Exception.class);
         verify(listener, times(1)).onFailure(exceptionCaptor.capture());
-        assertTrue(exceptionCaptor.getValue().getMessage().contains("Failed to parse workflow state"));
+        assertTrue(exceptionCaptor.getValue().getMessage().contains("Failed to parse workflowState"));
     }
 
     public void testCanDeleteWorkflowStateDoc() {
@@ -439,7 +455,7 @@ public class FlowFrameworkIndicesHandlerTests extends OpenSearchTestCase {
 
         CountDownLatch latch = new CountDownLatch(1);
         LatchedActionListener<GetResponse> latchedActionListener = new LatchedActionListener<>(listener, latch);
-        flowFrameworkIndicesHandler.doesTemplateExist(documentId, function, latchedActionListener);
+        flowFrameworkIndicesHandler.doesTemplateExist(documentId, null, function, latchedActionListener);
         latch.await(1, TimeUnit.SECONDS);
         verify(function).accept(true);
     }

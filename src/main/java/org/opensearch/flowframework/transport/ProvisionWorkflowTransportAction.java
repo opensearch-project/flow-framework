@@ -214,7 +214,7 @@ public class ProvisionWorkflowTransportAction extends HandledTransportAction<Wor
             );
             workflowProcessSorter.validate(provisionProcessSequence, pluginsService);
 
-            flowFrameworkIndicesHandler.getProvisioningProgress(workflowId, progress -> {
+            flowFrameworkIndicesHandler.getProvisioningProgress(workflowId, tenantId, progress -> {
                 if (ProvisioningProgress.NOT_STARTED.equals(progress.orElse(null))) {
                     // update state index
                     flowFrameworkIndicesHandler.updateFlowFrameworkSystemIndexDoc(

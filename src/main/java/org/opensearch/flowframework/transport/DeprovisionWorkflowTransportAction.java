@@ -175,6 +175,7 @@ public class DeprovisionWorkflowTransportAction extends HandledTransportAction<W
                 .execute(
                     () -> executeDeprovisionSequence(
                         workflowId,
+                        tenantId,
                         response.getWorkflowState().resourcesCreated(),
                         deleteAllowedResources,
                         listener,
@@ -193,6 +194,7 @@ public class DeprovisionWorkflowTransportAction extends HandledTransportAction<W
 
     private void executeDeprovisionSequence(
         String workflowId,
+        String tenantId,
         List<ResourceCreated> resourcesCreated,
         Set<String> deleteAllowedResources,
         ActionListener<WorkflowResponse> listener,
@@ -312,11 +314,12 @@ public class DeprovisionWorkflowTransportAction extends HandledTransportAction<W
             logger.info("Resources requiring allow_delete: {}.", deleteNotAllowed);
         }
         // This is a redundant best-effort backup to the incremental deletion done earlier
-        updateWorkflowState(workflowId, remainingResources, deleteNotAllowed, listener, user);
+        updateWorkflowState(workflowId, tenantId, remainingResources, deleteNotAllowed, listener, user);
     }
 
     private void updateWorkflowState(
         String workflowId,
+        String tenantId,
         List<ResourceCreated> remainingResources,
         List<ResourceCreated> deleteNotAllowed,
         ActionListener<WorkflowResponse> listener,
@@ -324,11 +327,15 @@ public class DeprovisionWorkflowTransportAction extends HandledTransportAction<W
     ) {
         if (remainingResources.isEmpty() && deleteNotAllowed.isEmpty()) {
             // Successful deprovision of all resources, reset state to initial
-            flowFrameworkIndicesHandler.doesTemplateExist(workflowId, templateExists -> {
+            flowFrameworkIndicesHandler.doesTemplateExist(workflowId, tenantId, templateExists -> {
                 if (Boolean.TRUE.equals(templateExists)) {
-                    flowFrameworkIndicesHandler.putInitialStateToWorkflowState(workflowId, user, ActionListener.wrap(indexResponse -> {
-                        logger.info("Reset workflow {} state to NOT_STARTED", workflowId);
-                    }, exception -> { logger.error("Failed to reset to initial workflow state for {}", workflowId, exception); }));
+                    flowFrameworkIndicesHandler.putInitialStateToWorkflowState(
+                        workflowId, 
+                        tenantId,
+                        user, 
+                        ActionListener.wrap(indexResponse -> {
+                            logger.info("Reset workflow {} state to NOT_STARTED", workflowId);
+                        }, exception -> { logger.error("Failed to reset to initial workflow state for {}", workflowId, exception); }));
                 } else {
                     flowFrameworkIndicesHandler.deleteFlowFrameworkSystemIndexDoc(workflowId, ActionListener.wrap(deleteResponse -> {
                         logger.info("Deleted workflow {} state", workflowId);
