@@ -34,7 +34,6 @@ import org.opensearch.cluster.service.ClusterService;
 import org.opensearch.common.settings.Settings;
 import org.opensearch.common.unit.TimeValue;
 import org.opensearch.common.util.concurrent.OpenSearchExecutors;
-import org.opensearch.common.util.concurrent.ThreadContext;
 import org.opensearch.common.xcontent.XContentFactory;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.core.common.bytes.BytesReference;
@@ -79,6 +78,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
+import static org.opensearch.flowframework.common.CommonValue.DEPROVISION_WORKFLOW_THREAD_POOL;
 import static org.opensearch.flowframework.common.CommonValue.FLOW_FRAMEWORK_THREAD_POOL_PREFIX;
 import static org.opensearch.flowframework.common.CommonValue.GLOBAL_CONTEXT_INDEX;
 import static org.opensearch.flowframework.common.CommonValue.WORKFLOW_STATE_INDEX;
@@ -102,6 +102,13 @@ public class FlowFrameworkIndicesHandlerTests extends OpenSearchTestCase {
             Math.max(2, OpenSearchExecutors.allocatedProcessors(Settings.EMPTY) - 1),
             TimeValue.timeValueMinutes(1),
             FLOW_FRAMEWORK_THREAD_POOL_PREFIX + WORKFLOW_THREAD_POOL
+        ),
+        new ScalingExecutorBuilder(
+            DEPROVISION_WORKFLOW_THREAD_POOL,
+            1,
+            Math.max(2, OpenSearchExecutors.allocatedProcessors(Settings.EMPTY) - 1),
+            TimeValue.timeValueMinutes(1),
+            FLOW_FRAMEWORK_THREAD_POOL_PREFIX + DEPROVISION_WORKFLOW_THREAD_POOL
         )
     );
 
@@ -115,7 +122,6 @@ public class FlowFrameworkIndicesHandlerTests extends OpenSearchTestCase {
     private FlowFrameworkIndicesHandler flowFrameworkIndicesHandler;
     private AdminClient adminClient;
     private IndicesAdminClient indicesAdminClient;
-    private ThreadContext threadContext;
     @Mock
     protected ClusterService clusterService;
     @Mock
@@ -135,8 +141,6 @@ public class FlowFrameworkIndicesHandlerTests extends OpenSearchTestCase {
         super.setUp();
         MockitoAnnotations.openMocks(this);
 
-        Settings settings = Settings.builder().build();
-        threadContext = new ThreadContext(settings);
         when(client.threadPool()).thenReturn(testThreadPool);
         sdkClient = SdkClientFactory.createSdkClient(client, namedXContentRegistry, Collections.emptyMap());
         flowFrameworkIndicesHandler = new FlowFrameworkIndicesHandler(
@@ -228,7 +232,7 @@ public class FlowFrameworkIndicesHandlerTests extends OpenSearchTestCase {
 
         CountDownLatch latch = new CountDownLatch(1);
         LatchedActionListener<IndexResponse> latchedActionListener = new LatchedActionListener<>(listener, latch);
-        flowFrameworkIndicesHandler.updateTemplateInGlobalContext("1", template, listener);
+        flowFrameworkIndicesHandler.updateTemplateInGlobalContext("1", template, latchedActionListener);
         latch.await(1, TimeUnit.SECONDS);
 
         ArgumentCaptor<Exception> exceptionCaptor = ArgumentCaptor.forClass(Exception.class);
@@ -564,7 +568,7 @@ public class FlowFrameworkIndicesHandlerTests extends OpenSearchTestCase {
         );
     }
 
-    public void testDeleteFlowFrameworkSystemIndexDoc() throws IOException {
+    public void testDeleteFlowFrameworkSystemIndexDoc() throws IOException, InterruptedException {
         ClusterState mockClusterState = mock(ClusterState.class);
         Metadata mockMetaData = mock(Metadata.class);
         when(clusterService.state()).thenReturn(mockClusterState);
@@ -574,35 +578,35 @@ public class FlowFrameworkIndicesHandlerTests extends OpenSearchTestCase {
         @SuppressWarnings("unchecked")
         ActionListener<DeleteResponse> listener = mock(ActionListener.class);
 
-        // test success
-        doAnswer(invocation -> {
-            ActionListener<DeleteResponse> responseListener = invocation.getArgument(1);
-            responseListener.onResponse(new DeleteResponse(new ShardId(WORKFLOW_STATE_INDEX, "", 1), "id", -2, 0, 0, true));
-            return null;
-        }).when(client).delete(any(DeleteRequest.class), any());
+        PlainActionFuture<DeleteResponse> future = PlainActionFuture.newFuture();
+        future.onResponse(new DeleteResponse(new ShardId(WORKFLOW_STATE_INDEX, "", 1), "id", -2, 0, 0, true));
+        when(client.delete(any(DeleteRequest.class))).thenReturn(future);
 
-        flowFrameworkIndicesHandler.deleteFlowFrameworkSystemIndexDoc("1", listener);
+        CountDownLatch latch = new CountDownLatch(1);
+        LatchedActionListener<DeleteResponse> latchedActionListener = new LatchedActionListener<>(listener, latch);
+        flowFrameworkIndicesHandler.deleteFlowFrameworkSystemIndexDoc("1", null, latchedActionListener);
+        latch.await(1, TimeUnit.SECONDS);
 
         ArgumentCaptor<DeleteResponse> responseCaptor = ArgumentCaptor.forClass(DeleteResponse.class);
         verify(listener, times(1)).onResponse(responseCaptor.capture());
         assertEquals(Result.DELETED, responseCaptor.getValue().getResult());
 
-        // test failure
-        doAnswer(invocation -> {
-            ActionListener<DeleteResponse> responseListener = invocation.getArgument(1);
-            responseListener.onFailure(new Exception("Failed to delete state"));
-            return null;
-        }).when(client).delete(any(DeleteRequest.class), any());
+        future = PlainActionFuture.newFuture();
+        future.onFailure(new Exception("Failed to delete state"));
+        when(client.delete(any(DeleteRequest.class))).thenReturn(future);
 
-        flowFrameworkIndicesHandler.deleteFlowFrameworkSystemIndexDoc("1", listener);
+        latch = new CountDownLatch(1);
+        latchedActionListener = new LatchedActionListener<>(listener, latch);
+        flowFrameworkIndicesHandler.deleteFlowFrameworkSystemIndexDoc("1", null, latchedActionListener);
+        latch.await(1, TimeUnit.SECONDS);
 
         ArgumentCaptor<Exception> exceptionCaptor = ArgumentCaptor.forClass(Exception.class);
         verify(listener, times(1)).onFailure(exceptionCaptor.capture());
-        assertEquals("Failed to delete state", exceptionCaptor.getValue().getMessage());
+        assertEquals("Failed to delete .plugins-flow-framework-state entry : 1", exceptionCaptor.getValue().getMessage());
 
         // test no index
         when(mockMetaData.hasIndex(WORKFLOW_STATE_INDEX)).thenReturn(false);
-        flowFrameworkIndicesHandler.deleteFlowFrameworkSystemIndexDoc("1", listener);
+        flowFrameworkIndicesHandler.deleteFlowFrameworkSystemIndexDoc("1", null, listener);
 
         verify(listener, times(2)).onFailure(exceptionCaptor.capture());
         assertEquals(

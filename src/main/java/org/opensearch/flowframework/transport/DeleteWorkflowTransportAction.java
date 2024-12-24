@@ -171,7 +171,7 @@ public class DeleteWorkflowTransportAction extends HandledTransportAction<Workfl
         }, exception -> { logger.info("Failed to delete workflow state doc: {}", workflowId, exception); });
         flowFrameworkIndicesHandler.canDeleteWorkflowStateDoc(workflowId, tenantId, clearStatus, canDelete -> {
             if (Boolean.TRUE.equals(canDelete)) {
-                flowFrameworkIndicesHandler.deleteFlowFrameworkSystemIndexDoc(workflowId, stateListener);
+                flowFrameworkIndicesHandler.deleteFlowFrameworkSystemIndexDoc(workflowId, tenantId, stateListener);
             }
         }, stateListener);
     }

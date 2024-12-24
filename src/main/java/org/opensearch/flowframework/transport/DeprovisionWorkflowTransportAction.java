@@ -337,9 +337,13 @@ public class DeprovisionWorkflowTransportAction extends HandledTransportAction<W
                             logger.info("Reset workflow {} state to NOT_STARTED", workflowId);
                         }, exception -> { logger.error("Failed to reset to initial workflow state for {}", workflowId, exception); }));
                 } else {
-                    flowFrameworkIndicesHandler.deleteFlowFrameworkSystemIndexDoc(workflowId, ActionListener.wrap(deleteResponse -> {
-                        logger.info("Deleted workflow {} state", workflowId);
-                    }, exception -> { logger.error("Failed to delete workflow state for {}", workflowId, exception); }));
+                    flowFrameworkIndicesHandler.deleteFlowFrameworkSystemIndexDoc(
+                        workflowId,
+                        tenantId,
+                        ActionListener.wrap(deleteResponse -> {
+                            logger.info("Deleted workflow {} state", workflowId);
+                        }, exception -> { logger.error("Failed to delete workflow state for {}", workflowId, exception); })
+                    );
                 }
                 // return workflow ID
                 listener.onResponse(new WorkflowResponse(workflowId));

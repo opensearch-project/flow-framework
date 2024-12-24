@@ -17,7 +17,6 @@ import org.opensearch.action.admin.indices.create.CreateIndexRequest;
 import org.opensearch.action.admin.indices.create.CreateIndexResponse;
 import org.opensearch.action.admin.indices.mapping.put.PutMappingRequest;
 import org.opensearch.action.admin.indices.settings.put.UpdateSettingsRequest;
-import org.opensearch.action.delete.DeleteRequest;
 import org.opensearch.action.delete.DeleteResponse;
 import org.opensearch.action.get.GetRequest;
 import org.opensearch.action.get.GetResponse;
@@ -50,6 +49,7 @@ import org.opensearch.flowframework.util.ParseUtils;
 import org.opensearch.flowframework.workflow.WorkflowData;
 import org.opensearch.index.IndexNotFoundException;
 import org.opensearch.index.engine.VersionConflictEngineException;
+import org.opensearch.remote.metadata.client.DeleteDataObjectRequest;
 import org.opensearch.remote.metadata.client.GetDataObjectRequest;
 import org.opensearch.remote.metadata.client.PutDataObjectRequest;
 import org.opensearch.remote.metadata.client.SdkClient;
@@ -68,6 +68,7 @@ import java.util.function.Consumer;
 import static org.opensearch.core.rest.RestStatus.INTERNAL_SERVER_ERROR;
 import static org.opensearch.core.xcontent.XContentParserUtils.ensureExpectedToken;
 import static org.opensearch.flowframework.common.CommonValue.CONFIG_INDEX_MAPPING;
+import static org.opensearch.flowframework.common.CommonValue.DEPROVISION_WORKFLOW_THREAD_POOL;
 import static org.opensearch.flowframework.common.CommonValue.GLOBAL_CONTEXT_INDEX;
 import static org.opensearch.flowframework.common.CommonValue.GLOBAL_CONTEXT_INDEX_MAPPING;
 import static org.opensearch.flowframework.common.CommonValue.META;
@@ -778,9 +779,10 @@ public class FlowFrameworkIndicesHandler {
     /**
      * Deletes a document in the workflow state index
      * @param documentId the document ID
+     * @param tenantId the tenant Id
      * @param listener action listener
      */
-    public void deleteFlowFrameworkSystemIndexDoc(String documentId, ActionListener<DeleteResponse> listener) {
+    public void deleteFlowFrameworkSystemIndexDoc(String documentId, String tenantId, ActionListener<DeleteResponse> listener) {
         if (!doesIndexExist(WORKFLOW_STATE_INDEX)) {
             String errorMessage = ParameterizedMessageFactory.INSTANCE.newMessage(
                 "Failed to delete document {} due to missing {} index",
@@ -791,17 +793,36 @@ public class FlowFrameworkIndicesHandler {
             listener.onFailure(new FlowFrameworkException(errorMessage, RestStatus.BAD_REQUEST));
         } else {
             try (ThreadContext.StoredContext context = client.threadPool().getThreadContext().stashContext()) {
-                DeleteRequest deleteRequest = new DeleteRequest(WORKFLOW_STATE_INDEX, documentId);
-                deleteRequest.setRefreshPolicy(WriteRequest.RefreshPolicy.IMMEDIATE);
-                client.delete(deleteRequest, ActionListener.runBefore(listener, context::restore));
-            } catch (Exception e) {
-                String errorMessage = ParameterizedMessageFactory.INSTANCE.newMessage(
-                    "Failed to delete {} entry : {}",
-                    WORKFLOW_STATE_INDEX,
-                    documentId
-                ).getFormattedMessage();
-                logger.error(errorMessage, e);
-                listener.onFailure(new FlowFrameworkException(errorMessage, ExceptionsHelper.status(e)));
+                DeleteDataObjectRequest deleteRequest = DeleteDataObjectRequest.builder()
+                    .index(WORKFLOW_STATE_INDEX)
+                    .id(documentId)
+                    .tenantId(tenantId)
+                    .build();
+                sdkClient.deleteDataObjectAsync(deleteRequest, client.threadPool().executor(DEPROVISION_WORKFLOW_THREAD_POOL))
+                    .whenComplete((r, throwable) -> {
+                        context.restore();
+                        if (throwable == null) {
+                            try {
+                                DeleteResponse response = DeleteResponse.fromXContent(r.parser());
+                                logger.info("Deleted workflow state doc: {}", documentId);
+                                listener.onResponse(response);
+                            } catch (Exception e) {
+                                logger.error("Failed to parse delete response", e);
+                                listener.onFailure(
+                                    new FlowFrameworkException("Failed to parse delete response", RestStatus.INTERNAL_SERVER_ERROR)
+                                );
+                            }
+                        } else {
+                            Exception exception = SdkClientUtils.unwrapAndConvertToException(throwable);
+                            String errorMessage = ParameterizedMessageFactory.INSTANCE.newMessage(
+                                "Failed to delete {} entry : {}",
+                                WORKFLOW_STATE_INDEX,
+                                documentId
+                            ).getFormattedMessage();
+                            logger.error(errorMessage, exception);
+                            listener.onFailure(new FlowFrameworkException(errorMessage, ExceptionsHelper.status(exception)));
+                        }
+                    });
             }
         }
     }
