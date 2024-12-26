@@ -166,6 +166,7 @@ public class Template implements ToXContentObject {
             this.createdTime = t.createdTime();
             this.lastUpdatedTime = t.lastUpdatedTime();
             this.lastProvisionedTime = t.lastProvisionedTime();
+            this.tenantId = t.getTenantId();
         }
 
         /**

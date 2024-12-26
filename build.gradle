@@ -264,10 +264,19 @@ integTest {
     systemProperty('user', user)
     systemProperty('password', password)
 
+    // Only tenant aware test if set
+    if (System.getProperty("tests.rest.tenantaware") == "true") {
+        filter {
+            includeTestsMatching "org.opensearch.flowframework.*TenantAwareIT"
+        }
+        systemProperty "plugins.flow_framework.multi_tenancy_enabled", "true"
+    }
+
     // Only rest case can run with remote cluster
-    if (System.getProperty("tests.rest.cluster") != null) {
+    if (System.getProperty("tests.rest.cluster") != null && System.getProperty("tests.rest.tenantaware") == null) {
         filter {
             includeTestsMatching "org.opensearch.flowframework.rest.*IT"
+            excludeTestsMatching "org.opensearch.ml.rest.*TenantAwareIT"
         }
     }
 
@@ -295,6 +304,28 @@ integTest {
 
     // doFirst delays this block until execution time
     doFirst {
+        if (System.getProperty("tests.rest.tenantaware") == "true") {
+            def ymlFile = file("$buildDir/testclusters/integTest-0/config/opensearch.yml")
+            if (ymlFile.exists()) {
+                ymlFile.withWriterAppend {
+                    writer ->
+                    writer.write("\n# Set multitenancy\n")
+                    writer.write("plugins.flow_framework.multi_tenancy_enabled: true\n")
+                }
+                // TODO this properly uses the remote client factory but needs a remote cluster set up
+                // TODO get the endpoint from a system property
+                if (System.getProperty("tests.rest.cluster") != null) {
+                    ymlFile.withWriterAppend { writer ->
+                        writer.write("\n# Use a remote cluster\n")
+                        writer.write("plugins.flow_framework.remote_metadata_type: RemoteOpenSearch\n")
+                        writer.write("plugins.flow_framework.remote_metadata_endpoint: https://127.0.0.1:9200\n")
+                    }
+                }
+            } else {
+                throw new GradleException("opensearch.yml not found at: $ymlFile")
+            }
+        }
+
         // Tell the test JVM if the cluster JVM is running under a debugger so that tests can
         // use longer timeouts for requests.
         def isDebuggingCluster = getDebug() || System.getProperty("test.debug") != null

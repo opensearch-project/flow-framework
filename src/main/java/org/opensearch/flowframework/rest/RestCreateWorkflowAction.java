@@ -105,60 +105,64 @@ public class RestCreateWorkflowAction extends BaseRestHandler {
                 .stream()
                 .filter(e -> !request.consumedParams().contains(e.getKey()))
                 .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
-        if (!flowFrameworkSettings.isFlowFrameworkEnabled()) {
-            FlowFrameworkException ffe = new FlowFrameworkException(
-                "This API is disabled. To enable it, set [" + FLOW_FRAMEWORK_ENABLED.getKey() + "] to true.",
-                RestStatus.FORBIDDEN
-            );
-            return channel -> channel.sendResponse(
-                new BytesRestResponse(ffe.getRestStatus(), ffe.toXContent(channel.newErrorBuilder(), ToXContent.EMPTY_PARAMS))
-            );
-        }
-        String tenantId = RestActionUtils.getTenantID(flowFrameworkSettings.isMultiTenancyEnabled(), request);
-        if (!provision && !params.isEmpty()) {
-            FlowFrameworkException ffe = new FlowFrameworkException(
-                "Only the parameters " + request.consumedParams() + " are permitted unless the provision parameter is set to true.",
-                RestStatus.BAD_REQUEST
-            );
-            return processError(ffe, params, request);
-        }
-        if (provision && updateFields) {
-            FlowFrameworkException ffe = new FlowFrameworkException(
-                "You can not use both the " + PROVISION_WORKFLOW + " and " + UPDATE_WORKFLOW_FIELDS + " parameters in the same request.",
-                RestStatus.BAD_REQUEST
-            );
-            return processError(ffe, params, request);
-        }
-        if (reprovision && workflowId == null) {
-            FlowFrameworkException ffe = new FlowFrameworkException(
-                "You can not use the " + REPROVISION_WORKFLOW + " parameter to create a new template.",
-                RestStatus.BAD_REQUEST
-            );
-            return processError(ffe, params, request);
-        }
-        if (reprovision && useCase != null) {
-            FlowFrameworkException ffe = new FlowFrameworkException(
-                "You cannot use the " + REPROVISION_WORKFLOW + " and " + USE_CASE + " parameters in the same request.",
-                RestStatus.BAD_REQUEST
-            );
-            return processError(ffe, params, request);
-        }
-        if (reprovision && !params.isEmpty()) {
-            FlowFrameworkException ffe = new FlowFrameworkException(
-                "Only the parameters " + request.consumedParams() + " are permitted unless the provision parameter is set to true.",
-                RestStatus.BAD_REQUEST
-            );
-            return processError(ffe, params, request);
-        }
-        // Ensure wait_for_completion is not set unless reprovision or provision is true
-        if (waitForCompletionTimeout != TimeValue.MINUS_ONE && !(reprovision || provision)) {
-            FlowFrameworkException ffe = new FlowFrameworkException(
-                "Request parameters 'wait_for_completion_timeout' are not allowed unless the 'provision' or 'reprovision' parameter is set to true.",
-                RestStatus.BAD_REQUEST
-            );
-            return processError(ffe, params, request);
-        }
         try {
+            if (!flowFrameworkSettings.isFlowFrameworkEnabled()) {
+                FlowFrameworkException ffe = new FlowFrameworkException(
+                    "This API is disabled. To enable it, set [" + FLOW_FRAMEWORK_ENABLED.getKey() + "] to true.",
+                    RestStatus.FORBIDDEN
+                );
+                return channel -> channel.sendResponse(
+                    new BytesRestResponse(ffe.getRestStatus(), ffe.toXContent(channel.newErrorBuilder(), ToXContent.EMPTY_PARAMS))
+                );
+            }
+            String tenantId = RestActionUtils.getTenantID(flowFrameworkSettings.isMultiTenancyEnabled(), request);
+            if (!provision && !params.isEmpty()) {
+                FlowFrameworkException ffe = new FlowFrameworkException(
+                    "Only the parameters " + request.consumedParams() + " are permitted unless the provision parameter is set to true.",
+                    RestStatus.BAD_REQUEST
+                );
+                return processError(ffe, params, request);
+            }
+            if (provision && updateFields) {
+                FlowFrameworkException ffe = new FlowFrameworkException(
+                    "You can not use both the "
+                        + PROVISION_WORKFLOW
+                        + " and "
+                        + UPDATE_WORKFLOW_FIELDS
+                        + " parameters in the same request.",
+                    RestStatus.BAD_REQUEST
+                );
+                return processError(ffe, params, request);
+            }
+            if (reprovision && workflowId == null) {
+                FlowFrameworkException ffe = new FlowFrameworkException(
+                    "You can not use the " + REPROVISION_WORKFLOW + " parameter to create a new template.",
+                    RestStatus.BAD_REQUEST
+                );
+                return processError(ffe, params, request);
+            }
+            if (reprovision && useCase != null) {
+                FlowFrameworkException ffe = new FlowFrameworkException(
+                    "You cannot use the " + REPROVISION_WORKFLOW + " and " + USE_CASE + " parameters in the same request.",
+                    RestStatus.BAD_REQUEST
+                );
+                return processError(ffe, params, request);
+            }
+            if (reprovision && !params.isEmpty()) {
+                FlowFrameworkException ffe = new FlowFrameworkException(
+                    "Only the parameters " + request.consumedParams() + " are permitted unless the provision parameter is set to true.",
+                    RestStatus.BAD_REQUEST
+                );
+                return processError(ffe, params, request);
+            }
+            // Ensure wait_for_completion is not set unless reprovision or provision is true
+            if (waitForCompletionTimeout != TimeValue.MINUS_ONE && !(reprovision || provision)) {
+                FlowFrameworkException ffe = new FlowFrameworkException(
+                    "Request parameter 'wait_for_completion_timeout' is not allowed unless the 'provision' or 'reprovision' parameter is set to true.",
+                    RestStatus.BAD_REQUEST
+                );
+                return processError(ffe, params, request);
+            }
             Template template;
             Map<String, String> useCaseDefaultsMap = Collections.emptyMap();
             if (useCase != null) {

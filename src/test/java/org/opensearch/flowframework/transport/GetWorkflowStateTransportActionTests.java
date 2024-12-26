@@ -63,7 +63,6 @@ import static org.opensearch.flowframework.common.CommonValue.FLOW_FRAMEWORK_THR
 import static org.opensearch.flowframework.common.CommonValue.GLOBAL_CONTEXT_INDEX;
 import static org.opensearch.flowframework.common.CommonValue.WORKFLOW_THREAD_POOL;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.spy;
@@ -196,6 +195,7 @@ public class GetWorkflowStateTransportActionTests extends OpenSearchTestCase {
     public void testExecuteGetWorkflowStateRequestFailure() throws IOException, InterruptedException {
         String workflowId = "test-workflow";
         GetWorkflowStateRequest request = new GetWorkflowStateRequest(workflowId, false, null);
+        @SuppressWarnings("unchecked")
         ActionListener<GetWorkflowStateResponse> listener = mock(ActionListener.class);
 
         PlainActionFuture<GetResponse> future = PlainActionFuture.newFuture();
@@ -217,6 +217,7 @@ public class GetWorkflowStateTransportActionTests extends OpenSearchTestCase {
     public void testExecuteGetWorkflowStateRequestIndexNotFound() throws IOException, InterruptedException {
         String workflowId = "test-workflow";
         GetWorkflowStateRequest request = new GetWorkflowStateRequest(workflowId, false, null);
+        @SuppressWarnings("unchecked")
         ActionListener<GetWorkflowStateResponse> listener = mock(ActionListener.class);
 
         PlainActionFuture<GetResponse> future = PlainActionFuture.newFuture();
@@ -238,6 +239,7 @@ public class GetWorkflowStateTransportActionTests extends OpenSearchTestCase {
     public void testExecuteGetWorkflowStateRequestParseFailure() throws IOException, InterruptedException {
         String workflowId = "test-workflow";
         GetWorkflowStateRequest request = new GetWorkflowStateRequest(workflowId, false, null);
+        @SuppressWarnings("unchecked")
         ActionListener<GetWorkflowStateResponse> listener = mock(ActionListener.class);
 
         XContentBuilder builder = XContentFactory.jsonBuilder();
