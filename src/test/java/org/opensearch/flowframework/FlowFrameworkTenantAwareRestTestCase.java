@@ -33,8 +33,8 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.Collections.emptyMap;
 import static java.util.Collections.singletonList;
 import static org.opensearch.common.xcontent.XContentType.JSON;
-import static org.opensearch.flowframework.common.CommonValue.*;
-import static org.opensearch.flowframework.common.FlowFrameworkSettings.*;
+import static org.opensearch.flowframework.common.CommonValue.TENANT_ID_HEADER;
+import static org.opensearch.flowframework.common.FlowFrameworkSettings.FLOW_FRAMEWORK_MULTI_TENANCY_ENABLED;
 
 public abstract class FlowFrameworkTenantAwareRestTestCase extends FlowFrameworkRestTestCase {
 

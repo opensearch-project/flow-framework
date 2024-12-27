@@ -420,7 +420,7 @@ public class EncryptorUtils {
             MessageDigest digest = MessageDigest.getInstance("SHA-256");
 
             // Perform the hashing and get the byte array
-            byte[] hashBytes = digest.digest(input.getBytes());
+            byte[] hashBytes = digest.digest(input.getBytes(StandardCharsets.UTF_8));
 
             // Convert the byte array to a Base64 encoded string
             return Base64.getUrlEncoder().encodeToString(hashBytes);

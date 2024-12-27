@@ -20,6 +20,22 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      # TEMPORARY until this is on Maven
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: 21
+          distribution: temurin
+      - name: Checkout Metadata Client
+        uses: actions/checkout@v4
+        with:
+          repository: dbwiddis/opensearch-remote-metadata-sdk
+          ref: main
+          path: opensearch-remote-metadata-sdk
+      - name: Publish to maven local
+        working-directory: opensearch-remote-metadata-sdk
+        run: ./gradlew publishToMavenLocal
+      # end TEMPORARY code
       - name: Setup Java ${{ matrix.java }}
         uses: actions/setup-java@v4
         with:

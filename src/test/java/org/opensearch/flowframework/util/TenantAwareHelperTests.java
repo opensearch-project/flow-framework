@@ -12,7 +12,6 @@ import org.opensearch.core.action.ActionListener;
 import org.opensearch.core.rest.RestStatus;
 import org.opensearch.flowframework.exception.FlowFrameworkException;
 import org.junit.Before;
-import org.junit.Test;
 
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
@@ -32,7 +31,6 @@ public class TenantAwareHelperTests {
         MockitoAnnotations.openMocks(this);
     }
 
-    @Test
     public void testValidateTenantId_MultiTenancyEnabled_TenantIdNull() {
         boolean result = TenantAwareHelper.validateTenantId(true, null, actionListener);
         assertFalse(result);
@@ -43,17 +41,14 @@ public class TenantAwareHelperTests {
         assert exception.getMessage().equals("You don't have permission to access this resource");
     }
 
-    @Test
     public void testValidateTenantId_MultiTenancyEnabled_TenantIdPresent() {
         assertTrue(TenantAwareHelper.validateTenantId(true, "_tenant_id", actionListener));
     }
 
-    @Test
     public void testValidateTenantId_MultiTenancyDisabled() {
         assertTrue(TenantAwareHelper.validateTenantId(false, null, actionListener));
     }
 
-    @Test
     public void testValidateTenantResource_MultiTenancyEnabled_TenantIdMismatch() {
         boolean result = TenantAwareHelper.validateTenantResource(true, null, "different_tenant_id", actionListener);
         assertFalse(result);
@@ -64,12 +59,10 @@ public class TenantAwareHelperTests {
         assert exception.getMessage().equals("You don't have permission to access this resource");
     }
 
-    @Test
     public void testValidateTenantResource_MultiTenancyEnabled_TenantIdMatch() {
         assertTrue(TenantAwareHelper.validateTenantResource(true, "_tenant_id", "_tenant_id", actionListener));
     }
 
-    @Test
     public void testValidateTenantResource_MultiTenancyDisabled() {
         assertTrue(TenantAwareHelper.validateTenantResource(false, "_tenant_id", "different_tenant_id", actionListener));
     }

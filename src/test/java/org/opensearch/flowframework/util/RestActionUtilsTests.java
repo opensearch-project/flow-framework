@@ -15,7 +15,6 @@ import org.opensearch.rest.RestRequest;
 import org.opensearch.test.OpenSearchTestCase;
 import org.opensearch.test.rest.FakeRestRequest;
 import org.junit.Assert;
-import org.junit.Test;
 
 import java.util.Collections;
 import java.util.HashMap;
@@ -23,7 +22,7 @@ import java.util.List;
 import java.util.Map;
 
 public class RestActionUtilsTests extends OpenSearchTestCase {
-    @Test
+
     public void testGetTenantID() {
         String tenantId = "test-tenant";
         Map<String, List<String>> headers = new HashMap<>();
@@ -34,7 +33,6 @@ public class RestActionUtilsTests extends OpenSearchTestCase {
         Assert.assertEquals(tenantId, actualTenantID);
     }
 
-    @Test
     public void testGetTenantID_NullTenantID() {
         Map<String, List<String>> headers = new HashMap<>();
         headers.put(CommonValue.TENANT_ID_HEADER, Collections.singletonList(null));
@@ -50,7 +48,6 @@ public class RestActionUtilsTests extends OpenSearchTestCase {
         }
     }
 
-    @Test
     public void testGetTenantID_NoMultiTenancy() {
         String tenantId = "test-tenant";
         Map<String, List<String>> headers = new HashMap<>();
@@ -61,7 +58,6 @@ public class RestActionUtilsTests extends OpenSearchTestCase {
         Assert.assertNull(tenantID);
     }
 
-    @Test
     public void testGetTenantID_EmptyTenantIDList() {
         Map<String, List<String>> headers = new HashMap<>();
         headers.put(CommonValue.TENANT_ID_HEADER, Collections.emptyList());
@@ -75,7 +71,6 @@ public class RestActionUtilsTests extends OpenSearchTestCase {
         assertEquals("Tenant ID header is present but has no value", exception.getMessage());
     }
 
-    @Test
     public void testGetTenantID_MissingTenantIDHeader() {
         Map<String, List<String>> headers = new HashMap<>();
         RestRequest restRequest = new FakeRestRequest.Builder(xContentRegistry()).withHeaders(headers).build();
@@ -88,7 +83,6 @@ public class RestActionUtilsTests extends OpenSearchTestCase {
         assertEquals("Tenant ID header is missing", exception.getMessage());
     }
 
-    @Test
     public void testGetTenantID_MultipleValues() {
         Map<String, List<String>> headers = new HashMap<>();
         headers.put(CommonValue.TENANT_ID_HEADER, List.of("tenant1", "tenant2"));
@@ -98,7 +92,6 @@ public class RestActionUtilsTests extends OpenSearchTestCase {
         assertEquals("tenant1", actualTenantID);
     }
 
-    @Test
     public void testGetTenantID_EmptyStringTenantID() {
         Map<String, List<String>> headers = new HashMap<>();
         headers.put(CommonValue.TENANT_ID_HEADER, Collections.singletonList(""));
