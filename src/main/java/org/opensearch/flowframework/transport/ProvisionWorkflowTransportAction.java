@@ -86,8 +86,8 @@ public class ProvisionWorkflowTransportAction extends HandledTransportAction<Wor
      * Instantiates a new ProvisionWorkflowTransportAction
      * @param transportService The TransportService
      * @param actionFilters action filters
-     * @param threadPool The OpenSearch thread pool
      * @param client The node client to retrieve a stored use case template
+     * @param sdkClient the Multitenant Client
      * @param workflowProcessSorter Utility class to generate a togologically sorted list of Process nodes
      * @param flowFrameworkIndicesHandler Class to handle all internal system indices actions
      * @param flowFrameworkSettings The Flow Framework settings

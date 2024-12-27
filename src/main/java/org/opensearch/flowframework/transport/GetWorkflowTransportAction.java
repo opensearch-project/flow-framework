@@ -63,6 +63,7 @@ public class GetWorkflowTransportAction extends HandledTransportAction<WorkflowR
      * @param flowFrameworkSettings The Flow Framework settings
      * @param encryptorUtils Encryptor utils
      * @param client the Opensearch Client
+     * @param sdkClient the Multitenant Client
      * @param xContentRegistry contentRegister to parse get response
      * @param clusterService the cluster service
      * @param settings the plugin settings

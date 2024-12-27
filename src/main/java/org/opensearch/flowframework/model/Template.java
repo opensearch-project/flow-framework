@@ -281,7 +281,7 @@ public class Template implements ToXContentObject {
 
         /**
          * Builder method for adding user
-         * @param user user
+         * @param tenantId the tenant id
          * @return the Builder object
          */
         public Builder tenantId(String tenantId) {

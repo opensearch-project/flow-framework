@@ -90,6 +90,7 @@ public class CreateWorkflowTransportAction extends HandledTransportAction<Workfl
      * @param flowFrameworkIndicesHandler The handler for the global context index
      * @param flowFrameworkSettings Plugin settings
      * @param client The client used to make the request to OS
+     * @param sdkClient the Multitenant Client
      * @param pluginsService The plugin service
      * @param clusterService the cluster service
      * @param xContentRegistry the named content registry

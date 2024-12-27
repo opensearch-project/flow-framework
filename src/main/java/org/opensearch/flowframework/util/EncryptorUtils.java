@@ -89,6 +89,7 @@ public class EncryptorUtils {
      * Instantiates a new EncryptorUtils object
      * @param clusterService the cluster service
      * @param client the node client
+     * @param sdkClient the Multitenant Client
      * @param xContentRegistry the OpenSearch XContent Registry
      */
     public EncryptorUtils(ClusterService clusterService, Client client, SdkClient sdkClient, NamedXContentRegistry xContentRegistry) {

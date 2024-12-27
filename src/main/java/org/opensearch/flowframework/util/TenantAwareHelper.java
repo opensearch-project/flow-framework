@@ -14,6 +14,9 @@ import org.opensearch.flowframework.exception.FlowFrameworkException;
 
 import java.util.Objects;
 
+/**
+ * Helper class for tenant ID validation
+ */
 public class TenantAwareHelper {
 
     /**

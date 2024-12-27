@@ -63,6 +63,7 @@ public class DeleteWorkflowTransportAction extends HandledTransportAction<Workfl
      * @param flowFrameworkIndicesHandler The Flow Framework indices handler
      * @param flowFrameworkSettings The Flow Framework settings
      * @param client the OpenSearch Client
+     * @param sdkClient the Multitenant Client
      * @param clusterService the cluster service
      * @param xContentRegistry contentRegister to parse get response
      * @param settings the plugin settings

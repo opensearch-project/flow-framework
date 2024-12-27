@@ -512,7 +512,7 @@ public class FlowFrameworkIndicesHandler {
      * Check if the given template exists in the template index
      *
      * @param documentId document id
-     * @param tenantID tenant id
+     * @param tenantId tenant id
      * @param booleanResultConsumer a consumer based on whether the template exist
      * @param listener action listener
      * @param <T> action listener response type
@@ -667,6 +667,7 @@ public class FlowFrameworkIndicesHandler {
      * Check workflow provisioning state and resources to see if state can be deleted with template
      *
      * @param workflowId workflow id
+     * @param tenantId tenant id
      * @param clearStatus if set true, always deletes the state document unless status is IN_PROGRESS
      * @param canDeleteStateConsumer consumer function which will be true if workflow state is not IN_PROGRESS and either no resources or true clearStatus
      * @param listener action listener from caller to fail on error

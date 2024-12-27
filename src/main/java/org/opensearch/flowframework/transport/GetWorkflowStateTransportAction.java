@@ -56,7 +56,10 @@ public class GetWorkflowStateTransportAction extends HandledTransportAction<GetW
      * Instantiates a new GetWorkflowStateTransportAction
      * @param transportService The TransportService
      * @param actionFilters action filters
+     * @param flowFrameworkIndicesHandler the handler class for index actions
+     * @param flowFrameworkSettings the plugin settings
      * @param client The client used to make the request to OS
+     * @param sdkClient the Multitenant Client
      * @param xContentRegistry contentRegister to parse get response
      * @param clusterService the cluster service
      * @param settings the plugin settings

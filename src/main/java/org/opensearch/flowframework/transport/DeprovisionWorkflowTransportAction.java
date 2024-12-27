@@ -88,6 +88,7 @@ public class DeprovisionWorkflowTransportAction extends HandledTransportAction<W
      * @param actionFilters action filters
      * @param threadPool The OpenSearch thread pool
      * @param client The node client to retrieve a stored use case template
+     * @param sdkClient the Multitenant Client
      * @param workflowStepFactory The factory instantiating workflow steps
      * @param flowFrameworkIndicesHandler Class to handle all internal system indices actions
      * @param flowFrameworkSettings The plugin settings
