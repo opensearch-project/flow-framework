@@ -302,7 +302,7 @@ public class CreateWorkflowTransportAction extends HandledTransportAction<Workfl
                                                 if (request.isProvision()) {
                                                     WorkflowRequest workflowRequest = new WorkflowRequest(
                                                         globalContextResponse.getId(),
-                                                        null,
+                                                        Template.createEmptyTemplateWithTenantId(tenantId),
                                                         request.getParams(),
                                                         waitForTimeCompletion
                                                     );

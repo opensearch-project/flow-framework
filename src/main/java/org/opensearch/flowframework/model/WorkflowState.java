@@ -373,7 +373,7 @@ public class WorkflowState implements ToXContentObject, Writeable {
             xContentBuilder.field(RESOURCES_CREATED_FIELD, resourcesCreated.toArray());
         }
         if (tenantId != null) {
-            xContentBuilder.field(TENANT_ID_FIELD, workflowId);
+            xContentBuilder.field(TENANT_ID_FIELD, tenantId);
         }
         return xContentBuilder.endObject();
     }

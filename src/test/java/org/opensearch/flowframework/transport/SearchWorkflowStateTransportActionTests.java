@@ -23,6 +23,7 @@ import org.opensearch.threadpool.ThreadPool;
 import org.opensearch.transport.TransportService;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.nullable;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
@@ -66,10 +67,10 @@ public class SearchWorkflowStateTransportActionTests extends OpenSearchTestCase 
             SearchRequest request = invocation.getArgument(0);
             ActionListener<SearchResponse> responseListener = invocation.getArgument(1);
             ThreadContext.StoredContext storedContext = mock(ThreadContext.StoredContext.class);
-            searchHandler.validateRole(request, null, responseListener, storedContext);
+            searchHandler.validateRole(request, null, null, responseListener, storedContext);
             responseListener.onResponse(mock(SearchResponse.class));
             return null;
-        }).when(searchHandler).search(any(SearchRequest.class), any(ActionListener.class));
+        }).when(searchHandler).search(any(SearchRequest.class), nullable(String.class), any(ActionListener.class));
 
         doAnswer(invocation -> {
             ActionListener<SearchResponse> responseListener = invocation.getArgument(1);
@@ -78,7 +79,7 @@ public class SearchWorkflowStateTransportActionTests extends OpenSearchTestCase 
         }).when(client).search(any(SearchRequest.class), any(ActionListener.class));
 
         searchWorkflowStateTransportAction.doExecute(mock(Task.class), searchRequest, listener);
-        verify(searchHandler).search(any(SearchRequest.class), any(ActionListener.class));
+        verify(searchHandler).search(any(SearchRequest.class), nullable(String.class), any(ActionListener.class));
     }
 
 }

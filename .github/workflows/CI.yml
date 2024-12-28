@@ -192,4 +192,4 @@ jobs:
           distribution: temurin
       - name: Build and Run Tests
         run: |
-          ./gradlew integTest -Dtests.rest.tenantaware=true
+          ./gradlew integTest "-Dtests.rest.tenantaware=true"
