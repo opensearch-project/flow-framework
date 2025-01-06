@@ -251,7 +251,8 @@ public class CreateWorkflowTransportAction extends HandledTransportAction<Workfl
                                                     WorkflowRequest workflowRequest = new WorkflowRequest(
                                                         globalContextResponse.getId(),
                                                         null,
-                                                        request.getParams()
+                                                        request.getParams(),
+                                                        request.getWaitForCompletionTimeout()
                                                     );
                                                     logger.info(
                                                         "Provisioning parameter is set, continuing to provision workflow {}",
@@ -261,7 +262,18 @@ public class CreateWorkflowTransportAction extends HandledTransportAction<Workfl
                                                         ProvisionWorkflowAction.INSTANCE,
                                                         workflowRequest,
                                                         ActionListener.wrap(provisionResponse -> {
-                                                            listener.onResponse(new WorkflowResponse(provisionResponse.getWorkflowId()));
+                                                            if (request.getWaitForCompletionTimeout() != null) {
+                                                                listener.onResponse(
+                                                                    new WorkflowResponse(
+                                                                        provisionResponse.getWorkflowId(),
+                                                                        provisionResponse.getWorkflowState()
+                                                                    )
+                                                                );
+                                                            } else {
+                                                                listener.onResponse(
+                                                                    new WorkflowResponse(provisionResponse.getWorkflowId())
+                                                                );
+                                                            }
                                                         }, exception -> {
                                                             String errorMessage = "Provisioning failed.";
                                                             logger.error(errorMessage, exception);

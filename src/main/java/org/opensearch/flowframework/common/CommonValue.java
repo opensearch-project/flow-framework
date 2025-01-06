@@ -8,6 +8,8 @@
  */
 package org.opensearch.flowframework.common;
 
+import org.opensearch.common.unit.TimeValue;
+
 /**
  * Representation of common values that are used across project
  */
@@ -55,6 +57,8 @@ public class CommonValue {
     /** The last provisioned time field */
     public static final String LAST_PROVISIONED_TIME_FIELD = "last_provisioned_time";
 
+    public static final TimeValue DEFAULT_WAIT_FOR_COMPLETION_TIMEOUT = TimeValue.timeValueSeconds(1);
+
     /*
      * Constants associated with Rest or Transport actions
      */
@@ -74,6 +78,8 @@ public class CommonValue {
     public static final String PROVISION_WORKFLOW = "provision";
     /** The param name for update workflow field in create API */
     public static final String UPDATE_WORKFLOW_FIELDS = "update_fields";
+    /** The param name for specifying the timeout duration in seconds to wait for workflow completion */
+    public static final String WAIT_FOR_COMPLETION_TIMEOUT = "wait_for_completion_timeout";
     /** The field name for workflow steps. This field represents the name of the workflow steps to be fetched. */
     public static final String WORKFLOW_STEP = "workflow_step";
     /** The param name for default use case, used by the create workflow API */
