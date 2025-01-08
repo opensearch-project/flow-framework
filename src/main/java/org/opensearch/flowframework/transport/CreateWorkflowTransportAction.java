@@ -262,18 +262,14 @@ public class CreateWorkflowTransportAction extends HandledTransportAction<Workfl
                                                         ProvisionWorkflowAction.INSTANCE,
                                                         workflowRequest,
                                                         ActionListener.wrap(provisionResponse -> {
-                                                            if (request.getWaitForCompletionTimeout() != null) {
-                                                                listener.onResponse(
-                                                                    new WorkflowResponse(
+                                                            listener.onResponse(
+                                                                request.getWaitForCompletionTimeout() != null
+                                                                    ? new WorkflowResponse(
                                                                         provisionResponse.getWorkflowId(),
                                                                         provisionResponse.getWorkflowState()
                                                                     )
-                                                                );
-                                                            } else {
-                                                                listener.onResponse(
-                                                                    new WorkflowResponse(provisionResponse.getWorkflowId())
-                                                                );
-                                                            }
+                                                                    : new WorkflowResponse(provisionResponse.getWorkflowId())
+                                                            );
                                                         }, exception -> {
                                                             String errorMessage = "Provisioning failed.";
                                                             logger.error(errorMessage, exception);

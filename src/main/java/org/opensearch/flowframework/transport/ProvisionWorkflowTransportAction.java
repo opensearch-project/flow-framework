@@ -354,26 +354,59 @@ public class ProvisionWorkflowTransportAction extends HandledTransportAction<Wor
             }
         }, threadPool.executor(PROVISION_WORKFLOW_THREAD_POOL));
 
+        // Schedule timeout handler
+        scheduleTimeoutHandler(workflowId, listener, timeout, isResponseSent);
+    }
+
+    /**
+     * Schedules a timeout handler for workflow execution.
+     * This method starts a new task in the thread pool to wait for the specified timeout duration.
+     * If the workflow does not complete within the given timeout, it triggers a follow-up action
+     * to fetch the workflow's state and notify the listener.
+     *
+     * @param workflowId     The unique identifier of the workflow being executed.
+     * @param listener       The ActionListener to notify with the workflow's response or failure.
+     * @param timeout        The maximum time (in milliseconds) to wait for the workflow to complete before timing out.
+     * @param isResponseSent An AtomicBoolean flag to ensure the response is sent only once.
+     */
+    private void scheduleTimeoutHandler(
+        String workflowId,
+        ActionListener<WorkflowResponse> listener,
+        long timeout,
+        AtomicBoolean isResponseSent
+    ) {
         threadPool.executor(PROVISION_WORKFLOW_THREAD_POOL).execute(() -> {
             try {
                 Thread.sleep(timeout);
                 if (isResponseSent.compareAndSet(false, true)) {
                     logger.warn("Workflow execution timed out for workflowId: {}", workflowId);
-                    client.execute(
-                        GetWorkflowStateAction.INSTANCE,
-                        new GetWorkflowStateRequest(workflowId, false),
-                        ActionListener.wrap(
-                            response -> listener.onResponse(new WorkflowResponse(workflowId, response.getWorkflowState())),
-                            exception -> listener.onFailure(
-                                new FlowFrameworkException("Failed to get workflow state after timeout", ExceptionsHelper.status(exception))
-                            )
-                        )
-                    );
+                    fetchWorkflowStateAfterTimeout(workflowId, listener);
                 }
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
             }
         });
+    }
+
+    /**
+     * Fetches the workflow state after a timeout has occurred.
+     * This method sends a request to retrieve the current state of the workflow
+     * and notifies the listener with the updated state or an error if the request fails.
+     *
+     * @param workflowId The unique identifier of the workflow whose state needs to be fetched.
+     * @param listener   The ActionListener to notify with the workflow's updated state or failure.
+     */
+    private void fetchWorkflowStateAfterTimeout(String workflowId, ActionListener<WorkflowResponse> listener) {
+        client.execute(
+            GetWorkflowStateAction.INSTANCE,
+            new GetWorkflowStateRequest(workflowId, false),
+            ActionListener.wrap(
+                response -> listener.onResponse(new WorkflowResponse(workflowId, response.getWorkflowState())),
+                exception -> listener.onFailure(
+                    new FlowFrameworkException("Failed to get workflow state after timeout", ExceptionsHelper.status(exception))
+                )
+            )
+        );
     }
 
     /**
