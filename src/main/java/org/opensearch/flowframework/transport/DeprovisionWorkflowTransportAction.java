@@ -251,7 +251,7 @@ public class DeprovisionWorkflowTransportAction extends HandledTransportAction<W
                     deprovisionFuture.get();
                     logger.info("Successful {} for {}", deprovisionNode.id(), resourceNameAndId);
                     // Remove from state index resource list
-                    flowFrameworkIndicesHandler.deleteResourceFromStateIndex(workflowId, resource, stateUpdateFuture);
+                    flowFrameworkIndicesHandler.deleteResourceFromStateIndex(workflowId, tenantId, resource, stateUpdateFuture);
                     try {
                         // Wait at most 1 second for state index update.
                         stateUpdateFuture.actionGet(1, TimeUnit.SECONDS);

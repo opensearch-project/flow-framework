@@ -183,7 +183,12 @@ public class DeprovisionWorkflowTransportActionTests extends OpenSearchTestCase 
         ArgumentCaptor<WorkflowResponse> responseCaptor = ArgumentCaptor.forClass(WorkflowResponse.class);
         verify(listener, times(1)).onResponse(responseCaptor.capture());
         assertEquals(workflowId, responseCaptor.getValue().getWorkflowId());
-        verify(flowFrameworkIndicesHandler, times(1)).deleteResourceFromStateIndex(anyString(), any(ResourceCreated.class), any());
+        verify(flowFrameworkIndicesHandler, times(1)).deleteResourceFromStateIndex(
+            anyString(),
+            nullable(String.class),
+            any(ResourceCreated.class),
+            any()
+        );
     }
 
     public void testFailToDeprovision() throws Exception {
@@ -218,7 +223,12 @@ public class DeprovisionWorkflowTransportActionTests extends OpenSearchTestCase 
         verify(listener, times(1)).onFailure(exceptionCaptor.capture());
         assertEquals(RestStatus.ACCEPTED, exceptionCaptor.getValue().getRestStatus());
         assertEquals("Failed to deprovision some resources: [model_id modelId].", exceptionCaptor.getValue().getMessage());
-        verify(flowFrameworkIndicesHandler, times(0)).deleteResourceFromStateIndex(anyString(), any(ResourceCreated.class), any());
+        verify(flowFrameworkIndicesHandler, times(0)).deleteResourceFromStateIndex(
+            anyString(),
+            nullable(String.class),
+            any(ResourceCreated.class),
+            any()
+        );
     }
 
     public void testAllowDeleteRequired() throws Exception {
@@ -259,7 +269,12 @@ public class DeprovisionWorkflowTransportActionTests extends OpenSearchTestCase 
             "These resources require the allow_delete parameter to deprovision: [index_name test-index].",
             exceptionCaptor.getValue().getMessage()
         );
-        verify(flowFrameworkIndicesHandler, times(0)).deleteResourceFromStateIndex(anyString(), any(ResourceCreated.class), any());
+        verify(flowFrameworkIndicesHandler, times(0)).deleteResourceFromStateIndex(
+            anyString(),
+            nullable(String.class),
+            any(ResourceCreated.class),
+            any()
+        );
 
         // Test (2nd) failure with wrong allow_delete param
         workflowRequest = new WorkflowRequest(workflowId, null, Map.of(ALLOW_DELETE, "wrong-index"));
@@ -276,7 +291,12 @@ public class DeprovisionWorkflowTransportActionTests extends OpenSearchTestCase 
             "These resources require the allow_delete parameter to deprovision: [index_name test-index].",
             exceptionCaptor.getValue().getMessage()
         );
-        verify(flowFrameworkIndicesHandler, times(0)).deleteResourceFromStateIndex(anyString(), any(ResourceCreated.class), any());
+        verify(flowFrameworkIndicesHandler, times(0)).deleteResourceFromStateIndex(
+            anyString(),
+            nullable(String.class),
+            any(ResourceCreated.class),
+            any()
+        );
 
         // Test success with correct allow_delete param
         workflowRequest = new WorkflowRequest(workflowId, null, Map.of(ALLOW_DELETE, "wrong-index,test-index,other-index"));
@@ -294,7 +314,12 @@ public class DeprovisionWorkflowTransportActionTests extends OpenSearchTestCase 
         ArgumentCaptor<WorkflowResponse> responseCaptor = ArgumentCaptor.forClass(WorkflowResponse.class);
         verify(listener, times(1)).onResponse(responseCaptor.capture());
         assertEquals(workflowId, responseCaptor.getValue().getWorkflowId());
-        verify(flowFrameworkIndicesHandler, times(1)).deleteResourceFromStateIndex(anyString(), any(ResourceCreated.class), any());
+        verify(flowFrameworkIndicesHandler, times(1)).deleteResourceFromStateIndex(
+            anyString(),
+            nullable(String.class),
+            any(ResourceCreated.class),
+            any()
+        );
     }
 
     public void testFailToDeprovisionAndAllowDeleteRequired() throws Exception {
@@ -339,6 +364,11 @@ public class DeprovisionWorkflowTransportActionTests extends OpenSearchTestCase 
                 + " These resources require the allow_delete parameter to deprovision: [index_name test-index].",
             exceptionCaptor.getValue().getMessage()
         );
-        verify(flowFrameworkIndicesHandler, times(0)).deleteResourceFromStateIndex(anyString(), any(ResourceCreated.class), any());
+        verify(flowFrameworkIndicesHandler, times(0)).deleteResourceFromStateIndex(
+            anyString(),
+            nullable(String.class),
+            any(ResourceCreated.class),
+            any()
+        );
     }
 }

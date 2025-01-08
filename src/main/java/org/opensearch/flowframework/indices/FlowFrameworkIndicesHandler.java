@@ -12,6 +12,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.message.ParameterizedMessageFactory;
 import org.opensearch.ExceptionsHelper;
+import org.opensearch.OpenSearchStatusException;
 import org.opensearch.action.DocWriteRequest.OpType;
 import org.opensearch.action.admin.indices.create.CreateIndexRequest;
 import org.opensearch.action.admin.indices.create.CreateIndexResponse;
@@ -47,7 +48,6 @@ import org.opensearch.flowframework.util.EncryptorUtils;
 import org.opensearch.flowframework.util.ParseUtils;
 import org.opensearch.flowframework.workflow.WorkflowData;
 import org.opensearch.index.IndexNotFoundException;
-import org.opensearch.index.engine.VersionConflictEngineException;
 import org.opensearch.remote.metadata.client.DeleteDataObjectRequest;
 import org.opensearch.remote.metadata.client.GetDataObjectRequest;
 import org.opensearch.remote.metadata.client.PutDataObjectRequest;
@@ -845,7 +845,7 @@ public class FlowFrameworkIndicesHandler {
         String resourceId,
         ActionListener<WorkflowData> listener
     ) {
-        addResourceToStateIndex(currentNodeInputs, nodeId, workflowStepName, resourceId, null, listener);
+        addResourceToStateIndex(currentNodeInputs, nodeId, workflowStepName, resourceId, "fakeTenantId", listener);
     }
 
     /**
@@ -892,7 +892,7 @@ public class FlowFrameworkIndicesHandler {
      */
     @Deprecated
     public void deleteResourceFromStateIndex(String workflowId, ResourceCreated resourceToDelete, ActionListener<WorkflowData> listener) {
-        deleteResourceFromStateIndex(workflowId, null, resourceToDelete, listener);
+        deleteResourceFromStateIndex(workflowId, "fakeTenantId", resourceToDelete, listener);
     }
 
     /**
@@ -967,7 +967,7 @@ public class FlowFrameworkIndicesHandler {
                 try {
                     GetResponse getResponse = GetResponse.fromXContent(r.parser());
                     handleStateGetResponse(workflowId, tenantId, resource, operation, retries, listener, getResponse);
-                } catch (IOException e) {
+                } catch (Exception e) {
                     logger.error("Failed to parse get response", e);
                     listener.onFailure(new FlowFrameworkException("Failed to parse get response", INTERNAL_SERVER_ERROR));
                 }
@@ -991,9 +991,8 @@ public class FlowFrameworkIndicesHandler {
             listener.onFailure(new FlowFrameworkException("Workflow state not found for " + workflowId, RestStatus.NOT_FOUND));
             return;
         }
-        WorkflowState currentState;
         try {
-            currentState = WorkflowState.parse(getResponse.getSourceAsString());
+            WorkflowState currentState = WorkflowState.parse(getResponse.getSourceAsString());
             List<ResourceCreated> resourcesCreated = new ArrayList<>(currentState.resourcesCreated());
             if (operation == OpType.DELETE) {
                 resourcesCreated.removeIf(r -> r.resourceMap().equals(resource.resourceMap()));
@@ -1001,7 +1000,7 @@ public class FlowFrameworkIndicesHandler {
                 resourcesCreated.add(resource);
             }
             WorkflowState newState = WorkflowState.builder(currentState).resourcesCreated(resourcesCreated).build();
-            UpdateDataObjectRequest updateRequest2 = UpdateDataObjectRequest.builder()
+            UpdateDataObjectRequest updateRequest = UpdateDataObjectRequest.builder()
                 .index(WORKFLOW_STATE_INDEX)
                 .id(workflowId)
                 .tenantId(tenantId)
@@ -1010,7 +1009,7 @@ public class FlowFrameworkIndicesHandler {
                 .ifPrimaryTerm(getResponse.getPrimaryTerm())
                 .build();
             sdkClient.updateDataObjectAsync(
-                updateRequest2,
+                updateRequest,
                 client.threadPool().executor(operation == OpType.DELETE ? DEPROVISION_WORKFLOW_THREAD_POOL : PROVISION_WORKFLOW_THREAD_POOL)
             ).whenComplete((r, throwable) -> {
                 if (throwable == null) {
@@ -1059,7 +1058,7 @@ public class FlowFrameworkIndicesHandler {
         ActionListener<WorkflowData> listener,
         Exception e
     ) {
-        if (e instanceof VersionConflictEngineException && retries > 0) {
+        if (e instanceof OpenSearchStatusException && ((OpenSearchStatusException) e).status() == RestStatus.CONFLICT && retries > 0) {
             // Retry if we haven't exhausted retries
             getAndUpdateResourceInStateDocumentWithRetries(workflowId, tenantId, newResource, operation, retries - 1, listener);
             return;
