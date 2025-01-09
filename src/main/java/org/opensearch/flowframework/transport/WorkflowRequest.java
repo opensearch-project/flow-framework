@@ -76,7 +76,7 @@ public class WorkflowRequest extends ActionRequest {
      * @param template the use case template which describes the workflow
      */
     public WorkflowRequest(@Nullable String workflowId, @Nullable Template template) {
-        this(workflowId, template, new String[] { "all" }, false, Collections.emptyMap(), false, null);
+        this(workflowId, template, new String[] { "all" }, false, Collections.emptyMap(), false, TimeValue.MINUS_ONE);
     }
 
     /**
@@ -86,7 +86,7 @@ public class WorkflowRequest extends ActionRequest {
      * @param params The parameters from the REST path
      */
     public WorkflowRequest(@Nullable String workflowId, @Nullable Template template, Map<String, String> params) {
-        this(workflowId, template, new String[] { "all" }, true, params, false, null);
+        this(workflowId, template, new String[] { "all" }, true, params, false, TimeValue.MINUS_ONE);
     }
 
     /**
@@ -107,6 +107,26 @@ public class WorkflowRequest extends ActionRequest {
         TimeValue waitForCompletionTimeout
     ) {
         this(workflowId, template, new String[] { "all" }, true, params, false, waitForCompletionTimeout);
+    }
+
+    /**
+     * Instantiates a new WorkflowRequest
+     * @param workflowId the documentId of the workflow
+     * @param template the use case template which describes the workflow
+     * @param validation flag to indicate if validation is necessary
+     * @param provisionOrUpdate provision or updateFields flag. Only one may be true, the presence of update_fields key in map indicates if updating fields, otherwise true means it's provisioning.
+     * @param params map of REST path params. If provisionOrUpdate is false, must be an empty map. If update_fields key is present, must be only key.
+     * @param reprovision flag to indicate if request is to reprovision
+     */
+    public WorkflowRequest(
+        @Nullable String workflowId,
+        @Nullable Template template,
+        String[] validation,
+        boolean provisionOrUpdate,
+        Map<String, String> params,
+        boolean reprovision
+    ) {
+        this(workflowId, template, validation, provisionOrUpdate, params, reprovision, TimeValue.MINUS_ONE);
     }
 
     /**

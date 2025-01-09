@@ -64,6 +64,7 @@ import org.mockito.ArgumentCaptor;
 import static org.opensearch.action.DocWriteResponse.Result.UPDATED;
 import static org.opensearch.flowframework.common.CommonValue.GLOBAL_CONTEXT_INDEX;
 import static org.opensearch.flowframework.common.CommonValue.UPDATE_WORKFLOW_FIELDS;
+import static org.opensearch.flowframework.common.CommonValue.WAIT_FOR_COMPLETION_TIMEOUT;
 import static org.opensearch.flowframework.common.CommonValue.WORKFLOW_STATE_INDEX;
 import static org.opensearch.flowframework.common.WorkflowResources.CONNECTOR_ID;
 import static org.opensearch.flowframework.common.WorkflowResources.CREATE_CONNECTOR;
@@ -960,9 +961,83 @@ public class CreateWorkflowTransportActionTests extends OpenSearchTestCase {
             validTemplate,
             new String[] { "all" },
             true,
-            Collections.emptyMap(),
-            false,
-            TimeValue.timeValueSeconds(5)
+            Map.of(WAIT_FOR_COMPLETION_TIMEOUT, "5s"),
+            false
+        );
+
+        // Bypass checkMaxWorkflows and force onResponse
+        doAnswer(invocation -> {
+            ActionListener<Boolean> checkMaxWorkflowListener = invocation.getArgument(2);
+            checkMaxWorkflowListener.onResponse(true);
+            return null;
+        }).when(createWorkflowTransportAction).checkMaxWorkflows(any(TimeValue.class), anyInt(), any());
+
+        // Bypass initializeConfigIndex and force onResponse
+        doAnswer(invocation -> {
+            ActionListener<Boolean> initalizeMasterKeyIndexListener = invocation.getArgument(0);
+            initalizeMasterKeyIndexListener.onResponse(true);
+            return null;
+        }).when(flowFrameworkIndicesHandler).initializeConfigIndex(any());
+
+        // Bypass putTemplateToGlobalContext and force onResponse
+        doAnswer(invocation -> {
+            ActionListener<IndexResponse> responseListener = invocation.getArgument(1);
+            responseListener.onResponse(new IndexResponse(new ShardId(GLOBAL_CONTEXT_INDEX, "", 1), "1", 1L, 1L, 1L, true));
+            return null;
+        }).when(flowFrameworkIndicesHandler).putTemplateToGlobalContext(any(), any());
+
+        // Bypass putInitialStateToWorkflowState and force on response
+        doAnswer(invocation -> {
+            ActionListener<IndexResponse> responseListener = invocation.getArgument(2);
+            responseListener.onResponse(new IndexResponse(new ShardId(WORKFLOW_STATE_INDEX, "", 1), "1", 1L, 1L, 1L, true));
+            return null;
+        }).when(flowFrameworkIndicesHandler).putInitialStateToWorkflowState(any(), any(), any());
+
+        doAnswer(invocation -> {
+            ActionListener<WorkflowResponse> responseListener = invocation.getArgument(2);
+            WorkflowResponse response = mock(WorkflowResponse.class);
+            when(response.getWorkflowId()).thenReturn("1");
+            when(response.getWorkflowState()).thenReturn(
+                new WorkflowState(
+                    "1",
+                    "test",
+                    "PROVISIONING",
+                    "IN_PROGRESS",
+                    Instant.now(),
+                    Instant.now(),
+                    TestHelpers.randomUser(),
+                    Collections.emptyMap(),
+                    Collections.emptyList()
+                )
+            );
+            responseListener.onResponse(response);
+            return null;
+        }).when(client).execute(eq(ProvisionWorkflowAction.INSTANCE), any(WorkflowRequest.class), any(ActionListener.class));
+
+        ArgumentCaptor<WorkflowResponse> workflowResponseCaptor = ArgumentCaptor.forClass(WorkflowResponse.class);
+
+        createWorkflowTransportAction.doExecute(mock(Task.class), workflowRequest, listener);
+
+        verify(listener, times(1)).onResponse(workflowResponseCaptor.capture());
+        assertEquals("1", workflowResponseCaptor.getValue().getWorkflowId());
+        assertEquals("PROVISIONING", workflowResponseCaptor.getValue().getWorkflowState().getState());
+    }
+
+    public void testCreateWorkflow_withValidation_withWaitForCompletionTimeSetZero_withProvision_Success() throws Exception {
+
+        Template validTemplate = generateValidTemplate();
+
+        @SuppressWarnings("unchecked")
+        ActionListener<WorkflowResponse> listener = mock(ActionListener.class);
+
+        doNothing().when(workflowProcessSorter).validate(any(), any());
+        WorkflowRequest workflowRequest = new WorkflowRequest(
+            null,
+            validTemplate,
+            new String[] { "all" },
+            true,
+            Map.of(WAIT_FOR_COMPLETION_TIMEOUT, "0s"),
+            false
         );
 
         // Bypass checkMaxWorkflows and force onResponse

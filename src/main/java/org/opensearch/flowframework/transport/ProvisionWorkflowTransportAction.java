@@ -20,6 +20,7 @@ import org.opensearch.client.Client;
 import org.opensearch.cluster.service.ClusterService;
 import org.opensearch.common.inject.Inject;
 import org.opensearch.common.settings.Settings;
+import org.opensearch.common.unit.TimeValue;
 import org.opensearch.common.util.concurrent.ThreadContext;
 import org.opensearch.commons.authuser.User;
 import org.opensearch.core.action.ActionListener;
@@ -32,6 +33,7 @@ import org.opensearch.flowframework.model.State;
 import org.opensearch.flowframework.model.Template;
 import org.opensearch.flowframework.model.Workflow;
 import org.opensearch.flowframework.util.EncryptorUtils;
+import org.opensearch.flowframework.util.WorkflowTimeoutUtility;
 import org.opensearch.flowframework.workflow.ProcessNode;
 import org.opensearch.flowframework.workflow.WorkflowProcessSorter;
 import org.opensearch.plugins.PluginsService;
@@ -212,15 +214,15 @@ public class ProvisionWorkflowTransportAction extends HandledTransportAction<Wor
                         ),
                         ActionListener.wrap(updateResponse -> {
                             logger.info("updated workflow {} state to {}", request.getWorkflowId(), State.PROVISIONING);
-                            if (request.getWaitForCompletionTimeout() != null) {
+                            if (request.getWaitForCompletionTimeout() == TimeValue.MINUS_ONE) {
+                                executeWorkflowAsync(workflowId, provisionProcessSequence, listener);
+                            } else {
                                 executeWorkflowSync(
                                     workflowId,
                                     provisionProcessSequence,
                                     listener,
                                     request.getWaitForCompletionTimeout().getMillis()
                                 );
-                            } else {
-                                executeWorkflowAsync(workflowId, provisionProcessSequence, listener);
                             }
                             // update last provisioned field in template
                             Template newTemplate = Template.builder(template).lastProvisionedTime(Instant.now()).build();
@@ -228,10 +230,10 @@ public class ProvisionWorkflowTransportAction extends HandledTransportAction<Wor
                                 request.getWorkflowId(),
                                 newTemplate,
                                 ActionListener.wrap(templateResponse -> {
-                                    if (request.getWaitForCompletionTimeout() != null) {
-                                        logger.info("Waiting for workflow completion");
-                                    } else {
+                                    if (request.getWaitForCompletionTimeout() == TimeValue.MINUS_ONE) {
                                         listener.onResponse(new WorkflowResponse(request.getWorkflowId()));
+                                    } else {
+                                        logger.info("Waiting for workflow completion");
                                     }
                                 }, exception -> {
                                     String errorMessage = ParameterizedMessageFactory.INSTANCE.newMessage(
@@ -312,101 +314,27 @@ public class ProvisionWorkflowTransportAction extends HandledTransportAction<Wor
         ActionListener<WorkflowResponse> listener,
         long timeout
     ) {
-        PlainActionFuture<WorkflowResponse> workflowFuture = new PlainActionFuture<>();
         AtomicBoolean isResponseSent = new AtomicBoolean(false);
+
         CompletableFuture.runAsync(() -> {
             try {
                 executeWorkflow(workflowSequence, workflowId, new ActionListener<>() {
                     @Override
                     public void onResponse(WorkflowResponse workflowResponse) {
-                        if (isResponseSent.get()) {
-                            logger.info("Ignoring onResponse for workflowId: {} as timeout already occurred", workflowId);
-                            return;
-                        }
-                        isResponseSent.set(true);
-                        workflowFuture.onResponse(null);
-                        listener.onResponse(new WorkflowResponse(workflowResponse.getWorkflowId(), workflowResponse.getWorkflowState()));
+                        WorkflowTimeoutUtility.handleResponse(workflowId, workflowResponse, isResponseSent, listener);
                     }
 
                     @Override
                     public void onFailure(Exception e) {
-                        if (isResponseSent.get()) {
-                            logger.info("Ignoring onFailure for workflowId: {} as timeout already occurred", workflowId);
-                            return;
-                        }
-                        isResponseSent.set(true);
-                        workflowFuture.onFailure(
-                            new FlowFrameworkException("Failed to execute workflow " + workflowId, ExceptionsHelper.status(e))
-                        );
-                        listener.onFailure(
-                            new FlowFrameworkException("Failed to execute workflow " + workflowId, ExceptionsHelper.status(e))
-                        );
+                        WorkflowTimeoutUtility.handleFailure(workflowId, e, isResponseSent, listener);
                     }
                 }, true);
             } catch (Exception ex) {
-                if (!isResponseSent.get()) {
-                    isResponseSent.set(true);
-                    workflowFuture.onFailure(
-                        new FlowFrameworkException("Failed to execute workflow " + workflowId, ExceptionsHelper.status(ex))
-                    );
-                    listener.onFailure(new FlowFrameworkException("Failed to execute workflow " + workflowId, ExceptionsHelper.status(ex)));
-                }
+                WorkflowTimeoutUtility.handleFailure(workflowId, ex, isResponseSent, listener);
             }
         }, threadPool.executor(PROVISION_WORKFLOW_THREAD_POOL));
 
-        // Schedule timeout handler
-        scheduleTimeoutHandler(workflowId, listener, timeout, isResponseSent);
-    }
-
-    /**
-     * Schedules a timeout handler for workflow execution.
-     * This method starts a new task in the thread pool to wait for the specified timeout duration.
-     * If the workflow does not complete within the given timeout, it triggers a follow-up action
-     * to fetch the workflow's state and notify the listener.
-     *
-     * @param workflowId     The unique identifier of the workflow being executed.
-     * @param listener       The ActionListener to notify with the workflow's response or failure.
-     * @param timeout        The maximum time (in milliseconds) to wait for the workflow to complete before timing out.
-     * @param isResponseSent An AtomicBoolean flag to ensure the response is sent only once.
-     */
-    private void scheduleTimeoutHandler(
-        String workflowId,
-        ActionListener<WorkflowResponse> listener,
-        long timeout,
-        AtomicBoolean isResponseSent
-    ) {
-        threadPool.executor(PROVISION_WORKFLOW_THREAD_POOL).execute(() -> {
-            try {
-                Thread.sleep(timeout);
-                if (isResponseSent.compareAndSet(false, true)) {
-                    logger.warn("Workflow execution timed out for workflowId: {}", workflowId);
-                    fetchWorkflowStateAfterTimeout(workflowId, listener);
-                }
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-            }
-        });
-    }
-
-    /**
-     * Fetches the workflow state after a timeout has occurred.
-     * This method sends a request to retrieve the current state of the workflow
-     * and notifies the listener with the updated state or an error if the request fails.
-     *
-     * @param workflowId The unique identifier of the workflow whose state needs to be fetched.
-     * @param listener   The ActionListener to notify with the workflow's updated state or failure.
-     */
-    private void fetchWorkflowStateAfterTimeout(String workflowId, ActionListener<WorkflowResponse> listener) {
-        client.execute(
-            GetWorkflowStateAction.INSTANCE,
-            new GetWorkflowStateRequest(workflowId, false),
-            ActionListener.wrap(
-                response -> listener.onResponse(new WorkflowResponse(workflowId, response.getWorkflowState())),
-                exception -> listener.onFailure(
-                    new FlowFrameworkException("Failed to get workflow state after timeout", ExceptionsHelper.status(exception))
-                )
-            )
-        );
+        WorkflowTimeoutUtility.scheduleTimeoutHandler(client, threadPool, workflowId, listener, timeout, isResponseSent);
     }
 
     /**

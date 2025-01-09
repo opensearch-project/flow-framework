@@ -53,6 +53,7 @@ import static java.lang.Boolean.FALSE;
 import static org.opensearch.flowframework.common.CommonValue.GLOBAL_CONTEXT_INDEX;
 import static org.opensearch.flowframework.common.CommonValue.PROVISIONING_PROGRESS_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.STATE_FIELD;
+import static org.opensearch.flowframework.common.CommonValue.WAIT_FOR_COMPLETION_TIMEOUT;
 import static org.opensearch.flowframework.common.FlowFrameworkSettings.FILTER_BY_BACKEND_ROLES;
 import static org.opensearch.flowframework.util.ParseUtils.checkFilterByBackendRoles;
 import static org.opensearch.flowframework.util.ParseUtils.getUserContext;
@@ -248,11 +249,14 @@ public class CreateWorkflowTransportAction extends HandledTransportAction<Workfl
                                             ActionListener.wrap(stateResponse -> {
                                                 logger.info("Creating state workflow doc: {}", globalContextResponse.getId());
                                                 if (request.isProvision()) {
+                                                    String waitForTimeCompletion = request.getParams()
+                                                        .getOrDefault(WAIT_FOR_COMPLETION_TIMEOUT, TimeValue.MINUS_ONE.toString());
                                                     WorkflowRequest workflowRequest = new WorkflowRequest(
                                                         globalContextResponse.getId(),
                                                         null,
                                                         request.getParams(),
-                                                        request.getWaitForCompletionTimeout()
+                                                        // todo : what is this setting name represent?
+                                                        TimeValue.parseTimeValue(waitForTimeCompletion, "provision.timout")
                                                     );
                                                     logger.info(
                                                         "Provisioning parameter is set, continuing to provision workflow {}",
@@ -262,14 +266,18 @@ public class CreateWorkflowTransportAction extends HandledTransportAction<Workfl
                                                         ProvisionWorkflowAction.INSTANCE,
                                                         workflowRequest,
                                                         ActionListener.wrap(provisionResponse -> {
-                                                            listener.onResponse(
-                                                                request.getWaitForCompletionTimeout() != null
-                                                                    ? new WorkflowResponse(
+                                                            if (workflowRequest.getWaitForCompletionTimeout() == TimeValue.MINUS_ONE) {
+                                                                listener.onResponse(
+                                                                    new WorkflowResponse(provisionResponse.getWorkflowId())
+                                                                );
+                                                            } else {
+                                                                listener.onResponse(
+                                                                    new WorkflowResponse(
                                                                         provisionResponse.getWorkflowId(),
                                                                         provisionResponse.getWorkflowState()
                                                                     )
-                                                                    : new WorkflowResponse(provisionResponse.getWorkflowId())
-                                                            );
+                                                                );
+                                                            }
                                                         }, exception -> {
                                                             String errorMessage = "Provisioning failed.";
                                                             logger.error(errorMessage, exception);

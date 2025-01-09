@@ -12,7 +12,6 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.opensearch.ExceptionsHelper;
 import org.opensearch.client.node.NodeClient;
-import org.opensearch.common.unit.TimeValue;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.core.rest.RestStatus;
 import org.opensearch.core.xcontent.ToXContent;
@@ -44,7 +43,6 @@ import static org.opensearch.flowframework.common.CommonValue.REPROVISION_WORKFL
 import static org.opensearch.flowframework.common.CommonValue.UPDATE_WORKFLOW_FIELDS;
 import static org.opensearch.flowframework.common.CommonValue.USE_CASE;
 import static org.opensearch.flowframework.common.CommonValue.VALIDATION;
-import static org.opensearch.flowframework.common.CommonValue.WAIT_FOR_COMPLETION_TIMEOUT;
 import static org.opensearch.flowframework.common.CommonValue.WORKFLOW_ID;
 import static org.opensearch.flowframework.common.CommonValue.WORKFLOW_URI;
 import static org.opensearch.flowframework.common.FlowFrameworkSettings.FLOW_FRAMEWORK_ENABLED;
@@ -89,7 +87,6 @@ public class RestCreateWorkflowAction extends BaseRestHandler {
         boolean provision = request.paramAsBoolean(PROVISION_WORKFLOW, false);
         boolean reprovision = request.paramAsBoolean(REPROVISION_WORKFLOW, false);
         boolean updateFields = request.paramAsBoolean(UPDATE_WORKFLOW_FIELDS, false);
-        TimeValue waitForCompletionTimeout = request.paramAsTime(WAIT_FOR_COMPLETION_TIMEOUT, null);
         String useCase = request.param(USE_CASE);
 
         // If provisioning, consume all other params and pass to provision transport action
@@ -229,8 +226,7 @@ public class RestCreateWorkflowAction extends BaseRestHandler {
                 validation,
                 provision || updateFields,
                 params,
-                reprovision,
-                waitForCompletionTimeout
+                reprovision
             );
 
             return channel -> client.execute(CreateWorkflowAction.INSTANCE, workflowRequest, ActionListener.wrap(response -> {

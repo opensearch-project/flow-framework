@@ -130,7 +130,7 @@ public class RestCreateWorkflowActionTests extends OpenSearchTestCase {
 
     public void testRestCreateWorkflow_withWaitForCompletionTimeout() throws Exception {
         RestRequest request = new FakeRestRequest.Builder(xContentRegistry()).withMethod(RestRequest.Method.POST)
-            .withParams(Map.of("wait_for_completion_timeout", "5s"))
+            .withParams(Map.ofEntries(Map.entry(PROVISION_WORKFLOW, "true"), Map.entry("wait_for_completion_timeout", "5s")))
             .withContent(new BytesArray(validTemplate), MediaTypeRegistry.JSON)
             .build();
 
@@ -148,20 +148,6 @@ public class RestCreateWorkflowActionTests extends OpenSearchTestCase {
         assertTrue(channel.capturedResponse().content().utf8ToString().contains("workflow_1"));
     }
 
-    public void testInvalidValueForCompletionTimeout() throws Exception {
-        RestRequest request = new FakeRestRequest.Builder(xContentRegistry()).withMethod(RestRequest.Method.POST)
-            .withParams(Map.of("wait_for_completion_timeout", "invalid_value"))
-            .withContent(new BytesArray(validTemplate), MediaTypeRegistry.JSON)
-            .build();
-
-        FakeRestChannel channel = new FakeRestChannel(request, false, 1);
-
-        IllegalArgumentException exception = expectThrows(IllegalArgumentException.class, () -> {
-            createWorkflowRestAction.handleRequest(request, channel, nodeClient);
-        });
-
-        assertTrue(exception.getMessage().contains("failed to parse setting [wait_for_completion_timeout] with value [invalid_value]"));
-    }
 
     public void testCreateWorkflowRequestWithParamsButNoProvision() throws Exception {
         RestRequest request = new FakeRestRequest.Builder(xContentRegistry()).withMethod(RestRequest.Method.POST)

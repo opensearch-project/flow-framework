@@ -8,6 +8,7 @@
  */
 package org.opensearch.flowframework.transport;
 
+import org.opensearch.Version;
 import org.opensearch.core.action.ActionResponse;
 import org.opensearch.core.common.io.stream.StreamInput;
 import org.opensearch.core.common.io.stream.StreamOutput;
@@ -47,7 +48,10 @@ public class WorkflowResponse extends ActionResponse implements ToXContentObject
     public WorkflowResponse(StreamInput in) throws IOException {
         super(in);
         this.workflowId = in.readString();
-        this.workflowState = in.readOptionalWriteable(WorkflowState::new);
+        // todo : change version to 2_19_0
+        if (in.getVersion().onOrAfter(Version.CURRENT)) {
+            this.workflowState = in.readOptionalWriteable(WorkflowState::new);
+        }
 
     }
 
@@ -89,7 +93,10 @@ public class WorkflowResponse extends ActionResponse implements ToXContentObject
     @Override
     public void writeTo(StreamOutput out) throws IOException {
         out.writeString(workflowId);
-        out.writeOptionalWriteable(workflowState);
+        // todo : change version to 2_19_0
+        if (out.getVersion().onOrAfter(Version.CURRENT)) {
+            out.writeOptionalWriteable(workflowState);
+        }
     }
 
     @Override
