@@ -148,7 +148,6 @@ public class RestCreateWorkflowActionTests extends OpenSearchTestCase {
         assertTrue(channel.capturedResponse().content().utf8ToString().contains("workflow_1"));
     }
 
-
     public void testCreateWorkflowRequestWithParamsButNoProvision() throws Exception {
         RestRequest request = new FakeRestRequest.Builder(xContentRegistry()).withMethod(RestRequest.Method.POST)
             .withPath(this.createWorkflowPath)
