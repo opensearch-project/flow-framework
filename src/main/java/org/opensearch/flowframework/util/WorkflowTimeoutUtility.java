@@ -31,8 +31,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 public class WorkflowTimeoutUtility {
 
     private static final Logger logger = LogManager.getLogger(WorkflowTimeoutUtility.class);
-    private static final TimeValue MAX_TIMEOUT_MILLIS = TimeValue.timeValueSeconds(300);
-    private static final TimeValue MIN_TIMEOUT_MILLIS = TimeValue.timeValueSeconds(1);
+    private static final TimeValue MIN_TIMEOUT_MILLIS = TimeValue.timeValueSeconds(0);
 
     /**
      * Schedules a timeout task for a workflow execution.
@@ -53,8 +52,8 @@ public class WorkflowTimeoutUtility {
         long timeout,
         AtomicBoolean isResponseSent
     ) {
-        long adjustedTimeout = Math.min(timeout, MAX_TIMEOUT_MILLIS.millis());
-        adjustedTimeout = Math.max(adjustedTimeout, MIN_TIMEOUT_MILLIS.millis());
+        // Ensure timeout is within the valid range (non-negative)
+        long adjustedTimeout = Math.max(timeout, MIN_TIMEOUT_MILLIS.millis());
         Scheduler.ScheduledCancellable scheduledCancellable = threadPool.schedule(
             new WorkflowTimeoutListener(client, workflowId, listener, isResponseSent),
             TimeValue.timeValueMillis(adjustedTimeout),
