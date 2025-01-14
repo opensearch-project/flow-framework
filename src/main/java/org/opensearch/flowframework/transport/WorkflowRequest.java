@@ -8,6 +8,7 @@
  */
 package org.opensearch.flowframework.transport;
 
+import org.opensearch.Version;
 import org.opensearch.action.ActionRequest;
 import org.opensearch.action.ActionRequestValidationException;
 import org.opensearch.common.Nullable;
@@ -184,7 +185,11 @@ public class WorkflowRequest extends ActionRequest {
             this.params = Collections.emptyMap();
         }
         this.reprovision = !provision && Boolean.parseBoolean(params.get(REPROVISION_WORKFLOW));
-        this.waitForCompletionTimeout = in.readOptionalTimeValue();
+        // todo:change to 2.19
+        if (in.getVersion().onOrAfter(Version.CURRENT)) {
+            this.waitForCompletionTimeout = in.readOptionalTimeValue();
+        }
+
     }
 
     /**
@@ -268,7 +273,10 @@ public class WorkflowRequest extends ActionRequest {
         } else if (reprovision) {
             out.writeMap(Map.of(REPROVISION_WORKFLOW, "true"), StreamOutput::writeString, StreamOutput::writeString);
         }
-        out.writeOptionalTimeValue(waitForCompletionTimeout);
+        // todo: change to 2.19
+        if (out.getVersion().onOrAfter(Version.CURRENT)) {
+            out.writeOptionalTimeValue(waitForCompletionTimeout);
+        }
     }
 
     @Override

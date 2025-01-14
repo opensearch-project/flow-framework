@@ -52,6 +52,7 @@ import java.util.Map;
 import static java.lang.Boolean.FALSE;
 import static org.opensearch.flowframework.common.CommonValue.GLOBAL_CONTEXT_INDEX;
 import static org.opensearch.flowframework.common.CommonValue.PROVISIONING_PROGRESS_FIELD;
+import static org.opensearch.flowframework.common.CommonValue.PROVISION_TIMEOUT_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.STATE_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.WAIT_FOR_COMPLETION_TIMEOUT;
 import static org.opensearch.flowframework.common.FlowFrameworkSettings.FILTER_BY_BACKEND_ROLES;
@@ -255,8 +256,7 @@ public class CreateWorkflowTransportAction extends HandledTransportAction<Workfl
                                                         globalContextResponse.getId(),
                                                         null,
                                                         request.getParams(),
-                                                        // todo : what is this setting name represent?
-                                                        TimeValue.parseTimeValue(waitForTimeCompletion, "provision.timout")
+                                                        TimeValue.parseTimeValue(waitForTimeCompletion, PROVISION_TIMEOUT_FIELD)
                                                     );
                                                     logger.info(
                                                         "Provisioning parameter is set, continuing to provision workflow {}",
@@ -266,18 +266,14 @@ public class CreateWorkflowTransportAction extends HandledTransportAction<Workfl
                                                         ProvisionWorkflowAction.INSTANCE,
                                                         workflowRequest,
                                                         ActionListener.wrap(provisionResponse -> {
-                                                            if (workflowRequest.getWaitForCompletionTimeout() == TimeValue.MINUS_ONE) {
-                                                                listener.onResponse(
-                                                                    new WorkflowResponse(provisionResponse.getWorkflowId())
-                                                                );
-                                                            } else {
-                                                                listener.onResponse(
-                                                                    new WorkflowResponse(
+                                                            listener.onResponse(
+                                                                (workflowRequest.getWaitForCompletionTimeout() == TimeValue.MINUS_ONE)
+                                                                    ? new WorkflowResponse(provisionResponse.getWorkflowId())
+                                                                    : new WorkflowResponse(
                                                                         provisionResponse.getWorkflowId(),
                                                                         provisionResponse.getWorkflowState()
                                                                     )
-                                                                );
-                                                            }
+                                                            );
                                                         }, exception -> {
                                                             String errorMessage = "Provisioning failed.";
                                                             logger.error(errorMessage, exception);
@@ -362,12 +358,14 @@ public class CreateWorkflowTransportAction extends HandledTransportAction<Workfl
                                 .build();
 
                         if (request.isReprovision()) {
-
+                            String waitForTimeCompletion = request.getParams()
+                                .getOrDefault(WAIT_FOR_COMPLETION_TIMEOUT, TimeValue.MINUS_ONE.toString());
                             // Reprovision request
                             ReprovisionWorkflowRequest reprovisionRequest = new ReprovisionWorkflowRequest(
                                 getResponse.getId(),
                                 existingTemplate,
-                                template
+                                template,
+                                TimeValue.parseTimeValue(waitForTimeCompletion, PROVISION_TIMEOUT_FIELD)
                             );
                             logger.info("Reprovisioning parameter is set, continuing to reprovision workflow {}", getResponse.getId());
                             client.execute(

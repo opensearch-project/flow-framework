@@ -192,6 +192,8 @@ public class CommonValue {
     public static final String SOURCE_INDEX = "source_index";
     /** The destination index field for reindex */
     public static final String DESTINATION_INDEX = "destination_index";
+    /** Provision Timeout field */
+    public static final String PROVISION_TIMEOUT_FIELD = "provision.timeout";
     /*
      * Constants associated with resource provisioning / state
      */
