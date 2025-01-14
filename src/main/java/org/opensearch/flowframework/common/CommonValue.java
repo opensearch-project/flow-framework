@@ -57,8 +57,6 @@ public class CommonValue {
     /** The last provisioned time field */
     public static final String LAST_PROVISIONED_TIME_FIELD = "last_provisioned_time";
 
-    public static final TimeValue DEFAULT_WAIT_FOR_COMPLETION_TIMEOUT = TimeValue.timeValueSeconds(1);
-
     /*
      * Constants associated with Rest or Transport actions
      */
