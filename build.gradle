@@ -2,6 +2,7 @@ import java.nio.file.Files
 import org.opensearch.gradle.testclusters.OpenSearchCluster
 import org.opensearch.gradle.testclusters.StandaloneRestIntegTestTask
 import org.opensearch.gradle.test.RestIntegTestTask
+import org.opensearch.gradle.VersionProperties
 import java.util.concurrent.Callable
 import java.nio.file.Paths
 
@@ -35,7 +36,6 @@ buildscript {
 
         isSameMajorVersion = opensearch_version.split("\\.")[0] == bwcVersionShort.split("\\.")[0]
         swaggerVersion = "2.1.24"
-        jacksonVersion = "2.18.1"
         swaggerCoreVersion = "2.2.27"
 
     }
@@ -101,6 +101,8 @@ allprojects {
     // Default to the apache license
     project.ext.licenseName = 'The Apache Software License, Version 2.0'
     project.ext.licenseUrl = 'http://www.apache.org/licenses/LICENSE-2.0.txt'
+    // Get OpenSearch version catalog
+    project.getExtensions().getExtraProperties().set("versions", VersionProperties.getVersions())
 }
 
 publishing {
@@ -189,16 +191,10 @@ dependencies {
     implementation "io.swagger.parser.v3:swagger-parser-core:${swaggerVersion}"
     implementation "io.swagger.parser.v3:swagger-parser:${swaggerVersion}"
     implementation "io.swagger.parser.v3:swagger-parser-v3:${swaggerVersion}"
-    // Declare and force Jackson dependencies for tests
-    testImplementation("com.fasterxml.jackson.core:jackson-databind") {
-        version { strictly("${jacksonVersion}") }
-    }
-    testImplementation("com.fasterxml.jackson.datatype:jackson-datatype-jsr310") {
-        version { strictly("${jacksonVersion}") }
-    }
-    testImplementation("com.fasterxml.jackson.core:jackson-annotations") {
-        version { strictly("${jacksonVersion}") }
-    }
+    // Declare Jackson dependencies for tests (from OpenSearch version catalog)
+    testImplementation "com.fasterxml.jackson.core:jackson-annotations:${versions.jackson}"
+    testImplementation "com.fasterxml.jackson.core:jackson-databind:${versions.jackson_databind}"
+    testImplementation "com.fasterxml.jackson.datatype:jackson-datatype-jsr310:${versions.jackson_databind}"
 
     // ZipArchive dependencies used for integration tests
     zipArchive group: 'org.opensearch.plugin', name:'opensearch-ml-plugin', version: "${opensearch_build}"
@@ -208,8 +204,12 @@ dependencies {
 
     configurations.all {
         resolutionStrategy {
+<<<<<<< HEAD
             force("com.google.guava:guava:33.4.0-jre") // CVE for 31.1, keep to force transitive dependencies
             force("com.fasterxml.jackson.core:jackson-core:${jacksonVersion}") // Dependency Jar Hell
+=======
+            force("com.google.guava:guava:33.3.1-jre") // CVE for 31.1, keep to force transitive dependencies
+>>>>>>> e54a44d (Change Jackson dependency to get version from core to avoid jar hell)
             force("org.apache.httpcomponents.core5:httpcore5:5.3.2") // Dependency Jar Hell
         }
     }
