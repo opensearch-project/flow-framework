@@ -74,7 +74,7 @@ public class WorkflowTimeoutUtilityTests extends OpenSearchTestCase {
         );
     }
 
-    public void testWrapWithTimeoutCancellationListener_OnResponse() {
+    public void testWrapWithTimeoutCancellationListenerOnResponse() {
         WorkflowResponse response = new WorkflowResponse(
             "testWorkflowId",
             new WorkflowState(
@@ -104,7 +104,7 @@ public class WorkflowTimeoutUtilityTests extends OpenSearchTestCase {
         verify(mockListener, times(1)).onResponse(response);
     }
 
-    public void testWrapWithTimeoutCancellationListener_OnFailure() {
+    public void testWrapWithTimeoutCancellationListenerOnFailure() {
         Exception exception = new Exception("Test exception");
         Scheduler.ScheduledCancellable scheduledCancellable = mock(Scheduler.ScheduledCancellable.class);
 
