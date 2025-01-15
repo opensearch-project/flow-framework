@@ -52,7 +52,6 @@ import java.util.Map;
 import static java.lang.Boolean.FALSE;
 import static org.opensearch.flowframework.common.CommonValue.GLOBAL_CONTEXT_INDEX;
 import static org.opensearch.flowframework.common.CommonValue.PROVISIONING_PROGRESS_FIELD;
-import static org.opensearch.flowframework.common.CommonValue.PROVISION_TIMEOUT_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.STATE_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.WAIT_FOR_COMPLETION_TIMEOUT;
 import static org.opensearch.flowframework.common.FlowFrameworkSettings.FILTER_BY_BACKEND_ROLES;
