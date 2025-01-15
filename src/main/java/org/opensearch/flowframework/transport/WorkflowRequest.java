@@ -67,9 +67,9 @@ public class WorkflowRequest extends ActionRequest {
 
     /**
      * The timeout duration to wait for workflow completion.
-     * If null, the request will respond immediately with the workflowId.
+     * default set to -1, the request will respond immediately with the workflowId,
+     * indicating asynchronous execution.
      */
-    @Nullable
     private TimeValue waitForCompletionTimeout;
 
     /**
@@ -139,7 +139,7 @@ public class WorkflowRequest extends ActionRequest {
      * @param provisionOrUpdate provision or updateFields flag. Only one may be true, the presence of update_fields key in map indicates if updating fields, otherwise true means it's provisioning.
      * @param params map of REST path params. If provisionOrUpdate is false, must be an empty map. If update_fields key is present, must be only key.
      * @param reprovision flag to indicate if request is to reprovision
-     * @param waitForCompletionTimeout the timeout duration (in milliseconds) to wait for workflow completion
+     * @param waitForCompletionTimeout the timeout duration to wait for workflow completion
      */
     public WorkflowRequest(
         @Nullable String workflowId,
@@ -187,8 +187,7 @@ public class WorkflowRequest extends ActionRequest {
             this.params = Collections.emptyMap();
         }
         this.reprovision = !provision && Boolean.parseBoolean(params.get(REPROVISION_WORKFLOW));
-        // todo:change to 2.19
-        if (in.getVersion().onOrAfter(Version.CURRENT)) {
+        if (in.getVersion().onOrAfter(Version.V_2_19_0)) {
             this.waitForCompletionTimeout = in.readOptionalTimeValue();
         }
 
@@ -275,8 +274,7 @@ public class WorkflowRequest extends ActionRequest {
         } else if (reprovision) {
             out.writeMap(Map.of(REPROVISION_WORKFLOW, "true"), StreamOutput::writeString, StreamOutput::writeString);
         }
-        // todo: change to 2.19
-        if (out.getVersion().onOrAfter(Version.CURRENT)) {
+        if (out.getVersion().onOrAfter(Version.V_2_19_0)) {
             out.writeOptionalTimeValue(waitForCompletionTimeout);
         }
     }

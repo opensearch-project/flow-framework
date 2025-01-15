@@ -215,6 +215,16 @@ public class CreateWorkflowTransportAction extends HandledTransportAction<Workfl
             }
         }
         String workflowId = request.getWorkflowId();
+        TimeValue waitForTimeCompletion;
+        if (request.getParams().containsKey(WAIT_FOR_COMPLETION_TIMEOUT)) {
+            waitForTimeCompletion = TimeValue.parseTimeValue(
+                request.getParams().get(WAIT_FOR_COMPLETION_TIMEOUT),
+                WAIT_FOR_COMPLETION_TIMEOUT
+            );
+        } else {
+            // default to minus one indicate async execution
+            waitForTimeCompletion = TimeValue.MINUS_ONE;
+        }
         if (workflowId == null) {
             // This is a new workflow (POST)
             // Throttle incoming requests
@@ -249,14 +259,6 @@ public class CreateWorkflowTransportAction extends HandledTransportAction<Workfl
                                             ActionListener.wrap(stateResponse -> {
                                                 logger.info("Creating state workflow doc: {}", globalContextResponse.getId());
                                                 if (request.isProvision()) {
-                                                    // default to minus one indicate async execution
-                                                    TimeValue waitForTimeCompletion = TimeValue.MINUS_ONE;
-                                                    if (request.getParams().containsKey(WAIT_FOR_COMPLETION_TIMEOUT)) {
-                                                        waitForTimeCompletion = TimeValue.parseTimeValue(
-                                                            request.getParams().get(WAIT_FOR_COMPLETION_TIMEOUT),
-                                                            WAIT_FOR_COMPLETION_TIMEOUT
-                                                        );
-                                                    }
                                                     WorkflowRequest workflowRequest = new WorkflowRequest(
                                                         globalContextResponse.getId(),
                                                         null,
@@ -363,14 +365,6 @@ public class CreateWorkflowTransportAction extends HandledTransportAction<Workfl
                                 .build();
 
                         if (request.isReprovision()) {
-                            // default to minus one indicate async execution
-                            TimeValue waitForTimeCompletion = TimeValue.MINUS_ONE;
-                            if (request.getParams().containsKey(WAIT_FOR_COMPLETION_TIMEOUT)) {
-                                waitForTimeCompletion = TimeValue.parseTimeValue(
-                                    request.getParams().get(WAIT_FOR_COMPLETION_TIMEOUT),
-                                    WAIT_FOR_COMPLETION_TIMEOUT
-                                );
-                            }
                             // Reprovision request
                             ReprovisionWorkflowRequest reprovisionRequest = new ReprovisionWorkflowRequest(
                                 getResponse.getId(),

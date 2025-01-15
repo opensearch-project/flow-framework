@@ -49,8 +49,7 @@ public class WorkflowResponse extends ActionResponse implements ToXContentObject
     public WorkflowResponse(StreamInput in) throws IOException {
         super(in);
         this.workflowId = in.readString();
-        // todo : change version to 2_19_0
-        if (in.getVersion().onOrAfter(Version.CURRENT)) {
+        if (in.getVersion().onOrAfter(Version.V_2_19_0)) {
             this.workflowState = in.readOptionalWriteable(WorkflowState::new);
         }
 
@@ -95,8 +94,7 @@ public class WorkflowResponse extends ActionResponse implements ToXContentObject
     @Override
     public void writeTo(StreamOutput out) throws IOException {
         out.writeString(workflowId);
-        // todo : change version to 2_19_0
-        if (out.getVersion().onOrAfter(Version.CURRENT)) {
+        if (out.getVersion().onOrAfter(Version.V_2_19_0)) {
             out.writeOptionalWriteable(workflowState);
         }
     }

@@ -70,8 +70,7 @@ public class ReprovisionWorkflowRequest extends ActionRequest {
         this.workflowId = in.readString();
         this.originalTemplate = Template.parse(in.readString());
         this.updatedTemplate = Template.parse(in.readString());
-        // todo:change to 2.19
-        if (in.getVersion().onOrAfter(Version.CURRENT)) {
+        if (in.getVersion().onOrAfter(Version.V_2_19_0)) {
             this.waitForCompletionTimeout = in.readTimeValue();
         }
 
@@ -83,8 +82,7 @@ public class ReprovisionWorkflowRequest extends ActionRequest {
         out.writeString(workflowId);
         out.writeString(originalTemplate.toJson());
         out.writeString(updatedTemplate.toJson());
-        // todo:change to 2.19
-        if (out.getVersion().onOrAfter(Version.CURRENT)) {
+        if (out.getVersion().onOrAfter(Version.V_2_19_0)) {
             out.writeTimeValue(waitForCompletionTimeout);
         }
     }
