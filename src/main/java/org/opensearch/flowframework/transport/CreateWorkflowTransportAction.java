@@ -156,7 +156,17 @@ public class CreateWorkflowTransportAction extends HandledTransportAction<Workfl
                 boolean filterByBackendRole = requestedUser == null ? false : filterByEnabled;
                 // Update workflow request, check if user has permissions to update the workflow
                 // Get workflow and verify backend roles
-                getWorkflow(requestedUser, workflowId, filterByBackendRole, listener, function, client, clusterService, xContentRegistry);
+                getWorkflow(
+                    requestedUser,
+                    workflowId,
+                    filterByBackendRole,
+                    false,
+                    listener,
+                    function,
+                    client,
+                    clusterService,
+                    xContentRegistry
+                );
             } else {
                 // Create Workflow. No need to get current workflow.
                 function.run();

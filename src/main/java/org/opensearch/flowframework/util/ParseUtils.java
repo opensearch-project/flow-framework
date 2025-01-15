@@ -36,6 +36,7 @@ import org.opensearch.core.xcontent.XContentBuilder;
 import org.opensearch.core.xcontent.XContentParser;
 import org.opensearch.flowframework.exception.FlowFrameworkException;
 import org.opensearch.flowframework.model.Template;
+import org.opensearch.flowframework.model.WorkflowState;
 import org.opensearch.flowframework.transport.WorkflowResponse;
 import org.opensearch.flowframework.workflow.WorkflowData;
 import org.opensearch.index.query.BoolQueryBuilder;
@@ -67,6 +68,7 @@ import jakarta.json.bind.JsonbBuilder;
 
 import static org.opensearch.core.xcontent.XContentParserUtils.ensureExpectedToken;
 import static org.opensearch.flowframework.common.CommonValue.GLOBAL_CONTEXT_INDEX;
+import static org.opensearch.flowframework.common.CommonValue.WORKFLOW_STATE_INDEX;
 
 /**
  * Utility methods for Template parsing
@@ -284,6 +286,7 @@ public class ParseUtils {
      * @param requestedUser the user to execute the request
      * @param workflowId workflow id
      * @param filterByEnabled filter by enabled setting
+     * @param statePresent state present for the transport action
      * @param listener action listener
      * @param function workflow function
      * @param client node client
@@ -294,6 +297,7 @@ public class ParseUtils {
         User requestedUser,
         String workflowId,
         Boolean filterByEnabled,
+        Boolean statePresent,
         ActionListener<? extends ActionResponse> listener,
         Runnable function,
         Client client,
@@ -307,7 +311,17 @@ public class ParseUtils {
                 // !filterByEnabled means security is enabled and filterByEnabled is disabled
                 function.run();
             } else {
-                getWorkflow(requestedUser, workflowId, filterByEnabled, listener, function, client, clusterService, xContentRegistry);
+                getWorkflow(
+                    requestedUser,
+                    workflowId,
+                    filterByEnabled,
+                    statePresent,
+                    listener,
+                    function,
+                    client,
+                    clusterService,
+                    xContentRegistry
+                );
             }
         } catch (Exception e) {
             listener.onFailure(e);
@@ -368,6 +382,7 @@ public class ParseUtils {
      * @param requestUser the user to execute the request
      * @param workflowId workflow id
      * @param filterByEnabled filter by enabled setting
+     * @param statePresent state present for the transport action
      * @param listener action listener
      * @param function workflow function
      * @param client node client
@@ -378,15 +393,17 @@ public class ParseUtils {
         User requestUser,
         String workflowId,
         Boolean filterByEnabled,
+        Boolean statePresent,
         ActionListener listener,
         Runnable function,
         Client client,
         ClusterService clusterService,
         NamedXContentRegistry xContentRegistry
     ) {
-        if (clusterService.state().metadata().hasIndex(GLOBAL_CONTEXT_INDEX)) {
+        String index = statePresent ? WORKFLOW_STATE_INDEX : GLOBAL_CONTEXT_INDEX;
+        if (clusterService.state().metadata().hasIndex(index)) {
             try (ThreadContext.StoredContext context = client.threadPool().getThreadContext().stashContext()) {
-                GetRequest request = new GetRequest(GLOBAL_CONTEXT_INDEX, workflowId);
+                GetRequest request = new GetRequest(index, workflowId);
                 client.get(
                     request,
                     ActionListener.wrap(
@@ -395,9 +412,11 @@ public class ParseUtils {
                             requestUser,
                             workflowId,
                             filterByEnabled,
+                            statePresent,
                             listener,
                             function,
-                            xContentRegistry
+                            xContentRegistry,
+                            context
                         ),
                         exception -> {
                             logger.error("Failed to get workflow: {}", workflowId, exception);
@@ -407,10 +426,8 @@ public class ParseUtils {
                 );
             }
         } else {
-            String errorMessage = ParameterizedMessageFactory.INSTANCE.newMessage(
-                "Failed to retrieve template ({}) from global context.",
-                workflowId
-            ).getFormattedMessage();
+            String errorMessage = ParameterizedMessageFactory.INSTANCE.newMessage("Failed to retrieve template ({}).", workflowId)
+                .getFormattedMessage();
             logger.error(errorMessage);
             listener.onFailure(new FlowFrameworkException(errorMessage, RestStatus.NOT_FOUND));
         }
@@ -422,26 +439,30 @@ public class ParseUtils {
      * @param response get response
      * @param workflowId workflow id
      * @param filterByEnabled filter by enabled setting
+     * @param statePresent state present for the transport action
      * @param listener action listener
      * @param function workflow function
      * @param xContentRegistry contentRegister to parse get response
+     * @param context thread context
      */
     public static void onGetWorkflowResponse(
         GetResponse response,
         User requestUser,
         String workflowId,
         Boolean filterByEnabled,
+        Boolean statePresent,
         ActionListener<WorkflowResponse> listener,
         Runnable function,
-        NamedXContentRegistry xContentRegistry
+        NamedXContentRegistry xContentRegistry,
+        ThreadContext.StoredContext context
     ) {
         if (response.isExists()) {
             try (
                 XContentParser parser = RestHandlerUtils.createXContentParserFromRegistry(xContentRegistry, response.getSourceAsBytesRef())
             ) {
+                context.restore();
                 ensureExpectedToken(XContentParser.Token.START_OBJECT, parser.nextToken(), parser);
-                Template template = Template.parse(parser);
-                User resourceUser = template.getUser();
+                User resourceUser = statePresent ? WorkflowState.parse(parser).getUser() : Template.parse(parser).getUser();
 
                 if (!filterByEnabled || checkUserPermissions(requestUser, resourceUser, workflowId) || isAdmin(requestUser)) {
                     function.run();
