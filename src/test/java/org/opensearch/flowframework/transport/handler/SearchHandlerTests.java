@@ -83,7 +83,12 @@ public class SearchHandlerTests extends OpenSearchTestCase {
         clusterSettings = clusterSetting(settings, FILTER_BY_BACKEND_ROLES);
         clusterService = new ClusterService(settings, clusterSettings, mock(ThreadPool.class), null);
         client = mock(Client.class);
-        sdkClient = SdkClientFactory.createSdkClient(client, NamedXContentRegistry.EMPTY, Collections.emptyMap());
+        sdkClient = SdkClientFactory.createSdkClient(
+            client,
+            NamedXContentRegistry.EMPTY,
+            Collections.emptyMap(),
+            testThreadPool.executor(ThreadPool.Names.SAME)
+        );
         searchHandler = new SearchHandler(settings, clusterService, client, sdkClient, FlowFrameworkSettings.FILTER_BY_BACKEND_ROLES);
 
         when(client.threadPool()).thenReturn(testThreadPool);

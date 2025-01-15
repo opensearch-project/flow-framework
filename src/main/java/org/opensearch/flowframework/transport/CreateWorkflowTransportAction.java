@@ -392,8 +392,7 @@ public class CreateWorkflowTransportAction extends HandledTransportAction<Workfl
             logger.info("Querying existing workflow from global context: {}", workflowId);
             try (ThreadContext.StoredContext context = client.threadPool().getThreadContext().stashContext()) {
                 sdkClient.getDataObjectAsync(
-                    GetDataObjectRequest.builder().index(GLOBAL_CONTEXT_INDEX).id(workflowId).tenantId(tenantId).build(),
-                    client.threadPool().executor(WORKFLOW_THREAD_POOL)
+                    GetDataObjectRequest.builder().index(GLOBAL_CONTEXT_INDEX).id(workflowId).tenantId(tenantId).build()
                 ).whenComplete((r, throwable) -> {
                     if (throwable == null) {
                         context.restore();
@@ -538,24 +537,23 @@ public class CreateWorkflowTransportAction extends HandledTransportAction<Workfl
                 .tenantId(tenantId)
                 .build();
             try (ThreadContext.StoredContext context = client.threadPool().getThreadContext().stashContext()) {
-                sdkClient.searchDataObjectAsync(searchRequest, client.threadPool().executor(WORKFLOW_THREAD_POOL))
-                    .whenComplete((r, throwable) -> {
-                        if (throwable == null) {
-                            context.restore();
-                            try {
-                                SearchResponse searchResponse = SearchResponse.fromXContent(r.parser());
-                                internalListener.onResponse(searchResponse.getHits().getTotalHits().value < maxWorkflow);
-                            } catch (Exception e) {
-                                logger.error("Failed to parse workflow searchResponse", e);
-                                internalListener.onFailure(e);
-                            }
-                        } else {
-                            Exception exception = SdkClientUtils.unwrapAndConvertToException(throwable);
-                            String errorMessage = "Unable to fetch the workflows";
-                            logger.error(errorMessage, exception);
-                            internalListener.onFailure(new FlowFrameworkException(errorMessage, ExceptionsHelper.status(exception)));
+                sdkClient.searchDataObjectAsync(searchRequest).whenComplete((r, throwable) -> {
+                    if (throwable == null) {
+                        context.restore();
+                        try {
+                            SearchResponse searchResponse = SearchResponse.fromXContent(r.parser());
+                            internalListener.onResponse(searchResponse.getHits().getTotalHits().value < maxWorkflow);
+                        } catch (Exception e) {
+                            logger.error("Failed to parse workflow searchResponse", e);
+                            internalListener.onFailure(e);
                         }
-                    });
+                    } else {
+                        Exception exception = SdkClientUtils.unwrapAndConvertToException(throwable);
+                        String errorMessage = "Unable to fetch the workflows";
+                        logger.error(errorMessage, exception);
+                        internalListener.onFailure(new FlowFrameworkException(errorMessage, ExceptionsHelper.status(exception)));
+                    }
+                });
             } catch (Exception e) {
                 String errorMessage = "Unable to fetch the workflows";
                 logger.error(errorMessage, e);

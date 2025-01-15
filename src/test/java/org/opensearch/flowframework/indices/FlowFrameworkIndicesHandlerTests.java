@@ -150,7 +150,12 @@ public class FlowFrameworkIndicesHandlerTests extends OpenSearchTestCase {
         MockitoAnnotations.openMocks(this);
 
         when(client.threadPool()).thenReturn(testThreadPool);
-        sdkClient = SdkClientFactory.createSdkClient(client, namedXContentRegistry, Collections.emptyMap());
+        sdkClient = SdkClientFactory.createSdkClient(
+            client,
+            namedXContentRegistry,
+            Collections.emptyMap(),
+            testThreadPool.executor(ThreadPool.Names.SAME)
+        );
         flowFrameworkIndicesHandler = new FlowFrameworkIndicesHandler(
             client,
             sdkClient,

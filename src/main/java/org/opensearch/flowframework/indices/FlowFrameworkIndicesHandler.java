@@ -68,16 +68,13 @@ import java.util.function.Consumer;
 import static org.opensearch.core.rest.RestStatus.INTERNAL_SERVER_ERROR;
 import static org.opensearch.core.xcontent.XContentParserUtils.ensureExpectedToken;
 import static org.opensearch.flowframework.common.CommonValue.CONFIG_INDEX_MAPPING;
-import static org.opensearch.flowframework.common.CommonValue.DEPROVISION_WORKFLOW_THREAD_POOL;
 import static org.opensearch.flowframework.common.CommonValue.GLOBAL_CONTEXT_INDEX;
 import static org.opensearch.flowframework.common.CommonValue.GLOBAL_CONTEXT_INDEX_MAPPING;
 import static org.opensearch.flowframework.common.CommonValue.META;
 import static org.opensearch.flowframework.common.CommonValue.NO_SCHEMA_VERSION;
-import static org.opensearch.flowframework.common.CommonValue.PROVISION_WORKFLOW_THREAD_POOL;
 import static org.opensearch.flowframework.common.CommonValue.SCHEMA_VERSION_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.WORKFLOW_STATE_INDEX;
 import static org.opensearch.flowframework.common.CommonValue.WORKFLOW_STATE_INDEX_MAPPING;
-import static org.opensearch.flowframework.common.CommonValue.WORKFLOW_THREAD_POOL;
 import static org.opensearch.flowframework.common.WorkflowResources.getResourceByWorkflowStep;
 
 /**
@@ -359,7 +356,7 @@ public class FlowFrameworkIndicesHandler {
             .dataObject(encryptorUtils.encryptTemplateCredentials(template))
             .build();
         try (ThreadContext.StoredContext context = client.threadPool().getThreadContext().stashContext()) {
-            sdkClient.putDataObjectAsync(request, client.threadPool().executor(WORKFLOW_THREAD_POOL)).whenComplete((r, throwable) -> {
+            sdkClient.putDataObjectAsync(request).whenComplete((r, throwable) -> {
                 context.restore();
                 if (throwable == null) {
                     try {
@@ -426,24 +423,23 @@ public class FlowFrameworkIndicesHandler {
                 .dataObject(state)
                 .build();
             try (ThreadContext.StoredContext context = client.threadPool().getThreadContext().stashContext()) {
-                sdkClient.putDataObjectAsync(putRequest, client.threadPool().executor(PROVISION_WORKFLOW_THREAD_POOL))
-                    .whenComplete((r, throwable) -> {
-                        context.restore();
-                        if (throwable == null) {
-                            try {
-                                IndexResponse indexResponse = IndexResponse.fromXContent(r.parser());
-                                listener.onResponse(indexResponse);
-                            } catch (IOException e) {
-                                logger.error("Failed to parse index response", e);
-                                listener.onFailure(new FlowFrameworkException("Failed to parse index response", INTERNAL_SERVER_ERROR));
-                            }
-                        } else {
-                            Exception exception = SdkClientUtils.unwrapAndConvertToException(throwable);
-                            String errorMessage = "Failed to put state index document";
-                            logger.error(errorMessage, exception);
-                            listener.onFailure(new FlowFrameworkException(errorMessage, ExceptionsHelper.status(exception)));
+                sdkClient.putDataObjectAsync(putRequest).whenComplete((r, throwable) -> {
+                    context.restore();
+                    if (throwable == null) {
+                        try {
+                            IndexResponse indexResponse = IndexResponse.fromXContent(r.parser());
+                            listener.onResponse(indexResponse);
+                        } catch (IOException e) {
+                            logger.error("Failed to parse index response", e);
+                            listener.onFailure(new FlowFrameworkException("Failed to parse index response", INTERNAL_SERVER_ERROR));
                         }
-                    });
+                    } else {
+                        Exception exception = SdkClientUtils.unwrapAndConvertToException(throwable);
+                        String errorMessage = "Failed to put state index document";
+                        logger.error(errorMessage, exception);
+                        listener.onFailure(new FlowFrameworkException(errorMessage, ExceptionsHelper.status(exception)));
+                    }
+                });
             }
         }, e -> {
             String errorMessage = "Failed to create workflow_state index";
@@ -552,7 +548,7 @@ public class FlowFrameworkIndicesHandler {
             .id(documentId)
             .tenantId(tenantId)
             .build();
-        sdkClient.getDataObjectAsync(getRequest, client.threadPool().executor(WORKFLOW_THREAD_POOL)).whenComplete((r, throwable) -> {
+        sdkClient.getDataObjectAsync(getRequest).whenComplete((r, throwable) -> {
             context.restore();
             if (throwable == null) {
                 try {
@@ -586,7 +582,7 @@ public class FlowFrameworkIndicesHandler {
             .id(workflowId)
             .tenantId(tenantId)
             .build();
-        sdkClient.getDataObjectAsync(getRequest, client.threadPool().executor(WORKFLOW_THREAD_POOL)).whenComplete((r, throwable) -> {
+        sdkClient.getDataObjectAsync(getRequest).whenComplete((r, throwable) -> {
             context.restore();
             if (throwable == null) {
                 try {
@@ -799,31 +795,30 @@ public class FlowFrameworkIndicesHandler {
                     .id(documentId)
                     .tenantId(tenantId)
                     .build();
-                sdkClient.deleteDataObjectAsync(deleteRequest, client.threadPool().executor(DEPROVISION_WORKFLOW_THREAD_POOL))
-                    .whenComplete((r, throwable) -> {
-                        context.restore();
-                        if (throwable == null) {
-                            try {
-                                DeleteResponse response = DeleteResponse.fromXContent(r.parser());
-                                logger.info("Deleted workflow state doc: {}", documentId);
-                                listener.onResponse(response);
-                            } catch (Exception e) {
-                                logger.error("Failed to parse delete response", e);
-                                listener.onFailure(
-                                    new FlowFrameworkException("Failed to parse delete response", RestStatus.INTERNAL_SERVER_ERROR)
-                                );
-                            }
-                        } else {
-                            Exception exception = SdkClientUtils.unwrapAndConvertToException(throwable);
-                            String errorMessage = ParameterizedMessageFactory.INSTANCE.newMessage(
-                                "Failed to delete {} entry : {}",
-                                WORKFLOW_STATE_INDEX,
-                                documentId
-                            ).getFormattedMessage();
-                            logger.error(errorMessage, exception);
-                            listener.onFailure(new FlowFrameworkException(errorMessage, ExceptionsHelper.status(exception)));
+                sdkClient.deleteDataObjectAsync(deleteRequest).whenComplete((r, throwable) -> {
+                    context.restore();
+                    if (throwable == null) {
+                        try {
+                            DeleteResponse response = DeleteResponse.fromXContent(r.parser());
+                            logger.info("Deleted workflow state doc: {}", documentId);
+                            listener.onResponse(response);
+                        } catch (Exception e) {
+                            logger.error("Failed to parse delete response", e);
+                            listener.onFailure(
+                                new FlowFrameworkException("Failed to parse delete response", RestStatus.INTERNAL_SERVER_ERROR)
+                            );
                         }
-                    });
+                    } else {
+                        Exception exception = SdkClientUtils.unwrapAndConvertToException(throwable);
+                        String errorMessage = ParameterizedMessageFactory.INSTANCE.newMessage(
+                            "Failed to delete {} entry : {}",
+                            WORKFLOW_STATE_INDEX,
+                            documentId
+                        ).getFormattedMessage();
+                        logger.error(errorMessage, exception);
+                        listener.onFailure(new FlowFrameworkException(errorMessage, ExceptionsHelper.status(exception)));
+                    }
+                });
             }
         }
     }
@@ -959,10 +954,7 @@ public class FlowFrameworkIndicesHandler {
             .id(workflowId)
             .tenantId(tenantId)
             .build();
-        sdkClient.getDataObjectAsync(
-            getRequest,
-            client.threadPool().executor(operation == OpType.DELETE ? DEPROVISION_WORKFLOW_THREAD_POOL : PROVISION_WORKFLOW_THREAD_POOL)
-        ).whenComplete((r, throwable) -> {
+        sdkClient.getDataObjectAsync(getRequest).whenComplete((r, throwable) -> {
             if (throwable == null) {
                 try {
                     GetResponse getResponse = GetResponse.fromXContent(r.parser());
@@ -1008,10 +1000,7 @@ public class FlowFrameworkIndicesHandler {
                 .ifSeqNo(getResponse.getSeqNo())
                 .ifPrimaryTerm(getResponse.getPrimaryTerm())
                 .build();
-            sdkClient.updateDataObjectAsync(
-                updateRequest,
-                client.threadPool().executor(operation == OpType.DELETE ? DEPROVISION_WORKFLOW_THREAD_POOL : PROVISION_WORKFLOW_THREAD_POOL)
-            ).whenComplete((r, throwable) -> {
+            sdkClient.updateDataObjectAsync(updateRequest).whenComplete((r, throwable) -> {
                 if (throwable == null) {
                     handleStateUpdateSuccess(workflowId, resource, operation, listener);
                 } else {

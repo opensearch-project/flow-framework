@@ -130,7 +130,12 @@ public class CreateWorkflowTransportActionTests extends OpenSearchTestCase {
         super.setUp();
         client = mock(Client.class);
         when(client.threadPool()).thenReturn(testThreadPool);
-        this.sdkClient = SdkClientFactory.createSdkClient(client, NamedXContentRegistry.EMPTY, Collections.emptyMap());
+        this.sdkClient = SdkClientFactory.createSdkClient(
+            client,
+            NamedXContentRegistry.EMPTY,
+            Collections.emptyMap(),
+            testThreadPool.executor(ThreadPool.Names.SAME)
+        );
 
         this.flowFrameworkSettings = mock(FlowFrameworkSettings.class);
         when(flowFrameworkSettings.getMaxWorkflows()).thenReturn(2);
@@ -796,7 +801,6 @@ public class CreateWorkflowTransportActionTests extends OpenSearchTestCase {
         latchedActionListener = new LatchedActionListener<>(listener, latch);
         createWorkflowTransportAction.doExecute(mock(Task.class), updateWorkflow, latchedActionListener);
         latch.await(2, TimeUnit.SECONDS);
-        createWorkflowTransportAction.doExecute(mock(Task.class), updateWorkflow, listener);
         verify(listener, times(2)).onResponse(any());
 
         ArgumentCaptor<Template> newTemplateCaptor = ArgumentCaptor.forClass(Template.class);

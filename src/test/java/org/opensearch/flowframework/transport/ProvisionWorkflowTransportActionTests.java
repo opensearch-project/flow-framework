@@ -112,7 +112,12 @@ public class ProvisionWorkflowTransportActionTests extends OpenSearchTestCase {
         super.setUp();
         this.client = mock(Client.class);
         when(client.threadPool()).thenReturn(testThreadPool);
-        this.sdkClient = SdkClientFactory.createSdkClient(client, NamedXContentRegistry.EMPTY, Collections.emptyMap());
+        this.sdkClient = SdkClientFactory.createSdkClient(
+            client,
+            NamedXContentRegistry.EMPTY,
+            Collections.emptyMap(),
+            testThreadPool.executor(ThreadPool.Names.SAME)
+        );
         this.workflowProcessSorter = mock(WorkflowProcessSorter.class);
         this.flowFrameworkSettings = mock(FlowFrameworkSettings.class);
         this.encryptorUtils = mock(EncryptorUtils.class);

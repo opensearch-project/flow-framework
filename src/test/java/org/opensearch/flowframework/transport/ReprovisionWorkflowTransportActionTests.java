@@ -80,7 +80,12 @@ public class ReprovisionWorkflowTransportActionTests extends OpenSearchTestCase 
         this.actionFilters = mock(ActionFilters.class);
         this.threadPool = mock(ThreadPool.class);
         this.client = mock(Client.class);
-        this.sdkClient = SdkClientFactory.createSdkClient(client, NamedXContentRegistry.EMPTY, Collections.emptyMap());
+        this.sdkClient = SdkClientFactory.createSdkClient(
+            client,
+            NamedXContentRegistry.EMPTY,
+            Collections.emptyMap(),
+            threadPool.executor(ThreadPool.Names.SAME)
+        );
         this.workflowStepFactory = mock(WorkflowStepFactory.class);
         this.workflowProcessSorter = mock(WorkflowProcessSorter.class);
         this.flowFrameworkIndicesHandler = mock(FlowFrameworkIndicesHandler.class);

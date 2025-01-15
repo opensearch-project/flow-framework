@@ -29,7 +29,6 @@ import org.opensearch.search.builder.SearchSourceBuilder;
 import java.util.Arrays;
 
 import static org.opensearch.core.rest.RestStatus.INTERNAL_SERVER_ERROR;
-import static org.opensearch.flowframework.common.CommonValue.WORKFLOW_THREAD_POOL;
 import static org.opensearch.flowframework.util.ParseUtils.isAdmin;
 import static org.opensearch.flowframework.util.RestHandlerUtils.getSourceContext;
 
@@ -122,7 +121,7 @@ public class SearchHandler {
             .tenantId(tenantId)
             .searchSourceBuilder(request.source())
             .build();
-        sdkClient.searchDataObjectAsync(searchRequest, client.threadPool().executor(WORKFLOW_THREAD_POOL)).whenComplete((r, throwable) -> {
+        sdkClient.searchDataObjectAsync(searchRequest).whenComplete((r, throwable) -> {
             if (throwable == null) {
                 try {
                     SearchResponse searchResponse = SearchResponse.fromXContent(r.parser());

@@ -433,7 +433,7 @@ public class ParseUtils {
                     .id(workflowId)
                     .tenantId(tenantId)
                     .build();
-                sdkClient.getDataObjectAsync(request, client.threadPool().executor(WORKFLOW_THREAD_POOL)).whenComplete((r, throwable) -> {
+                sdkClient.getDataObjectAsync(request).whenComplete((r, throwable) -> {
                     if (throwable == null) {
                         GetResponse getResponse;
                         try {

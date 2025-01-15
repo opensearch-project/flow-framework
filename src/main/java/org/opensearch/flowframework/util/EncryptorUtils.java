@@ -61,7 +61,6 @@ import static org.opensearch.core.xcontent.XContentParserUtils.ensureExpectedTok
 import static org.opensearch.flowframework.common.CommonValue.CONFIG_INDEX;
 import static org.opensearch.flowframework.common.CommonValue.CREDENTIAL_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.MASTER_KEY;
-import static org.opensearch.flowframework.common.CommonValue.WORKFLOW_THREAD_POOL;
 
 /**
  * Encryption utility class
@@ -324,7 +323,7 @@ public class EncryptorUtils {
             .dataObject(config)
             .build();
         try (ThreadContext.StoredContext context = client.threadPool().getThreadContext().stashContext()) {
-            sdkClient.putDataObjectAsync(putRequest, client.threadPool().executor(WORKFLOW_THREAD_POOL)).whenComplete((r, throwable) -> {
+            sdkClient.putDataObjectAsync(putRequest).whenComplete((r, throwable) -> {
                 if (throwable == null) {
                     context.restore();
                     // Set generated key to master
@@ -372,8 +371,7 @@ public class EncryptorUtils {
                     .id(masterKeyId)
                     .tenantId(tenantId)
                     .fetchSourceContext(fetchSourceContext)
-                    .build(),
-                client.threadPool().executor(WORKFLOW_THREAD_POOL)
+                    .build()
             ).whenComplete((r, throwable) -> {
                 context.restore();
                 if (throwable == null) {

@@ -151,7 +151,9 @@ public class FlowFrameworkPlugin extends Plugin implements ActionPlugin, SystemI
                     Map.entry(TENANT_AWARE_KEY, "true"),
                     Map.entry(TENANT_ID_FIELD_KEY, TENANT_ID_FIELD)
                 )
-                : Collections.emptyMap()
+                : Collections.emptyMap(),
+            // TODO: Find a better thread pool or make one
+            client.threadPool().executor(ThreadPool.Names.GENERIC)
         );
         EncryptorUtils encryptorUtils = new EncryptorUtils(clusterService, client, sdkClient, xContentRegistry);
         FlowFrameworkIndicesHandler flowFrameworkIndicesHandler = new FlowFrameworkIndicesHandler(

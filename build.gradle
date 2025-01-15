@@ -196,7 +196,7 @@ dependencies {
     testImplementation "com.fasterxml.jackson.core:jackson-databind:${versions.jackson_databind}"
     testImplementation "com.fasterxml.jackson.datatype:jackson-datatype-jsr310:${versions.jackson_databind}"
     // Multi-tenant SDK Client
-    implementation "org.opensearch:opensearch-remote-metadata-sdk:${opensearch_version}"
+    implementation "org.opensearch:opensearch-remote-metadata-sdk:${opensearch_build}"
 
     // ZipArchive dependencies used for integration tests
     zipArchive group: 'org.opensearch.plugin', name:'opensearch-ml-plugin', version: "${opensearch_build}"

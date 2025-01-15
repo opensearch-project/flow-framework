@@ -64,6 +64,7 @@ public class FlowFrameworkPluginTests extends OpenSearchTestCase {
         when(client.admin()).thenReturn(adminClient);
         when(adminClient.cluster()).thenReturn(clusterAdminClient);
         threadPool = new TestThreadPool(FlowFrameworkPluginTests.class.getName());
+        when(client.threadPool()).thenReturn(threadPool);
 
         environment = mock(Environment.class);
         settings = Settings.builder().build();

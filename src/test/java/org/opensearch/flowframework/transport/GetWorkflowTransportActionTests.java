@@ -94,10 +94,20 @@ public class GetWorkflowTransportActionTests extends OpenSearchTestCase {
         super.setUp();
         this.client = mock(Client.class);
         when(client.threadPool()).thenReturn(testThreadPool);
-        this.sdkClient = SdkClientFactory.createSdkClient(client, NamedXContentRegistry.EMPTY, Collections.emptyMap());
+        this.sdkClient = SdkClientFactory.createSdkClient(
+            client,
+            NamedXContentRegistry.EMPTY,
+            Collections.emptyMap(),
+            testThreadPool.executor(ThreadPool.Names.SAME)
+        );
         this.xContentRegistry = mock(NamedXContentRegistry.class);
         this.flowFrameworkSettings = mock(FlowFrameworkSettings.class);
-        this.sdkClient = SdkClientFactory.createSdkClient(client, xContentRegistry, Collections.emptyMap());
+        this.sdkClient = SdkClientFactory.createSdkClient(
+            client,
+            xContentRegistry,
+            Collections.emptyMap(),
+            testThreadPool.executor(ThreadPool.Names.SAME)
+        );
         this.encryptorUtils = new EncryptorUtils(mock(ClusterService.class), client, sdkClient, xContentRegistry);
         ClusterService clusterService = mock(ClusterService.class);
         ClusterSettings clusterSettings = new ClusterSettings(

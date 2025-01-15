@@ -92,7 +92,12 @@ public class EncryptorUtilsTests extends OpenSearchTestCase {
         client = mock(Client.class);
         when(client.threadPool()).thenReturn(testThreadPool);
         this.xContentRegistry = mock(NamedXContentRegistry.class);
-        this.sdkClient = SdkClientFactory.createSdkClient(client, xContentRegistry, Collections.emptyMap());
+        this.sdkClient = SdkClientFactory.createSdkClient(
+            client,
+            xContentRegistry,
+            Collections.emptyMap(),
+            testThreadPool.executor(ThreadPool.Names.SAME)
+        );
         this.encryptorUtils = new EncryptorUtils(clusterService, client, sdkClient, xContentRegistry);
         this.testMasterKey = encryptorUtils.generateMasterKey();
         this.testCredentialKey = "credential_key";

@@ -36,7 +36,6 @@ import org.opensearch.transport.TransportService;
 
 import static org.opensearch.flowframework.common.CommonValue.CLEAR_STATUS;
 import static org.opensearch.flowframework.common.CommonValue.GLOBAL_CONTEXT_INDEX;
-import static org.opensearch.flowframework.common.CommonValue.WORKFLOW_THREAD_POOL;
 import static org.opensearch.flowframework.common.FlowFrameworkSettings.FILTER_BY_BACKEND_ROLES;
 import static org.opensearch.flowframework.util.ParseUtils.getUserContext;
 import static org.opensearch.flowframework.util.ParseUtils.resolveUserAndExecute;
@@ -146,7 +145,7 @@ public class DeleteWorkflowTransportAction extends HandledTransportAction<Workfl
             .id(workflowId)
             .tenantId(tenantId)
             .build();
-        sdkClient.deleteDataObjectAsync(deleteRequest, client.threadPool().executor(WORKFLOW_THREAD_POOL)).whenComplete((r, throwable) -> {
+        sdkClient.deleteDataObjectAsync(deleteRequest).whenComplete((r, throwable) -> {
             context.restore();
             if (throwable == null) {
                 try {
