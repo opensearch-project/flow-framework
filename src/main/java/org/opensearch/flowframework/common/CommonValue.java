@@ -8,8 +8,6 @@
  */
 package org.opensearch.flowframework.common;
 
-import org.opensearch.common.unit.TimeValue;
-
 /**
  * Representation of common values that are used across project
  */

@@ -23,6 +23,8 @@ import org.opensearch.threadpool.ThreadPool;
 
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import static org.opensearch.flowframework.common.CommonValue.PROVISION_WORKFLOW_THREAD_POOL;
+
 /**
  * Utility class for managing timeout tasks in workflow execution.
  * This class provides methods to schedule timeout handlers, wrap listeners with timeout cancellation logic,
@@ -57,7 +59,7 @@ public class WorkflowTimeoutUtility {
         Scheduler.ScheduledCancellable scheduledCancellable = threadPool.schedule(
             new WorkflowTimeoutListener(client, workflowId, listener, isResponseSent),
             TimeValue.timeValueMillis(adjustedTimeout),
-            ThreadPool.Names.GENERIC
+            PROVISION_WORKFLOW_THREAD_POOL
         );
 
         return wrapWithTimeoutCancellationListener(listener, scheduledCancellable, isResponseSent);
@@ -181,6 +183,7 @@ public class WorkflowTimeoutUtility {
         final String workflowId,
         final ActionListener<WorkflowResponse> listener
     ) {
+        logger.info("Fetching workflow state after timeout");
         client.execute(
             GetWorkflowStateAction.INSTANCE,
             new GetWorkflowStateRequest(workflowId, false),

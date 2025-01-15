@@ -9,6 +9,7 @@
 package org.opensearch.flowframework.transport;
 
 import org.opensearch.Version;
+import org.opensearch.common.Nullable;
 import org.opensearch.core.action.ActionResponse;
 import org.opensearch.core.common.io.stream.StreamInput;
 import org.opensearch.core.common.io.stream.StreamOutput;
@@ -67,6 +68,7 @@ public class WorkflowResponse extends ActionResponse implements ToXContentObject
      * Gets the workflowState of this repsonse
      * @return the workflowState
      */
+    @Nullable
     public WorkflowState getWorkflowState() {
         return this.workflowState;
     }

@@ -23,6 +23,7 @@ import java.util.Map;
 
 import static org.opensearch.flowframework.common.CommonValue.REPROVISION_WORKFLOW;
 import static org.opensearch.flowframework.common.CommonValue.UPDATE_WORKFLOW_FIELDS;
+import static org.opensearch.flowframework.common.CommonValue.WAIT_FOR_COMPLETION_TIMEOUT;
 
 /**
  * Transport Request to create, provision, and deprovision a workflow
@@ -154,7 +155,8 @@ public class WorkflowRequest extends ActionRequest {
         this.validation = validation;
         this.provision = provisionOrUpdate && !params.containsKey(UPDATE_WORKFLOW_FIELDS);
         this.updateFields = !provision && Boolean.parseBoolean(params.get(UPDATE_WORKFLOW_FIELDS));
-        if (!this.provision && params.keySet().stream().anyMatch(k -> !UPDATE_WORKFLOW_FIELDS.equals(k))) {
+        if (!this.provision
+            && params.keySet().stream().anyMatch(k -> !UPDATE_WORKFLOW_FIELDS.equals(k) && !WAIT_FOR_COMPLETION_TIMEOUT.equals(k))) {
             throw new IllegalArgumentException("Params may only be included when provisioning.");
         }
         this.params = this.updateFields ? Collections.emptyMap() : params;
