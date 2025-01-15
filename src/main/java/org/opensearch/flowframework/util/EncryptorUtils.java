@@ -377,7 +377,7 @@ public class EncryptorUtils {
                 if (throwable == null) {
                     try {
                         GetResponse response = r.parser() == null ? null : GetResponse.fromXContent(r.parser());
-                        if (response.isExists()) {
+                        if (response != null && response.isExists()) {
                             try (
                                 XContentParser parser = ParseUtils.createXContentParserFromRegistry(
                                     xContentRegistry,

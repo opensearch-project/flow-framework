@@ -10,7 +10,6 @@ package org.opensearch.flowframework.indices;
 
 import org.opensearch.Version;
 import org.opensearch.action.DocWriteResponse.Result;
-import org.opensearch.action.LatchedActionListener;
 import org.opensearch.action.admin.indices.create.CreateIndexRequest;
 import org.opensearch.action.admin.indices.mapping.put.PutMappingRequest;
 import org.opensearch.action.delete.DeleteRequest;
@@ -18,7 +17,6 @@ import org.opensearch.action.delete.DeleteResponse;
 import org.opensearch.action.get.GetRequest;
 import org.opensearch.action.get.GetResponse;
 import org.opensearch.action.index.IndexResponse;
-import org.opensearch.action.support.PlainActionFuture;
 import org.opensearch.action.support.master.AcknowledgedResponse;
 import org.opensearch.action.update.UpdateRequest;
 import org.opensearch.action.update.UpdateResponse;
@@ -32,8 +30,7 @@ import org.opensearch.cluster.metadata.MappingMetadata;
 import org.opensearch.cluster.metadata.Metadata;
 import org.opensearch.cluster.service.ClusterService;
 import org.opensearch.common.settings.Settings;
-import org.opensearch.common.unit.TimeValue;
-import org.opensearch.common.util.concurrent.OpenSearchExecutors;
+import org.opensearch.common.util.concurrent.ThreadContext;
 import org.opensearch.common.xcontent.XContentFactory;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.core.common.bytes.BytesReference;
@@ -57,10 +54,7 @@ import org.opensearch.index.get.GetResult;
 import org.opensearch.remote.metadata.client.SdkClient;
 import org.opensearch.remote.metadata.client.impl.SdkClientFactory;
 import org.opensearch.test.OpenSearchTestCase;
-import org.opensearch.threadpool.ScalingExecutorBuilder;
-import org.opensearch.threadpool.TestThreadPool;
 import org.opensearch.threadpool.ThreadPool;
-import org.junit.AfterClass;
 
 import java.io.IOException;
 import java.time.Instant;
@@ -69,8 +63,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Consumer;
 
@@ -78,12 +70,8 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
-import static org.opensearch.flowframework.common.CommonValue.DEPROVISION_WORKFLOW_THREAD_POOL;
-import static org.opensearch.flowframework.common.CommonValue.FLOW_FRAMEWORK_THREAD_POOL_PREFIX;
 import static org.opensearch.flowframework.common.CommonValue.GLOBAL_CONTEXT_INDEX;
-import static org.opensearch.flowframework.common.CommonValue.PROVISION_WORKFLOW_THREAD_POOL;
 import static org.opensearch.flowframework.common.CommonValue.WORKFLOW_STATE_INDEX;
-import static org.opensearch.flowframework.common.CommonValue.WORKFLOW_THREAD_POOL;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doAnswer;
@@ -94,42 +82,19 @@ import static org.mockito.Mockito.when;
 
 @SuppressWarnings("deprecation")
 public class FlowFrameworkIndicesHandlerTests extends OpenSearchTestCase {
-
-    private static final TestThreadPool testThreadPool = new TestThreadPool(
-        FlowFrameworkIndicesHandlerTests.class.getName(),
-        new ScalingExecutorBuilder(
-            WORKFLOW_THREAD_POOL,
-            1,
-            Math.max(2, OpenSearchExecutors.allocatedProcessors(Settings.EMPTY) - 1),
-            TimeValue.timeValueMinutes(1),
-            FLOW_FRAMEWORK_THREAD_POOL_PREFIX + WORKFLOW_THREAD_POOL
-        ),
-        new ScalingExecutorBuilder(
-            PROVISION_WORKFLOW_THREAD_POOL,
-            1,
-            Math.max(4, OpenSearchExecutors.allocatedProcessors(Settings.EMPTY) - 1),
-            TimeValue.timeValueMinutes(5),
-            FLOW_FRAMEWORK_THREAD_POOL_PREFIX + PROVISION_WORKFLOW_THREAD_POOL
-        ),
-        new ScalingExecutorBuilder(
-            DEPROVISION_WORKFLOW_THREAD_POOL,
-            1,
-            Math.max(2, OpenSearchExecutors.allocatedProcessors(Settings.EMPTY) - 1),
-            TimeValue.timeValueMinutes(1),
-            FLOW_FRAMEWORK_THREAD_POOL_PREFIX + DEPROVISION_WORKFLOW_THREAD_POOL
-        )
-    );
-
     @Mock
     private Client client;
     private SdkClient sdkClient;
     @Mock
     private CreateIndexStep createIndexStep;
     @Mock
+    private ThreadPool threadPool;
+    @Mock
     private EncryptorUtils encryptorUtils;
     private FlowFrameworkIndicesHandler flowFrameworkIndicesHandler;
     private AdminClient adminClient;
     private IndicesAdminClient indicesAdminClient;
+    private ThreadContext threadContext;
     @Mock
     protected ClusterService clusterService;
     @Mock
@@ -149,13 +114,11 @@ public class FlowFrameworkIndicesHandlerTests extends OpenSearchTestCase {
         super.setUp();
         MockitoAnnotations.openMocks(this);
 
-        when(client.threadPool()).thenReturn(testThreadPool);
-        sdkClient = SdkClientFactory.createSdkClient(
-            client,
-            namedXContentRegistry,
-            Collections.emptyMap(),
-            testThreadPool.executor(ThreadPool.Names.SAME)
-        );
+        Settings settings = Settings.builder().build();
+        threadContext = new ThreadContext(settings);
+        when(client.threadPool()).thenReturn(threadPool);
+        when(threadPool.getThreadContext()).thenReturn(threadContext);
+        sdkClient = SdkClientFactory.createSdkClient(client, namedXContentRegistry, Collections.emptyMap());
         flowFrameworkIndicesHandler = new FlowFrameworkIndicesHandler(
             client,
             sdkClient,
@@ -167,6 +130,8 @@ public class FlowFrameworkIndicesHandlerTests extends OpenSearchTestCase {
         indicesAdminClient = mock(IndicesAdminClient.class);
         metadata = mock(Metadata.class);
 
+        when(client.threadPool()).thenReturn(threadPool);
+        when(threadPool.getThreadContext()).thenReturn(threadContext);
         when(client.admin()).thenReturn(adminClient);
         when(adminClient.indices()).thenReturn(indicesAdminClient);
         when(clusterService.state()).thenReturn(ClusterState.builder(new ClusterName("test cluster")).build());
@@ -189,11 +154,6 @@ public class FlowFrameworkIndicesHandlerTests extends OpenSearchTestCase {
             null,
             null
         );
-    }
-
-    @AfterClass
-    public static void cleanup() {
-        ThreadPool.terminate(testThreadPool, 500, TimeUnit.MILLISECONDS);
     }
 
     public void testDoesIndexExist() {
@@ -227,7 +187,7 @@ public class FlowFrameworkIndicesHandlerTests extends OpenSearchTestCase {
         );
     }
 
-    public void testFailedUpdateTemplateInGlobalContextNotExisting() throws IOException, InterruptedException {
+    public void testFailedUpdateTemplateInGlobalContextNotExisting() throws IOException {
         Template template = mock(Template.class);
         @SuppressWarnings("unchecked")
         ActionListener<IndexResponse> listener = mock(ActionListener.class);
@@ -238,15 +198,13 @@ public class FlowFrameworkIndicesHandlerTests extends OpenSearchTestCase {
         when(mockClusterState.metadata()).thenReturn(mockMetadata);
         when(mockMetadata.hasIndex(index.getIndexName())).thenReturn(true);
         when(flowFrameworkIndicesHandler.doesIndexExist(GLOBAL_CONTEXT_INDEX)).thenReturn(true);
+        doAnswer(invocation -> {
+            ActionListener<GetResponse> responseListener = invocation.getArgument(1);
+            responseListener.onFailure(new Exception("Failed to get template"));
+            return null;
+        }).when(client).get(any(GetRequest.class), any());
 
-        PlainActionFuture<GetResponse> future = PlainActionFuture.newFuture();
-        future.onFailure(new Exception("Failed to get template"));
-        when(client.get(any(GetRequest.class))).thenReturn(future);
-
-        CountDownLatch latch = new CountDownLatch(1);
-        LatchedActionListener<IndexResponse> latchedActionListener = new LatchedActionListener<>(listener, latch);
-        flowFrameworkIndicesHandler.updateTemplateInGlobalContext("1", template, latchedActionListener);
-        latch.await(1, TimeUnit.SECONDS);
+        flowFrameworkIndicesHandler.updateTemplateInGlobalContext("1", template, listener);
 
         ArgumentCaptor<Exception> exceptionCaptor = ArgumentCaptor.forClass(Exception.class);
         verify(listener, times(1)).onFailure(exceptionCaptor.capture());
@@ -322,26 +280,24 @@ public class FlowFrameworkIndicesHandlerTests extends OpenSearchTestCase {
         verify(indicesAdminClient, times(1)).create(any(CreateIndexRequest.class), any());
     }
 
-    public void testIsWorkflowProvisionedFailedParsing() throws IOException, InterruptedException {
+    public void testIsWorkflowProvisionedFailedParsing() {
         String documentId = randomAlphaOfLength(5);
         @SuppressWarnings("unchecked")
         Consumer<Optional<ProvisioningProgress>> function = mock(Consumer.class);
         @SuppressWarnings("unchecked")
         ActionListener<GetResponse> listener = mock(ActionListener.class);
+        doAnswer(invocation -> {
+            ActionListener<GetResponse> responseListener = invocation.getArgument(1);
 
-        XContentBuilder builder = XContentFactory.jsonBuilder();
-        this.template.toXContent(builder, null);
-        BytesReference workflowBytesRef = BytesReference.bytes(builder);
-        GetResult getResult = new GetResult(WORKFLOW_STATE_INDEX, documentId, 1, 1, 1, true, workflowBytesRef, null, null);
-        PlainActionFuture<GetResponse> future = PlainActionFuture.newFuture();
-        future.onResponse(new GetResponse(getResult));
-        when(client.get(any(GetRequest.class))).thenReturn(future);
-
-        CountDownLatch latch = new CountDownLatch(1);
-        LatchedActionListener<GetResponse> latchedActionListener = new LatchedActionListener<>(listener, latch);
-        flowFrameworkIndicesHandler.getProvisioningProgress(documentId, null, function, latchedActionListener);
-        latch.await(1, TimeUnit.SECONDS);
-
+            XContentBuilder builder = XContentFactory.jsonBuilder();
+            // workFlowState.toXContent(builder, null);
+            this.template.toXContent(builder, null);
+            BytesReference workflowBytesRef = BytesReference.bytes(builder);
+            GetResult getResult = new GetResult(WORKFLOW_STATE_INDEX, documentId, 1, 1, 1, true, workflowBytesRef, null, null);
+            responseListener.onResponse(new GetResponse(getResult));
+            return null;
+        }).when(client).get(any(GetRequest.class), any());
+        flowFrameworkIndicesHandler.getProvisioningProgress(documentId, null, function, listener);
         ArgumentCaptor<Exception> exceptionCaptor = ArgumentCaptor.forClass(Exception.class);
         verify(listener, times(1)).onFailure(exceptionCaptor.capture());
         assertTrue(exceptionCaptor.getValue().getMessage().contains("Failed to parse workflowState"));
@@ -441,29 +397,27 @@ public class FlowFrameworkIndicesHandlerTests extends OpenSearchTestCase {
         flowFrameworkIndicesHandler.canDeleteWorkflowStateDoc(documentId, null, true, canDelete -> { assertTrue(canDelete); }, listener);
     }
 
-    public void testDoesTemplateExist() throws IOException, InterruptedException {
+    public void testDoesTemplateExist() {
         String documentId = randomAlphaOfLength(5);
         @SuppressWarnings("unchecked")
         Consumer<Boolean> function = mock(Consumer.class);
         @SuppressWarnings("unchecked")
         ActionListener<GetResponse> listener = mock(ActionListener.class);
+        doAnswer(invocation -> {
+            ActionListener<GetResponse> responseListener = invocation.getArgument(1);
 
-        XContentBuilder builder = XContentFactory.jsonBuilder();
-        this.template.toXContent(builder, null);
-        BytesReference templateBytesRef = BytesReference.bytes(builder);
-        GetResult getResult = new GetResult(GLOBAL_CONTEXT_INDEX, documentId, 1, 1, 1, true, templateBytesRef, null, null);
-        PlainActionFuture<GetResponse> future = PlainActionFuture.newFuture();
-        future.onResponse(new GetResponse(getResult));
-        when(client.get(any(GetRequest.class))).thenReturn(future);
-
-        CountDownLatch latch = new CountDownLatch(1);
-        LatchedActionListener<GetResponse> latchedActionListener = new LatchedActionListener<>(listener, latch);
-        flowFrameworkIndicesHandler.doesTemplateExist(documentId, null, function, latchedActionListener);
-        latch.await(1, TimeUnit.SECONDS);
+            XContentBuilder builder = XContentFactory.jsonBuilder();
+            this.template.toXContent(builder, null);
+            BytesReference templateBytesRef = BytesReference.bytes(builder);
+            GetResult getResult = new GetResult(GLOBAL_CONTEXT_INDEX, documentId, 1, 1, 1, true, templateBytesRef, null, null);
+            responseListener.onResponse(new GetResponse(getResult));
+            return null;
+        }).when(client).get(any(GetRequest.class), any());
+        flowFrameworkIndicesHandler.doesTemplateExist(documentId, null, function, listener);
         verify(function).accept(true);
     }
 
-    public void testUpdateFlowFrameworkSystemIndexDoc() throws IOException, InterruptedException {
+    public void testUpdateFlowFrameworkSystemIndexDoc() throws IOException {
         ClusterState mockClusterState = mock(ClusterState.class);
         Metadata mockMetaData = mock(Metadata.class);
         when(clusterService.state()).thenReturn(mockClusterState);
@@ -474,33 +428,26 @@ public class FlowFrameworkIndicesHandlerTests extends OpenSearchTestCase {
         ActionListener<UpdateResponse> listener = mock(ActionListener.class);
 
         // test success
-        PlainActionFuture<UpdateResponse> future = PlainActionFuture.newFuture();
-        future.onResponse(new UpdateResponse(new ShardId(WORKFLOW_STATE_INDEX, "", 1), "id", -2, 0, 0, Result.UPDATED));
-        when(client.update(any(UpdateRequest.class))).thenReturn(future);
-
-        CountDownLatch latch = new CountDownLatch(1);
-        LatchedActionListener<UpdateResponse> latchedActionListener = new LatchedActionListener<>(listener, latch);
-        flowFrameworkIndicesHandler.updateFlowFrameworkSystemIndexDoc("1", Map.of("foo", "bar"), latchedActionListener);
-        latch.await(1, TimeUnit.SECONDS);
         doAnswer(invocation -> {
             ActionListener<UpdateResponse> responseListener = invocation.getArgument(1);
             responseListener.onResponse(new UpdateResponse(new ShardId(WORKFLOW_STATE_INDEX, "", 1), "id", -2, 0, 0, Result.UPDATED));
             return null;
         }).when(client).update(any(UpdateRequest.class), any());
 
+        flowFrameworkIndicesHandler.updateFlowFrameworkSystemIndexDoc("1", Map.of("foo", "bar"), listener);
+
         ArgumentCaptor<UpdateResponse> responseCaptor = ArgumentCaptor.forClass(UpdateResponse.class);
         verify(listener, times(1)).onResponse(responseCaptor.capture());
         assertEquals(Result.UPDATED, responseCaptor.getValue().getResult());
 
         // test failure
-        future = PlainActionFuture.newFuture();
-        future.onFailure(new Exception("Failed to update state"));
-        when(client.update(any(UpdateRequest.class))).thenReturn(future);
+        doAnswer(invocation -> {
+            ActionListener<UpdateResponse> responseListener = invocation.getArgument(1);
+            responseListener.onFailure(new Exception("Failed to update state"));
+            return null;
+        }).when(client).update(any(UpdateRequest.class), any());
 
-        latch = new CountDownLatch(1);
-        latchedActionListener = new LatchedActionListener<>(listener, latch);
-        flowFrameworkIndicesHandler.updateFlowFrameworkSystemIndexDoc("1", Map.of("foo", "bar"), latchedActionListener);
-        latch.await(1, TimeUnit.SECONDS);
+        flowFrameworkIndicesHandler.updateFlowFrameworkSystemIndexDoc("1", Map.of("foo", "bar"), listener);
 
         ArgumentCaptor<Exception> exceptionCaptor = ArgumentCaptor.forClass(Exception.class);
         verify(listener, times(1)).onFailure(exceptionCaptor.capture());
@@ -517,7 +464,7 @@ public class FlowFrameworkIndicesHandlerTests extends OpenSearchTestCase {
         );
     }
 
-    public void testUpdateFlowFrameworkSystemIndexFullDoc() throws IOException, InterruptedException {
+    public void testUpdateFlowFrameworkSystemIndexFullDoc() throws IOException {
         ClusterState mockClusterState = mock(ClusterState.class);
         Metadata mockMetaData = mock(Metadata.class);
         when(clusterService.state()).thenReturn(mockClusterState);
@@ -528,9 +475,11 @@ public class FlowFrameworkIndicesHandlerTests extends OpenSearchTestCase {
         ActionListener<UpdateResponse> listener = mock(ActionListener.class);
 
         // test success
-        PlainActionFuture<UpdateResponse> future = PlainActionFuture.newFuture();
-        future.onResponse(new UpdateResponse(new ShardId(WORKFLOW_STATE_INDEX, "", 1), "id", -2, 0, 0, Result.UPDATED));
-        when(client.update(any(UpdateRequest.class))).thenReturn(future);
+        doAnswer(invocation -> {
+            ActionListener<UpdateResponse> responseListener = invocation.getArgument(1);
+            responseListener.onResponse(new UpdateResponse(new ShardId(WORKFLOW_STATE_INDEX, "", 1), "id", -2, 0, 0, Result.UPDATED));
+            return null;
+        }).when(client).update(any(UpdateRequest.class), any());
 
         ToXContentObject fooBar = new ToXContentObject() {
             @Override
@@ -542,24 +491,20 @@ public class FlowFrameworkIndicesHandlerTests extends OpenSearchTestCase {
             }
         };
 
-        CountDownLatch latch = new CountDownLatch(1);
-        LatchedActionListener<UpdateResponse> latchedActionListener = new LatchedActionListener<>(listener, latch);
-        flowFrameworkIndicesHandler.updateFlowFrameworkSystemIndexDoc("1", fooBar, latchedActionListener);
-        latch.await(1, TimeUnit.SECONDS);
+        flowFrameworkIndicesHandler.updateFlowFrameworkSystemIndexDoc("1", fooBar, listener);
 
         ArgumentCaptor<UpdateResponse> responseCaptor = ArgumentCaptor.forClass(UpdateResponse.class);
         verify(listener, times(1)).onResponse(responseCaptor.capture());
         assertEquals(Result.UPDATED, responseCaptor.getValue().getResult());
 
         // test failure
-        future = PlainActionFuture.newFuture();
-        future.onFailure(new Exception("Failed to update state"));
-        when(client.update(any(UpdateRequest.class))).thenReturn(future);
+        doAnswer(invocation -> {
+            ActionListener<UpdateResponse> responseListener = invocation.getArgument(1);
+            responseListener.onFailure(new Exception("Failed to update state"));
+            return null;
+        }).when(client).update(any(UpdateRequest.class), any());
 
-        latch = new CountDownLatch(1);
-        latchedActionListener = new LatchedActionListener<>(listener, latch);
-        flowFrameworkIndicesHandler.updateFlowFrameworkSystemIndexDoc("1", fooBar, latchedActionListener);
-        latch.await(1, TimeUnit.SECONDS);
+        flowFrameworkIndicesHandler.updateFlowFrameworkSystemIndexDoc("1", fooBar, listener);
 
         ArgumentCaptor<Exception> exceptionCaptor = ArgumentCaptor.forClass(Exception.class);
         verify(listener, times(1)).onFailure(exceptionCaptor.capture());
@@ -576,7 +521,7 @@ public class FlowFrameworkIndicesHandlerTests extends OpenSearchTestCase {
         );
     }
 
-    public void testDeleteFlowFrameworkSystemIndexDoc() throws IOException, InterruptedException {
+    public void testDeleteFlowFrameworkSystemIndexDoc() throws IOException {
         ClusterState mockClusterState = mock(ClusterState.class);
         Metadata mockMetaData = mock(Metadata.class);
         when(clusterService.state()).thenReturn(mockClusterState);
@@ -586,27 +531,27 @@ public class FlowFrameworkIndicesHandlerTests extends OpenSearchTestCase {
         @SuppressWarnings("unchecked")
         ActionListener<DeleteResponse> listener = mock(ActionListener.class);
 
-        PlainActionFuture<DeleteResponse> future = PlainActionFuture.newFuture();
-        future.onResponse(new DeleteResponse(new ShardId(WORKFLOW_STATE_INDEX, "", 1), "id", -2, 0, 0, true));
-        when(client.delete(any(DeleteRequest.class))).thenReturn(future);
+        // test success
+        doAnswer(invocation -> {
+            ActionListener<DeleteResponse> responseListener = invocation.getArgument(1);
+            responseListener.onResponse(new DeleteResponse(new ShardId(WORKFLOW_STATE_INDEX, "", 1), "id", -2, 0, 0, true));
+            return null;
+        }).when(client).delete(any(DeleteRequest.class), any());
 
-        CountDownLatch latch = new CountDownLatch(1);
-        LatchedActionListener<DeleteResponse> latchedActionListener = new LatchedActionListener<>(listener, latch);
-        flowFrameworkIndicesHandler.deleteFlowFrameworkSystemIndexDoc("1", null, latchedActionListener);
-        latch.await(1, TimeUnit.SECONDS);
+        flowFrameworkIndicesHandler.deleteFlowFrameworkSystemIndexDoc("1", null, listener);
 
         ArgumentCaptor<DeleteResponse> responseCaptor = ArgumentCaptor.forClass(DeleteResponse.class);
         verify(listener, times(1)).onResponse(responseCaptor.capture());
         assertEquals(Result.DELETED, responseCaptor.getValue().getResult());
 
-        future = PlainActionFuture.newFuture();
-        future.onFailure(new Exception("Failed to delete state"));
-        when(client.delete(any(DeleteRequest.class))).thenReturn(future);
+        // test failure
+        doAnswer(invocation -> {
+            ActionListener<DeleteResponse> responseListener = invocation.getArgument(1);
+            responseListener.onFailure(new Exception("Failed to delete state"));
+            return null;
+        }).when(client).delete(any(DeleteRequest.class), any());
 
-        latch = new CountDownLatch(1);
-        latchedActionListener = new LatchedActionListener<>(listener, latch);
-        flowFrameworkIndicesHandler.deleteFlowFrameworkSystemIndexDoc("1", null, latchedActionListener);
-        latch.await(1, TimeUnit.SECONDS);
+        flowFrameworkIndicesHandler.deleteFlowFrameworkSystemIndexDoc("1", null, listener);
 
         ArgumentCaptor<Exception> exceptionCaptor = ArgumentCaptor.forClass(Exception.class);
         verify(listener, times(1)).onFailure(exceptionCaptor.capture());
@@ -623,7 +568,7 @@ public class FlowFrameworkIndicesHandlerTests extends OpenSearchTestCase {
         );
     }
 
-    public void testAddResourceToStateIndex() throws InterruptedException, IOException {
+    public void testAddResourceToStateIndex() {
         ClusterState mockClusterState = mock(ClusterState.class);
         Metadata mockMetaData = mock(Metadata.class);
         when(clusterService.state()).thenReturn(mockClusterState);
@@ -633,49 +578,48 @@ public class FlowFrameworkIndicesHandlerTests extends OpenSearchTestCase {
         @SuppressWarnings("unchecked")
         ActionListener<WorkflowData> listener = mock(ActionListener.class);
         // test success
-        XContentBuilder builder = XContentFactory.jsonBuilder();
-        WorkflowState state = WorkflowState.builder().build();
-        state.toXContent(builder, null);
-        BytesReference workflowBytesRef = BytesReference.bytes(builder);
-        GetResult getResult = new GetResult(WORKFLOW_STATE_INDEX, "this_id", 1, 1, 1, true, workflowBytesRef, null, null);
-        PlainActionFuture<GetResponse> future = PlainActionFuture.newFuture();
-        future.onResponse(new GetResponse(getResult));
-        when(client.get(any(GetRequest.class))).thenReturn(future);
+        doAnswer(invocation -> {
+            ActionListener<GetResponse> responseListener = invocation.getArgument(1);
+            XContentBuilder builder = XContentFactory.jsonBuilder();
+            WorkflowState state = WorkflowState.builder().build();
+            state.toXContent(builder, null);
+            BytesReference workflowBytesRef = BytesReference.bytes(builder);
+            GetResult getResult = new GetResult(WORKFLOW_STATE_INDEX, "this_id", 1, 1, 1, true, workflowBytesRef, null, null);
+            responseListener.onResponse(new GetResponse(getResult));
+            return null;
+        }).when(client).get(any(GetRequest.class), any());
+        doAnswer(invocation -> {
+            ActionListener<UpdateResponse> responseListener = invocation.getArgument(1);
+            responseListener.onResponse(new UpdateResponse(new ShardId(WORKFLOW_STATE_INDEX, "", 1), "this_id", -2, 0, 0, Result.UPDATED));
+            return null;
+        }).when(client).update(any(UpdateRequest.class), any());
 
-        PlainActionFuture<UpdateResponse> updateFuture = PlainActionFuture.newFuture();
-        updateFuture.onResponse(new UpdateResponse(new ShardId(WORKFLOW_STATE_INDEX, "", 1), "this_id", -2, 0, 0, Result.UPDATED));
-        when(client.update(any(UpdateRequest.class))).thenReturn(updateFuture);
-
-        CountDownLatch latch = new CountDownLatch(1);
-        LatchedActionListener<WorkflowData> latchedActionListener = new LatchedActionListener<>(listener, latch);
         flowFrameworkIndicesHandler.addResourceToStateIndex(
             new WorkflowData(Collections.emptyMap(), "this_id", null),
             "node_id",
             CreateConnectorStep.NAME,
             "this_id",
-            latchedActionListener
+            listener
         );
-        latch.await(1, TimeUnit.SECONDS);
 
         ArgumentCaptor<WorkflowData> responseCaptor = ArgumentCaptor.forClass(WorkflowData.class);
         verify(listener, times(1)).onResponse(responseCaptor.capture());
         assertEquals("this_id", responseCaptor.getValue().getContent().get(WorkflowResources.CONNECTOR_ID));
 
         // test failure
-        updateFuture = PlainActionFuture.newFuture();
-        updateFuture.onFailure(new Exception("Failed to update state"));
-        when(client.update(any(UpdateRequest.class))).thenReturn(updateFuture);
+        doAnswer(invocation -> {
+            ActionListener<UpdateResponse> responseListener = invocation.getArgument(1);
+            responseListener.onFailure(new Exception("Failed to update state"));
+            return null;
+        }).when(client).update(any(UpdateRequest.class), any());
 
-        latch = new CountDownLatch(1);
-        latchedActionListener = new LatchedActionListener<>(listener, latch);
         flowFrameworkIndicesHandler.addResourceToStateIndex(
             new WorkflowData(Collections.emptyMap(), "this_id", null),
             "node_id",
             CreateConnectorStep.NAME,
             "this_id",
-            latchedActionListener
+            listener
         );
-        latch.await(1, TimeUnit.SECONDS);
 
         ArgumentCaptor<Exception> exceptionCaptor = ArgumentCaptor.forClass(Exception.class);
         verify(listener, times(1)).onFailure(exceptionCaptor.capture());
@@ -686,23 +630,20 @@ public class FlowFrameworkIndicesHandlerTests extends OpenSearchTestCase {
 
         // test document not found
         @SuppressWarnings("unchecked")
-
         ActionListener<WorkflowData> notFoundListener = mock(ActionListener.class);
-        getResult = new GetResult(WORKFLOW_STATE_INDEX, "this_id", -2, 0, 1, false, null, null, null);
-        future = PlainActionFuture.newFuture();
-        future.onResponse(new GetResponse(getResult));
-        when(client.get(any(GetRequest.class))).thenReturn(future);
-
-        latch = new CountDownLatch(1);
-        latchedActionListener = new LatchedActionListener<>(notFoundListener, latch);
+        doAnswer(invocation -> {
+            ActionListener<GetResponse> responseListener = invocation.getArgument(1);
+            GetResult getResult = new GetResult(WORKFLOW_STATE_INDEX, "this_id", -2, 0, 1, false, null, null, null);
+            responseListener.onResponse(new GetResponse(getResult));
+            return null;
+        }).when(client).get(any(GetRequest.class), any());
         flowFrameworkIndicesHandler.addResourceToStateIndex(
             new WorkflowData(Collections.emptyMap(), "this_id", null),
             "node_id",
             CreateConnectorStep.NAME,
             "this_id",
-            latchedActionListener
+            notFoundListener
         );
-        latch.await(1, TimeUnit.SECONDS);
 
         exceptionCaptor = ArgumentCaptor.forClass(Exception.class);
         verify(notFoundListener, times(1)).onFailure(exceptionCaptor.capture());
@@ -728,7 +669,7 @@ public class FlowFrameworkIndicesHandlerTests extends OpenSearchTestCase {
         );
     }
 
-    public void testDeleteResourceFromStateIndex() throws InterruptedException, IOException {
+    public void testDeleteResourceFromStateIndex() {
         ClusterState mockClusterState = mock(ClusterState.class);
         Metadata mockMetaData = mock(Metadata.class);
         when(clusterService.state()).thenReturn(mockClusterState);
@@ -739,37 +680,36 @@ public class FlowFrameworkIndicesHandlerTests extends OpenSearchTestCase {
         @SuppressWarnings("unchecked")
         ActionListener<WorkflowData> listener = mock(ActionListener.class);
         // test success
-        XContentBuilder builder = XContentFactory.jsonBuilder();
-        WorkflowState state = WorkflowState.builder().build();
-        state.toXContent(builder, null);
-        BytesReference workflowBytesRef = BytesReference.bytes(builder);
-        GetResult getResult = new GetResult(WORKFLOW_STATE_INDEX, "this_id", 1, 1, 1, true, workflowBytesRef, null, null);
-        PlainActionFuture<GetResponse> future = PlainActionFuture.newFuture();
-        future.onResponse(new GetResponse(getResult));
-        when(client.get(any(GetRequest.class))).thenReturn(future);
+        doAnswer(invocation -> {
+            ActionListener<GetResponse> responseListener = invocation.getArgument(1);
+            XContentBuilder builder = XContentFactory.jsonBuilder();
+            WorkflowState state = WorkflowState.builder().build();
+            state.toXContent(builder, null);
+            BytesReference workflowBytesRef = BytesReference.bytes(builder);
+            GetResult getResult = new GetResult(WORKFLOW_STATE_INDEX, "this_id", 1, 1, 1, true, workflowBytesRef, null, null);
+            responseListener.onResponse(new GetResponse(getResult));
+            return null;
+        }).when(client).get(any(GetRequest.class), any());
+        doAnswer(invocation -> {
+            ActionListener<UpdateResponse> responseListener = invocation.getArgument(1);
+            responseListener.onResponse(new UpdateResponse(new ShardId(WORKFLOW_STATE_INDEX, "", 1), "this_id", -2, 0, 0, Result.UPDATED));
+            return null;
+        }).when(client).update(any(UpdateRequest.class), any());
 
-        PlainActionFuture<UpdateResponse> updateFuture = PlainActionFuture.newFuture();
-        updateFuture.onResponse(new UpdateResponse(new ShardId(WORKFLOW_STATE_INDEX, "", 1), "this_id", -2, 0, 0, Result.UPDATED));
-        when(client.update(any(UpdateRequest.class))).thenReturn(updateFuture);
-
-        CountDownLatch latch = new CountDownLatch(1);
-        LatchedActionListener<WorkflowData> latchedActionListener = new LatchedActionListener<>(listener, latch);
-        flowFrameworkIndicesHandler.deleteResourceFromStateIndex("this_id", resourceToDelete, latchedActionListener);
-        latch.await(1, TimeUnit.SECONDS);
+        flowFrameworkIndicesHandler.deleteResourceFromStateIndex("this_id", resourceToDelete, listener);
 
         ArgumentCaptor<WorkflowData> responseCaptor = ArgumentCaptor.forClass(WorkflowData.class);
         verify(listener, times(1)).onResponse(responseCaptor.capture());
         assertEquals("this_id", responseCaptor.getValue().getContent().get(WorkflowResources.CONNECTOR_ID));
 
         // test failure
-        updateFuture = PlainActionFuture.newFuture();
-        updateFuture.onFailure(new Exception("Failed to update state"));
-        when(client.update(any(UpdateRequest.class))).thenReturn(updateFuture);
+        doAnswer(invocation -> {
+            ActionListener<UpdateResponse> responseListener = invocation.getArgument(1);
+            responseListener.onFailure(new Exception("Failed to update state"));
+            return null;
+        }).when(client).update(any(UpdateRequest.class), any());
 
-        latch = new CountDownLatch(1);
-        latchedActionListener = new LatchedActionListener<>(listener, latch);
-        flowFrameworkIndicesHandler.deleteResourceFromStateIndex("this_id", resourceToDelete, latchedActionListener);
-        latch.await(1, TimeUnit.SECONDS);
+        flowFrameworkIndicesHandler.deleteResourceFromStateIndex("this_id", resourceToDelete, listener);
 
         ArgumentCaptor<Exception> exceptionCaptor = ArgumentCaptor.forClass(Exception.class);
         verify(listener, times(1)).onFailure(exceptionCaptor.capture());
@@ -781,15 +721,13 @@ public class FlowFrameworkIndicesHandlerTests extends OpenSearchTestCase {
         // test document not found
         @SuppressWarnings("unchecked")
         ActionListener<WorkflowData> notFoundListener = mock(ActionListener.class);
-        getResult = new GetResult(WORKFLOW_STATE_INDEX, "this_id", -2, 0, 1, false, null, null, null);
-        future = PlainActionFuture.newFuture();
-        future.onResponse(new GetResponse(getResult));
-        when(client.get(any(GetRequest.class))).thenReturn(future);
-
-        latch = new CountDownLatch(1);
-        latchedActionListener = new LatchedActionListener<>(notFoundListener, latch);
-        flowFrameworkIndicesHandler.deleteResourceFromStateIndex("this_id", resourceToDelete, latchedActionListener);
-        latch.await(1, TimeUnit.SECONDS);
+        doAnswer(invocation -> {
+            ActionListener<GetResponse> responseListener = invocation.getArgument(1);
+            GetResult getResult = new GetResult(WORKFLOW_STATE_INDEX, "this_id", -2, 0, 1, false, null, null, null);
+            responseListener.onResponse(new GetResponse(getResult));
+            return null;
+        }).when(client).get(any(GetRequest.class), any());
+        flowFrameworkIndicesHandler.deleteResourceFromStateIndex("this_id", resourceToDelete, notFoundListener);
 
         exceptionCaptor = ArgumentCaptor.forClass(Exception.class);
         verify(notFoundListener, times(1)).onFailure(exceptionCaptor.capture());
@@ -809,7 +747,7 @@ public class FlowFrameworkIndicesHandlerTests extends OpenSearchTestCase {
         );
     }
 
-    public void testAddResourceToStateIndexWithRetries() throws IOException, InterruptedException {
+    public void testAddResourceToStateIndexWithRetries() {
         ClusterState mockClusterState = mock(ClusterState.class);
         Metadata mockMetaData = mock(Metadata.class);
         when(clusterService.state()).thenReturn(mockClusterState);
@@ -820,73 +758,94 @@ public class FlowFrameworkIndicesHandlerTests extends OpenSearchTestCase {
             "this_id",
             null
         );
-
-        XContentBuilder builder = XContentFactory.jsonBuilder();
-        WorkflowState state = WorkflowState.builder().build();
-        state.toXContent(builder, null);
-        BytesReference workflowBytesRef = BytesReference.bytes(builder);
-        GetResult getResult = new GetResult(WORKFLOW_STATE_INDEX, "this_id", 1, 1, 1, true, workflowBytesRef, null, null);
-        PlainActionFuture<GetResponse> future = PlainActionFuture.newFuture();
-        future.onResponse(new GetResponse(getResult));
-        when(client.get(any(GetRequest.class))).thenReturn(future);
-
         UpdateResponse updateResponse = new UpdateResponse(new ShardId(WORKFLOW_STATE_INDEX, "", 1), "this_id", -2, 0, 0, Result.UPDATED);
-        PlainActionFuture<UpdateResponse> updateFuture = PlainActionFuture.newFuture();
-        updateFuture.onResponse(updateResponse);
-
-        when(client.update(any(UpdateRequest.class))).thenThrow(conflictException).thenReturn(updateFuture);
+        doAnswer(invocation -> {
+            ActionListener<GetResponse> responseListener = invocation.getArgument(1);
+            XContentBuilder builder = XContentFactory.jsonBuilder();
+            WorkflowState state = WorkflowState.builder().build();
+            state.toXContent(builder, null);
+            BytesReference workflowBytesRef = BytesReference.bytes(builder);
+            GetResult getResult = new GetResult(WORKFLOW_STATE_INDEX, "this_id", 1, 1, 1, true, workflowBytesRef, null, null);
+            responseListener.onResponse(new GetResponse(getResult));
+            return null;
+        }).when(client).get(any(GetRequest.class), any());
 
         // test success on retry
         @SuppressWarnings("unchecked")
         ActionListener<WorkflowData> retryListener = mock(ActionListener.class);
+        doAnswer(invocation -> {
+            ActionListener<UpdateResponse> responseListener = invocation.getArgument(1);
+            responseListener.onFailure(conflictException);
+            return null;
+        }).doAnswer(invocation -> {
+            ActionListener<UpdateResponse> responseListener = invocation.getArgument(1);
+            responseListener.onResponse(updateResponse);
+            return null;
+        }).when(client).update(any(UpdateRequest.class), any());
 
-        CountDownLatch latch = new CountDownLatch(1);
-        LatchedActionListener<WorkflowData> latchedActionListener = new LatchedActionListener<>(retryListener, latch);
         flowFrameworkIndicesHandler.addResourceToStateIndex(
             new WorkflowData(Collections.emptyMap(), "this_id", null),
             "node_id",
             CreateConnectorStep.NAME,
             "this_id",
-            latchedActionListener
+            retryListener
         );
-        latch.await(1, TimeUnit.SECONDS);
 
         ArgumentCaptor<WorkflowData> responseCaptor = ArgumentCaptor.forClass(WorkflowData.class);
         verify(retryListener, times(1)).onResponse(responseCaptor.capture());
         assertEquals("this_id", responseCaptor.getValue().getContent().get(WorkflowResources.CONNECTOR_ID));
 
         // test failure on 6th after 5 retries even if 7th would have been success
-        when(client.update(any(UpdateRequest.class))).thenThrow(conflictException)
-            .thenThrow(conflictException)
-            .thenThrow(conflictException)
-            .thenThrow(conflictException)
-            .thenThrow(conflictException)
-            .thenThrow(conflictException)
-            .thenReturn(updateFuture);
-
         @SuppressWarnings("unchecked")
-        ActionListener<WorkflowData> fiveRetryListener = mock(ActionListener.class);
+        ActionListener<WorkflowData> threeRetryListener = mock(ActionListener.class);
+        doAnswer(invocation -> {
+            ActionListener<UpdateResponse> responseListener = invocation.getArgument(1);
+            responseListener.onFailure(conflictException);
+            return null;
+        }).doAnswer(invocation -> {
+            ActionListener<UpdateResponse> responseListener = invocation.getArgument(1);
+            responseListener.onFailure(conflictException);
+            return null;
+        }).doAnswer(invocation -> {
+            ActionListener<UpdateResponse> responseListener = invocation.getArgument(1);
+            responseListener.onFailure(conflictException);
+            return null;
+        }).doAnswer(invocation -> {
+            ActionListener<UpdateResponse> responseListener = invocation.getArgument(1);
+            responseListener.onFailure(conflictException);
+            return null;
+        }).doAnswer(invocation -> {
+            ActionListener<UpdateResponse> responseListener = invocation.getArgument(1);
+            responseListener.onFailure(conflictException);
+            return null;
+        }).doAnswer(invocation -> {
+            ActionListener<UpdateResponse> responseListener = invocation.getArgument(1);
+            responseListener.onFailure(conflictException);
+            return null;
+        }).doAnswer(invocation -> {
+            // we'll never get here
+            ActionListener<UpdateResponse> responseListener = invocation.getArgument(1);
+            responseListener.onResponse(updateResponse);
+            return null;
+        }).when(client).update(any(UpdateRequest.class), any());
 
-        latch = new CountDownLatch(1);
-        latchedActionListener = new LatchedActionListener<>(fiveRetryListener, latch);
         flowFrameworkIndicesHandler.addResourceToStateIndex(
             new WorkflowData(Collections.emptyMap(), "this_id", null),
             "node_id",
             CreateConnectorStep.NAME,
             "this_id",
-            latchedActionListener
+            threeRetryListener
         );
-        latch.await(1, TimeUnit.SECONDS);
 
         ArgumentCaptor<Exception> exceptionCaptor = ArgumentCaptor.forClass(Exception.class);
-        verify(fiveRetryListener, times(1)).onFailure(exceptionCaptor.capture());
+        verify(threeRetryListener, times(1)).onFailure(exceptionCaptor.capture());
         assertEquals(
             "Failed to update workflow state for this_id on step node_id to add resource connector_id this_id",
             exceptionCaptor.getValue().getMessage()
         );
     }
 
-    public void testDeleteResourceFromStateIndexWithRetries() throws IOException, InterruptedException {
+    public void testDeleteResourceFromStateIndexWithRetries() {
         ClusterState mockClusterState = mock(ClusterState.class);
         Metadata mockMetaData = mock(Metadata.class);
         when(clusterService.state()).thenReturn(mockClusterState);
@@ -897,54 +856,77 @@ public class FlowFrameworkIndicesHandlerTests extends OpenSearchTestCase {
             "this_id",
             null
         );
+        UpdateResponse updateResponse = new UpdateResponse(new ShardId(WORKFLOW_STATE_INDEX, "", 1), "this_id", -2, 0, 0, Result.UPDATED);
         ResourceCreated resourceToDelete = new ResourceCreated("", "node_id", "connector_id", "this_id");
 
-        XContentBuilder builder = XContentFactory.jsonBuilder();
-        WorkflowState state = WorkflowState.builder().build();
-        state.toXContent(builder, null);
-        BytesReference workflowBytesRef = BytesReference.bytes(builder);
-        GetResult getResult = new GetResult(WORKFLOW_STATE_INDEX, "this_id", 1, 1, 1, true, workflowBytesRef, null, null);
-        PlainActionFuture<GetResponse> future = PlainActionFuture.newFuture();
-        future.onResponse(new GetResponse(getResult));
-        when(client.get(any(GetRequest.class))).thenReturn(future);
+        doAnswer(invocation -> {
+            ActionListener<GetResponse> responseListener = invocation.getArgument(1);
+            XContentBuilder builder = XContentFactory.jsonBuilder();
+            WorkflowState state = WorkflowState.builder().build();
+            state.toXContent(builder, null);
+            BytesReference workflowBytesRef = BytesReference.bytes(builder);
+            GetResult getResult = new GetResult(WORKFLOW_STATE_INDEX, "this_id", 1, 1, 1, true, workflowBytesRef, null, null);
+            responseListener.onResponse(new GetResponse(getResult));
+            return null;
+        }).when(client).get(any(GetRequest.class), any());
 
         // test success on retry
-        UpdateResponse updateResponse = new UpdateResponse(new ShardId(WORKFLOW_STATE_INDEX, "", 1), "this_id", -2, 0, 0, Result.UPDATED);
-        PlainActionFuture<UpdateResponse> updateFuture = PlainActionFuture.newFuture();
-        updateFuture.onResponse(updateResponse);
-
-        when(client.update(any(UpdateRequest.class))).thenThrow(conflictException).thenReturn(updateFuture);
-
         @SuppressWarnings("unchecked")
         ActionListener<WorkflowData> retryListener = mock(ActionListener.class);
-        CountDownLatch latch = new CountDownLatch(1);
-        LatchedActionListener<WorkflowData> latchedActionListener = new LatchedActionListener<>(retryListener, latch);
-        flowFrameworkIndicesHandler.deleteResourceFromStateIndex("this_id", resourceToDelete, latchedActionListener);
-        latch.await(1, TimeUnit.SECONDS);
+        doAnswer(invocation -> {
+            ActionListener<UpdateResponse> responseListener = invocation.getArgument(1);
+            responseListener.onFailure(conflictException);
+            return null;
+        }).doAnswer(invocation -> {
+            ActionListener<UpdateResponse> responseListener = invocation.getArgument(1);
+            responseListener.onResponse(updateResponse);
+            return null;
+        }).when(client).update(any(UpdateRequest.class), any());
+
+        flowFrameworkIndicesHandler.deleteResourceFromStateIndex("this_id", resourceToDelete, retryListener);
 
         ArgumentCaptor<WorkflowData> responseCaptor = ArgumentCaptor.forClass(WorkflowData.class);
         verify(retryListener, times(1)).onResponse(responseCaptor.capture());
         assertEquals("this_id", responseCaptor.getValue().getContent().get(WorkflowResources.CONNECTOR_ID));
 
         // test failure on 6th after 5 retries even if 7th would have been success
-        when(client.update(any(UpdateRequest.class))).thenThrow(conflictException)
-            .thenThrow(conflictException)
-            .thenThrow(conflictException)
-            .thenThrow(conflictException)
-            .thenThrow(conflictException)
-            .thenThrow(conflictException)
-            .thenReturn(updateFuture);
-
         @SuppressWarnings("unchecked")
-        ActionListener<WorkflowData> fiveRetryListener = mock(ActionListener.class);
+        ActionListener<WorkflowData> threeRetryListener = mock(ActionListener.class);
+        doAnswer(invocation -> {
+            ActionListener<UpdateResponse> responseListener = invocation.getArgument(1);
+            responseListener.onFailure(conflictException);
+            return null;
+        }).doAnswer(invocation -> {
+            ActionListener<UpdateResponse> responseListener = invocation.getArgument(1);
+            responseListener.onFailure(conflictException);
+            return null;
+        }).doAnswer(invocation -> {
+            ActionListener<UpdateResponse> responseListener = invocation.getArgument(1);
+            responseListener.onFailure(conflictException);
+            return null;
+        }).doAnswer(invocation -> {
+            ActionListener<UpdateResponse> responseListener = invocation.getArgument(1);
+            responseListener.onFailure(conflictException);
+            return null;
+        }).doAnswer(invocation -> {
+            ActionListener<UpdateResponse> responseListener = invocation.getArgument(1);
+            responseListener.onFailure(conflictException);
+            return null;
+        }).doAnswer(invocation -> {
+            ActionListener<UpdateResponse> responseListener = invocation.getArgument(1);
+            responseListener.onFailure(conflictException);
+            return null;
+        }).doAnswer(invocation -> {
+            // we'll never get here
+            ActionListener<UpdateResponse> responseListener = invocation.getArgument(1);
+            responseListener.onResponse(updateResponse);
+            return null;
+        }).when(client).update(any(UpdateRequest.class), any());
 
-        latch = new CountDownLatch(1);
-        latchedActionListener = new LatchedActionListener<>(fiveRetryListener, latch);
-        flowFrameworkIndicesHandler.deleteResourceFromStateIndex("this_id", resourceToDelete, latchedActionListener);
-        latch.await(1, TimeUnit.SECONDS);
+        flowFrameworkIndicesHandler.deleteResourceFromStateIndex("this_id", resourceToDelete, threeRetryListener);
 
         ArgumentCaptor<Exception> exceptionCaptor = ArgumentCaptor.forClass(Exception.class);
-        verify(fiveRetryListener, times(1)).onFailure(exceptionCaptor.capture());
+        verify(threeRetryListener, times(1)).onFailure(exceptionCaptor.capture());
         assertEquals(
             "Failed to update workflow state for this_id on step node_id to delete resource connector_id this_id",
             exceptionCaptor.getValue().getMessage()

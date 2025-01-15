@@ -9,19 +9,16 @@
 package org.opensearch.flowframework.util;
 
 import org.opensearch.Version;
-import org.opensearch.action.LatchedActionListener;
 import org.opensearch.action.get.GetRequest;
 import org.opensearch.action.get.GetResponse;
 import org.opensearch.action.index.IndexRequest;
 import org.opensearch.action.index.IndexResponse;
-import org.opensearch.action.support.PlainActionFuture;
 import org.opensearch.client.Client;
 import org.opensearch.cluster.ClusterState;
 import org.opensearch.cluster.metadata.Metadata;
 import org.opensearch.cluster.service.ClusterService;
 import org.opensearch.common.settings.Settings;
-import org.opensearch.common.unit.TimeValue;
-import org.opensearch.common.util.concurrent.OpenSearchExecutors;
+import org.opensearch.common.util.concurrent.ThreadContext;
 import org.opensearch.commons.authuser.User;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.core.rest.RestStatus;
@@ -35,10 +32,7 @@ import org.opensearch.flowframework.model.WorkflowNode;
 import org.opensearch.remote.metadata.client.SdkClient;
 import org.opensearch.remote.metadata.client.impl.SdkClientFactory;
 import org.opensearch.test.OpenSearchTestCase;
-import org.opensearch.threadpool.ScalingExecutorBuilder;
-import org.opensearch.threadpool.TestThreadPool;
 import org.opensearch.threadpool.ThreadPool;
-import org.junit.AfterClass;
 
 import java.io.IOException;
 import java.time.Instant;
@@ -47,33 +41,19 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
 
 import static org.opensearch.flowframework.common.CommonValue.CONFIG_INDEX;
 import static org.opensearch.flowframework.common.CommonValue.CREDENTIAL_FIELD;
-import static org.opensearch.flowframework.common.CommonValue.FLOW_FRAMEWORK_THREAD_POOL_PREFIX;
 import static org.opensearch.flowframework.common.CommonValue.MASTER_KEY;
-import static org.opensearch.flowframework.common.CommonValue.WORKFLOW_THREAD_POOL;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 public class EncryptorUtilsTests extends OpenSearchTestCase {
-
-    private static final TestThreadPool testThreadPool = new TestThreadPool(
-        EncryptorUtilsTests.class.getName(),
-        new ScalingExecutorBuilder(
-            WORKFLOW_THREAD_POOL,
-            1,
-            Math.max(2, OpenSearchExecutors.allocatedProcessors(Settings.EMPTY) - 1),
-            TimeValue.timeValueMinutes(1),
-            FLOW_FRAMEWORK_THREAD_POOL_PREFIX + WORKFLOW_THREAD_POOL
-        )
-    );
 
     private ClusterService clusterService;
     private Client client;
@@ -90,14 +70,8 @@ public class EncryptorUtilsTests extends OpenSearchTestCase {
         super.setUp();
         this.clusterService = mock(ClusterService.class);
         client = mock(Client.class);
-        when(client.threadPool()).thenReturn(testThreadPool);
         this.xContentRegistry = mock(NamedXContentRegistry.class);
-        this.sdkClient = SdkClientFactory.createSdkClient(
-            client,
-            xContentRegistry,
-            Collections.emptyMap(),
-            testThreadPool.executor(ThreadPool.Names.SAME)
-        );
+        this.sdkClient = SdkClientFactory.createSdkClient(client, xContentRegistry, Collections.emptyMap());
         this.encryptorUtils = new EncryptorUtils(clusterService, client, sdkClient, xContentRegistry);
         this.testMasterKey = encryptorUtils.generateMasterKey();
         this.testCredentialKey = "credential_key";
@@ -134,11 +108,11 @@ public class EncryptorUtilsTests extends OpenSearchTestCase {
         when(clusterService.state()).thenReturn(clusterState);
         when(clusterState.metadata()).thenReturn(metadata);
         when(metadata.hasIndex(anyString())).thenReturn(true);
-    }
 
-    @AfterClass
-    public static void cleanup() {
-        ThreadPool.terminate(testThreadPool, 500, TimeUnit.MILLISECONDS);
+        ThreadPool threadPool = mock(ThreadPool.class);
+        ThreadContext threadContext = new ThreadContext(Settings.EMPTY);
+        when(client.threadPool()).thenReturn(threadPool);
+        when(threadPool.getThreadContext()).thenReturn(threadContext);
     }
 
     public void testGenerateMasterKey() {
@@ -171,65 +145,69 @@ public class EncryptorUtilsTests extends OpenSearchTestCase {
         assertNotEquals(encrypted1, encrypted2);
     }
 
-    public void testInitializeMasterKeySuccess() throws IOException, InterruptedException, ExecutionException, TimeoutException {
+    public void testInitializeMasterKeySuccess() throws IOException {
         String masterKey = encryptorUtils.generateMasterKey();
 
         // Index exists case
         // reinitialize with blank master key
-        this.encryptorUtils = new EncryptorUtils(clusterService, client, sdkClient, xContentRegistry);
+        encryptorUtils = new EncryptorUtils(clusterService, client, sdkClient, xContentRegistry);
         assertNull(encryptorUtils.getMasterKey(null));
 
-        GetResponse getMasterKeyResponse = TestHelpers.createGetResponse(new Config(masterKey, Instant.now()), MASTER_KEY, CONFIG_INDEX);
-        PlainActionFuture<GetResponse> future = PlainActionFuture.newFuture();
-        future.onResponse(getMasterKeyResponse);
-        when(client.get(any(GetRequest.class))).thenReturn(future);
+        doAnswer(invocation -> {
+            GetResponse getMasterKeyResponse = TestHelpers.createGetResponse(
+                new Config(masterKey, Instant.now()),
+                MASTER_KEY,
+                CONFIG_INDEX
+            );
+            ActionListener<GetResponse> getRequestActionListener = invocation.getArgument(1);
+            getRequestActionListener.onResponse(getMasterKeyResponse);
+            return null;
+        }).when(client).get(any(GetRequest.class), any());
 
         ActionListener<Boolean> listener = ActionListener.wrap(b -> {}, e -> {});
 
-        CountDownLatch latch = new CountDownLatch(1);
-        LatchedActionListener<Boolean> latchedActionListener = new LatchedActionListener<>(listener, latch);
-        encryptorUtils.initializeMasterKey(null, latchedActionListener);
-        latch.await(1, TimeUnit.SECONDS);
+        encryptorUtils.initializeMasterKey(null, listener);
         assertEquals(masterKey, encryptorUtils.getMasterKey(null));
 
         // Test ifAbsent version
         // reinitialize with blank master key
-        this.encryptorUtils = new EncryptorUtils(clusterService, client, sdkClient, xContentRegistry);
+        encryptorUtils = new EncryptorUtils(clusterService, client, sdkClient, xContentRegistry);
         assertNull(encryptorUtils.getMasterKey(null));
 
-        CompletableFuture<Void> resultFuture = encryptorUtils.initializeMasterKeyIfAbsent(null);
-        resultFuture.get(5, TimeUnit.SECONDS);
+        encryptorUtils.initializeMasterKeyIfAbsent(null);
         assertEquals(masterKey, encryptorUtils.getMasterKey(null));
 
         // No key exists case
-        getMasterKeyResponse = TestHelpers.createGetResponse(null, MASTER_KEY, CONFIG_INDEX);
-        future = PlainActionFuture.newFuture();
-        future.onResponse(getMasterKeyResponse);
-        when(client.get(any(GetRequest.class))).thenReturn(future);
-
-        IndexResponse indexResponse = mock(IndexResponse.class);
-        PlainActionFuture<IndexResponse> indexFuture = PlainActionFuture.newFuture();
-        indexFuture.onResponse(indexResponse);
-        when(client.index(any(IndexRequest.class))).thenReturn(indexFuture);
+        doAnswer(invocation -> {
+            GetResponse getMasterKeyResponse = TestHelpers.createGetResponse(null, MASTER_KEY, CONFIG_INDEX);
+            ActionListener<GetResponse> getRequestActionListener = invocation.getArgument(1);
+            getRequestActionListener.onResponse(getMasterKeyResponse);
+            return null;
+        }).when(client).get(any(GetRequest.class), any());
+        doAnswer(invocation -> {
+            ActionListener<IndexResponse> indexRequestActionListener = invocation.getArgument(1);
+            IndexResponse indexResponse = mock(IndexResponse.class);
+            indexRequestActionListener.onResponse(indexResponse);
+            return null;
+        }).when(client).index(any(IndexRequest.class), any());
 
         listener = ActionListener.wrap(b -> {}, e -> {});
-        latch = new CountDownLatch(1);
-        latchedActionListener = new LatchedActionListener<>(listener, latch);
-        encryptorUtils.initializeMasterKey(null, latchedActionListener);
+        encryptorUtils.initializeMasterKey(null, listener);
         // This will generate a new master key 32 bytes -> base64 encoded
-        latch.await(1, TimeUnit.SECONDS);
         assertNotEquals(masterKey, encryptorUtils.getMasterKey(null));
         assertEquals(masterKey.length(), encryptorUtils.getMasterKey(null).length());
     }
 
     public void testInitializeMasterKeyFailure() throws IOException {
         // reinitialize with blank master key
-        this.encryptorUtils = new EncryptorUtils(clusterService, client, sdkClient, xContentRegistry);
+        encryptorUtils = new EncryptorUtils(clusterService, client, sdkClient, xContentRegistry);
 
-        GetResponse getResponse = TestHelpers.createGetResponse(null, MASTER_KEY, CONFIG_INDEX);
-        PlainActionFuture<GetResponse> future = PlainActionFuture.newFuture();
-        future.onResponse(getResponse);
-        when(client.get(any(GetRequest.class))).thenReturn(future);
+        doAnswer(invocation -> {
+            GetResponse getResponse = TestHelpers.createGetResponse(null, MASTER_KEY, CONFIG_INDEX);
+            ActionListener<GetResponse> getRequestActionListener = invocation.getArgument(1);
+            getRequestActionListener.onResponse(getResponse);
+            return null;
+        }).when(client).get(any(GetRequest.class), any());
 
         CompletableFuture<Void> resultFuture = encryptorUtils.initializeMasterKeyIfAbsent(null);
         ExecutionException executionException = assertThrows(ExecutionException.class, () -> resultFuture.get(5, TimeUnit.SECONDS));
