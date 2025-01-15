@@ -463,7 +463,7 @@ public class FlowFrameworkIndicesHandlerTests extends OpenSearchTestCase {
         verify(function).accept(true);
     }
 
-    public void testUpdateFlowFrameworkSystemIndexDoc() throws IOException {
+    public void testUpdateFlowFrameworkSystemIndexDoc() throws IOException, InterruptedException {
         ClusterState mockClusterState = mock(ClusterState.class);
         Metadata mockMetaData = mock(Metadata.class);
         when(clusterService.state()).thenReturn(mockClusterState);
@@ -474,30 +474,37 @@ public class FlowFrameworkIndicesHandlerTests extends OpenSearchTestCase {
         ActionListener<UpdateResponse> listener = mock(ActionListener.class);
 
         // test success
+        PlainActionFuture<UpdateResponse> future = PlainActionFuture.newFuture();
+        future.onResponse(new UpdateResponse(new ShardId(WORKFLOW_STATE_INDEX, "", 1), "id", -2, 0, 0, Result.UPDATED));
+        when(client.update(any(UpdateRequest.class))).thenReturn(future);
+
+        CountDownLatch latch = new CountDownLatch(1);
+        LatchedActionListener<UpdateResponse> latchedActionListener = new LatchedActionListener<>(listener, latch);
+        flowFrameworkIndicesHandler.updateFlowFrameworkSystemIndexDoc("1", Map.of("foo", "bar"), latchedActionListener);
+        latch.await(1, TimeUnit.SECONDS);
         doAnswer(invocation -> {
             ActionListener<UpdateResponse> responseListener = invocation.getArgument(1);
             responseListener.onResponse(new UpdateResponse(new ShardId(WORKFLOW_STATE_INDEX, "", 1), "id", -2, 0, 0, Result.UPDATED));
             return null;
         }).when(client).update(any(UpdateRequest.class), any());
 
-        flowFrameworkIndicesHandler.updateFlowFrameworkSystemIndexDoc("1", Map.of("foo", "bar"), listener);
-
         ArgumentCaptor<UpdateResponse> responseCaptor = ArgumentCaptor.forClass(UpdateResponse.class);
         verify(listener, times(1)).onResponse(responseCaptor.capture());
         assertEquals(Result.UPDATED, responseCaptor.getValue().getResult());
 
         // test failure
-        doAnswer(invocation -> {
-            ActionListener<UpdateResponse> responseListener = invocation.getArgument(1);
-            responseListener.onFailure(new Exception("Failed to update state"));
-            return null;
-        }).when(client).update(any(UpdateRequest.class), any());
+        future = PlainActionFuture.newFuture();
+        future.onFailure(new Exception("Failed to update state"));
+        when(client.update(any(UpdateRequest.class))).thenReturn(future);
 
-        flowFrameworkIndicesHandler.updateFlowFrameworkSystemIndexDoc("1", Map.of("foo", "bar"), listener);
+        latch = new CountDownLatch(1);
+        latchedActionListener = new LatchedActionListener<>(listener, latch);
+        flowFrameworkIndicesHandler.updateFlowFrameworkSystemIndexDoc("1", Map.of("foo", "bar"), latchedActionListener);
+        latch.await(1, TimeUnit.SECONDS);
 
         ArgumentCaptor<Exception> exceptionCaptor = ArgumentCaptor.forClass(Exception.class);
         verify(listener, times(1)).onFailure(exceptionCaptor.capture());
-        assertEquals("Failed to update state", exceptionCaptor.getValue().getMessage());
+        assertEquals("Failed to update .plugins-flow-framework-state entry : 1", exceptionCaptor.getValue().getMessage());
 
         // test no index
         when(mockMetaData.hasIndex(WORKFLOW_STATE_INDEX)).thenReturn(false);
@@ -510,7 +517,7 @@ public class FlowFrameworkIndicesHandlerTests extends OpenSearchTestCase {
         );
     }
 
-    public void testUpdateFlowFrameworkSystemIndexFullDoc() throws IOException {
+    public void testUpdateFlowFrameworkSystemIndexFullDoc() throws IOException, InterruptedException {
         ClusterState mockClusterState = mock(ClusterState.class);
         Metadata mockMetaData = mock(Metadata.class);
         when(clusterService.state()).thenReturn(mockClusterState);
@@ -521,11 +528,9 @@ public class FlowFrameworkIndicesHandlerTests extends OpenSearchTestCase {
         ActionListener<UpdateResponse> listener = mock(ActionListener.class);
 
         // test success
-        doAnswer(invocation -> {
-            ActionListener<UpdateResponse> responseListener = invocation.getArgument(1);
-            responseListener.onResponse(new UpdateResponse(new ShardId(WORKFLOW_STATE_INDEX, "", 1), "id", -2, 0, 0, Result.UPDATED));
-            return null;
-        }).when(client).update(any(UpdateRequest.class), any());
+        PlainActionFuture<UpdateResponse> future = PlainActionFuture.newFuture();
+        future.onResponse(new UpdateResponse(new ShardId(WORKFLOW_STATE_INDEX, "", 1), "id", -2, 0, 0, Result.UPDATED));
+        when(client.update(any(UpdateRequest.class))).thenReturn(future);
 
         ToXContentObject fooBar = new ToXContentObject() {
             @Override
@@ -537,24 +542,28 @@ public class FlowFrameworkIndicesHandlerTests extends OpenSearchTestCase {
             }
         };
 
-        flowFrameworkIndicesHandler.updateFlowFrameworkSystemIndexDoc("1", fooBar, listener);
+        CountDownLatch latch = new CountDownLatch(1);
+        LatchedActionListener<UpdateResponse> latchedActionListener = new LatchedActionListener<>(listener, latch);
+        flowFrameworkIndicesHandler.updateFlowFrameworkSystemIndexDoc("1", fooBar, latchedActionListener);
+        latch.await(1, TimeUnit.SECONDS);
 
         ArgumentCaptor<UpdateResponse> responseCaptor = ArgumentCaptor.forClass(UpdateResponse.class);
         verify(listener, times(1)).onResponse(responseCaptor.capture());
         assertEquals(Result.UPDATED, responseCaptor.getValue().getResult());
 
         // test failure
-        doAnswer(invocation -> {
-            ActionListener<UpdateResponse> responseListener = invocation.getArgument(1);
-            responseListener.onFailure(new Exception("Failed to update state"));
-            return null;
-        }).when(client).update(any(UpdateRequest.class), any());
+        future = PlainActionFuture.newFuture();
+        future.onFailure(new Exception("Failed to update state"));
+        when(client.update(any(UpdateRequest.class))).thenReturn(future);
 
-        flowFrameworkIndicesHandler.updateFlowFrameworkSystemIndexDoc("1", fooBar, listener);
+        latch = new CountDownLatch(1);
+        latchedActionListener = new LatchedActionListener<>(listener, latch);
+        flowFrameworkIndicesHandler.updateFlowFrameworkSystemIndexDoc("1", fooBar, latchedActionListener);
+        latch.await(1, TimeUnit.SECONDS);
 
         ArgumentCaptor<Exception> exceptionCaptor = ArgumentCaptor.forClass(Exception.class);
         verify(listener, times(1)).onFailure(exceptionCaptor.capture());
-        assertEquals("Failed to update state", exceptionCaptor.getValue().getMessage());
+        assertEquals("Failed to update .plugins-flow-framework-state entry : 1", exceptionCaptor.getValue().getMessage());
 
         // test no index
         when(mockMetaData.hasIndex(WORKFLOW_STATE_INDEX)).thenReturn(false);

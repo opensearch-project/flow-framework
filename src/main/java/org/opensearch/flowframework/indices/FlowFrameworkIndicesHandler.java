@@ -21,22 +21,18 @@ import org.opensearch.action.admin.indices.settings.put.UpdateSettingsRequest;
 import org.opensearch.action.delete.DeleteResponse;
 import org.opensearch.action.get.GetResponse;
 import org.opensearch.action.index.IndexResponse;
-import org.opensearch.action.support.WriteRequest;
-import org.opensearch.action.update.UpdateRequest;
 import org.opensearch.action.update.UpdateResponse;
 import org.opensearch.client.Client;
 import org.opensearch.cluster.metadata.IndexMetadata;
 import org.opensearch.cluster.service.ClusterService;
 import org.opensearch.common.util.concurrent.ThreadContext;
 import org.opensearch.common.util.concurrent.ThreadContext.StoredContext;
-import org.opensearch.common.xcontent.XContentFactory;
 import org.opensearch.common.xcontent.XContentType;
 import org.opensearch.commons.authuser.User;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.core.rest.RestStatus;
 import org.opensearch.core.xcontent.NamedXContentRegistry;
 import org.opensearch.core.xcontent.ToXContentObject;
-import org.opensearch.core.xcontent.XContentBuilder;
 import org.opensearch.core.xcontent.XContentParser;
 import org.opensearch.flowframework.exception.FlowFrameworkException;
 import org.opensearch.flowframework.model.ProvisioningProgress;
@@ -714,13 +710,37 @@ public class FlowFrameworkIndicesHandler {
             listener.onFailure(new FlowFrameworkException(errorMessage, RestStatus.BAD_REQUEST));
         } else {
             try (ThreadContext.StoredContext context = client.threadPool().getThreadContext().stashContext()) {
-                UpdateRequest updateRequest = new UpdateRequest(WORKFLOW_STATE_INDEX, documentId);
-                XContentBuilder builder = XContentFactory.jsonBuilder();
-                updatedDocument.toXContent(builder, null);
-                updateRequest.doc(builder);
-                updateRequest.setRefreshPolicy(WriteRequest.RefreshPolicy.IMMEDIATE);
-                updateRequest.retryOnConflict(RETRIES);
-                client.update(updateRequest, ActionListener.runBefore(listener, context::restore));
+                UpdateDataObjectRequest updateRequest = UpdateDataObjectRequest.builder()
+                    .index(WORKFLOW_STATE_INDEX)
+                    .id(documentId)
+                    .dataObject(updatedDocument)
+                    .retryOnConflict(RETRIES)
+                    .build();
+                sdkClient.updateDataObjectAsync(updateRequest).whenComplete((r, throwable) -> {
+                    context.restore();
+                    if (throwable == null) {
+                        UpdateResponse response;
+                        try {
+                            response = UpdateResponse.fromXContent(r.parser());
+                            logger.info("Deleted workflow state doc: {}", documentId);
+                            listener.onResponse(response);
+                        } catch (Exception e) {
+                            logger.error("Failed to parse delete response", e);
+                            listener.onFailure(
+                                new FlowFrameworkException("Failed to parse delete response", RestStatus.INTERNAL_SERVER_ERROR)
+                            );
+                        }
+                    } else {
+                        Exception exception = SdkClientUtils.unwrapAndConvertToException(throwable);
+                        String errorMessage = ParameterizedMessageFactory.INSTANCE.newMessage(
+                            "Failed to update {} entry : {}",
+                            WORKFLOW_STATE_INDEX,
+                            documentId
+                        ).getFormattedMessage();
+                        logger.error(errorMessage, exception);
+                        listener.onFailure(new FlowFrameworkException(errorMessage, ExceptionsHelper.status(exception)));
+                    }
+                });
             } catch (Exception e) {
                 String errorMessage = ParameterizedMessageFactory.INSTANCE.newMessage(
                     "Failed to update {} entry : {}",
@@ -754,13 +774,39 @@ public class FlowFrameworkIndicesHandler {
             listener.onFailure(new FlowFrameworkException(errorMessage, RestStatus.BAD_REQUEST));
         } else {
             try (ThreadContext.StoredContext context = client.threadPool().getThreadContext().stashContext()) {
-                UpdateRequest updateRequest = new UpdateRequest(WORKFLOW_STATE_INDEX, documentId);
                 Map<String, Object> updatedContent = new HashMap<>(updatedFields);
-                updateRequest.doc(updatedContent);
-                updateRequest.setRefreshPolicy(WriteRequest.RefreshPolicy.IMMEDIATE);
-                updateRequest.retryOnConflict(RETRIES);
+                UpdateDataObjectRequest updateRequest = UpdateDataObjectRequest.builder()
+                    .index(WORKFLOW_STATE_INDEX)
+                    .id(documentId)
+                    .dataObject(updatedContent)
+                    .retryOnConflict(RETRIES)
+                    .build();
                 // TODO: decide what condition can be considered as an update conflict and add retry strategy
-                client.update(updateRequest, ActionListener.runBefore(listener, context::restore));
+                sdkClient.updateDataObjectAsync(updateRequest).whenComplete((r, throwable) -> {
+                    context.restore();
+                    if (throwable == null) {
+                        UpdateResponse response;
+                        try {
+                            response = UpdateResponse.fromXContent(r.parser());
+                            logger.info("Deleted workflow state doc: {}", documentId);
+                            listener.onResponse(response);
+                        } catch (Exception e) {
+                            logger.error("Failed to parse delete response", e);
+                            listener.onFailure(
+                                new FlowFrameworkException("Failed to parse delete response", RestStatus.INTERNAL_SERVER_ERROR)
+                            );
+                        }
+                    } else {
+                        Exception exception = SdkClientUtils.unwrapAndConvertToException(throwable);
+                        String errorMessage = ParameterizedMessageFactory.INSTANCE.newMessage(
+                            "Failed to update {} entry : {}",
+                            WORKFLOW_STATE_INDEX,
+                            documentId
+                        ).getFormattedMessage();
+                        logger.error(errorMessage, exception);
+                        listener.onFailure(new FlowFrameworkException(errorMessage, ExceptionsHelper.status(exception)));
+                    }
+                });
             } catch (Exception e) {
                 String errorMessage = ParameterizedMessageFactory.INSTANCE.newMessage(
                     "Failed to update {} entry : {}",
