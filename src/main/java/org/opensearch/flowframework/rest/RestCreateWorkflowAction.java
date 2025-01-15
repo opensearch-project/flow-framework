@@ -151,9 +151,7 @@ public class RestCreateWorkflowAction extends BaseRestHandler {
         // Ensure wait_for_completion is not set unless reprovision or provision is true
         if (waitForCompletionTimeout != TimeValue.MINUS_ONE && !(reprovision || provision)) {
             FlowFrameworkException ffe = new FlowFrameworkException(
-                "Request parameters "
-                    + request.consumedParams()
-                    + " are not allowed unless the 'provision' or 'reprovision' parameter is set to true.",
+                "Request parameters 'wait_for_completion_timeout' are not allowed unless the 'provision' or 'reprovision' parameter is set to true.",
                 RestStatus.BAD_REQUEST
             );
             return processError(ffe, params, request);

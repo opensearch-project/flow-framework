@@ -33,7 +33,6 @@ import static org.opensearch.flowframework.common.CommonValue.PROVISION_WORKFLOW
 public class WorkflowTimeoutUtility {
 
     private static final Logger logger = LogManager.getLogger(WorkflowTimeoutUtility.class);
-    private static final TimeValue MIN_TIMEOUT_MILLIS = TimeValue.timeValueSeconds(0);
 
     /**
      * Schedules a timeout task for a workflow execution.
@@ -55,7 +54,7 @@ public class WorkflowTimeoutUtility {
         AtomicBoolean isResponseSent
     ) {
         // Ensure timeout is within the valid range (non-negative)
-        long adjustedTimeout = Math.max(timeout, MIN_TIMEOUT_MILLIS.millis());
+        long adjustedTimeout = Math.max(timeout, TimeValue.timeValueMillis(0).millis());
         Scheduler.ScheduledCancellable scheduledCancellable = threadPool.schedule(
             new WorkflowTimeoutListener(client, workflowId, listener, isResponseSent),
             TimeValue.timeValueMillis(adjustedTimeout),
@@ -83,6 +82,7 @@ public class WorkflowTimeoutUtility {
 
         @Override
         public void run() {
+            // This AtomicBoolean ensures that the timeout logic is executed only once, preventing duplicate responses.
             if (isResponseSent.compareAndSet(false, true)) {
                 logger.warn("Workflow execution timed out for workflowId: {}", workflowId);
                 fetchWorkflowStateAfterTimeout(client, workflowId, listener);
@@ -107,6 +107,7 @@ public class WorkflowTimeoutUtility {
         return new ActionListener<>() {
             @Override
             public void onResponse(Response response) {
+                // Cancel the timeout task if the response is successfully sent.
                 if (isResponseSent.compareAndSet(false, true)) {
                     scheduledCancellable.cancel();
                 }
@@ -115,6 +116,7 @@ public class WorkflowTimeoutUtility {
 
             @Override
             public void onFailure(Exception e) {
+                // Cancel the timeout task if an error occurs and the failure is reported.
                 if (isResponseSent.compareAndSet(false, true)) {
                     scheduledCancellable.cancel();
                 }
@@ -137,6 +139,7 @@ public class WorkflowTimeoutUtility {
         AtomicBoolean isResponseSent,
         ActionListener<WorkflowResponse> listener
     ) {
+        // Check if the response has already been sent, and send it only if it hasn't been sent yet.
         if (isResponseSent.compareAndSet(false, true)) {
             listener.onResponse(new WorkflowResponse(workflowResponse.getWorkflowId(), workflowResponse.getWorkflowState()));
         } else {
@@ -158,6 +161,7 @@ public class WorkflowTimeoutUtility {
         AtomicBoolean isResponseSent,
         ActionListener<WorkflowResponse> listener
     ) {
+        // Check if the failure has already been reported, and report it only if it hasn't been reported yet.
         if (isResponseSent.compareAndSet(false, true)) {
             FlowFrameworkException exception = new FlowFrameworkException(
                 "Failed to execute workflow " + workflowId,

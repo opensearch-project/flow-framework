@@ -250,13 +250,19 @@ public class CreateWorkflowTransportAction extends HandledTransportAction<Workfl
                                             ActionListener.wrap(stateResponse -> {
                                                 logger.info("Creating state workflow doc: {}", globalContextResponse.getId());
                                                 if (request.isProvision()) {
-                                                    String waitForTimeCompletion = request.getParams()
-                                                        .getOrDefault(WAIT_FOR_COMPLETION_TIMEOUT, TimeValue.MINUS_ONE.toString());
+                                                    // default to minus one indicate async execution
+                                                    TimeValue waitForTimeCompletion = TimeValue.MINUS_ONE;
+                                                    if (request.getParams().containsKey(WAIT_FOR_COMPLETION_TIMEOUT)) {
+                                                        waitForTimeCompletion = TimeValue.parseTimeValue(
+                                                            request.getParams().get(WAIT_FOR_COMPLETION_TIMEOUT),
+                                                            WAIT_FOR_COMPLETION_TIMEOUT
+                                                        );
+                                                    }
                                                     WorkflowRequest workflowRequest = new WorkflowRequest(
                                                         globalContextResponse.getId(),
                                                         null,
                                                         request.getParams(),
-                                                        TimeValue.parseTimeValue(waitForTimeCompletion, PROVISION_TIMEOUT_FIELD)
+                                                        waitForTimeCompletion
                                                     );
                                                     logger.info(
                                                         "Provisioning parameter is set, continuing to provision workflow {}",
@@ -358,14 +364,20 @@ public class CreateWorkflowTransportAction extends HandledTransportAction<Workfl
                                 .build();
 
                         if (request.isReprovision()) {
-                            String waitForTimeCompletion = request.getParams()
-                                .getOrDefault(WAIT_FOR_COMPLETION_TIMEOUT, TimeValue.MINUS_ONE.toString());
+                            // default to minus one indicate async execution
+                            TimeValue waitForTimeCompletion = TimeValue.MINUS_ONE;
+                            if (request.getParams().containsKey(WAIT_FOR_COMPLETION_TIMEOUT)) {
+                                waitForTimeCompletion = TimeValue.parseTimeValue(
+                                    request.getParams().get(WAIT_FOR_COMPLETION_TIMEOUT),
+                                    WAIT_FOR_COMPLETION_TIMEOUT
+                                );
+                            }
                             // Reprovision request
                             ReprovisionWorkflowRequest reprovisionRequest = new ReprovisionWorkflowRequest(
                                 getResponse.getId(),
                                 existingTemplate,
                                 template,
-                                TimeValue.parseTimeValue(waitForTimeCompletion, PROVISION_TIMEOUT_FIELD)
+                                waitForTimeCompletion
                             );
                             logger.info("Reprovisioning parameter is set, continuing to reprovision workflow {}", getResponse.getId());
                             client.execute(
