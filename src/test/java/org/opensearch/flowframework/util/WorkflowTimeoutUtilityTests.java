@@ -24,6 +24,7 @@ import java.time.Instant;
 import java.util.Collections;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import static org.opensearch.flowframework.common.CommonValue.PROVISION_WORKFLOW_THREAD_POOL;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
@@ -69,7 +70,7 @@ public class WorkflowTimeoutUtilityTests extends OpenSearchTestCase {
         verify(mockThreadPool, times(1)).schedule(
             any(Runnable.class),
             eq(TimeValue.timeValueMillis(timeout)),
-            eq(ThreadPool.Names.GENERIC)
+            eq(PROVISION_WORKFLOW_THREAD_POOL)
         );
     }
 
