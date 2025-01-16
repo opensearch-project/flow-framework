@@ -8,11 +8,14 @@
  */
 package org.opensearch.flowframework.transport;
 
+import org.opensearch.Version;
+import org.opensearch.common.Nullable;
 import org.opensearch.core.action.ActionResponse;
 import org.opensearch.core.common.io.stream.StreamInput;
 import org.opensearch.core.common.io.stream.StreamOutput;
 import org.opensearch.core.xcontent.ToXContentObject;
 import org.opensearch.core.xcontent.XContentBuilder;
+import org.opensearch.flowframework.model.WorkflowState;
 
 import java.io.IOException;
 
@@ -27,6 +30,8 @@ public class WorkflowResponse extends ActionResponse implements ToXContentObject
      * The documentId of the workflow entry within the Global Context index
      */
     private String workflowId;
+    /** The workflow state */
+    private WorkflowState workflowState;
 
     /**
      * Instantiates a new WorkflowResponse from params
@@ -44,6 +49,10 @@ public class WorkflowResponse extends ActionResponse implements ToXContentObject
     public WorkflowResponse(StreamInput in) throws IOException {
         super(in);
         this.workflowId = in.readString();
+        if (in.getVersion().onOrAfter(Version.V_2_19_0)) {
+            this.workflowState = in.readOptionalWriteable(WorkflowState::new);
+        }
+
     }
 
     /**
@@ -54,14 +63,49 @@ public class WorkflowResponse extends ActionResponse implements ToXContentObject
         return this.workflowId;
     }
 
+    /**
+     * Gets the workflowState of this repsonse
+     * @return the workflowState
+     */
+    @Nullable
+    public WorkflowState getWorkflowState() {
+        return this.workflowState;
+    }
+
+    /**
+     * Constructs a new WorkflowResponse object with the specified workflowId and workflowState.
+     * The WorkflowResponse is typically returned as part of a `wait_for_completion` request,
+     * indicating the final state of a workflow after execution.
+     * @param workflowId The unique identifier for the workflow.
+     * @param workflowState The current state of the workflow, including status, errors (if any),
+     *                      and resources created as part of the workflow execution.
+     */
+    public WorkflowResponse(String workflowId, WorkflowState workflowState) {
+        this.workflowId = workflowId;
+        this.workflowState = WorkflowState.builder()
+            .workflowId(workflowId)
+            .error(workflowState.getError())
+            .state(workflowState.getState())
+            .resourcesCreated(workflowState.resourcesCreated())
+            .build();
+
+    }
+
     @Override
     public void writeTo(StreamOutput out) throws IOException {
         out.writeString(workflowId);
+        if (out.getVersion().onOrAfter(Version.V_2_19_0)) {
+            out.writeOptionalWriteable(workflowState);
+        }
     }
 
     @Override
     public XContentBuilder toXContent(XContentBuilder builder, Params params) throws IOException {
-        return builder.startObject().field(WORKFLOW_ID, this.workflowId).endObject();
+        if (workflowState != null) {
+            return workflowState.toXContent(builder, params);
+        } else {
+            return builder.startObject().field(WORKFLOW_ID, this.workflowId).endObject();
+        }
     }
 
 }

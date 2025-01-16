@@ -10,6 +10,7 @@ package org.opensearch.flowframework.transport;
 
 import org.opensearch.Version;
 import org.opensearch.common.io.stream.BytesStreamOutput;
+import org.opensearch.common.unit.TimeValue;
 import org.opensearch.core.common.bytes.BytesReference;
 import org.opensearch.core.common.io.stream.BytesStreamInput;
 import org.opensearch.flowframework.TestHelpers;
@@ -72,7 +73,7 @@ public class ReprovisionWorkflowRequestTests extends OpenSearchTestCase {
     }
 
     public void testReprovisionWorkflowRequest() throws IOException {
-        ReprovisionWorkflowRequest request = new ReprovisionWorkflowRequest("123", originalTemplate, updatedTemplate);
+        ReprovisionWorkflowRequest request = new ReprovisionWorkflowRequest("123", originalTemplate, updatedTemplate, TimeValue.MINUS_ONE);
 
         BytesStreamOutput out = new BytesStreamOutput();
         request.writeTo(out);

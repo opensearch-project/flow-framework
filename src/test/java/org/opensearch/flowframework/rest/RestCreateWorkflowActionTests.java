@@ -39,6 +39,7 @@ import static org.opensearch.flowframework.common.CommonValue.PROVISION_WORKFLOW
 import static org.opensearch.flowframework.common.CommonValue.REPROVISION_WORKFLOW;
 import static org.opensearch.flowframework.common.CommonValue.UPDATE_WORKFLOW_FIELDS;
 import static org.opensearch.flowframework.common.CommonValue.USE_CASE;
+import static org.opensearch.flowframework.common.CommonValue.WAIT_FOR_COMPLETION_TIMEOUT;
 import static org.opensearch.flowframework.common.CommonValue.WORKFLOW_URI;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doAnswer;
@@ -128,6 +129,26 @@ public class RestCreateWorkflowActionTests extends OpenSearchTestCase {
         assertTrue(channel.capturedResponse().content().utf8ToString().contains("id-123"));
     }
 
+    public void testRestCreateWorkflowWithWaitForCompletionTimeout() throws Exception {
+        RestRequest request = new FakeRestRequest.Builder(xContentRegistry()).withMethod(RestRequest.Method.POST)
+            .withParams(Map.ofEntries(Map.entry(PROVISION_WORKFLOW, "true"), Map.entry("wait_for_completion_timeout", "5s")))
+            .withContent(new BytesArray(validTemplate), MediaTypeRegistry.JSON)
+            .build();
+
+        FakeRestChannel channel = new FakeRestChannel(request, false, 1);
+
+        doAnswer(invocation -> {
+            ActionListener<WorkflowResponse> listener = invocation.getArgument(2);
+            listener.onResponse(new WorkflowResponse("workflow_1"));
+            return null;
+        }).when(nodeClient).execute(any(), any(WorkflowRequest.class), any());
+
+        createWorkflowRestAction.handleRequest(request, channel, nodeClient);
+
+        assertEquals(RestStatus.CREATED, channel.capturedResponse().status());
+        assertTrue(channel.capturedResponse().content().utf8ToString().contains("workflow_1"));
+    }
+
     public void testCreateWorkflowRequestWithParamsButNoProvision() throws Exception {
         RestRequest request = new FakeRestRequest.Builder(xContentRegistry()).withMethod(RestRequest.Method.POST)
             .withPath(this.createWorkflowPath)
@@ -139,6 +160,23 @@ public class RestCreateWorkflowActionTests extends OpenSearchTestCase {
         assertEquals(RestStatus.BAD_REQUEST, channel.capturedResponse().status());
         assertTrue(
             channel.capturedResponse().content().utf8ToString().contains("are permitted unless the provision parameter is set to true.")
+        );
+    }
+
+    public void testCreateWorkflowRequestWithWaitForTimeCompletionTimeoutButNoProvision() throws Exception {
+        RestRequest request = new FakeRestRequest.Builder(xContentRegistry()).withMethod(RestRequest.Method.POST)
+            .withPath(this.createWorkflowPath)
+            .withParams(Map.of(WAIT_FOR_COMPLETION_TIMEOUT, "1s"))
+            .withContent(new BytesArray(validTemplate), MediaTypeRegistry.JSON)
+            .build();
+        FakeRestChannel channel = new FakeRestChannel(request, false, 1);
+        createWorkflowRestAction.handleRequest(request, channel, nodeClient);
+        assertEquals(RestStatus.BAD_REQUEST, channel.capturedResponse().status());
+        assertTrue(
+            channel.capturedResponse()
+                .content()
+                .utf8ToString()
+                .contains("are not allowed unless the 'provision' or 'reprovision' parameter is set to true.")
         );
     }
 
