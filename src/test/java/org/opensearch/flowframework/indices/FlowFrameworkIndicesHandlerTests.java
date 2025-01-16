@@ -434,7 +434,7 @@ public class FlowFrameworkIndicesHandlerTests extends OpenSearchTestCase {
             return null;
         }).when(client).update(any(UpdateRequest.class), any());
 
-        flowFrameworkIndicesHandler.updateFlowFrameworkSystemIndexDoc("1", Map.of("foo", "bar"), listener);
+        flowFrameworkIndicesHandler.updateFlowFrameworkSystemIndexDoc("1", null, Map.of("foo", "bar"), listener);
 
         ArgumentCaptor<UpdateResponse> responseCaptor = ArgumentCaptor.forClass(UpdateResponse.class);
         verify(listener, times(1)).onResponse(responseCaptor.capture());
@@ -447,7 +447,7 @@ public class FlowFrameworkIndicesHandlerTests extends OpenSearchTestCase {
             return null;
         }).when(client).update(any(UpdateRequest.class), any());
 
-        flowFrameworkIndicesHandler.updateFlowFrameworkSystemIndexDoc("1", Map.of("foo", "bar"), listener);
+        flowFrameworkIndicesHandler.updateFlowFrameworkSystemIndexDoc("1", null, Map.of("foo", "bar"), listener);
 
         ArgumentCaptor<Exception> exceptionCaptor = ArgumentCaptor.forClass(Exception.class);
         verify(listener, times(1)).onFailure(exceptionCaptor.capture());
@@ -455,7 +455,7 @@ public class FlowFrameworkIndicesHandlerTests extends OpenSearchTestCase {
 
         // test no index
         when(mockMetaData.hasIndex(WORKFLOW_STATE_INDEX)).thenReturn(false);
-        flowFrameworkIndicesHandler.updateFlowFrameworkSystemIndexDoc("1", Map.of("foo", "bar"), listener);
+        flowFrameworkIndicesHandler.updateFlowFrameworkSystemIndexDoc("1", null, Map.of("foo", "bar"), listener);
 
         verify(listener, times(2)).onFailure(exceptionCaptor.capture());
         assertEquals(
@@ -491,7 +491,7 @@ public class FlowFrameworkIndicesHandlerTests extends OpenSearchTestCase {
             }
         };
 
-        flowFrameworkIndicesHandler.updateFlowFrameworkSystemIndexDoc("1", fooBar, listener);
+        flowFrameworkIndicesHandler.updateFlowFrameworkSystemIndexDoc("1", null, fooBar, listener);
 
         ArgumentCaptor<UpdateResponse> responseCaptor = ArgumentCaptor.forClass(UpdateResponse.class);
         verify(listener, times(1)).onResponse(responseCaptor.capture());
@@ -504,7 +504,7 @@ public class FlowFrameworkIndicesHandlerTests extends OpenSearchTestCase {
             return null;
         }).when(client).update(any(UpdateRequest.class), any());
 
-        flowFrameworkIndicesHandler.updateFlowFrameworkSystemIndexDoc("1", fooBar, listener);
+        flowFrameworkIndicesHandler.updateFlowFrameworkSystemIndexDoc("1", null, fooBar, listener);
 
         ArgumentCaptor<Exception> exceptionCaptor = ArgumentCaptor.forClass(Exception.class);
         verify(listener, times(1)).onFailure(exceptionCaptor.capture());
@@ -512,7 +512,7 @@ public class FlowFrameworkIndicesHandlerTests extends OpenSearchTestCase {
 
         // test no index
         when(mockMetaData.hasIndex(WORKFLOW_STATE_INDEX)).thenReturn(false);
-        flowFrameworkIndicesHandler.updateFlowFrameworkSystemIndexDoc("1", fooBar, listener);
+        flowFrameworkIndicesHandler.updateFlowFrameworkSystemIndexDoc("1", null, fooBar, listener);
 
         verify(listener, times(2)).onFailure(exceptionCaptor.capture());
         assertEquals(

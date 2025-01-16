@@ -49,6 +49,7 @@ import org.mockito.ArgumentCaptor;
 import static org.opensearch.flowframework.common.CommonValue.PROVISION_WORKFLOW;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyMap;
+import static org.mockito.ArgumentMatchers.nullable;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.mock;
@@ -158,10 +159,10 @@ public class ReprovisionWorkflowTransportActionTests extends OpenSearchTestCase 
 
         // Bypass updateFlowFrameworkSystemIndexDoc and stub on response
         doAnswer(invocation -> {
-            ActionListener<UpdateResponse> actionListener = invocation.getArgument(2);
+            ActionListener<UpdateResponse> actionListener = invocation.getArgument(3);
             actionListener.onResponse(mock(UpdateResponse.class));
             return null;
-        }).when(flowFrameworkIndicesHandler).updateFlowFrameworkSystemIndexDoc(any(), anyMap(), any());
+        }).when(flowFrameworkIndicesHandler).updateFlowFrameworkSystemIndexDoc(any(), nullable(String.class), anyMap(), any());
 
         @SuppressWarnings("unchecked")
         ActionListener<WorkflowResponse> listener = mock(ActionListener.class);
@@ -286,10 +287,10 @@ public class ReprovisionWorkflowTransportActionTests extends OpenSearchTestCase 
 
         // Bypass updateFlowFrameworkSystemIndexDoc and stub on response
         doAnswer(invocation -> {
-            ActionListener<UpdateResponse> actionListener = invocation.getArgument(2);
+            ActionListener<UpdateResponse> actionListener = invocation.getArgument(3);
             actionListener.onFailure(new Exception("failed"));
             return null;
-        }).when(flowFrameworkIndicesHandler).updateFlowFrameworkSystemIndexDoc(any(), anyMap(), any());
+        }).when(flowFrameworkIndicesHandler).updateFlowFrameworkSystemIndexDoc(any(), nullable(String.class), anyMap(), any());
 
         @SuppressWarnings("unchecked")
         ActionListener<WorkflowResponse> listener = mock(ActionListener.class);

@@ -356,6 +356,7 @@ public class DeprovisionWorkflowTransportAction extends HandledTransportAction<W
             stateIndexResources.addAll(deleteNotAllowed);
             flowFrameworkIndicesHandler.updateFlowFrameworkSystemIndexDoc(
                 workflowId,
+                tenantId,
                 Map.ofEntries(
                     Map.entry(STATE_FIELD, State.COMPLETED),
                     Map.entry(PROVISIONING_PROGRESS_FIELD, ProvisioningProgress.DONE),

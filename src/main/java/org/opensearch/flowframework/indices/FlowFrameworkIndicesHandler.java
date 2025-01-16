@@ -692,11 +692,13 @@ public class FlowFrameworkIndicesHandler {
     /**
      * Updates a complete document in the workflow state index
      * @param documentId the document ID
+     * @param tenantId the tenant ID
      * @param updatedDocument a complete document to update the global state index with
      * @param listener action listener
      */
     public void updateFlowFrameworkSystemIndexDoc(
         String documentId,
+        String tenantId,
         ToXContentObject updatedDocument,
         ActionListener<UpdateResponse> listener
     ) {
@@ -713,6 +715,7 @@ public class FlowFrameworkIndicesHandler {
                 UpdateDataObjectRequest updateRequest = UpdateDataObjectRequest.builder()
                     .index(WORKFLOW_STATE_INDEX)
                     .id(documentId)
+                    .tenantId(tenantId)
                     .dataObject(updatedDocument)
                     .retryOnConflict(RETRIES)
                     .build();
@@ -756,11 +759,13 @@ public class FlowFrameworkIndicesHandler {
     /**
      * Updates a partial document in the workflow state index
      * @param documentId the document ID
+     * @param tenantId the tenant ID
      * @param updatedFields the fields to update the global state index with
      * @param listener action listener
      */
     public void updateFlowFrameworkSystemIndexDoc(
         String documentId,
+        String tenantId,
         Map<String, Object> updatedFields,
         ActionListener<UpdateResponse> listener
     ) {
@@ -778,6 +783,7 @@ public class FlowFrameworkIndicesHandler {
                 UpdateDataObjectRequest updateRequest = UpdateDataObjectRequest.builder()
                     .index(WORKFLOW_STATE_INDEX)
                     .id(documentId)
+                    .tenantId(tenantId)
                     .dataObject(updatedContent)
                     .retryOnConflict(RETRIES)
                     .build();

@@ -59,7 +59,6 @@ import static org.opensearch.flowframework.common.CommonValue.GLOBAL_CONTEXT_IND
 import static org.opensearch.flowframework.common.CommonValue.PROVISIONING_PROGRESS_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.STATE_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.WAIT_FOR_COMPLETION_TIMEOUT;
-import static org.opensearch.flowframework.common.CommonValue.WORKFLOW_THREAD_POOL;
 import static org.opensearch.flowframework.common.FlowFrameworkSettings.FILTER_BY_BACKEND_ROLES;
 import static org.opensearch.flowframework.util.ParseUtils.checkFilterByBackendRoles;
 import static org.opensearch.flowframework.util.ParseUtils.getUserContext;
@@ -458,8 +457,12 @@ public class CreateWorkflowTransportAction extends HandledTransportAction<Workfl
         TimeValue waitForTimeCompletion,
         ActionListener<WorkflowResponse> listener
     ) {
-        ReprovisionWorkflowRequest reprovisionRequest = new ReprovisionWorkflowRequest(workflowId, existingTemplate, template,
-            waitForTimeCompletion);
+        ReprovisionWorkflowRequest reprovisionRequest = new ReprovisionWorkflowRequest(
+            workflowId,
+            existingTemplate,
+            template,
+            waitForTimeCompletion
+        );
         logger.info("Reprovisioning parameter is set, continuing to reprovision workflow {}", workflowId);
         client.execute(ReprovisionWorkflowAction.INSTANCE, reprovisionRequest, ActionListener.wrap(reprovisionResponse -> {
             listener.onResponse(new WorkflowResponse(reprovisionResponse.getWorkflowId()));
@@ -482,6 +485,7 @@ public class CreateWorkflowTransportAction extends HandledTransportAction<Workfl
             if (!isFieldUpdate) {
                 flowFrameworkIndicesHandler.updateFlowFrameworkSystemIndexDoc(
                     request.getWorkflowId(),
+                    template.getTenantId(),
                     Map.ofEntries(
                         Map.entry(STATE_FIELD, State.NOT_STARTED),
                         Map.entry(PROVISIONING_PROGRESS_FIELD, ProvisioningProgress.NOT_STARTED)

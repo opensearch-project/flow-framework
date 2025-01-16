@@ -219,6 +219,7 @@ public class ProvisionWorkflowTransportAction extends HandledTransportAction<Wor
                     // update state index
                     flowFrameworkIndicesHandler.updateFlowFrameworkSystemIndexDoc(
                         workflowId,
+                        tenantId,
                         Map.ofEntries(
                             Map.entry(STATE_FIELD, State.PROVISIONING),
                             Map.entry(PROVISIONING_PROGRESS_FIELD, ProvisioningProgress.IN_PROGRESS),
@@ -228,10 +229,11 @@ public class ProvisionWorkflowTransportAction extends HandledTransportAction<Wor
                         ActionListener.wrap(updateResponse -> {
                             logger.info("updated workflow {} state to {}", request.getWorkflowId(), State.PROVISIONING);
                             if (request.getWaitForCompletionTimeout() == TimeValue.MINUS_ONE) {
-                                executeWorkflowAsync(workflowId, provisionProcessSequence, listener);
+                                executeWorkflowAsync(workflowId, tenantId, provisionProcessSequence, listener);
                             } else {
                                 executeWorkflowSync(
                                     workflowId,
+                                    tenantId,
                                     provisionProcessSequence,
                                     listener,
                                     request.getWaitForCompletionTimeout().getMillis()
@@ -303,10 +305,16 @@ public class ProvisionWorkflowTransportAction extends HandledTransportAction<Wor
      * @param workflowSequence The sorted workflow to execute
      * @param listener ActionListener for any failures that don't get caught earlier in below step
      */
-    private void executeWorkflowAsync(String workflowId, List<ProcessNode> workflowSequence, ActionListener<WorkflowResponse> listener) {
+    private void executeWorkflowAsync(
+        String workflowId,
+        String tenantId,
+        List<ProcessNode> workflowSequence,
+        ActionListener<WorkflowResponse> listener
+    ) {
         try {
-            client.threadPool().executor(PROVISION_WORKFLOW_THREAD_POOL)
-                .execute(() -> { executeWorkflow(workflowSequence, workflowId, listener, false); });
+            client.threadPool().executor(PROVISION_WORKFLOW_THREAD_POOL).execute(() -> {
+                executeWorkflow(workflowSequence, workflowId, tenantId, listener, false);
+            });
         } catch (Exception exception) {
             listener.onFailure(new FlowFrameworkException("Failed to execute workflow " + workflowId, ExceptionsHelper.status(exception)));
         }
@@ -323,6 +331,7 @@ public class ProvisionWorkflowTransportAction extends HandledTransportAction<Wor
      */
     private void executeWorkflowSync(
         String workflowId,
+        String tenantId,
         List<ProcessNode> workflowSequence,
         ActionListener<WorkflowResponse> listener,
         long timeout
@@ -331,7 +340,7 @@ public class ProvisionWorkflowTransportAction extends HandledTransportAction<Wor
 
         CompletableFuture.runAsync(() -> {
             try {
-                executeWorkflow(workflowSequence, workflowId, new ActionListener<>() {
+                executeWorkflow(workflowSequence, workflowId, tenantId, new ActionListener<>() {
                     @Override
                     public void onResponse(WorkflowResponse workflowResponse) {
                         WorkflowTimeoutUtility.handleResponse(workflowId, workflowResponse, isResponseSent, listener);
@@ -354,12 +363,14 @@ public class ProvisionWorkflowTransportAction extends HandledTransportAction<Wor
      * Executes the given workflow sequence
      * @param workflowSequence The topologically sorted workflow to execute
      * @param workflowId The workflowId associated with the workflow that is executing
+     * @param tenantId The tenant id
      * @param listener The ActionListener to handle the workflow response or failure
      * @param isSyncExecution Flag indicating whether the workflow should be executed synchronously (true) or asynchronously (false)
      */
     private void executeWorkflow(
         List<ProcessNode> workflowSequence,
         String workflowId,
+        String tenantId,
         ActionListener<WorkflowResponse> listener,
         boolean isSyncExecution
     ) {
@@ -393,6 +404,7 @@ public class ProvisionWorkflowTransportAction extends HandledTransportAction<Wor
             logger.info("Provisioning completed successfully for workflow {}", workflowId);
             flowFrameworkIndicesHandler.updateFlowFrameworkSystemIndexDoc(
                 workflowId,
+                tenantId,
                 Map.ofEntries(
                     Map.entry(STATE_FIELD, State.COMPLETED),
                     Map.entry(PROVISIONING_PROGRESS_FIELD, ProvisioningProgress.DONE),
@@ -403,7 +415,7 @@ public class ProvisionWorkflowTransportAction extends HandledTransportAction<Wor
                     if (isSyncExecution) {
                         client.execute(
                             GetWorkflowStateAction.INSTANCE,
-                            new GetWorkflowStateRequest(workflowId, false),
+                            new GetWorkflowStateRequest(workflowId, false, tenantId),
                             ActionListener.wrap(response -> {
                                 listener.onResponse(new WorkflowResponse(workflowId, response.getWorkflowState()));
                             }, exception -> {
@@ -434,6 +446,7 @@ public class ProvisionWorkflowTransportAction extends HandledTransportAction<Wor
                 + status.toString();
             flowFrameworkIndicesHandler.updateFlowFrameworkSystemIndexDoc(
                 workflowId,
+                tenantId,
                 Map.ofEntries(
                     Map.entry(STATE_FIELD, State.FAILED),
                     Map.entry(ERROR_FIELD, errorMessage),

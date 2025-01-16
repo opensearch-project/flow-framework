@@ -55,7 +55,6 @@ import org.opensearch.transport.TransportService;
 
 import java.io.IOException;
 import java.time.Instant;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -689,10 +688,10 @@ public class CreateWorkflowTransportActionTests extends OpenSearchTestCase {
         }).when(client).get(any(GetRequest.class), any());
 
         doAnswer(invocation -> {
-            ActionListener<UpdateResponse> updateResponseListener = invocation.getArgument(2);
+            ActionListener<UpdateResponse> updateResponseListener = invocation.getArgument(3);
             updateResponseListener.onResponse(new UpdateResponse(new ShardId(WORKFLOW_STATE_INDEX, "", 1), "id", -2, 0, 0, UPDATED));
             return null;
-        }).when(flowFrameworkIndicesHandler).updateFlowFrameworkSystemIndexDoc(anyString(), anyMap(), any());
+        }).when(flowFrameworkIndicesHandler).updateFlowFrameworkSystemIndexDoc(anyString(), nullable(String.class), anyMap(), any());
 
         createWorkflowTransportAction.doExecute(mock(Task.class), updateWorkflow, listener);
 

@@ -236,19 +236,27 @@ public class ReprovisionWorkflowTransportAction extends HandledTransportAction<R
             // Remove error field if any prior to subsequent execution
             if (response.getWorkflowState().getError() != null) {
                 WorkflowState newState = WorkflowState.builder(response.getWorkflowState()).error(null).build();
-                flowFrameworkIndicesHandler.updateFlowFrameworkSystemIndexDoc(workflowId, newState, ActionListener.wrap(updateResponse -> {
+                flowFrameworkIndicesHandler.updateFlowFrameworkSystemIndexDoc(
+                    workflowId,
+                    tenantId,
+                    newState,
+                    ActionListener.wrap(updateResponse -> {
 
-                }, exception -> {
-                    String errorMessage = ParameterizedMessageFactory.INSTANCE.newMessage("Failed to update workflow state: {}", workflowId)
-                        .getFormattedMessage();
-                    logger.error(errorMessage, exception);
-                    listener.onFailure(new FlowFrameworkException(errorMessage, ExceptionsHelper.status(exception)));
-                }));
+                    }, exception -> {
+                        String errorMessage = ParameterizedMessageFactory.INSTANCE.newMessage(
+                            "Failed to update workflow state: {}",
+                            workflowId
+                        ).getFormattedMessage();
+                        logger.error(errorMessage, exception);
+                        listener.onFailure(new FlowFrameworkException(errorMessage, ExceptionsHelper.status(exception)));
+                    })
+                );
             }
 
             // Update State Index, maintain resources created for subsequent execution
             flowFrameworkIndicesHandler.updateFlowFrameworkSystemIndexDoc(
                 workflowId,
+                tenantId,
                 Map.ofEntries(
                     Map.entry(STATE_FIELD, State.PROVISIONING),
                     Map.entry(PROVISIONING_PROGRESS_FIELD, ProvisioningProgress.IN_PROGRESS),
@@ -410,6 +418,7 @@ public class ReprovisionWorkflowTransportAction extends HandledTransportAction<R
             logger.info("Reprovisioning completed successfully for workflow {}", workflowId);
             flowFrameworkIndicesHandler.updateFlowFrameworkSystemIndexDoc(
                 workflowId,
+                template.getTenantId(),
                 Map.ofEntries(
                     Map.entry(STATE_FIELD, State.COMPLETED),
                     Map.entry(PROVISIONING_PROGRESS_FIELD, ProvisioningProgress.DONE),
@@ -421,7 +430,7 @@ public class ReprovisionWorkflowTransportAction extends HandledTransportAction<R
                     if (isSyncExecution) {
                         client.execute(
                             GetWorkflowStateAction.INSTANCE,
-                            new GetWorkflowStateRequest(workflowId, false),
+                            new GetWorkflowStateRequest(workflowId, false, template.getTenantId()),
                             ActionListener.wrap(response -> {
                                 listener.onResponse(new WorkflowResponse(workflowId, response.getWorkflowState()));
                             }, exception -> {
@@ -452,6 +461,7 @@ public class ReprovisionWorkflowTransportAction extends HandledTransportAction<R
                 + status.toString();
             flowFrameworkIndicesHandler.updateFlowFrameworkSystemIndexDoc(
                 workflowId,
+                template.getTenantId(),
                 Map.ofEntries(
                     Map.entry(STATE_FIELD, State.FAILED),
                     Map.entry(ERROR_FIELD, errorMessage),
