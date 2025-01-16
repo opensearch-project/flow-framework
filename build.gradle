@@ -168,7 +168,7 @@ configurations {
 
 dependencies {
     implementation "org.opensearch:opensearch:${opensearch_version}"
-    implementation 'org.junit.jupiter:junit-jupiter:5.11.3'
+    implementation 'org.junit.jupiter:junit-jupiter:5.11.4'
     api group: 'org.opensearch', name:'opensearch-ml-client', version: "${opensearch_build}"
     api group: 'org.opensearch.client', name: 'opensearch-rest-client', version: "${opensearch_version}"
     api group: 'org.slf4j', name: 'slf4j-api', version: '1.7.36'
