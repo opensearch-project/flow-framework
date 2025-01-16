@@ -144,4 +144,26 @@ public class RestProvisionWorkflowActionTests extends OpenSearchTestCase {
         assertEquals(RestStatus.FORBIDDEN, channel.capturedResponse().status());
         assertTrue(channel.capturedResponse().content().utf8ToString().contains("This API is disabled."));
     }
+
+    public void testProvisionWorkflowWithValidWaitForCompletionTimeout() throws Exception {
+        RestRequest request = new FakeRestRequest.Builder(xContentRegistry()).withMethod(RestRequest.Method.POST)
+            .withPath(this.provisionWorkflowPath)
+            .withParams(Map.of("workflow_id", "abc", "wait_for_completion_timeout", "5s"))
+            .withContent(new BytesArray("{\"foo\": \"bar\"}"), MediaTypeRegistry.JSON)
+            .build();
+
+        FakeRestChannel channel = new FakeRestChannel(request, false, 1);
+
+        doAnswer(invocation -> {
+            ActionListener<WorkflowResponse> actionListener = invocation.getArgument(2);
+            actionListener.onResponse(new WorkflowResponse("workflow_1"));
+            return null;
+        }).when(nodeClient).execute(any(), any(WorkflowRequest.class), any());
+
+        provisionWorkflowRestAction.handleRequest(request, channel, nodeClient);
+
+        assertEquals(RestStatus.OK, channel.capturedResponse().status());
+        assertTrue(channel.capturedResponse().content().utf8ToString().contains("workflow_1"));
+    }
+
 }

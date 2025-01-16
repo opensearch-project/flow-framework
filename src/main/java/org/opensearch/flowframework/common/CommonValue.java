@@ -74,6 +74,8 @@ public class CommonValue {
     public static final String PROVISION_WORKFLOW = "provision";
     /** The param name for update workflow field in create API */
     public static final String UPDATE_WORKFLOW_FIELDS = "update_fields";
+    /** The param name for specifying the timeout duration in seconds to wait for workflow completion */
+    public static final String WAIT_FOR_COMPLETION_TIMEOUT = "wait_for_completion_timeout";
     /** The field name for workflow steps. This field represents the name of the workflow steps to be fetched. */
     public static final String WORKFLOW_STEP = "workflow_step";
     /** The param name for default use case, used by the create workflow API */
@@ -186,6 +188,8 @@ public class CommonValue {
     public static final String SOURCE_INDEX = "source_index";
     /** The destination index field for reindex */
     public static final String DESTINATION_INDEX = "destination_index";
+    /** Provision Timeout field */
+    public static final String PROVISION_TIMEOUT_FIELD = "provision.timeout";
     /*
      * Constants associated with resource provisioning / state
      */
