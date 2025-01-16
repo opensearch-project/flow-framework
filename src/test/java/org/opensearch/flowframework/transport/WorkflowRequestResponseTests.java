@@ -21,9 +21,11 @@ import org.opensearch.flowframework.model.Template;
 import org.opensearch.flowframework.model.Workflow;
 import org.opensearch.flowframework.model.WorkflowEdge;
 import org.opensearch.flowframework.model.WorkflowNode;
+import org.opensearch.flowframework.model.WorkflowState;
 import org.opensearch.test.OpenSearchTestCase;
 
 import java.io.IOException;
+import java.time.Instant;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -156,7 +158,7 @@ public class WorkflowRequestResponseTests extends OpenSearchTestCase {
     public void testWorkflowRequestWithParamsNoProvision() throws IOException {
         IllegalArgumentException ex = assertThrows(
             IllegalArgumentException.class,
-            () -> new WorkflowRequest("123", template, new String[] { "all" }, false, Map.of("foo", "bar"), false)
+            () -> new WorkflowRequest("123", template, new String[] { "all" }, false, Map.of("foo", "bar"), false, null)
         );
         assertEquals("Params may only be included when provisioning.", ex.getMessage());
     }
@@ -168,7 +170,8 @@ public class WorkflowRequestResponseTests extends OpenSearchTestCase {
             new String[] { "all" },
             true,
             Map.of(UPDATE_WORKFLOW_FIELDS, "true"),
-            false
+            false,
+            null
         );
         assertNotNull(workflowRequest.getWorkflowId());
         assertEquals(template, workflowRequest.getTemplate());
@@ -206,6 +209,39 @@ public class WorkflowRequestResponseTests extends OpenSearchTestCase {
         response.toXContent(builder, ToXContent.EMPTY_PARAMS);
         assertNotNull(builder);
         assertEquals("{\"workflow_id\":\"123\"}", builder.toString());
+    }
+
+    public void testWorkflowResponseWithWaitForCompletionTimeOut() throws IOException {
+        WorkflowState workFlowState = new WorkflowState(
+            "123",
+            "test",
+            "PROVISIONING",
+            "IN_PROGRESS",
+            Instant.now(),
+            Instant.now(),
+            TestHelpers.randomUser(),
+            Collections.emptyMap(),
+            Collections.emptyList()
+        );
+
+        WorkflowResponse response = new WorkflowResponse("123", workFlowState);
+        assertEquals("123", response.getWorkflowId());
+        assertEquals("PROVISIONING", response.getWorkflowState().getState());
+
+        BytesStreamOutput out = new BytesStreamOutput();
+        response.writeTo(out);
+        BytesStreamInput in = new BytesStreamInput(BytesReference.toBytes(out.bytes()));
+        WorkflowResponse streamInputResponse = new WorkflowResponse(in);
+
+        assertEquals(response.getWorkflowId(), streamInputResponse.getWorkflowId());
+        assertEquals(response.getWorkflowState().getState(), streamInputResponse.getWorkflowState().getState());
+
+        XContentBuilder builder = MediaTypeRegistry.contentBuilder(XContentType.JSON);
+        response.toXContent(builder, ToXContent.EMPTY_PARAMS);
+
+        assertNotNull(builder);
+        assertTrue(builder.toString().contains("\"workflow_id\":\"123\""));
+        assertTrue(builder.toString().contains("\"state\":\"PROVISIONING\""));
     }
 
 }
