@@ -176,7 +176,7 @@ dependencies {
     implementation "org.opensearch:common-utils:${common_utils_version}"
     implementation "com.amazonaws:aws-encryption-sdk-java:3.0.1"
     implementation "software.amazon.cryptography:aws-cryptographic-material-providers:1.8.0"
-    implementation "org.dafny:DafnyRuntime:4.9.0"
+    implementation "org.dafny:DafnyRuntime:4.9.1"
     implementation "software.amazon.smithy.dafny:conversion:0.1.1"
     implementation 'org.bouncycastle:bcprov-jdk18on:1.78.1'
     implementation "jakarta.json.bind:jakarta.json.bind-api:3.0.1"
