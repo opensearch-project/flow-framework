@@ -356,7 +356,7 @@ public class ProvisionWorkflowTransportAction extends HandledTransportAction<Wor
             }
         }, client.threadPool().executor(PROVISION_WORKFLOW_THREAD_POOL));
 
-        WorkflowTimeoutUtility.scheduleTimeoutHandler(client, client.threadPool(), workflowId, listener, timeout, isResponseSent);
+        WorkflowTimeoutUtility.scheduleTimeoutHandler(client, client.threadPool(), workflowId, tenantId, listener, timeout, isResponseSent);
     }
 
     /**

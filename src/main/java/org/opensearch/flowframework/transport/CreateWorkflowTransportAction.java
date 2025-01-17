@@ -233,7 +233,7 @@ public class CreateWorkflowTransportAction extends HandledTransportAction<Workfl
             creationTime,
             creationTime,
             null,
-            request.getTemplate().getTenantId()
+            tenantId
         );
 
         String[] validateAll = { "all" };

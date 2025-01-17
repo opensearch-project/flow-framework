@@ -36,7 +36,6 @@ import org.opensearch.core.xcontent.XContentParser;
 import org.opensearch.flowframework.exception.FlowFrameworkException;
 import org.opensearch.flowframework.model.Template;
 import org.opensearch.flowframework.model.WorkflowState;
-import org.opensearch.flowframework.transport.WorkflowResponse;
 import org.opensearch.flowframework.workflow.WorkflowData;
 import org.opensearch.index.query.BoolQueryBuilder;
 import org.opensearch.index.query.NestedQueryBuilder;
@@ -71,7 +70,6 @@ import jakarta.json.bind.JsonbBuilder;
 import static org.opensearch.core.xcontent.XContentParserUtils.ensureExpectedToken;
 import static org.opensearch.flowframework.common.CommonValue.GLOBAL_CONTEXT_INDEX;
 import static org.opensearch.flowframework.common.CommonValue.WORKFLOW_STATE_INDEX;
-import static org.opensearch.flowframework.common.CommonValue.WORKFLOW_THREAD_POOL;
 
 /**
  * Utility methods for Template parsing
@@ -290,11 +288,8 @@ public class ParseUtils {
      * @param workflowId workflow id
      * @param tenantId tenant id
      * @param filterByEnabled filter by enabled setting
-<<<<<<< HEAD
      * @param statePresent state present for the transport action
-=======
      * @param isMultitenancyEnabled whether multitenancy is enabled
->>>>>>> 4026563 (Pass SdkClient and tenant id to util used for access control checks)
      * @param listener action listener
      * @param function workflow function
      * @param client node client
@@ -399,11 +394,8 @@ public class ParseUtils {
      * @param workflowId workflow id
      * @param tenantId tenant id
      * @param filterByEnabled filter by enabled setting
-<<<<<<< Upstream, based on 6312605fcf8db4d0b78cf601a7d4f790a23aeb73
      * @param statePresent state present for the transport action
-=======
      * @param isMultitenancyEnabled if multi tenancy is enabled
->>>>>>> 10abc8e Perform tenant id validation checks for workflow APIs
      * @param listener action listener
      * @param function workflow function
      * @param client node client

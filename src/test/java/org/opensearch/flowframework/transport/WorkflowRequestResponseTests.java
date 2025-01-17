@@ -222,7 +222,8 @@ public class WorkflowRequestResponseTests extends OpenSearchTestCase {
             Instant.now(),
             TestHelpers.randomUser(),
             Collections.emptyMap(),
-            Collections.emptyList()
+            Collections.emptyList(),
+            null
         );
 
         WorkflowResponse response = new WorkflowResponse("123", workFlowState);

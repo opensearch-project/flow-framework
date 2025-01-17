@@ -331,12 +331,13 @@ public class DeprovisionWorkflowTransportAction extends HandledTransportAction<W
             flowFrameworkIndicesHandler.doesTemplateExist(workflowId, tenantId, templateExists -> {
                 if (Boolean.TRUE.equals(templateExists)) {
                     flowFrameworkIndicesHandler.putInitialStateToWorkflowState(
-                        workflowId, 
+                        workflowId,
                         tenantId,
-                        user, 
+                        user,
                         ActionListener.wrap(indexResponse -> {
                             logger.info("Reset workflow {} state to NOT_STARTED", workflowId);
-                        }, exception -> { logger.error("Failed to reset to initial workflow state for {}", workflowId, exception); }));
+                        }, exception -> { logger.error("Failed to reset to initial workflow state for {}", workflowId, exception); })
+                    );
                 } else {
                     flowFrameworkIndicesHandler.deleteFlowFrameworkSystemIndexDoc(
                         workflowId,

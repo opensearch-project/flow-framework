@@ -76,7 +76,6 @@ import static org.opensearch.flowframework.common.WorkflowResources.MODEL_ID;
 import static org.opensearch.flowframework.common.WorkflowResources.REGISTER_REMOTE_MODEL;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
-import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
@@ -297,7 +296,7 @@ public class CreateWorkflowTransportActionTests extends OpenSearchTestCase {
                 fail("Should call onResponse");
             }
         };
-        createWorkflowTransportAction.checkMaxWorkflows(new TimeValue(10, TimeUnit.SECONDS), 10, "tenant-id", listener);
+        createWorkflowTransportAction.checkMaxWorkflows(new TimeValue(10, TimeUnit.SECONDS), Integer.valueOf(10), "tenant-id", listener);
     }
 
     public void testFailedToCreateNewWorkflow() {
@@ -315,10 +314,10 @@ public class CreateWorkflowTransportActionTests extends OpenSearchTestCase {
 
         // Bypass checkMaxWorkflows and force onResponse
         doAnswer(invocation -> {
-            ActionListener<Boolean> checkMaxWorkflowListener = invocation.getArgument(2);
+            ActionListener<Boolean> checkMaxWorkflowListener = invocation.getArgument(3);
             checkMaxWorkflowListener.onResponse(true);
             return null;
-        }).when(createWorkflowTransportAction).checkMaxWorkflows(any(TimeValue.class), anyInt(), anyString(), any());
+        }).when(createWorkflowTransportAction).checkMaxWorkflows(any(TimeValue.class), any(Integer.class), nullable(String.class), any());
 
         // Bypass initializeConfigIndex and force onResponse
         doAnswer(invocation -> {
@@ -354,10 +353,10 @@ public class CreateWorkflowTransportActionTests extends OpenSearchTestCase {
 
         // Bypass checkMaxWorkflows and force onResponse
         doAnswer(invocation -> {
-            ActionListener<Boolean> checkMaxWorkflowListener = invocation.getArgument(2);
+            ActionListener<Boolean> checkMaxWorkflowListener = invocation.getArgument(3);
             checkMaxWorkflowListener.onResponse(true);
             return null;
-        }).when(createWorkflowTransportAction).checkMaxWorkflows(any(TimeValue.class), anyInt(), anyString(), any());
+        }).when(createWorkflowTransportAction).checkMaxWorkflows(any(TimeValue.class), any(Integer.class), nullable(String.class), any());
 
         // Bypass initializeConfigIndex and force onResponse
         doAnswer(invocation -> {
@@ -428,10 +427,10 @@ public class CreateWorkflowTransportActionTests extends OpenSearchTestCase {
 
         // Bypass checkMaxWorkflows and force onResponse
         doAnswer(invocation -> {
-            ActionListener<Boolean> checkMaxWorkflowListener = invocation.getArgument(2);
+            ActionListener<Boolean> checkMaxWorkflowListener = invocation.getArgument(3);
             checkMaxWorkflowListener.onResponse(true);
             return null;
-        }).when(createWorkflowTransportAction1).checkMaxWorkflows(any(TimeValue.class), anyInt(), anyString(), any());
+        }).when(createWorkflowTransportAction).checkMaxWorkflows(any(TimeValue.class), any(Integer.class), nullable(String.class), any());
 
         // Bypass initializeConfigIndex and force onResponse
         doAnswer(invocation -> {
@@ -795,10 +794,10 @@ public class CreateWorkflowTransportActionTests extends OpenSearchTestCase {
 
         // Bypass checkMaxWorkflows and force onResponse
         doAnswer(invocation -> {
-            ActionListener<Boolean> checkMaxWorkflowListener = invocation.getArgument(2);
+            ActionListener<Boolean> checkMaxWorkflowListener = invocation.getArgument(3);
             checkMaxWorkflowListener.onResponse(true);
             return null;
-        }).when(createWorkflowTransportAction).checkMaxWorkflows(any(TimeValue.class), anyInt(), anyString(), any());
+        }).when(createWorkflowTransportAction).checkMaxWorkflows(any(TimeValue.class), any(Integer.class), nullable(String.class), any());
 
         // Bypass initializeConfigIndex and force onResponse
         doAnswer(invocation -> {
@@ -856,17 +855,17 @@ public class CreateWorkflowTransportActionTests extends OpenSearchTestCase {
 
         // Bypass checkMaxWorkflows and force onResponse
         doAnswer(invocation -> {
-            ActionListener<Boolean> checkMaxWorkflowListener = invocation.getArgument(2);
+            ActionListener<Boolean> checkMaxWorkflowListener = invocation.getArgument(3);
             checkMaxWorkflowListener.onResponse(true);
             return null;
-        }).when(createWorkflowTransportAction).checkMaxWorkflows(any(TimeValue.class), anyInt(), any());
+        }).when(createWorkflowTransportAction).checkMaxWorkflows(any(TimeValue.class), any(Integer.class), nullable(String.class), any());
 
         // Bypass initializeConfigIndex and force onResponse
         doAnswer(invocation -> {
-            ActionListener<Boolean> initalizeMasterKeyIndexListener = invocation.getArgument(0);
+            ActionListener<Boolean> initalizeMasterKeyIndexListener = invocation.getArgument(1);
             initalizeMasterKeyIndexListener.onResponse(true);
             return null;
-        }).when(flowFrameworkIndicesHandler).initializeConfigIndex(any());
+        }).when(flowFrameworkIndicesHandler).initializeConfigIndex(nullable(String.class), any());
 
         // Bypass putTemplateToGlobalContext and force onResponse
         doAnswer(invocation -> {
@@ -877,10 +876,10 @@ public class CreateWorkflowTransportActionTests extends OpenSearchTestCase {
 
         // Bypass putInitialStateToWorkflowState and force on response
         doAnswer(invocation -> {
-            ActionListener<IndexResponse> responseListener = invocation.getArgument(2);
+            ActionListener<IndexResponse> responseListener = invocation.getArgument(3);
             responseListener.onResponse(new IndexResponse(new ShardId(WORKFLOW_STATE_INDEX, "", 1), "1", 1L, 1L, 1L, true));
             return null;
-        }).when(flowFrameworkIndicesHandler).putInitialStateToWorkflowState(any(), any(), any());
+        }).when(flowFrameworkIndicesHandler).putInitialStateToWorkflowState(any(), any(), any(), any());
 
         doAnswer(invocation -> {
             ActionListener<WorkflowResponse> responseListener = invocation.getArgument(2);
@@ -896,7 +895,8 @@ public class CreateWorkflowTransportActionTests extends OpenSearchTestCase {
                     Instant.now(),
                     TestHelpers.randomUser(),
                     Collections.emptyMap(),
-                    Collections.emptyList()
+                    Collections.emptyList(),
+                    null
                 )
             );
             responseListener.onResponse(response);
@@ -931,17 +931,17 @@ public class CreateWorkflowTransportActionTests extends OpenSearchTestCase {
 
         // Bypass checkMaxWorkflows and force onResponse
         doAnswer(invocation -> {
-            ActionListener<Boolean> checkMaxWorkflowListener = invocation.getArgument(2);
+            ActionListener<Boolean> checkMaxWorkflowListener = invocation.getArgument(3);
             checkMaxWorkflowListener.onResponse(true);
             return null;
-        }).when(createWorkflowTransportAction).checkMaxWorkflows(any(TimeValue.class), anyInt(), any());
+        }).when(createWorkflowTransportAction).checkMaxWorkflows(any(TimeValue.class), any(Integer.class), nullable(String.class), any());
 
         // Bypass initializeConfigIndex and force onResponse
         doAnswer(invocation -> {
-            ActionListener<Boolean> initalizeMasterKeyIndexListener = invocation.getArgument(0);
+            ActionListener<Boolean> initalizeMasterKeyIndexListener = invocation.getArgument(1);
             initalizeMasterKeyIndexListener.onResponse(true);
             return null;
-        }).when(flowFrameworkIndicesHandler).initializeConfigIndex(any());
+        }).when(flowFrameworkIndicesHandler).initializeConfigIndex(nullable(String.class), any());
 
         // Bypass putTemplateToGlobalContext and force onResponse
         doAnswer(invocation -> {
@@ -952,10 +952,10 @@ public class CreateWorkflowTransportActionTests extends OpenSearchTestCase {
 
         // Bypass putInitialStateToWorkflowState and force on response
         doAnswer(invocation -> {
-            ActionListener<IndexResponse> responseListener = invocation.getArgument(2);
+            ActionListener<IndexResponse> responseListener = invocation.getArgument(3);
             responseListener.onResponse(new IndexResponse(new ShardId(WORKFLOW_STATE_INDEX, "", 1), "1", 1L, 1L, 1L, true));
             return null;
-        }).when(flowFrameworkIndicesHandler).putInitialStateToWorkflowState(any(), any(), any());
+        }).when(flowFrameworkIndicesHandler).putInitialStateToWorkflowState(any(), any(), any(), any());
 
         doAnswer(invocation -> {
             ActionListener<WorkflowResponse> responseListener = invocation.getArgument(2);
@@ -971,7 +971,8 @@ public class CreateWorkflowTransportActionTests extends OpenSearchTestCase {
                     Instant.now(),
                     TestHelpers.randomUser(),
                     Collections.emptyMap(),
-                    Collections.emptyList()
+                    Collections.emptyList(),
+                    null
                 )
             );
             responseListener.onResponse(response);
@@ -1006,10 +1007,10 @@ public class CreateWorkflowTransportActionTests extends OpenSearchTestCase {
 
         // Bypass checkMaxWorkflows and force onResponse
         doAnswer(invocation -> {
-            ActionListener<Boolean> checkMaxWorkflowListener = invocation.getArgument(2);
+            ActionListener<Boolean> checkMaxWorkflowListener = invocation.getArgument(3);
             checkMaxWorkflowListener.onResponse(true);
             return null;
-        }).when(createWorkflowTransportAction).checkMaxWorkflows(any(TimeValue.class), anyInt(), anyString(), any());
+        }).when(createWorkflowTransportAction).checkMaxWorkflows(any(TimeValue.class), any(Integer.class), nullable(String.class), any());
 
         // Bypass initializeConfigIndex and force onResponse
         doAnswer(invocation -> {

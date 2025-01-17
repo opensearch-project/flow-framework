@@ -61,6 +61,7 @@ public class WorkflowTimeoutUtilityTests extends OpenSearchTestCase {
             mockClient,
             mockThreadPool,
             workflowId,
+            null,
             mockListener,
             timeout,
             isResponseSent
@@ -86,7 +87,8 @@ public class WorkflowTimeoutUtilityTests extends OpenSearchTestCase {
                 Instant.now(),
                 TestHelpers.randomUser(),
                 Collections.emptyMap(),
-                Collections.emptyList()
+                Collections.emptyList(),
+                null
             )
         );
         Scheduler.ScheduledCancellable scheduledCancellable = mock(Scheduler.ScheduledCancellable.class);
@@ -125,7 +127,7 @@ public class WorkflowTimeoutUtilityTests extends OpenSearchTestCase {
         String workflowId = "testWorkflowId";
         ActionListener<WorkflowResponse> mockListener = mock(ActionListener.class);
 
-        WorkflowTimeoutUtility.fetchWorkflowStateAfterTimeout(mockClient, workflowId, mockListener);
+        WorkflowTimeoutUtility.fetchWorkflowStateAfterTimeout(mockClient, workflowId, null, mockListener);
 
         verify(mockClient, times(1)).execute(
             eq(GetWorkflowStateAction.INSTANCE),

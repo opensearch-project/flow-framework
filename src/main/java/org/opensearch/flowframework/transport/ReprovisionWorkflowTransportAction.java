@@ -359,7 +359,15 @@ public class ReprovisionWorkflowTransportAction extends HandledTransportAction<R
                 WorkflowTimeoutUtility.handleFailure(workflowId, ex, isResponseSent, listener);
             }
         }, threadPool.executor(PROVISION_WORKFLOW_THREAD_POOL));
-        WorkflowTimeoutUtility.scheduleTimeoutHandler(client, threadPool, workflowId, listener, timeout, isResponseSent);
+        WorkflowTimeoutUtility.scheduleTimeoutHandler(
+            client,
+            threadPool,
+            workflowId,
+            template.getTenantId(),
+            listener,
+            timeout,
+            isResponseSent
+        );
     }
 
     /**
