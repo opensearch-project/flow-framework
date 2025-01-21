@@ -123,7 +123,7 @@ public class ReprovisionWorkflowTransportActionTests extends OpenSearchTestCase 
 
         // Stub validations
         when(mockTemplate.workflows()).thenReturn(mockWorkflows);
-        when(workflowProcessSorter.sortProcessNodes(any(), any(), any())).thenReturn(List.of());
+        when(workflowProcessSorter.sortProcessNodes(any(), any(), any(), any())).thenReturn(List.of());
         doNothing().when(workflowProcessSorter).validate(any(), any());
         when(encryptorUtils.decryptTemplateCredentials(any())).thenReturn(mockTemplate);
 
@@ -171,7 +171,7 @@ public class ReprovisionWorkflowTransportActionTests extends OpenSearchTestCase 
 
         // Stub validations
         when(mockTemplate.workflows()).thenReturn(mockWorkflows);
-        when(workflowProcessSorter.sortProcessNodes(any(), any(), any())).thenReturn(List.of());
+        when(workflowProcessSorter.sortProcessNodes(any(), any(), any(), any())).thenReturn(List.of());
         doNothing().when(workflowProcessSorter).validate(any(), any());
         when(encryptorUtils.decryptTemplateCredentials(any())).thenReturn(mockTemplate);
 
@@ -211,7 +211,7 @@ public class ReprovisionWorkflowTransportActionTests extends OpenSearchTestCase 
 
         // Stub validations
         when(mockTemplate.workflows()).thenReturn(mockWorkflows);
-        when(workflowProcessSorter.sortProcessNodes(any(), any(), any())).thenReturn(List.of());
+        when(workflowProcessSorter.sortProcessNodes(any(), any(), any(), any())).thenReturn(List.of());
         doNothing().when(workflowProcessSorter).validate(any(), any());
         when(encryptorUtils.decryptTemplateCredentials(any())).thenReturn(mockTemplate);
 
@@ -251,7 +251,7 @@ public class ReprovisionWorkflowTransportActionTests extends OpenSearchTestCase 
 
         // Stub validations
         when(mockTemplate.workflows()).thenReturn(mockWorkflows);
-        when(workflowProcessSorter.sortProcessNodes(any(), any(), any())).thenReturn(List.of());
+        when(workflowProcessSorter.sortProcessNodes(any(), any(), any(), any())).thenReturn(List.of());
         doNothing().when(workflowProcessSorter).validate(any(), any());
         when(encryptorUtils.decryptTemplateCredentials(any())).thenReturn(mockTemplate);
 
@@ -299,7 +299,7 @@ public class ReprovisionWorkflowTransportActionTests extends OpenSearchTestCase 
 
         // Stub validations
         when(mockTemplate.workflows()).thenReturn(mockWorkflows);
-        when(workflowProcessSorter.sortProcessNodes(any(), any(), any())).thenReturn(List.of());
+        when(workflowProcessSorter.sortProcessNodes(any(), any(), any(), any())).thenReturn(List.of());
         doNothing().when(workflowProcessSorter).validate(any(), any());
         when(encryptorUtils.decryptTemplateCredentials(any())).thenReturn(mockTemplate);
 

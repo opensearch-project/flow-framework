@@ -198,7 +198,8 @@ public class ProvisionWorkflowTransportAction extends HandledTransportAction<Wor
             List<ProcessNode> provisionProcessSequence = workflowProcessSorter.sortProcessNodes(
                 provisionWorkflow,
                 workflowId,
-                request.getParams()
+                request.getParams(),
+                "fakeTenantId"
             );
             workflowProcessSorter.validate(provisionProcessSequence, pluginsService);
 
