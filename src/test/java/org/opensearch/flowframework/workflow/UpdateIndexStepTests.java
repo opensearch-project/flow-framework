@@ -103,7 +103,7 @@ public class UpdateIndexStepTests extends OpenSearchTestCase {
             Collections.emptyMap(),
             Collections.emptyMap(),
             Collections.emptyMap(),
-            "fakeTenantId"
+            null
         );
 
         verify(indicesAdminClient, times(1)).getSettings(any(GetSettingsRequest.class), any());
@@ -164,7 +164,7 @@ public class UpdateIndexStepTests extends OpenSearchTestCase {
             Collections.emptyMap(),
             Collections.emptyMap(),
             Collections.emptyMap(),
-            "fakeTenantId"
+            null
         );
 
         assertTrue(future.isDone());
@@ -191,7 +191,7 @@ public class UpdateIndexStepTests extends OpenSearchTestCase {
             Collections.emptyMap(),
             Collections.emptyMap(),
             Collections.emptyMap(),
-            "fakeTenantId"
+            null
         );
 
         assertTrue(future.isDone());
@@ -242,7 +242,7 @@ public class UpdateIndexStepTests extends OpenSearchTestCase {
             Collections.emptyMap(),
             Collections.emptyMap(),
             Collections.emptyMap(),
-            "fakeTenantId"
+            null
         );
 
         verify(indicesAdminClient, times(1)).getSettings(any(GetSettingsRequest.class), any());
@@ -270,7 +270,7 @@ public class UpdateIndexStepTests extends OpenSearchTestCase {
             Collections.emptyMap(),
             Collections.emptyMap(),
             Collections.emptyMap(),
-            "fakeTenantId"
+            null
         );
 
         assertTrue(future.isDone());
@@ -295,7 +295,7 @@ public class UpdateIndexStepTests extends OpenSearchTestCase {
             Collections.emptyMap(),
             Collections.emptyMap(),
             Collections.emptyMap(),
-            "fakeTenantId"
+            null
         );
 
         assertTrue(future.isDone());
@@ -348,7 +348,7 @@ public class UpdateIndexStepTests extends OpenSearchTestCase {
             Collections.emptyMap(),
             Collections.emptyMap(),
             Collections.emptyMap(),
-            "fakeTenantId"
+            null
         );
 
         ExecutionException exception = assertThrows(ExecutionException.class, () -> future.get());

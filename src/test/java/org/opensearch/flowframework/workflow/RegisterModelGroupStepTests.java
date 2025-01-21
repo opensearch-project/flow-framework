@@ -122,7 +122,7 @@ public class RegisterModelGroupStepTests extends OpenSearchTestCase {
             Collections.emptyMap(),
             Collections.emptyMap(),
             Collections.emptyMap(),
-            "fakeTenantId"
+            null
         );
 
         verify(machineLearningNodeClient).registerModelGroup(any(MLRegisterModelGroupInput.class), actionListenerCaptor.capture());
@@ -137,7 +137,7 @@ public class RegisterModelGroupStepTests extends OpenSearchTestCase {
             Collections.emptyMap(),
             Collections.emptyMap(),
             Collections.emptyMap(),
-            "fakeTenantId"
+            null
         );
 
         assertTrue(future.isDone());
@@ -163,7 +163,7 @@ public class RegisterModelGroupStepTests extends OpenSearchTestCase {
             Collections.emptyMap(),
             Collections.emptyMap(),
             Collections.emptyMap(),
-            "fakeTenantId"
+            null
         );
 
         verify(machineLearningNodeClient).registerModelGroup(any(MLRegisterModelGroupInput.class), actionListenerCaptor.capture());
@@ -184,7 +184,7 @@ public class RegisterModelGroupStepTests extends OpenSearchTestCase {
             Collections.emptyMap(),
             Collections.emptyMap(),
             Collections.emptyMap(),
-            "fakeTenantId"
+            null
         );
 
         assertTrue(future.isDone());
@@ -202,7 +202,7 @@ public class RegisterModelGroupStepTests extends OpenSearchTestCase {
             Collections.emptyMap(),
             Collections.emptyMap(),
             Collections.emptyMap(),
-            "fakeTenantId"
+            null
         );
 
         assertTrue(future.isDone());

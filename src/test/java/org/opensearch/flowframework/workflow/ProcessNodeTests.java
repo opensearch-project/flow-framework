@@ -95,7 +95,7 @@ public class ProcessNodeTests extends OpenSearchTestCase {
             testThreadPool,
             PROVISION_WORKFLOW_THREAD_POOL,
             TimeValue.timeValueMillis(50),
-            "fakeTenantId"
+            null
         );
         assertEquals("A", nodeA.id());
         assertEquals("test", nodeA.workflowStep().getName());
@@ -147,7 +147,7 @@ public class ProcessNodeTests extends OpenSearchTestCase {
             testThreadPool,
             PROVISION_WORKFLOW_THREAD_POOL,
             TimeValue.timeValueMillis(500),
-            "fakeTenantId"
+            null
         );
         assertEquals("B", nodeB.id());
         assertEquals("test", nodeB.workflowStep().getName());
@@ -193,7 +193,7 @@ public class ProcessNodeTests extends OpenSearchTestCase {
             testThreadPool,
             PROVISION_WORKFLOW_THREAD_POOL,
             TimeValue.timeValueMillis(100),
-            "fakeTenantId"
+            null
         );
         assertEquals("Zzz", nodeZ.id());
         assertEquals("sleepy", nodeZ.workflowStep().getName());
@@ -236,7 +236,7 @@ public class ProcessNodeTests extends OpenSearchTestCase {
             testThreadPool,
             PROVISION_WORKFLOW_THREAD_POOL,
             TimeValue.timeValueSeconds(15),
-            "fakeTenantId"
+            null
         );
         assertEquals("E", nodeE.id());
         assertEquals("test", nodeE.workflowStep().getName());

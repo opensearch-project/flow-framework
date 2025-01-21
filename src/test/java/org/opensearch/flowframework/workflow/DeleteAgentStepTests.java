@@ -67,7 +67,7 @@ public class DeleteAgentStepTests extends OpenSearchTestCase {
             Map.of("step_1", new WorkflowData(Map.of(AGENT_ID, agentId), "workflowId", "nodeId")),
             Map.of("step_1", AGENT_ID),
             Collections.emptyMap(),
-            "fakeTenantId"
+            null
         );
         verify(machineLearningNodeClient).deleteAgent(any(String.class), any());
 
@@ -92,7 +92,7 @@ public class DeleteAgentStepTests extends OpenSearchTestCase {
             Map.of("step_1", new WorkflowData(Map.of(AGENT_ID, agentId), "workflowId", "nodeId")),
             Map.of("step_1", AGENT_ID),
             Collections.emptyMap(),
-            "fakeTenantId"
+            null
         );
         verify(machineLearningNodeClient).deleteAgent(any(String.class), any());
 
@@ -109,7 +109,7 @@ public class DeleteAgentStepTests extends OpenSearchTestCase {
             Collections.emptyMap(),
             Collections.emptyMap(),
             Collections.emptyMap(),
-            "fakeTenantId"
+            null
         );
 
         assertTrue(future.isDone());
@@ -133,7 +133,7 @@ public class DeleteAgentStepTests extends OpenSearchTestCase {
             Map.of("step_1", new WorkflowData(Map.of(AGENT_ID, "test"), "workflowId", "nodeId")),
             Map.of("step_1", AGENT_ID),
             Collections.emptyMap(),
-            "fakeTenantId"
+            null
         );
 
         verify(machineLearningNodeClient).deleteAgent(any(String.class), any());

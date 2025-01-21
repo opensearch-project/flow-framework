@@ -73,7 +73,7 @@ public class DeleteSearchPipelineStepTests extends OpenSearchTestCase {
             Map.of("step_1", new WorkflowData(Map.of(PIPELINE_ID, pipelineId), "workflowId", "nodeId")),
             Map.of("step_1", PIPELINE_ID),
             Collections.emptyMap(),
-            "fakeTenantId"
+            null
         );
         verify(clusterAdminClient).deleteSearchPipeline(any(DeleteSearchPipelineRequest.class), any());
 
@@ -90,7 +90,7 @@ public class DeleteSearchPipelineStepTests extends OpenSearchTestCase {
             Collections.emptyMap(),
             Collections.emptyMap(),
             Collections.emptyMap(),
-            "fakeTenantId"
+            null
         );
 
         assertTrue(future.isDone());
@@ -114,7 +114,7 @@ public class DeleteSearchPipelineStepTests extends OpenSearchTestCase {
             Map.of("step_1", new WorkflowData(Map.of(PIPELINE_ID, "test"), "workflowId", "nodeId")),
             Map.of("step_1", PIPELINE_ID),
             Collections.emptyMap(),
-            "fakeTenantId"
+            null
         );
 
         verify(clusterAdminClient).deleteSearchPipeline(any(DeleteSearchPipelineRequest.class), any());

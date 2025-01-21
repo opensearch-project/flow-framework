@@ -74,7 +74,7 @@ public class UndeployModelStepTests extends OpenSearchTestCase {
             Map.of("step_1", new WorkflowData(Map.of(MODEL_ID, modelId), "workflowId", "nodeId")),
             Map.of("step_1", MODEL_ID),
             Collections.emptyMap(),
-            "fakeTenantId"
+            null
         );
         verify(machineLearningNodeClient).undeploy(any(String[].class), any(), any());
 
@@ -91,7 +91,7 @@ public class UndeployModelStepTests extends OpenSearchTestCase {
             Collections.emptyMap(),
             Collections.emptyMap(),
             Collections.emptyMap(),
-            "fakeTenantId"
+            null
         );
 
         assertTrue(future.isDone());
@@ -124,7 +124,7 @@ public class UndeployModelStepTests extends OpenSearchTestCase {
             Map.of("step_1", new WorkflowData(Map.of(MODEL_ID, "test"), "workflowId", "nodeId")),
             Map.of("step_1", MODEL_ID),
             Collections.emptyMap(),
-            "fakeTenantId"
+            null
         );
 
         verify(machineLearningNodeClient).undeploy(any(String[].class), any(), any());

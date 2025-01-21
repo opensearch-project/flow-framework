@@ -50,6 +50,7 @@ import java.util.function.Consumer;
 
 import org.mockito.ArgumentCaptor;
 
+import static org.mockito.ArgumentMatchers.nullable;
 import static org.opensearch.flowframework.common.CommonValue.ALLOW_DELETE;
 import static org.opensearch.flowframework.common.CommonValue.DEPROVISION_WORKFLOW_THREAD_POOL;
 import static org.opensearch.flowframework.common.CommonValue.FLOW_FRAMEWORK_THREAD_POOL_PREFIX;
@@ -165,7 +166,7 @@ public class DeprovisionWorkflowTransportActionTests extends OpenSearchTestCase 
 
         PlainActionFuture<WorkflowData> future = PlainActionFuture.newFuture();
         future.onResponse(WorkflowData.EMPTY);
-        when(this.deleteConnectorStep.execute(anyString(), any(WorkflowData.class), anyMap(), anyMap(), anyMap(), anyString())).thenReturn(future);
+        when(this.deleteConnectorStep.execute(anyString(), any(WorkflowData.class), anyMap(), anyMap(), anyMap(), nullable(String.class))).thenReturn(future);
 
         CountDownLatch latch = new CountDownLatch(1);
         LatchedActionListener<WorkflowResponse> latchedActionListener = new LatchedActionListener<>(listener, latch);
@@ -197,7 +198,7 @@ public class DeprovisionWorkflowTransportActionTests extends OpenSearchTestCase 
 
         PlainActionFuture<WorkflowData> future = PlainActionFuture.newFuture();
         future.onFailure(new RuntimeException("rte"));
-        when(this.undeployModelStep.execute(anyString(), any(WorkflowData.class), anyMap(), anyMap(), anyMap(), anyString())).thenReturn(future);
+        when(this.undeployModelStep.execute(anyString(), any(WorkflowData.class), anyMap(), anyMap(), anyMap(), nullable(String.class))).thenReturn(future);
 
         CountDownLatch latch = new CountDownLatch(1);
         LatchedActionListener<WorkflowResponse> latchedActionListener = new LatchedActionListener<>(listener, latch);
@@ -274,7 +275,7 @@ public class DeprovisionWorkflowTransportActionTests extends OpenSearchTestCase 
 
         PlainActionFuture<WorkflowData> future = PlainActionFuture.newFuture();
         future.onResponse(WorkflowData.EMPTY);
-        when(this.deleteIndexStep.execute(anyString(), any(WorkflowData.class), anyMap(), anyMap(), anyMap(), anyString())).thenReturn(future);
+        when(this.deleteIndexStep.execute(anyString(), any(WorkflowData.class), anyMap(), anyMap(), anyMap(), nullable(String.class))).thenReturn(future);
 
         latch = new CountDownLatch(1);
         latchedActionListener = new LatchedActionListener<>(listener, latch);
@@ -312,7 +313,7 @@ public class DeprovisionWorkflowTransportActionTests extends OpenSearchTestCase 
 
         PlainActionFuture<WorkflowData> future = PlainActionFuture.newFuture();
         future.onFailure(new RuntimeException("rte"));
-        when(this.undeployModelStep.execute(anyString(), any(WorkflowData.class), anyMap(), anyMap(), anyMap(), anyString())).thenReturn(future);
+        when(this.undeployModelStep.execute(anyString(), any(WorkflowData.class), anyMap(), anyMap(), anyMap(), nullable(String.class))).thenReturn(future);
 
         CountDownLatch latch = new CountDownLatch(1);
         LatchedActionListener<WorkflowResponse> latchedActionListener = new LatchedActionListener<>(listener, latch);

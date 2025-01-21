@@ -67,7 +67,7 @@ public class DeleteConnectorStepTests extends OpenSearchTestCase {
             Map.of("step_1", new WorkflowData(Map.of(CONNECTOR_ID, connectorId), "workflowId", "nodeId")),
             Map.of("step_1", CONNECTOR_ID),
             Collections.emptyMap(),
-            "fakeTenantId"
+            null
         );
         verify(machineLearningNodeClient).deleteConnector(anyString(), anyActionListener());
 
@@ -84,7 +84,7 @@ public class DeleteConnectorStepTests extends OpenSearchTestCase {
             Collections.emptyMap(),
             Collections.emptyMap(),
             Collections.emptyMap(),
-            "fakeTenantId"
+            null
         );
 
         assertTrue(future.isDone());
@@ -108,7 +108,7 @@ public class DeleteConnectorStepTests extends OpenSearchTestCase {
             Map.of("step_1", new WorkflowData(Map.of(CONNECTOR_ID, "test"), "workflowId", "nodeId")),
             Map.of("step_1", CONNECTOR_ID),
             Collections.emptyMap(),
-            "fakeTenantId"
+            null
         );
 
         verify(machineLearningNodeClient).deleteConnector(anyString(), anyActionListener());

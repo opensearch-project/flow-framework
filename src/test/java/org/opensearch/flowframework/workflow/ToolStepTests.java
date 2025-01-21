@@ -89,7 +89,7 @@ public class ToolStepTests extends OpenSearchTestCase {
             Collections.emptyMap(),
             Collections.emptyMap(),
             Collections.emptyMap(),
-            "fakeTenantId"
+            null
         );
         assertTrue(future.isDone());
         assertEquals(MLToolSpec.class, future.get().getContent().get("tools").getClass());
@@ -101,7 +101,7 @@ public class ToolStepTests extends OpenSearchTestCase {
             Collections.emptyMap(),
             Collections.emptyMap(),
             Collections.emptyMap(),
-            "fakeTenantId"
+            null
         );
         assertTrue(future.isDone());
         assertEquals(MLToolSpec.class, future.get().getContent().get("tools").getClass());
@@ -117,7 +117,7 @@ public class ToolStepTests extends OpenSearchTestCase {
             Collections.emptyMap(),
             Collections.emptyMap(),
             Collections.emptyMap(),
-            "fakeTenantId"
+            null
         );
 
         assertTrue(future.isDone());
@@ -137,7 +137,7 @@ public class ToolStepTests extends OpenSearchTestCase {
             Map.of(createConnectorNodeId, inputDataWithConnectorId),
             Map.of(createConnectorNodeId, CONNECTOR_ID),
             Collections.emptyMap(),
-            "fakeTenantId"
+            null
         );
         assertTrue(future.isDone());
         Object tools = future.get().getContent().get("tools");
@@ -155,7 +155,7 @@ public class ToolStepTests extends OpenSearchTestCase {
             Map.of(createModelNodeId, inputDataWithModelId),
             Map.of(createModelNodeId, MODEL_ID),
             Collections.emptyMap(),
-            "fakeTenantId"
+            null
         );
         assertTrue(future.isDone());
         Object tools = future.get().getContent().get("tools");
@@ -173,7 +173,7 @@ public class ToolStepTests extends OpenSearchTestCase {
             Map.of(createAgentNodeId, inputDataWithAgentId),
             Map.of(createAgentNodeId, AGENT_ID),
             Collections.emptyMap(),
-            "fakeTenantId"
+            null
         );
         assertTrue(future.isDone());
         Object tools = future.get().getContent().get("tools");

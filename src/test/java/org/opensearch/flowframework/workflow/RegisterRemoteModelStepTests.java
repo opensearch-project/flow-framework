@@ -106,7 +106,7 @@ public class RegisterRemoteModelStepTests extends OpenSearchTestCase {
             Collections.emptyMap(),
             Collections.emptyMap(),
             Collections.emptyMap(),
-            "fakeTenantId"
+            null
         );
 
         verify(mlNodeClient, times(1)).register(any(MLRegisterModelInput.class), any());
@@ -160,7 +160,7 @@ public class RegisterRemoteModelStepTests extends OpenSearchTestCase {
             Collections.emptyMap(),
             Collections.emptyMap(),
             Collections.emptyMap(),
-            "fakeTenantId"
+            null
         );
 
         verify(mlNodeClient, times(1)).register(any(MLRegisterModelInput.class), any());
@@ -193,7 +193,7 @@ public class RegisterRemoteModelStepTests extends OpenSearchTestCase {
             Collections.emptyMap(),
             Collections.emptyMap(),
             Collections.emptyMap(),
-            "fakeTenantId"
+            null
         );
 
         verify(mlNodeClient, times(2)).register(any(MLRegisterModelInput.class), any());
@@ -224,7 +224,7 @@ public class RegisterRemoteModelStepTests extends OpenSearchTestCase {
             Collections.emptyMap(),
             Collections.emptyMap(),
             Collections.emptyMap(),
-            "fakeTenantId"
+            null
         );
         assertTrue(future.isDone());
         ExecutionException ex = expectThrows(ExecutionException.class, () -> future.get().getClass());
@@ -268,7 +268,7 @@ public class RegisterRemoteModelStepTests extends OpenSearchTestCase {
             Collections.emptyMap(),
             Collections.emptyMap(),
             Collections.emptyMap(),
-            "fakeTenantId"
+            null
         );
 
         assertTrue(future.isDone());
@@ -319,7 +319,7 @@ public class RegisterRemoteModelStepTests extends OpenSearchTestCase {
             Collections.emptyMap(),
             Collections.emptyMap(),
             Collections.emptyMap(),
-            "fakeTenantId"
+            null
         );
 
         assertTrue(future.isDone());
@@ -353,7 +353,7 @@ public class RegisterRemoteModelStepTests extends OpenSearchTestCase {
             Collections.emptyMap(),
             Collections.emptyMap(),
             Collections.emptyMap(),
-            "fakeTenantId"
+            null
         );
         assertTrue(future.isDone());
         ExecutionException ex = expectThrows(ExecutionException.class, () -> future.get().getClass());
@@ -374,7 +374,7 @@ public class RegisterRemoteModelStepTests extends OpenSearchTestCase {
             Collections.emptyMap(),
             Collections.emptyMap(),
             Collections.emptyMap(),
-            "fakeTenantId"
+            null
         );
         assertTrue(future.isDone());
         ExecutionException ex = expectThrows(ExecutionException.class, () -> future.get().getClass());
@@ -390,7 +390,7 @@ public class RegisterRemoteModelStepTests extends OpenSearchTestCase {
             Collections.emptyMap(),
             Collections.emptyMap(),
             Collections.emptyMap(),
-            "fakeTenantId"
+            null
         );
         assertTrue(future.isDone());
         ExecutionException ex = assertThrows(ExecutionException.class, () -> future.get().getContent());
@@ -420,7 +420,7 @@ public class RegisterRemoteModelStepTests extends OpenSearchTestCase {
             Collections.emptyMap(),
             Collections.emptyMap(),
             Collections.emptyMap(),
-            "fakeTenantId"
+            null
         );
 
         assertTrue(future.isDone());

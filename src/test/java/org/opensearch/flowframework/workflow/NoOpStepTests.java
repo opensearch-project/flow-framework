@@ -32,7 +32,7 @@ public class NoOpStepTests extends OpenSearchTestCase {
             Collections.emptyMap(),
             Collections.emptyMap(),
             Collections.emptyMap(),
-            "fakeTenantId"
+            null
         );
         assertTrue(future.isDone());
     }
@@ -48,7 +48,7 @@ public class NoOpStepTests extends OpenSearchTestCase {
             Collections.emptyMap(),
             Collections.emptyMap(),
             Collections.emptyMap(),
-            "fakeTenantId"
+            null
         );
         assertTrue(future.isDone());
         // Sleep isn't exactly accurate so leave 100ms of roundoff
@@ -71,7 +71,7 @@ public class NoOpStepTests extends OpenSearchTestCase {
                     Collections.emptyMap(),
                     Collections.emptyMap(),
                     Collections.emptyMap(),
-                    "fakeTenantId"
+                    null
                 );
                 try {
                     future.actionGet();
@@ -105,7 +105,7 @@ public class NoOpStepTests extends OpenSearchTestCase {
 
         Exception ex = assertThrows(
             WorkflowStepException.class,
-            () -> noopStep.execute("nodeId", delayData, Collections.emptyMap(), Collections.emptyMap(), Collections.emptyMap(),"fakeTenantId")
+            () -> noopStep.execute("nodeId", delayData, Collections.emptyMap(), Collections.emptyMap(), Collections.emptyMap(),null)
         );
         assertEquals("failed to parse setting [delay] with value [foo] as a time value: unit is missing or unrecognized", ex.getMessage());
     }

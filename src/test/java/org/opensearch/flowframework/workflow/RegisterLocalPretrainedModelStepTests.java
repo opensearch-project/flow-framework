@@ -158,7 +158,7 @@ public class RegisterLocalPretrainedModelStepTests extends OpenSearchTestCase {
             Collections.emptyMap(),
             Collections.emptyMap(),
             Collections.emptyMap(),
-            "fakeTenantId"
+            null
         );
 
         future.actionGet();
@@ -188,7 +188,7 @@ public class RegisterLocalPretrainedModelStepTests extends OpenSearchTestCase {
             Collections.emptyMap(),
             Collections.emptyMap(),
             Collections.emptyMap(),
-            "fakeTenantId"
+            null
         );
 
         future.actionGet();
@@ -214,7 +214,7 @@ public class RegisterLocalPretrainedModelStepTests extends OpenSearchTestCase {
             Collections.emptyMap(),
             Collections.emptyMap(),
             Collections.emptyMap(),
-            "fakeTenantId"
+            null
         );
 
         ExecutionException ex = expectThrows(ExecutionException.class, () -> future.get().getClass());
@@ -256,7 +256,7 @@ public class RegisterLocalPretrainedModelStepTests extends OpenSearchTestCase {
             Collections.emptyMap(),
             Collections.emptyMap(),
             Collections.emptyMap(),
-            "fakeTenantId"
+            null
         );
 
         ExecutionException ex = expectThrows(ExecutionException.class, () -> future.get().getClass());
@@ -271,7 +271,7 @@ public class RegisterLocalPretrainedModelStepTests extends OpenSearchTestCase {
             Collections.emptyMap(),
             Collections.emptyMap(),
             Collections.emptyMap(),
-            "fakeTenantId"
+            null
         );
         assertTrue(future.isDone());
         ExecutionException ex = assertThrows(ExecutionException.class, () -> future.get().getContent());
@@ -303,7 +303,7 @@ public class RegisterLocalPretrainedModelStepTests extends OpenSearchTestCase {
             Collections.emptyMap(),
             Collections.emptyMap(),
             Collections.emptyMap(),
-            "fakeTenantId"
+            null
         );
 
         assertTrue(future.isDone());
