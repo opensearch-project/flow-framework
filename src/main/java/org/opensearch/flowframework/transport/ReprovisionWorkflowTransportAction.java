@@ -143,6 +143,7 @@ public class ReprovisionWorkflowTransportAction extends HandledTransportAction<R
                 user,
                 workflowId,
                 filterByEnabled,
+                false,
                 listener,
                 () -> executeReprovisionRequest(request, listener, context),
                 client,
