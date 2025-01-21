@@ -129,8 +129,9 @@ public class DeprovisionWorkflowTransportAction extends HandledTransportAction<W
                 user,
                 workflowId,
                 filterByEnabled,
+                true,
                 listener,
-                () -> executeDeprovisionRequest(request, listener, context),
+                () -> executeDeprovisionRequest(request, listener, context, user),
                 client,
                 clusterService,
                 xContentRegistry
@@ -146,7 +147,8 @@ public class DeprovisionWorkflowTransportAction extends HandledTransportAction<W
     private void executeDeprovisionRequest(
         WorkflowRequest request,
         ActionListener<WorkflowResponse> listener,
-        ThreadContext.StoredContext context
+        ThreadContext.StoredContext context,
+        User user
     ) {
         String workflowId = request.getWorkflowId();
         String allowDelete = request.getParams().get(ALLOW_DELETE);
@@ -163,7 +165,8 @@ public class DeprovisionWorkflowTransportAction extends HandledTransportAction<W
                         workflowId,
                         response.getWorkflowState().resourcesCreated(),
                         deleteAllowedResources,
-                        listener
+                        listener,
+                        user
                     )
                 );
         }, exception -> {
@@ -180,7 +183,8 @@ public class DeprovisionWorkflowTransportAction extends HandledTransportAction<W
         String workflowId,
         List<ResourceCreated> resourcesCreated,
         Set<String> deleteAllowedResources,
-        ActionListener<WorkflowResponse> listener
+        ActionListener<WorkflowResponse> listener,
+        User user
     ) {
         List<ResourceCreated> deleteNotAllowed = new ArrayList<>();
         // Create a list of ProcessNodes with the corresponding deprovision workflow steps
@@ -294,26 +298,23 @@ public class DeprovisionWorkflowTransportAction extends HandledTransportAction<W
             logger.info("Resources requiring allow_delete: {}.", deleteNotAllowed);
         }
         // This is a redundant best-effort backup to the incremental deletion done earlier
-        updateWorkflowState(workflowId, remainingResources, deleteNotAllowed, listener);
+        updateWorkflowState(workflowId, remainingResources, deleteNotAllowed, listener, user);
     }
 
     private void updateWorkflowState(
         String workflowId,
         List<ResourceCreated> remainingResources,
         List<ResourceCreated> deleteNotAllowed,
-        ActionListener<WorkflowResponse> listener
+        ActionListener<WorkflowResponse> listener,
+        User user
     ) {
         if (remainingResources.isEmpty() && deleteNotAllowed.isEmpty()) {
             // Successful deprovision of all resources, reset state to initial
             flowFrameworkIndicesHandler.doesTemplateExist(workflowId, templateExists -> {
                 if (Boolean.TRUE.equals(templateExists)) {
-                    flowFrameworkIndicesHandler.putInitialStateToWorkflowState(
-                        workflowId,
-                        getUserContext(client),
-                        ActionListener.wrap(indexResponse -> {
-                            logger.info("Reset workflow {} state to NOT_STARTED", workflowId);
-                        }, exception -> { logger.error("Failed to reset to initial workflow state for {}", workflowId, exception); })
-                    );
+                    flowFrameworkIndicesHandler.putInitialStateToWorkflowState(workflowId, user, ActionListener.wrap(indexResponse -> {
+                        logger.info("Reset workflow {} state to NOT_STARTED", workflowId);
+                    }, exception -> { logger.error("Failed to reset to initial workflow state for {}", workflowId, exception); }));
                 } else {
                     flowFrameworkIndicesHandler.deleteFlowFrameworkSystemIndexDoc(workflowId, ActionListener.wrap(deleteResponse -> {
                         logger.info("Deleted workflow {} state", workflowId);

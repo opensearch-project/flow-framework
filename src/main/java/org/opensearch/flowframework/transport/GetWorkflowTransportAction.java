@@ -98,6 +98,7 @@ public class GetWorkflowTransportAction extends HandledTransportAction<WorkflowR
                     user,
                     workflowId,
                     filterByEnabled,
+                    false,
                     listener,
                     () -> executeGetRequest(request, listener, context),
                     client,
