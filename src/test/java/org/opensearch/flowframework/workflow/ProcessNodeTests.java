@@ -75,7 +75,8 @@ public class ProcessNodeTests extends OpenSearchTestCase {
                 WorkflowData currentNodeInputs,
                 Map<String, WorkflowData> outputs,
                 Map<String, String> previousNodeInputs,
-                Map<String, String> params
+                Map<String, String> params,
+                String tenantId
             ) {
                 PlainActionFuture<WorkflowData> f = PlainActionFuture.newFuture();
                 f.onResponse(new WorkflowData(Map.of("test", "output"), "test-id", "test-node-id"));
@@ -93,7 +94,8 @@ public class ProcessNodeTests extends OpenSearchTestCase {
             List.of(successfulNode),
             testThreadPool,
             PROVISION_WORKFLOW_THREAD_POOL,
-            TimeValue.timeValueMillis(50)
+            TimeValue.timeValueMillis(50),
+            "fakeTenantId"
         );
         assertEquals("A", nodeA.id());
         assertEquals("test", nodeA.workflowStep().getName());
@@ -121,7 +123,8 @@ public class ProcessNodeTests extends OpenSearchTestCase {
                 WorkflowData currentNodeInputs,
                 Map<String, WorkflowData> outputs,
                 Map<String, String> previousNodeInputs,
-                Map<String, String> params
+                Map<String, String> params,
+                String tenantId
             ) {
                 PlainActionFuture<WorkflowData> future = PlainActionFuture.newFuture();
                 testThreadPool.schedule(
@@ -143,7 +146,8 @@ public class ProcessNodeTests extends OpenSearchTestCase {
             Collections.emptyList(),
             testThreadPool,
             PROVISION_WORKFLOW_THREAD_POOL,
-            TimeValue.timeValueMillis(500)
+            TimeValue.timeValueMillis(500),
+            "fakeTenantId"
         );
         assertEquals("B", nodeB.id());
         assertEquals("test", nodeB.workflowStep().getName());
@@ -165,7 +169,8 @@ public class ProcessNodeTests extends OpenSearchTestCase {
                 WorkflowData currentNodeInputs,
                 Map<String, WorkflowData> outputs,
                 Map<String, String> previousNodeInputs,
-                Map<String, String> params
+                Map<String, String> params,
+                String tenantId
             ) {
                 PlainActionFuture<WorkflowData> future = PlainActionFuture.newFuture();
                 testThreadPool.schedule(
@@ -187,7 +192,8 @@ public class ProcessNodeTests extends OpenSearchTestCase {
             Collections.emptyList(),
             testThreadPool,
             PROVISION_WORKFLOW_THREAD_POOL,
-            TimeValue.timeValueMillis(100)
+            TimeValue.timeValueMillis(100),
+            "fakeTenantId"
         );
         assertEquals("Zzz", nodeZ.id());
         assertEquals("sleepy", nodeZ.workflowStep().getName());
@@ -210,7 +216,8 @@ public class ProcessNodeTests extends OpenSearchTestCase {
                 WorkflowData currentNodeInputs,
                 Map<String, WorkflowData> outputs,
                 Map<String, String> previousNodeInputs,
-                Map<String, String> params
+                Map<String, String> params,
+                String tenantId
             ) {
                 PlainActionFuture<WorkflowData> f = PlainActionFuture.newFuture();
                 f.onResponse(WorkflowData.EMPTY);
@@ -228,7 +235,8 @@ public class ProcessNodeTests extends OpenSearchTestCase {
             List.of(successfulNode, failedNode),
             testThreadPool,
             PROVISION_WORKFLOW_THREAD_POOL,
-            TimeValue.timeValueSeconds(15)
+            TimeValue.timeValueSeconds(15),
+            "fakeTenantId"
         );
         assertEquals("E", nodeE.id());
         assertEquals("test", nodeE.workflowStep().getName());

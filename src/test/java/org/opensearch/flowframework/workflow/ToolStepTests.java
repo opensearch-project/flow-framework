@@ -88,7 +88,8 @@ public class ToolStepTests extends OpenSearchTestCase {
             inputData,
             Collections.emptyMap(),
             Collections.emptyMap(),
-            Collections.emptyMap()
+            Collections.emptyMap(),
+            "fakeTenantId"
         );
         assertTrue(future.isDone());
         assertEquals(MLToolSpec.class, future.get().getContent().get("tools").getClass());
@@ -99,7 +100,8 @@ public class ToolStepTests extends OpenSearchTestCase {
             boolStringInputData,
             Collections.emptyMap(),
             Collections.emptyMap(),
-            Collections.emptyMap()
+            Collections.emptyMap(),
+            "fakeTenantId"
         );
         assertTrue(future.isDone());
         assertEquals(MLToolSpec.class, future.get().getContent().get("tools").getClass());
@@ -114,7 +116,8 @@ public class ToolStepTests extends OpenSearchTestCase {
             badBoolInputData,
             Collections.emptyMap(),
             Collections.emptyMap(),
-            Collections.emptyMap()
+            Collections.emptyMap(),
+            "fakeTenantId"
         );
 
         assertTrue(future.isDone());
@@ -133,7 +136,8 @@ public class ToolStepTests extends OpenSearchTestCase {
             inputData,
             Map.of(createConnectorNodeId, inputDataWithConnectorId),
             Map.of(createConnectorNodeId, CONNECTOR_ID),
-            Collections.emptyMap()
+            Collections.emptyMap(),
+            "fakeTenantId"
         );
         assertTrue(future.isDone());
         Object tools = future.get().getContent().get("tools");
@@ -150,7 +154,8 @@ public class ToolStepTests extends OpenSearchTestCase {
             inputData,
             Map.of(createModelNodeId, inputDataWithModelId),
             Map.of(createModelNodeId, MODEL_ID),
-            Collections.emptyMap()
+            Collections.emptyMap(),
+            "fakeTenantId"
         );
         assertTrue(future.isDone());
         Object tools = future.get().getContent().get("tools");
@@ -167,7 +172,8 @@ public class ToolStepTests extends OpenSearchTestCase {
             inputData,
             Map.of(createAgentNodeId, inputDataWithAgentId),
             Map.of(createAgentNodeId, AGENT_ID),
-            Collections.emptyMap()
+            Collections.emptyMap(),
+            "fakeTenantId"
         );
         assertTrue(future.isDone());
         Object tools = future.get().getContent().get("tools");

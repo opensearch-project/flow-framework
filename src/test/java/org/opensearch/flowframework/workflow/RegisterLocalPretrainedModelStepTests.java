@@ -157,7 +157,8 @@ public class RegisterLocalPretrainedModelStepTests extends OpenSearchTestCase {
             workflowData,
             Collections.emptyMap(),
             Collections.emptyMap(),
-            Collections.emptyMap()
+            Collections.emptyMap(),
+            "fakeTenantId"
         );
 
         future.actionGet();
@@ -186,7 +187,8 @@ public class RegisterLocalPretrainedModelStepTests extends OpenSearchTestCase {
             boolStringWorkflowData,
             Collections.emptyMap(),
             Collections.emptyMap(),
-            Collections.emptyMap()
+            Collections.emptyMap(),
+            "fakeTenantId"
         );
 
         future.actionGet();
@@ -211,7 +213,8 @@ public class RegisterLocalPretrainedModelStepTests extends OpenSearchTestCase {
             workflowData,
             Collections.emptyMap(),
             Collections.emptyMap(),
-            Collections.emptyMap()
+            Collections.emptyMap(),
+            "fakeTenantId"
         );
 
         ExecutionException ex = expectThrows(ExecutionException.class, () -> future.get().getClass());
@@ -252,7 +255,8 @@ public class RegisterLocalPretrainedModelStepTests extends OpenSearchTestCase {
             workflowData,
             Collections.emptyMap(),
             Collections.emptyMap(),
-            Collections.emptyMap()
+            Collections.emptyMap(),
+            "fakeTenantId"
         );
 
         ExecutionException ex = expectThrows(ExecutionException.class, () -> future.get().getClass());
@@ -266,7 +270,8 @@ public class RegisterLocalPretrainedModelStepTests extends OpenSearchTestCase {
             new WorkflowData(Collections.emptyMap(), "test-id", "test-node-id"),
             Collections.emptyMap(),
             Collections.emptyMap(),
-            Collections.emptyMap()
+            Collections.emptyMap(),
+            "fakeTenantId"
         );
         assertTrue(future.isDone());
         ExecutionException ex = assertThrows(ExecutionException.class, () -> future.get().getContent());
@@ -297,7 +302,8 @@ public class RegisterLocalPretrainedModelStepTests extends OpenSearchTestCase {
             boolStringWorkflowData,
             Collections.emptyMap(),
             Collections.emptyMap(),
-            Collections.emptyMap()
+            Collections.emptyMap(),
+            "fakeTenantId"
         );
 
         assertTrue(future.isDone());

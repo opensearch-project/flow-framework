@@ -102,7 +102,8 @@ public class UpdateIndexStepTests extends OpenSearchTestCase {
             data,
             Collections.emptyMap(),
             Collections.emptyMap(),
-            Collections.emptyMap()
+            Collections.emptyMap(),
+            "fakeTenantId"
         );
 
         verify(indicesAdminClient, times(1)).getSettings(any(GetSettingsRequest.class), any());
@@ -162,7 +163,8 @@ public class UpdateIndexStepTests extends OpenSearchTestCase {
             data,
             Collections.emptyMap(),
             Collections.emptyMap(),
-            Collections.emptyMap()
+            Collections.emptyMap(),
+            "fakeTenantId"
         );
 
         assertTrue(future.isDone());
@@ -188,7 +190,8 @@ public class UpdateIndexStepTests extends OpenSearchTestCase {
             incorrectData,
             Collections.emptyMap(),
             Collections.emptyMap(),
-            Collections.emptyMap()
+            Collections.emptyMap(),
+            "fakeTenantId"
         );
 
         assertTrue(future.isDone());
@@ -238,7 +241,8 @@ public class UpdateIndexStepTests extends OpenSearchTestCase {
             data,
             Collections.emptyMap(),
             Collections.emptyMap(),
-            Collections.emptyMap()
+            Collections.emptyMap(),
+            "fakeTenantId"
         );
 
         verify(indicesAdminClient, times(1)).getSettings(any(GetSettingsRequest.class), any());
@@ -265,7 +269,8 @@ public class UpdateIndexStepTests extends OpenSearchTestCase {
             incorrectData,
             Collections.emptyMap(),
             Collections.emptyMap(),
-            Collections.emptyMap()
+            Collections.emptyMap(),
+            "fakeTenantId"
         );
 
         assertTrue(future.isDone());
@@ -289,7 +294,8 @@ public class UpdateIndexStepTests extends OpenSearchTestCase {
             incorrectData,
             Collections.emptyMap(),
             Collections.emptyMap(),
-            Collections.emptyMap()
+            Collections.emptyMap(),
+            "fakeTenantId"
         );
 
         assertTrue(future.isDone());
@@ -341,7 +347,8 @@ public class UpdateIndexStepTests extends OpenSearchTestCase {
             data,
             Collections.emptyMap(),
             Collections.emptyMap(),
-            Collections.emptyMap()
+            Collections.emptyMap(),
+            "fakeTenantId"
         );
 
         ExecutionException exception = assertThrows(ExecutionException.class, () -> future.get());

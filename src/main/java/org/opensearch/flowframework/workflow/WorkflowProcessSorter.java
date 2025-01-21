@@ -140,7 +140,8 @@ public class WorkflowProcessSorter {
                 predecessorNodes,
                 threadPool,
                 PROVISION_WORKFLOW_THREAD_POOL,
-                nodeTimeout
+                nodeTimeout,
+                "fakeTenantId"
             );
             idToNodeMap.put(processNode.id(), processNode);
             nodes.add(processNode);
@@ -319,7 +320,8 @@ public class WorkflowProcessSorter {
             predecessorNodes,
             threadPool,
             PROVISION_WORKFLOW_THREAD_POOL,
-            nodeTimeout
+            nodeTimeout,
+            "fakeTenantId"
         );
     }
 
@@ -350,7 +352,8 @@ public class WorkflowProcessSorter {
                 predecessorNodes,
                 threadPool,
                 PROVISION_WORKFLOW_THREAD_POOL,
-                nodeTimeout
+                nodeTimeout,
+                "fakeTenantId"
             );
         } else {
             // Case 3 : Cannot update step (not supported)
@@ -392,7 +395,8 @@ public class WorkflowProcessSorter {
                 predecessorNodes,
                 threadPool,
                 PROVISION_WORKFLOW_THREAD_POOL,
-                nodeTimeout
+                nodeTimeout,
+                "fakeTenantId"
             );
         } else {
             return null;

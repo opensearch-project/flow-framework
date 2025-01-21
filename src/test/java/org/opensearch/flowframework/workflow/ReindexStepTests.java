@@ -95,7 +95,8 @@ public class ReindexStepTests extends OpenSearchTestCase {
             inputData,
             Collections.emptyMap(),
             Collections.emptyMap(),
-            Collections.emptyMap()
+            Collections.emptyMap(),
+            "fakeTenantId"
         );
 
         verify(client, times(1)).execute(any(), any(ReindexRequest.class), actionListenerCaptor.capture());
@@ -124,7 +125,8 @@ public class ReindexStepTests extends OpenSearchTestCase {
             inputData,
             Collections.emptyMap(),
             Collections.emptyMap(),
-            Collections.emptyMap()
+            Collections.emptyMap(),
+            "fakeTenantId"
         );
         assertFalse(future.isDone());
         verify(client, times(1)).execute(any(), any(ReindexRequest.class), actionListenerCaptor.capture());
