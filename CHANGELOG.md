@@ -31,6 +31,7 @@ Inspired from [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 ### Bug Fixes
 - Remove useCase and defaultParams field in WorkflowRequest ([#758](https://github.com/opensearch-project/flow-framework/pull/758))
 - Fixed Template Update Location and Improved Logger Statements in ReprovisionWorkflowTransportAction ([#918](https://github.com/opensearch-project/flow-framework/pull/918))
+- Fix RBAC fetching from workflow state when template is not present ([#998](https://github.com/opensearch-project/flow-framework/pull/998))
 
 ### Infrastructure
 ### Documentation
