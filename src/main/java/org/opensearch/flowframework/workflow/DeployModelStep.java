@@ -10,6 +10,7 @@ package org.opensearch.flowframework.workflow;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.apache.logging.log4j.message.ParameterizedMessageFactory;
 import org.opensearch.ExceptionsHelper;
 import org.opensearch.action.support.PlainActionFuture;
 import org.opensearch.core.action.ActionListener;
@@ -109,7 +110,9 @@ public class DeployModelStep extends AbstractRetryableWorkflowStep {
                 @Override
                 public void onFailure(Exception ex) {
                     Exception e = getSafeException(ex);
-                    String errorMessage = (e == null ? "Failed to deploy model " + modelId : e.getMessage());
+                    String errorMessage = (e == null
+                        ? ParameterizedMessageFactory.INSTANCE.newMessage("Failed to deploy model {}", modelId).getFormattedMessage()
+                        : e.getMessage());
                     logger.error(errorMessage, e);
                     deployModelFuture.onFailure(new WorkflowStepException(errorMessage, ExceptionsHelper.status(e)));
                 }

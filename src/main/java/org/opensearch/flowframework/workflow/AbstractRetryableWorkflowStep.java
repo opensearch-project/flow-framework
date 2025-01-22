@@ -10,6 +10,7 @@ package org.opensearch.flowframework.workflow;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.apache.logging.log4j.message.ParameterizedMessageFactory;
 import org.opensearch.action.support.PlainActionFuture;
 import org.opensearch.common.unit.TimeValue;
 import org.opensearch.common.util.concurrent.FutureUtils;
@@ -94,12 +95,17 @@ public abstract class AbstractRetryableWorkflowStep implements WorkflowStep {
                             break;
                         case FAILED:
                         case COMPLETED_WITH_ERROR:
-                            String errorMessage = workflowStep + " failed with error : " + response.getError();
+                            String errorMessage = ParameterizedMessageFactory.INSTANCE.newMessage(
+                                "{} failed with error : {}",
+                                workflowStep,
+                                response.getError()
+                            ).getFormattedMessage();
                             logger.error(errorMessage);
                             mlTaskListener.onFailure(new FlowFrameworkException(errorMessage, RestStatus.BAD_REQUEST));
                             break;
                         case CANCELLED:
-                            errorMessage = workflowStep + " task was cancelled.";
+                            errorMessage = ParameterizedMessageFactory.INSTANCE.newMessage("{} task was cancelled.", workflowStep)
+                                .getFormattedMessage();
                             logger.error(errorMessage);
                             mlTaskListener.onFailure(new FlowFrameworkException(errorMessage, RestStatus.REQUEST_TIMEOUT));
                             break;
@@ -107,7 +113,7 @@ public abstract class AbstractRetryableWorkflowStep implements WorkflowStep {
                             // Task started or running, do nothing
                     }
                 }, exception -> {
-                    String errorMessage = workflowStep + " failed";
+                    String errorMessage = ParameterizedMessageFactory.INSTANCE.newMessage("{} failed", workflowStep).getFormattedMessage();
                     logger.error(errorMessage, exception);
                     mlTaskListener.onFailure(new WorkflowStepException(errorMessage, RestStatus.BAD_REQUEST));
                 }));

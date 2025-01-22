@@ -10,6 +10,7 @@ package org.opensearch.flowframework.transport;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.apache.logging.log4j.message.ParameterizedMessageFactory;
 import org.opensearch.ExceptionsHelper;
 import org.opensearch.action.get.GetRequest;
 import org.opensearch.action.support.ActionFilters;
@@ -96,7 +97,8 @@ public class GetWorkflowStateTransportAction extends HandledTransportAction<GetW
             );
 
         } catch (Exception e) {
-            String errorMessage = "Failed to get workflow: " + workflowId;
+            String errorMessage = ParameterizedMessageFactory.INSTANCE.newMessage("Failed to get workflow: {}", workflowId)
+                .getFormattedMessage();
             logger.error(errorMessage, e);
             listener.onFailure(new FlowFrameworkException(errorMessage, ExceptionsHelper.status(e)));
         }
@@ -123,7 +125,8 @@ public class GetWorkflowStateTransportAction extends HandledTransportAction<GetW
                     WorkflowState workflowState = WorkflowState.parse(parser);
                     listener.onResponse(new GetWorkflowStateResponse(workflowState, request.getAll()));
                 } catch (Exception e) {
-                    String errorMessage = "Failed to parse workflowState: " + r.getId();
+                    String errorMessage = ParameterizedMessageFactory.INSTANCE.newMessage("Failed to parse workflowState: {}", r.getId())
+                        .getFormattedMessage();
                     logger.error(errorMessage, e);
                     listener.onFailure(new FlowFrameworkException(errorMessage, RestStatus.BAD_REQUEST));
                 }
@@ -134,7 +137,8 @@ public class GetWorkflowStateTransportAction extends HandledTransportAction<GetW
             if (e instanceof IndexNotFoundException) {
                 listener.onFailure(new FlowFrameworkException("Fail to find workflow status of " + workflowId, RestStatus.NOT_FOUND));
             } else {
-                String errorMessage = "Failed to get workflow status of: " + workflowId;
+                String errorMessage = ParameterizedMessageFactory.INSTANCE.newMessage("Failed to get workflow status of: {}", workflowId)
+                    .getFormattedMessage();
                 logger.error(errorMessage, e);
                 listener.onFailure(new FlowFrameworkException(errorMessage, RestStatus.NOT_FOUND));
             }
