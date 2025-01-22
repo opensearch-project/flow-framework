@@ -328,6 +328,7 @@ public abstract class FlowFrameworkRestTestCase extends OpenSearchRestTestCase {
             TestHelpers.toHttpEntity(
                 "{\n"
                     + "\"cluster_permissions\": [\n"
+                    + "\"cluster:admin/ingest/pipeline/put\",\n"
                     + "\"cluster:admin/ingest/pipeline/delete\"\n"
                     + "],\n"
                     + "\"index_permissions\": [\n"
@@ -344,6 +345,7 @@ public abstract class FlowFrameworkRestTestCase extends OpenSearchRestTestCase {
                     + "\"crud\",\n"
                     + "\"indices:admin/create\",\n"
                     + "\"indices:admin/aliases\",\n"
+                    + "\"indices:admin/settings/update\",\n"
                     + "\"indices:admin/delete\"\n"
                     + "]\n"
                     + "}\n"

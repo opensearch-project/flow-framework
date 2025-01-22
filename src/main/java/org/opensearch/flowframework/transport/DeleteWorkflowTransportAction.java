@@ -83,12 +83,15 @@ public class DeleteWorkflowTransportAction extends HandledTransportAction<Workfl
             String workflowId = request.getWorkflowId();
             User user = getUserContext(client);
 
+            final boolean clearStatus = Booleans.parseBoolean(request.getParams().get(CLEAR_STATUS), false);
+
             ThreadContext.StoredContext context = client.threadPool().getThreadContext().stashContext();
 
             resolveUserAndExecute(
                 user,
                 workflowId,
                 filterByEnabled,
+                clearStatus,
                 listener,
                 () -> executeDeleteRequest(request, listener, context),
                 client,
