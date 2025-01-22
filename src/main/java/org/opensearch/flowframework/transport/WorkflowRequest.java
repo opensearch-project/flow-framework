@@ -8,9 +8,11 @@
  */
 package org.opensearch.flowframework.transport;
 
+import org.opensearch.Version;
 import org.opensearch.action.ActionRequest;
 import org.opensearch.action.ActionRequestValidationException;
 import org.opensearch.common.Nullable;
+import org.opensearch.common.unit.TimeValue;
 import org.opensearch.core.common.io.stream.StreamInput;
 import org.opensearch.core.common.io.stream.StreamOutput;
 import org.opensearch.flowframework.model.Template;
@@ -21,6 +23,7 @@ import java.util.Map;
 
 import static org.opensearch.flowframework.common.CommonValue.REPROVISION_WORKFLOW;
 import static org.opensearch.flowframework.common.CommonValue.UPDATE_WORKFLOW_FIELDS;
+import static org.opensearch.flowframework.common.CommonValue.WAIT_FOR_COMPLETION_TIMEOUT;
 
 /**
  * Transport Request to create, provision, and deprovision a workflow
@@ -63,12 +66,19 @@ public class WorkflowRequest extends ActionRequest {
     private Map<String, String> params;
 
     /**
+     * The timeout duration to wait for workflow completion.
+     * default set to -1, the request will respond immediately with the workflowId,
+     * indicating asynchronous execution.
+     */
+    private TimeValue waitForCompletionTimeout;
+
+    /**
      * Instantiates a new WorkflowRequest, set validation to all, no provisioning
      * @param workflowId the documentId of the workflow
      * @param template the use case template which describes the workflow
      */
     public WorkflowRequest(@Nullable String workflowId, @Nullable Template template) {
-        this(workflowId, template, new String[] { "all" }, false, Collections.emptyMap(), false);
+        this(workflowId, template, new String[] { "all" }, false, Collections.emptyMap(), false, TimeValue.MINUS_ONE);
     }
 
     /**
@@ -78,7 +88,27 @@ public class WorkflowRequest extends ActionRequest {
      * @param params The parameters from the REST path
      */
     public WorkflowRequest(@Nullable String workflowId, @Nullable Template template, Map<String, String> params) {
-        this(workflowId, template, new String[] { "all" }, true, params, false);
+        this(workflowId, template, new String[] { "all" }, true, params, false, TimeValue.MINUS_ONE);
+    }
+
+    /**
+     * Instantiates a new WorkflowRequest with a specified wait-for-completion timeout.
+     * This constructor allows the caller to specify a custom timeout for the workflow execution,
+     * which determines how long the system will wait for the workflow to complete before returning a response.
+     * By default, the validation is set to "all", and provisioning is set to true.
+     * @param workflowId The unique document ID of the workflow. Can be null for new workflows.
+     * @param template The use case template that defines the structure and logic of the workflow. Can be null if not provided.
+     * @param params A map of parameters extracted from the REST request path, used to customize the workflow execution.
+     * @param waitForCompletionTimeout The maximum duration to wait for the workflow execution to complete.
+     *                                 If the workflow does not complete within this timeout, the request will return a timeout response.
+     */
+    public WorkflowRequest(
+        @Nullable String workflowId,
+        @Nullable Template template,
+        Map<String, String> params,
+        TimeValue waitForCompletionTimeout
+    ) {
+        this(workflowId, template, new String[] { "all" }, true, params, false, waitForCompletionTimeout);
     }
 
     /**
@@ -98,16 +128,40 @@ public class WorkflowRequest extends ActionRequest {
         Map<String, String> params,
         boolean reprovision
     ) {
+        this(workflowId, template, validation, provisionOrUpdate, params, reprovision, TimeValue.MINUS_ONE);
+    }
+
+    /**
+     * Instantiates a new WorkflowRequest
+     * @param workflowId the documentId of the workflow
+     * @param template the use case template which describes the workflow
+     * @param validation flag to indicate if validation is necessary
+     * @param provisionOrUpdate provision or updateFields flag. Only one may be true, the presence of update_fields key in map indicates if updating fields, otherwise true means it's provisioning.
+     * @param params map of REST path params. If provisionOrUpdate is false, must be an empty map. If update_fields key is present, must be only key.
+     * @param reprovision flag to indicate if request is to reprovision
+     * @param waitForCompletionTimeout the timeout duration to wait for workflow completion
+     */
+    public WorkflowRequest(
+        @Nullable String workflowId,
+        @Nullable Template template,
+        String[] validation,
+        boolean provisionOrUpdate,
+        Map<String, String> params,
+        boolean reprovision,
+        TimeValue waitForCompletionTimeout
+    ) {
         this.workflowId = workflowId;
         this.template = template;
         this.validation = validation;
         this.provision = provisionOrUpdate && !params.containsKey(UPDATE_WORKFLOW_FIELDS);
         this.updateFields = !provision && Boolean.parseBoolean(params.get(UPDATE_WORKFLOW_FIELDS));
-        if (!this.provision && params.keySet().stream().anyMatch(k -> !UPDATE_WORKFLOW_FIELDS.equals(k))) {
+        if (!this.provision
+            && params.keySet().stream().anyMatch(k -> !UPDATE_WORKFLOW_FIELDS.equals(k) && !WAIT_FOR_COMPLETION_TIMEOUT.equals(k))) {
             throw new IllegalArgumentException("Params may only be included when provisioning.");
         }
         this.params = this.updateFields ? Collections.emptyMap() : params;
         this.reprovision = reprovision;
+        this.waitForCompletionTimeout = waitForCompletionTimeout;
     }
 
     /**
@@ -133,6 +187,10 @@ public class WorkflowRequest extends ActionRequest {
             this.params = Collections.emptyMap();
         }
         this.reprovision = !provision && Boolean.parseBoolean(params.get(REPROVISION_WORKFLOW));
+        if (in.getVersion().onOrAfter(Version.V_2_19_0)) {
+            this.waitForCompletionTimeout = in.readOptionalTimeValue();
+        }
+
     }
 
     /**
@@ -193,6 +251,15 @@ public class WorkflowRequest extends ActionRequest {
         return this.reprovision;
     }
 
+    /**
+     * Gets the timeout duration (in milliseconds) to wait for workflow completion.
+     * @return the timeout duration, or null if the request should return immediately
+     */
+    @Nullable
+    public TimeValue getWaitForCompletionTimeout() {
+        return this.waitForCompletionTimeout;
+    }
+
     @Override
     public void writeTo(StreamOutput out) throws IOException {
         super.writeTo(out);
@@ -206,6 +273,9 @@ public class WorkflowRequest extends ActionRequest {
             out.writeMap(Map.of(UPDATE_WORKFLOW_FIELDS, "true"), StreamOutput::writeString, StreamOutput::writeString);
         } else if (reprovision) {
             out.writeMap(Map.of(REPROVISION_WORKFLOW, "true"), StreamOutput::writeString, StreamOutput::writeString);
+        }
+        if (out.getVersion().onOrAfter(Version.V_2_19_0)) {
+            out.writeOptionalTimeValue(waitForCompletionTimeout);
         }
     }
 

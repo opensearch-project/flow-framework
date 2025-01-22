@@ -12,6 +12,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.opensearch.ExceptionsHelper;
 import org.opensearch.client.node.NodeClient;
+import org.opensearch.common.unit.TimeValue;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.core.rest.RestStatus;
 import org.opensearch.core.xcontent.ToXContent;
@@ -43,6 +44,7 @@ import static org.opensearch.flowframework.common.CommonValue.REPROVISION_WORKFL
 import static org.opensearch.flowframework.common.CommonValue.UPDATE_WORKFLOW_FIELDS;
 import static org.opensearch.flowframework.common.CommonValue.USE_CASE;
 import static org.opensearch.flowframework.common.CommonValue.VALIDATION;
+import static org.opensearch.flowframework.common.CommonValue.WAIT_FOR_COMPLETION_TIMEOUT;
 import static org.opensearch.flowframework.common.CommonValue.WORKFLOW_ID;
 import static org.opensearch.flowframework.common.CommonValue.WORKFLOW_URI;
 import static org.opensearch.flowframework.common.FlowFrameworkSettings.FLOW_FRAMEWORK_ENABLED;
@@ -88,6 +90,7 @@ public class RestCreateWorkflowAction extends BaseRestHandler {
         boolean reprovision = request.paramAsBoolean(REPROVISION_WORKFLOW, false);
         boolean updateFields = request.paramAsBoolean(UPDATE_WORKFLOW_FIELDS, false);
         String useCase = request.param(USE_CASE);
+        TimeValue waitForCompletionTimeout = request.paramAsTime(WAIT_FOR_COMPLETION_TIMEOUT, TimeValue.MINUS_ONE);
 
         // If provisioning, consume all other params and pass to provision transport action
         Map<String, String> params = provision
@@ -145,6 +148,15 @@ public class RestCreateWorkflowAction extends BaseRestHandler {
             );
             return processError(ffe, params, request);
         }
+        // Ensure wait_for_completion is not set unless reprovision or provision is true
+        if (waitForCompletionTimeout != TimeValue.MINUS_ONE && !(reprovision || provision)) {
+            FlowFrameworkException ffe = new FlowFrameworkException(
+                "Request parameters 'wait_for_completion_timeout' are not allowed unless the 'provision' or 'reprovision' parameter is set to true.",
+                RestStatus.BAD_REQUEST
+            );
+            return processError(ffe, params, request);
+        }
+
         try {
             Template template;
             Map<String, String> useCaseDefaultsMap = Collections.emptyMap();
@@ -219,7 +231,9 @@ public class RestCreateWorkflowAction extends BaseRestHandler {
             if (updateFields) {
                 params = Map.of(UPDATE_WORKFLOW_FIELDS, "true");
             }
-
+            if (waitForCompletionTimeout != TimeValue.MINUS_ONE) {
+                params = Map.of(WAIT_FOR_COMPLETION_TIMEOUT, waitForCompletionTimeout.toString());
+            }
             WorkflowRequest workflowRequest = new WorkflowRequest(
                 workflowId,
                 template,

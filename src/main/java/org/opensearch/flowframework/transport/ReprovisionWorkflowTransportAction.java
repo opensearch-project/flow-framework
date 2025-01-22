@@ -18,6 +18,7 @@ import org.opensearch.client.Client;
 import org.opensearch.cluster.service.ClusterService;
 import org.opensearch.common.inject.Inject;
 import org.opensearch.common.settings.Settings;
+import org.opensearch.common.unit.TimeValue;
 import org.opensearch.common.util.concurrent.ThreadContext;
 import org.opensearch.commons.authuser.User;
 import org.opensearch.core.action.ActionListener;
@@ -33,6 +34,7 @@ import org.opensearch.flowframework.model.Template;
 import org.opensearch.flowframework.model.Workflow;
 import org.opensearch.flowframework.model.WorkflowState;
 import org.opensearch.flowframework.util.EncryptorUtils;
+import org.opensearch.flowframework.util.WorkflowTimeoutUtility;
 import org.opensearch.flowframework.workflow.ProcessNode;
 import org.opensearch.flowframework.workflow.WorkflowProcessSorter;
 import org.opensearch.flowframework.workflow.WorkflowStepFactory;
@@ -47,6 +49,8 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
 
 import static org.opensearch.flowframework.common.CommonValue.ERROR_FIELD;
@@ -235,9 +239,23 @@ public class ReprovisionWorkflowTransportAction extends HandledTransportAction<R
                     Template updatedTemplateWithProvisionedTime = Template.builder(updatedTemplate)
                         .lastProvisionedTime(Instant.now())
                         .build();
-                    executeWorkflowAsync(workflowId, updatedTemplateWithProvisionedTime, reprovisionProcessSequence, listener);
+                    if (request.getWaitForCompletionTimeout() == TimeValue.MINUS_ONE) {
+                        executeWorkflowAsync(workflowId, updatedTemplateWithProvisionedTime, reprovisionProcessSequence, listener);
+                    } else {
+                        executeWorkflowSync(
+                            workflowId,
+                            updatedTemplate,
+                            reprovisionProcessSequence,
+                            listener,
+                            request.getWaitForCompletionTimeout().getMillis()
+                        );
+                    }
 
-                    listener.onResponse(new WorkflowResponse(workflowId));
+                    if (request.getWaitForCompletionTimeout() == TimeValue.MINUS_ONE) {
+                        listener.onResponse(new WorkflowResponse(workflowId));
+                    } else {
+                        logger.info("Waiting for workflow completion");
+                    }
 
                 }, exception -> {
                     String errorMessage = "Failed to update workflow state: " + workflowId;
@@ -272,11 +290,40 @@ public class ReprovisionWorkflowTransportAction extends HandledTransportAction<R
         try {
             threadPool.executor(PROVISION_WORKFLOW_THREAD_POOL).execute(() -> {
                 updateTemplate(template, workflowId);
-                executeWorkflow(template, workflowSequence, workflowId);
+                executeWorkflow(template, workflowSequence, workflowId, listener, false);
             });
         } catch (Exception exception) {
             listener.onFailure(new FlowFrameworkException("Failed to execute workflow " + workflowId, ExceptionsHelper.status(exception)));
         }
+    }
+
+    private void executeWorkflowSync(
+        String workflowId,
+        Template template,
+        List<ProcessNode> workflowSequence,
+        ActionListener<WorkflowResponse> listener,
+        long timeout
+    ) {
+        AtomicBoolean isResponseSent = new AtomicBoolean(false);
+        CompletableFuture.runAsync(() -> {
+            try {
+                updateTemplate(template, workflowId);
+                executeWorkflow(template, workflowSequence, workflowId, new ActionListener<>() {
+                    @Override
+                    public void onResponse(WorkflowResponse workflowResponse) {
+                        WorkflowTimeoutUtility.handleResponse(workflowId, workflowResponse, isResponseSent, listener);
+                    }
+
+                    @Override
+                    public void onFailure(Exception e) {
+                        WorkflowTimeoutUtility.handleFailure(workflowId, e, isResponseSent, listener);
+                    }
+                }, true);
+            } catch (Exception ex) {
+                WorkflowTimeoutUtility.handleFailure(workflowId, ex, isResponseSent, listener);
+            }
+        }, threadPool.executor(PROVISION_WORKFLOW_THREAD_POOL));
+        WorkflowTimeoutUtility.scheduleTimeoutHandler(client, threadPool, workflowId, listener, timeout, isResponseSent);
     }
 
     /**
@@ -298,7 +345,13 @@ public class ReprovisionWorkflowTransportAction extends HandledTransportAction<R
      * @param workflowSequence The topologically sorted workflow to execute
      * @param workflowId The workflowId associated with the workflow that is executing
      */
-    private void executeWorkflow(Template template, List<ProcessNode> workflowSequence, String workflowId) {
+    private void executeWorkflow(
+        Template template,
+        List<ProcessNode> workflowSequence,
+        String workflowId,
+        ActionListener<WorkflowResponse> listener,
+        boolean isSyncExecution
+    ) {
         String currentStepId = "";
         try {
             Map<String, PlainActionFuture<?>> workflowFutureMap = new LinkedHashMap<>();
@@ -337,7 +390,23 @@ public class ReprovisionWorkflowTransportAction extends HandledTransportAction<R
                 ActionListener.wrap(updateResponse -> {
 
                     logger.info("updated workflow {} state to {}", workflowId, State.COMPLETED);
-
+                    if (isSyncExecution) {
+                        client.execute(
+                            GetWorkflowStateAction.INSTANCE,
+                            new GetWorkflowStateRequest(workflowId, false),
+                            ActionListener.wrap(response -> {
+                                listener.onResponse(new WorkflowResponse(workflowId, response.getWorkflowState()));
+                            }, exception -> {
+                                String errorMessage = "Failed to get workflow state.";
+                                logger.error(errorMessage, exception);
+                                if (exception instanceof FlowFrameworkException) {
+                                    listener.onFailure(exception);
+                                } else {
+                                    listener.onFailure(new FlowFrameworkException(errorMessage, ExceptionsHelper.status(exception)));
+                                }
+                            })
+                        );
+                    }
                 }, exception -> { logger.error("Failed to update workflow state for workflow {}", workflowId, exception); })
             );
         } catch (Exception ex) {
