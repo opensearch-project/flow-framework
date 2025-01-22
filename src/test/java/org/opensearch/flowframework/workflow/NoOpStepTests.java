@@ -105,7 +105,7 @@ public class NoOpStepTests extends OpenSearchTestCase {
 
         Exception ex = assertThrows(
             WorkflowStepException.class,
-            () -> noopStep.execute("nodeId", delayData, Collections.emptyMap(), Collections.emptyMap(), Collections.emptyMap(),null)
+            () -> noopStep.execute("nodeId", delayData, Collections.emptyMap(), Collections.emptyMap(), Collections.emptyMap(), null)
         );
         assertEquals("failed to parse setting [delay] with value [foo] as a time value: unit is missing or unrecognized", ex.getMessage());
     }

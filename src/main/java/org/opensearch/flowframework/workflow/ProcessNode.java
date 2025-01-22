@@ -152,7 +152,9 @@ public class ProcessNode {
      * Returns the tenantId value for this node in the workflow.
      * @return The node's tenantId value
      */
-    public String tenantId() { return tenantId; }
+    public String tenantId() {
+        return tenantId;
+    }
 
     /**
      * Execute this node in the sequence.
