@@ -125,6 +125,7 @@ public class RegisterModelGroupStep implements WorkflowStep {
 
             MLRegisterModelGroupInputBuilder builder = MLRegisterModelGroupInput.builder();
             builder.name(modelGroupName);
+            builder.tenantId(tenantId);
             if (description != null) {
                 builder.description(description);
             }
