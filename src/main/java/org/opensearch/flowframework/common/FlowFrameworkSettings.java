@@ -91,19 +91,38 @@ public class FlowFrameworkSettings {
         Setting.Property.Dynamic
     );
 
-    // Whether multi-tenancy is enabled in Flow Framework.
-    // This is a static setting which must be set before starting OpenSearch by (in priority order):
-    // 1. As a command-line argument using the -E flag (overrides other options):
-    // ./bin/opensearch -Eplugins.flow_framework.multi_tenancy_enabled=true
-    // 2. As a system property using OPENSEARCH_JAVA_OPTS (overrides opensearch.yml):
-    // export OPENSEARCH_JAVA_OPTS="-Dplugins.flow_framework.multi_tenancy_enabled=true"
-    // ./bin/opensearch
-    // Or inline when starting OpenSearch:
-    // OPENSEARCH_JAVA_OPTS="-Dplugins.flow_framework.multi_tenancy_enabled=true" ./bin/opensearch
-    // 3. In the opensearch.yml configuration file:
-    // plugins.flow_framework.multi_tenancy_enabled: true
-    // After setting it, a full cluster restart is required for the changes to take effect.
-    /** This setting determines if multitenancy is enabled */
+    /**
+     * Indicates whether multi-tenancy is enabled in Flow Framework.
+     *
+     * This is a static setting that must be configured before starting OpenSearch. The corresponding setting {@code plugins.ml_commons.multi_tenancy_enabled} in the ML Commons plugin should match.
+     *
+     * It can be set in the following ways, in priority order:
+     *
+     * <ol>
+     *   <li>As a command-line argument using the <code>-E</code> flag (this overrides other options):
+     *       <pre>
+     *       ./bin/opensearch -Eplugins.flow_framework.multi_tenancy_enabled=true
+     *       </pre>
+     *   </li>
+     *   <li>As a system property using <code>OPENSEARCH_JAVA_OPTS</code> (this overrides <code>opensearch.yml</code>):
+     *       <pre>
+     *       export OPENSEARCH_JAVA_OPTS="-Dplugins.flow_framework.multi_tenancy_enabled=true"
+     *       ./bin/opensearch
+     *       </pre>
+     *       Or inline when starting OpenSearch:
+     *       <pre>
+     *       OPENSEARCH_JAVA_OPTS="-Dplugins.flow_framework.multi_tenancy_enabled=true" ./bin/opensearch
+     *       </pre>
+     *   </li>
+     *   <li>In the <code>opensearch.yml</code> configuration file:
+     *       <pre>
+     *       plugins.flow_framework.multi_tenancy_enabled: true
+     *       </pre>
+     *   </li>
+     * </ol>
+     *
+     * After setting this option, a full cluster restart is required for the changes to take effect.
+     */
     public static final Setting<Boolean> FLOW_FRAMEWORK_MULTI_TENANCY_ENABLED = Setting.boolSetting(
         "plugins.flow_framework.multi_tenancy_enabled",
         false,

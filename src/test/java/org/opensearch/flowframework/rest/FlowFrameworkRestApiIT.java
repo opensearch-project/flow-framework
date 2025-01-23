@@ -277,6 +277,8 @@ public class FlowFrameworkRestApiIT extends FlowFrameworkRestTestCase {
             120,
             TimeUnit.SECONDS
         );
+        // Force a refresh so that search results are up to date
+        refreshAllIndices();
 
         // Hit Search State API with the workflow id created above
         String query = "{\"query\":{\"ids\":{\"values\":[\"" + workflowId + "\"]}}}";

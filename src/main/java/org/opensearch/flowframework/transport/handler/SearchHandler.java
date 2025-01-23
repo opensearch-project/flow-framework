@@ -133,7 +133,7 @@ public class SearchHandler {
                 }
             } else {
                 Exception cause = SdkClientUtils.unwrapAndConvertToException(throwable);
-                logger.error(Arrays.toString(request.indices()) + " search failed", cause);
+                logger.error("Search failed for indices: {}", Arrays.toString(request.indices()), cause);
                 listener.onFailure(cause);
             }
         });

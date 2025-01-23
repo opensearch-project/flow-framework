@@ -324,15 +324,15 @@ public class EncryptorUtils {
             .build();
         try (ThreadContext.StoredContext context = client.threadPool().getThreadContext().stashContext()) {
             sdkClient.putDataObjectAsync(putRequest).whenComplete((r, throwable) -> {
+                context.restore();
                 if (throwable == null) {
-                    context.restore();
                     // Set generated key to master
                     logger.info("Config has been initialized successfully");
                     setMasterKey(tenantId, config.masterKey());
                     listener.onResponse(true);
                 } else {
                     Exception exception = SdkClientUtils.unwrapAndConvertToException(throwable);
-                    logger.error("Failed to index new master key in config", exception);
+                    logger.error("Failed to index new master key in config for tenant id {}", tenantId, exception);
                     listener.onFailure(exception);
                 }
             });

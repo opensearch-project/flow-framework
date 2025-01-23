@@ -420,16 +420,11 @@ public class ParseUtils {
         String index = statePresent ? WORKFLOW_STATE_INDEX : GLOBAL_CONTEXT_INDEX;
         if (clusterService.state().metadata().hasIndex(index)) {
             try (ThreadContext.StoredContext context = client.threadPool().getThreadContext().stashContext()) {
-                GetDataObjectRequest request = GetDataObjectRequest.builder()
-                    .index(GLOBAL_CONTEXT_INDEX)
-                    .id(workflowId)
-                    .tenantId(tenantId)
-                    .build();
+                GetDataObjectRequest request = GetDataObjectRequest.builder().index(index).id(workflowId).tenantId(tenantId).build();
                 sdkClient.getDataObjectAsync(request).whenComplete((r, throwable) -> {
                     if (throwable == null) {
-                        GetResponse getResponse;
                         try {
-                            getResponse = r.parser() == null ? null : GetResponse.fromXContent(r.parser());
+                            GetResponse getResponse = r.parser() == null ? null : GetResponse.fromXContent(r.parser());
                             onGetWorkflowResponse(
                                 getResponse,
                                 requestUser,
@@ -495,10 +490,19 @@ public class ParseUtils {
             ) {
                 context.restore();
                 ensureExpectedToken(XContentParser.Token.START_OBJECT, parser.nextToken(), parser);
-                Template template = Template.parse(parser);
-                User resourceUser = statePresent ? WorkflowState.parse(parser).getUser() : template.getUser();
-                if (!TenantAwareHelper.validateTenantResource(isMultitenancyEnabled, tenantId, template.getTenantId(), listener)) {
-                    return;
+                User resourceUser;
+                if (statePresent) {
+                    WorkflowState state = WorkflowState.parse(parser);
+                    resourceUser = state.getUser();
+                    if (!TenantAwareHelper.validateTenantResource(isMultitenancyEnabled, tenantId, state.getTenantId(), listener)) {
+                        return;
+                    }
+                } else {
+                    Template template = Template.parse(parser);
+                    resourceUser = template.getUser();
+                    if (!TenantAwareHelper.validateTenantResource(isMultitenancyEnabled, tenantId, template.getTenantId(), listener)) {
+                        return;
+                    }
                 }
                 if (!filterByEnabled || checkUserPermissions(requestUser, resourceUser, workflowId) || isAdmin(requestUser)) {
                     function.run();

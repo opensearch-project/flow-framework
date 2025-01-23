@@ -18,7 +18,7 @@ Inspired from [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ## [Unreleased 2.x](https://github.com/opensearch-project/flow-framework/compare/2.18...2.x)
 ### Features
-- Implemented multitenant remote metadata client ([#980](https://github.com/opensearch-project/flow-framework/pull/980))
+- Add multitenant remote metadata client ([#980](https://github.com/opensearch-project/flow-framework/pull/980))
 - Add synchronous execution option to workflow provisioning ([#990](https://github.com/opensearch-project/flow-framework/pull/990))
 
 ### Enhancements

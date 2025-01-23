@@ -253,21 +253,21 @@ public class FlowFrameworkPlugin extends Plugin implements ActionPlugin, SystemI
             new ScalingExecutorBuilder(
                 WORKFLOW_THREAD_POOL,
                 1,
-                Math.max(10, OpenSearchExecutors.allocatedProcessors(settings) - 1),
+                Math.max(4, OpenSearchExecutors.allocatedProcessors(settings) - 1),
                 TimeValue.timeValueMinutes(1),
                 FLOW_FRAMEWORK_THREAD_POOL_PREFIX + WORKFLOW_THREAD_POOL
             ),
             new ScalingExecutorBuilder(
                 PROVISION_WORKFLOW_THREAD_POOL,
                 1,
-                Math.max(20, OpenSearchExecutors.allocatedProcessors(settings) - 1),
+                Math.max(8, OpenSearchExecutors.allocatedProcessors(settings) - 1),
                 TimeValue.timeValueMinutes(5),
                 FLOW_FRAMEWORK_THREAD_POOL_PREFIX + PROVISION_WORKFLOW_THREAD_POOL
             ),
             new ScalingExecutorBuilder(
                 DEPROVISION_WORKFLOW_THREAD_POOL,
                 1,
-                Math.max(10, OpenSearchExecutors.allocatedProcessors(settings) - 1),
+                Math.max(4, OpenSearchExecutors.allocatedProcessors(settings) - 1),
                 TimeValue.timeValueMinutes(1),
                 FLOW_FRAMEWORK_THREAD_POOL_PREFIX + DEPROVISION_WORKFLOW_THREAD_POOL
             )

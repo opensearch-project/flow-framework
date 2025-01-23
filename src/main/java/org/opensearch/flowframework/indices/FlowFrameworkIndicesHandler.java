@@ -359,8 +359,9 @@ public class FlowFrameworkIndicesHandler {
                         IndexResponse indexResponse = IndexResponse.fromXContent(r.parser());
                         listener.onResponse(indexResponse);
                     } catch (IOException e) {
-                        logger.error("Failed to parse index response", e);
-                        listener.onFailure(new FlowFrameworkException("Failed to parse index response", INTERNAL_SERVER_ERROR));
+                        String errorMessage = "Failed to parse index response";
+                        logger.error(errorMessage, e);
+                        listener.onFailure(new FlowFrameworkException(errorMessage, INTERNAL_SERVER_ERROR));
                     }
                 } else {
                     Exception exception = SdkClientUtils.unwrapAndConvertToException(throwable);
@@ -599,7 +600,7 @@ public class FlowFrameworkIndicesHandler {
                                 getResponse.getId()
                             ).getFormattedMessage();
                             logger.error(errorMessage, e);
-                            listener.onFailure(new FlowFrameworkException(errorMessage, RestStatus.BAD_REQUEST));
+                            listener.onFailure(new FlowFrameworkException(errorMessage, RestStatus.INTERNAL_SERVER_ERROR));
                         }
                     } else {
                         listener.onFailure(
@@ -725,12 +726,12 @@ public class FlowFrameworkIndicesHandler {
                         UpdateResponse response;
                         try {
                             response = UpdateResponse.fromXContent(r.parser());
-                            logger.info("Deleted workflow state doc: {}", documentId);
+                            logger.info("Updated workflow state doc: {}", documentId);
                             listener.onResponse(response);
                         } catch (Exception e) {
-                            logger.error("Failed to parse delete response", e);
+                            logger.error("Failed to parse update response", e);
                             listener.onFailure(
-                                new FlowFrameworkException("Failed to parse delete response", RestStatus.INTERNAL_SERVER_ERROR)
+                                new FlowFrameworkException("Failed to parse update response", RestStatus.INTERNAL_SERVER_ERROR)
                             );
                         }
                     } else {
