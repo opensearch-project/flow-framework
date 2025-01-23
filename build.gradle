@@ -37,8 +37,6 @@ buildscript {
         isSameMajorVersion = opensearch_version.split("\\.")[0] == bwcVersionShort.split("\\.")[0]
         swaggerVersion = "2.1.25"
         swaggerCoreVersion = "2.2.28"
-        apacheHttpVersion = "5.3.2"
-        apacheHttpClientVersion = "5.4.1"
     }
 
     repositories {
@@ -170,7 +168,9 @@ configurations {
 dependencies {
     implementation "org.opensearch:opensearch:${opensearch_version}"
     api group: 'org.opensearch', name:'opensearch-ml-client', version: "${opensearch_build}"
-    api group: 'org.opensearch.client', name: 'opensearch-rest-client', version: "${opensearch_version}"
+    api(group: 'org.opensearch.client', name: 'opensearch-rest-client', version: "${opensearch_version}") {
+        exclude group: "org.apache.httpcomponents.client5", module: "httpclient5"
+    }
     implementation "org.apache.commons:commons-lang3:${versions.commonslang}"
     implementation "org.opensearch:common-utils:${common_utils_version}"
     implementation "com.amazonaws:aws-encryption-sdk-java:3.0.1"
@@ -190,7 +190,9 @@ dependencies {
     implementation "io.swagger.parser.v3:swagger-parser:${swaggerVersion}"
     implementation "io.swagger.parser.v3:swagger-parser-v3:${swaggerVersion}"
     // Multi-tenant SDK Client
-    implementation "org.opensearch:opensearch-remote-metadata-sdk:${opensearch_build}"
+    implementation ("org.opensearch:opensearch-remote-metadata-sdk:${opensearch_build}") {
+        exclude group: "org.apache.httpcomponents.client5", module: "httpclient5"
+    }
     testImplementation 'org.junit.jupiter:junit-jupiter:5.11.4'
     testImplementation "com.fasterxml.jackson.core:jackson-annotations:${versions.jackson}"
     testImplementation "com.fasterxml.jackson.core:jackson-databind:${versions.jackson_databind}"
@@ -205,8 +207,6 @@ dependencies {
     configurations.all {
         resolutionStrategy {
             force("com.google.guava:guava:33.4.0-jre") // CVE for 31.1, keep to force transitive dependencies
-            // force "org.apache.httpcomponents.core5:httpcore5-h2:${apacheHttpVersion}"
-            // force("org.apache.httpcomponents.client5:httpclient5:${apacheHttpClientVersion}")
         }
     }
 }
