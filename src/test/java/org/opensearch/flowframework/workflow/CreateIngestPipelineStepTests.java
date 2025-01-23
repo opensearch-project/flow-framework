@@ -86,7 +86,8 @@ public class CreateIngestPipelineStepTests extends OpenSearchTestCase {
             inputData,
             Collections.emptyMap(),
             Collections.emptyMap(),
-            Collections.emptyMap()
+            Collections.emptyMap(),
+            null
         );
 
         assertFalse(future.isDone());
@@ -110,7 +111,8 @@ public class CreateIngestPipelineStepTests extends OpenSearchTestCase {
             inputData,
             Collections.emptyMap(),
             Collections.emptyMap(),
-            Collections.emptyMap()
+            Collections.emptyMap(),
+            null
         );
 
         assertFalse(future.isDone());
@@ -146,7 +148,8 @@ public class CreateIngestPipelineStepTests extends OpenSearchTestCase {
             incorrectData,
             Collections.emptyMap(),
             Collections.emptyMap(),
-            Collections.emptyMap()
+            Collections.emptyMap(),
+            null
         );
         assertTrue(future.isDone());
 

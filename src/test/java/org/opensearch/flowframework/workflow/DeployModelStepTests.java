@@ -143,7 +143,8 @@ public class DeployModelStepTests extends OpenSearchTestCase {
             inputData,
             Collections.emptyMap(),
             Collections.emptyMap(),
-            Collections.emptyMap()
+            Collections.emptyMap(),
+            null
         );
 
         future.actionGet();
@@ -170,7 +171,8 @@ public class DeployModelStepTests extends OpenSearchTestCase {
             inputData,
             Collections.emptyMap(),
             Collections.emptyMap(),
-            Collections.emptyMap()
+            Collections.emptyMap(),
+            null
         );
 
         verify(machineLearningNodeClient).deploy(eq("modelId"), actionListenerCaptor.capture());
@@ -210,7 +212,8 @@ public class DeployModelStepTests extends OpenSearchTestCase {
             inputData,
             Collections.emptyMap(),
             Collections.emptyMap(),
-            Collections.emptyMap()
+            Collections.emptyMap(),
+            null
         );
 
         ExecutionException ex = expectThrows(ExecutionException.class, () -> future.get().getClass());

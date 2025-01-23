@@ -164,7 +164,8 @@ public class RegisterLocalCustomModelStepTests extends OpenSearchTestCase {
             workflowData,
             Collections.emptyMap(),
             Collections.emptyMap(),
-            Collections.emptyMap()
+            Collections.emptyMap(),
+            null
         );
 
         future.actionGet();
@@ -199,7 +200,8 @@ public class RegisterLocalCustomModelStepTests extends OpenSearchTestCase {
             boolStringWorkflowData,
             Collections.emptyMap(),
             Collections.emptyMap(),
-            Collections.emptyMap()
+            Collections.emptyMap(),
+            null
         );
 
         future.actionGet();
@@ -270,7 +272,8 @@ public class RegisterLocalCustomModelStepTests extends OpenSearchTestCase {
             boolStringWorkflowData,
             Collections.emptyMap(),
             Collections.emptyMap(),
-            Collections.emptyMap()
+            Collections.emptyMap(),
+            null
         );
 
         ExecutionException ex = expectThrows(ExecutionException.class, () -> future.get().getClass());
@@ -291,7 +294,8 @@ public class RegisterLocalCustomModelStepTests extends OpenSearchTestCase {
             workflowData,
             Collections.emptyMap(),
             Collections.emptyMap(),
-            Collections.emptyMap()
+            Collections.emptyMap(),
+            null
         );
 
         ExecutionException ex = expectThrows(ExecutionException.class, () -> future.get().getClass());
@@ -332,7 +336,8 @@ public class RegisterLocalCustomModelStepTests extends OpenSearchTestCase {
             workflowData,
             Collections.emptyMap(),
             Collections.emptyMap(),
-            Collections.emptyMap()
+            Collections.emptyMap(),
+            null
         );
 
         ExecutionException ex = expectThrows(ExecutionException.class, () -> future.get().getClass());
@@ -346,7 +351,8 @@ public class RegisterLocalCustomModelStepTests extends OpenSearchTestCase {
             new WorkflowData(Collections.emptyMap(), "test-id", "test-node-id"),
             Collections.emptyMap(),
             Collections.emptyMap(),
-            Collections.emptyMap()
+            Collections.emptyMap(),
+            null
         );
         assertTrue(future.isDone());
         ExecutionException ex = assertThrows(ExecutionException.class, () -> future.get().getContent());
@@ -392,7 +398,8 @@ public class RegisterLocalCustomModelStepTests extends OpenSearchTestCase {
             boolStringWorkflowData,
             Collections.emptyMap(),
             Collections.emptyMap(),
-            Collections.emptyMap()
+            Collections.emptyMap(),
+            null
         );
 
         assertTrue(future.isDone());

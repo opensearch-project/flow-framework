@@ -63,7 +63,8 @@ public class ToolStep implements WorkflowStep {
         WorkflowData currentNodeInputs,
         Map<String, WorkflowData> outputs,
         Map<String, String> previousNodeInputs,
-        Map<String, String> params
+        Map<String, String> params,
+        String tenantId
     ) {
         try {
             Map<String, Object> inputs = ParseUtils.getInputsFromPreviousSteps(

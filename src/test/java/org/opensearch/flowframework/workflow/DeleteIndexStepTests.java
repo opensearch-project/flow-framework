@@ -72,7 +72,8 @@ public class DeleteIndexStepTests extends OpenSearchTestCase {
             inputData,
             Map.of("step_1", new WorkflowData(Map.of(INDEX_NAME, indexName), "workflowId", "nodeId")),
             Map.of("step_1", INDEX_NAME),
-            Collections.emptyMap()
+            Collections.emptyMap(),
+            null
         );
         verify(indicesAdminClient).delete(any(DeleteIndexRequest.class), any());
 
@@ -88,7 +89,8 @@ public class DeleteIndexStepTests extends OpenSearchTestCase {
             inputData,
             Collections.emptyMap(),
             Collections.emptyMap(),
-            Collections.emptyMap()
+            Collections.emptyMap(),
+            null
         );
 
         assertTrue(future.isDone());
@@ -111,7 +113,8 @@ public class DeleteIndexStepTests extends OpenSearchTestCase {
             inputData,
             Map.of("step_1", new WorkflowData(Map.of(INDEX_NAME, "test"), "workflowId", "nodeId")),
             Map.of("step_1", INDEX_NAME),
-            Collections.emptyMap()
+            Collections.emptyMap(),
+            null
         );
 
         verify(indicesAdminClient).delete(any(DeleteIndexRequest.class), any());

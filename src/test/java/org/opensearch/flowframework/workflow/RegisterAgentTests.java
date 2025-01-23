@@ -117,7 +117,8 @@ public class RegisterAgentTests extends OpenSearchTestCase {
             inputData,
             Collections.emptyMap(),
             Collections.emptyMap(),
-            Collections.emptyMap()
+            Collections.emptyMap(),
+            null
         );
 
         verify(machineLearningNodeClient).registerAgent(any(MLAgent.class), actionListenerCaptor.capture());
@@ -150,7 +151,8 @@ public class RegisterAgentTests extends OpenSearchTestCase {
             inputData,
             Collections.emptyMap(),
             Collections.emptyMap(),
-            Collections.emptyMap()
+            Collections.emptyMap(),
+            null
         );
 
         verify(machineLearningNodeClient).registerAgent(any(MLAgent.class), actionListenerCaptor.capture());

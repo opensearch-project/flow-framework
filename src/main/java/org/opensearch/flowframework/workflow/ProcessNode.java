@@ -36,6 +36,7 @@ public class ProcessNode {
     private final ThreadPool threadPool;
     private final String threadPoolName;
     private final TimeValue nodeTimeout;
+    private final String tenantId;
 
     private final PlainActionFuture<WorkflowData> future = PlainActionFuture.newFuture();
 
@@ -51,6 +52,7 @@ public class ProcessNode {
      * @param threadPool The OpenSearch thread pool
      * @param threadPoolName The thread pool to use
      * @param nodeTimeout The timeout value for executing on this node
+     * @param tenantId The tenantId
      */
     public ProcessNode(
         String id,
@@ -61,7 +63,8 @@ public class ProcessNode {
         List<ProcessNode> predecessors,
         ThreadPool threadPool,
         String threadPoolName,
-        TimeValue nodeTimeout
+        TimeValue nodeTimeout,
+        String tenantId
     ) {
         this.id = id;
         this.workflowStep = workflowStep;
@@ -72,6 +75,7 @@ public class ProcessNode {
         this.threadPool = threadPool;
         this.threadPoolName = threadPoolName;
         this.nodeTimeout = nodeTimeout;
+        this.tenantId = tenantId;
     }
 
     /**
@@ -145,6 +149,14 @@ public class ProcessNode {
     }
 
     /**
+     * Returns the tenantId value for this node in the workflow.
+     * @return The node's tenantId value
+     */
+    public String tenantId() {
+        return tenantId;
+    }
+
+    /**
      * Execute this node in the sequence.
      * Initializes the node's {@link CompletableFuture} and completes it when the process completes.
      *
@@ -172,7 +184,8 @@ public class ProcessNode {
                     this.input,
                     inputMap,
                     this.previousNodeInputs,
-                    this.params
+                    this.params,
+                    this.tenantId
                 );
                 // If completed exceptionally, this is a no-op
                 future.onResponse(stepFuture.actionGet(this.nodeTimeout));
