@@ -126,8 +126,8 @@ public class RestGetWorkflowStepActionTests extends OpenSearchTestCase {
     public void testFeatureFlagNotEnabled() throws Exception {
         when(flowFrameworkFeatureEnabledSetting.isFlowFrameworkEnabled()).thenReturn(false);
         RestRequest request = new FakeRestRequest.Builder(xContentRegistry()).withMethod(RestRequest.Method.GET)
-                .withPath(this.getPath)
-                .build();
+            .withPath(this.getPath)
+            .build();
         FakeRestChannel channel = new FakeRestChannel(request, false, 1);
         restGetWorkflowStepAction.handleRequest(request, channel, nodeClient);
         assertEquals(RestStatus.FORBIDDEN, channel.capturedResponse().status());

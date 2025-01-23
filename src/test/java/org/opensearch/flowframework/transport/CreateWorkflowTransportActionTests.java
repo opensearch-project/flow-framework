@@ -255,7 +255,15 @@ public class CreateWorkflowTransportActionTests extends OpenSearchTestCase {
 
         @SuppressWarnings("unchecked")
         ActionListener<WorkflowResponse> listener = mock(ActionListener.class);
-        WorkflowRequest workflowRequest = new WorkflowRequest(null, template, new String[] { "off" }, false, Collections.emptyMap(), false,null);
+        WorkflowRequest workflowRequest = new WorkflowRequest(
+            null,
+            template,
+            new String[] { "off" },
+            false,
+            Collections.emptyMap(),
+            false,
+            null
+        );
 
         doAnswer(invocation -> {
             ActionListener<SearchResponse> searchListener = invocation.getArgument(1);
