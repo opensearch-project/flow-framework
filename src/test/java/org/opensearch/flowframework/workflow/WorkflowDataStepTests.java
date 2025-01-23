@@ -47,7 +47,8 @@ public class WorkflowDataStepTests extends OpenSearchTestCase {
             inputData,
             Collections.emptyMap(),
             Collections.emptyMap(),
-            Collections.emptyMap()
+            Collections.emptyMap(),
+            null
         );
 
         assertTrue(future.isDone());

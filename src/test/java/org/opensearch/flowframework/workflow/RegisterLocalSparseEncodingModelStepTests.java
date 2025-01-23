@@ -160,7 +160,8 @@ public class RegisterLocalSparseEncodingModelStepTests extends OpenSearchTestCas
             workflowData,
             Collections.emptyMap(),
             Collections.emptyMap(),
-            Collections.emptyMap()
+            Collections.emptyMap(),
+            null
         );
 
         future.actionGet();
@@ -191,7 +192,8 @@ public class RegisterLocalSparseEncodingModelStepTests extends OpenSearchTestCas
             boolStringWorkflowData,
             Collections.emptyMap(),
             Collections.emptyMap(),
-            Collections.emptyMap()
+            Collections.emptyMap(),
+            null
         );
 
         future.actionGet();
@@ -216,7 +218,8 @@ public class RegisterLocalSparseEncodingModelStepTests extends OpenSearchTestCas
             workflowData,
             Collections.emptyMap(),
             Collections.emptyMap(),
-            Collections.emptyMap()
+            Collections.emptyMap(),
+            null
         );
 
         ExecutionException ex = expectThrows(ExecutionException.class, () -> future.get().getClass());
@@ -257,7 +260,8 @@ public class RegisterLocalSparseEncodingModelStepTests extends OpenSearchTestCas
             workflowData,
             Collections.emptyMap(),
             Collections.emptyMap(),
-            Collections.emptyMap()
+            Collections.emptyMap(),
+            null
         );
 
         ExecutionException ex = expectThrows(ExecutionException.class, () -> future.get().getClass());
@@ -271,7 +275,8 @@ public class RegisterLocalSparseEncodingModelStepTests extends OpenSearchTestCas
             new WorkflowData(Collections.emptyMap(), "test-id", "test-node-id"),
             Collections.emptyMap(),
             Collections.emptyMap(),
-            Collections.emptyMap()
+            Collections.emptyMap(),
+            null
         );
         assertTrue(future.isDone());
         ExecutionException ex = assertThrows(ExecutionException.class, () -> future.get().getContent());
@@ -304,7 +309,8 @@ public class RegisterLocalSparseEncodingModelStepTests extends OpenSearchTestCas
             boolStringWorkflowData,
             Collections.emptyMap(),
             Collections.emptyMap(),
-            Collections.emptyMap()
+            Collections.emptyMap(),
+            null
         );
 
         assertTrue(future.isDone());

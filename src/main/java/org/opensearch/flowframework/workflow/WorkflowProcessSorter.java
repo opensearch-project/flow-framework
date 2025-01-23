@@ -90,9 +90,10 @@ public class WorkflowProcessSorter {
      * @param workflow A workflow with (unsorted) nodes and edges which define predecessors and successors
      * @param workflowId The workflowId associated with the step
      * @param params Parameters passed on the REST path
+     * @param tenantId The tenantId associated with the step
      * @return A list of Process Nodes sorted topologically.  All predecessors of any node will occur prior to it in the list.
      */
-    public List<ProcessNode> sortProcessNodes(Workflow workflow, String workflowId, Map<String, String> params) {
+    public List<ProcessNode> sortProcessNodes(Workflow workflow, String workflowId, Map<String, String> params, String tenantId) {
         if (workflow.nodes().size() > this.maxWorkflowSteps) {
             throw new FlowFrameworkException(
                 "Workflow "
@@ -140,7 +141,8 @@ public class WorkflowProcessSorter {
                 predecessorNodes,
                 threadPool,
                 PROVISION_WORKFLOW_THREAD_POOL,
-                nodeTimeout
+                nodeTimeout,
+                tenantId
             );
             idToNodeMap.put(processNode.id(), processNode);
             nodes.add(processNode);
@@ -319,7 +321,8 @@ public class WorkflowProcessSorter {
             predecessorNodes,
             threadPool,
             PROVISION_WORKFLOW_THREAD_POOL,
-            nodeTimeout
+            nodeTimeout,
+            "fakeTenantId"
         );
     }
 
@@ -350,7 +353,8 @@ public class WorkflowProcessSorter {
                 predecessorNodes,
                 threadPool,
                 PROVISION_WORKFLOW_THREAD_POOL,
-                nodeTimeout
+                nodeTimeout,
+                "fakeTenantId"
             );
         } else {
             // Case 3 : Cannot update step (not supported)
@@ -392,7 +396,8 @@ public class WorkflowProcessSorter {
                 predecessorNodes,
                 threadPool,
                 PROVISION_WORKFLOW_THREAD_POOL,
-                nodeTimeout
+                nodeTimeout,
+                "fakeTenantId"
             );
         } else {
             return null;

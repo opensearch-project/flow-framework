@@ -58,7 +58,8 @@ public class UndeployModelStep implements WorkflowStep {
         WorkflowData currentNodeInputs,
         Map<String, WorkflowData> outputs,
         Map<String, String> previousNodeInputs,
-        Map<String, String> params
+        Map<String, String> params,
+        String tenantId
     ) {
         PlainActionFuture<WorkflowData> undeployModelFuture = PlainActionFuture.newFuture();
 

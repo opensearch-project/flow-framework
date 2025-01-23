@@ -104,7 +104,8 @@ public class CreateConnectorStepTests extends OpenSearchTestCase {
             inputData,
             Collections.emptyMap(),
             Collections.emptyMap(),
-            Collections.emptyMap()
+            Collections.emptyMap(),
+            null
         );
 
         verify(machineLearningNodeClient).createConnector(any(MLCreateConnectorInput.class), any());
@@ -127,7 +128,8 @@ public class CreateConnectorStepTests extends OpenSearchTestCase {
             inputData,
             Collections.emptyMap(),
             Collections.emptyMap(),
-            Collections.emptyMap()
+            Collections.emptyMap(),
+            null
         );
 
         verify(machineLearningNodeClient).createConnector(any(MLCreateConnectorInput.class), any());
