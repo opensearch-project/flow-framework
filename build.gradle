@@ -39,7 +39,6 @@ buildscript {
         swaggerCoreVersion = "2.2.28"
         apacheHttpVersion = "5.3.2"
         apacheHttpClientVersion = "5.4.1"
-        log4jVersion = "2.24.2"
     }
 
     repositories {
@@ -170,17 +169,16 @@ configurations {
 
 dependencies {
     implementation "org.opensearch:opensearch:${opensearch_version}"
-    implementation 'org.junit.jupiter:junit-jupiter:5.11.4'
     api group: 'org.opensearch', name:'opensearch-ml-client', version: "${opensearch_build}"
     api group: 'org.opensearch.client', name: 'opensearch-rest-client', version: "${opensearch_version}"
-    implementation group: 'org.apache.commons', name: 'commons-lang3', version: '3.17.0'
+    implementation "org.apache.commons:commons-lang3:${versions.commonslang}"
     implementation "org.opensearch:common-utils:${common_utils_version}"
     implementation "com.amazonaws:aws-encryption-sdk-java:3.0.1"
     implementation "software.amazon.cryptography:aws-cryptographic-material-providers:1.8.0"
     implementation "org.dafny:DafnyRuntime:4.9.1"
     implementation "software.amazon.smithy.dafny:conversion:0.1.1"
     implementation 'org.bouncycastle:bcprov-jdk18on:1.80'
-    api "org.apache.httpcomponents.core5:httpcore5:${apacheHttpVersion}"
+    api "org.apache.httpcomponents.core5:httpcore5:${versions.httpcore5}"
     implementation "jakarta.json.bind:jakarta.json.bind-api:3.0.1"
     implementation "org.glassfish:jakarta.json:2.0.1"
     implementation "org.eclipse:yasson:3.0.4"
@@ -193,7 +191,7 @@ dependencies {
     implementation "io.swagger.parser.v3:swagger-parser-v3:${swaggerVersion}"
     // Multi-tenant SDK Client
     implementation "org.opensearch:opensearch-remote-metadata-sdk:${opensearch_build}"
-    // Declare Jackson dependencies for tests (from OpenSearch version catalog)
+    testImplementation 'org.junit.jupiter:junit-jupiter:5.11.4'
     testImplementation "com.fasterxml.jackson.core:jackson-annotations:${versions.jackson}"
     testImplementation "com.fasterxml.jackson.core:jackson-databind:${versions.jackson_databind}"
     testImplementation "com.fasterxml.jackson.datatype:jackson-datatype-jsr310:${versions.jackson_databind}"
@@ -207,13 +205,8 @@ dependencies {
     configurations.all {
         resolutionStrategy {
             force("com.google.guava:guava:33.4.0-jre") // CVE for 31.1, keep to force transitive dependencies
-            // TODO: get apache and log4j versions from opensearch version catalog both here and at metadata client and then remove these
-            // https://github.com/opensearch-project/flow-framework/issues/992
-            force("org.apache.httpcomponents.core5:httpcore5:${apacheHttpVersion}")
-            force "org.apache.httpcomponents.core5:httpcore5-h2:${apacheHttpVersion}"
-            force("org.apache.httpcomponents.client5:httpclient5:${apacheHttpClientVersion}")
-            force "org.apache.logging.log4j:log4j-api:${log4jVersion}"
-            force "org.apache.logging.log4j:log4j-core:${log4jVersion}"
+            // force "org.apache.httpcomponents.core5:httpcore5-h2:${apacheHttpVersion}"
+            // force("org.apache.httpcomponents.client5:httpclient5:${apacheHttpClientVersion}")
         }
     }
 }
