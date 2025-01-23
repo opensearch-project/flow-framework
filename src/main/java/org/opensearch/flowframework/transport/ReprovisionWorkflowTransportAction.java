@@ -198,7 +198,8 @@ public class ReprovisionWorkflowTransportAction extends HandledTransportAction<R
             List<ProcessNode> updatedProcessSequence = workflowProcessSorter.sortProcessNodes(
                 provisionWorkflow,
                 request.getWorkflowId(),
-                Collections.emptyMap() // TODO : Add suport to reprovision substitution templates
+                Collections.emptyMap(), // TODO : Add suport to reprovision substitution templates
+                "fakeTenantId"
             );
 
             try {

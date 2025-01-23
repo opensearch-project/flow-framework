@@ -105,7 +105,8 @@ public class RegisterRemoteModelStepTests extends OpenSearchTestCase {
             workflowData,
             Collections.emptyMap(),
             Collections.emptyMap(),
-            Collections.emptyMap()
+            Collections.emptyMap(),
+            null
         );
 
         verify(mlNodeClient, times(1)).register(any(MLRegisterModelInput.class), any());
@@ -158,7 +159,8 @@ public class RegisterRemoteModelStepTests extends OpenSearchTestCase {
             deployWorkflowData,
             Collections.emptyMap(),
             Collections.emptyMap(),
-            Collections.emptyMap()
+            Collections.emptyMap(),
+            null
         );
 
         verify(mlNodeClient, times(1)).register(any(MLRegisterModelInput.class), any());
@@ -190,7 +192,8 @@ public class RegisterRemoteModelStepTests extends OpenSearchTestCase {
             deployWorkflowData,
             Collections.emptyMap(),
             Collections.emptyMap(),
-            Collections.emptyMap()
+            Collections.emptyMap(),
+            null
         );
 
         verify(mlNodeClient, times(2)).register(any(MLRegisterModelInput.class), any());
@@ -220,7 +223,8 @@ public class RegisterRemoteModelStepTests extends OpenSearchTestCase {
             workflowData,
             Collections.emptyMap(),
             Collections.emptyMap(),
-            Collections.emptyMap()
+            Collections.emptyMap(),
+            null
         );
         assertTrue(future.isDone());
         ExecutionException ex = expectThrows(ExecutionException.class, () -> future.get().getClass());
@@ -263,7 +267,8 @@ public class RegisterRemoteModelStepTests extends OpenSearchTestCase {
             deployWorkflowData,
             Collections.emptyMap(),
             Collections.emptyMap(),
-            Collections.emptyMap()
+            Collections.emptyMap(),
+            null
         );
 
         assertTrue(future.isDone());
@@ -313,7 +318,8 @@ public class RegisterRemoteModelStepTests extends OpenSearchTestCase {
             deployWorkflowData,
             Collections.emptyMap(),
             Collections.emptyMap(),
-            Collections.emptyMap()
+            Collections.emptyMap(),
+            null
         );
 
         assertTrue(future.isDone());
@@ -346,7 +352,8 @@ public class RegisterRemoteModelStepTests extends OpenSearchTestCase {
             incorrectWorkflowData,
             Collections.emptyMap(),
             Collections.emptyMap(),
-            Collections.emptyMap()
+            Collections.emptyMap(),
+            null
         );
         assertTrue(future.isDone());
         ExecutionException ex = expectThrows(ExecutionException.class, () -> future.get().getClass());
@@ -366,7 +373,8 @@ public class RegisterRemoteModelStepTests extends OpenSearchTestCase {
             workflowData,
             Collections.emptyMap(),
             Collections.emptyMap(),
-            Collections.emptyMap()
+            Collections.emptyMap(),
+            null
         );
         assertTrue(future.isDone());
         ExecutionException ex = expectThrows(ExecutionException.class, () -> future.get().getClass());
@@ -381,7 +389,8 @@ public class RegisterRemoteModelStepTests extends OpenSearchTestCase {
             new WorkflowData(Collections.emptyMap(), "test-id", "test-node-id"),
             Collections.emptyMap(),
             Collections.emptyMap(),
-            Collections.emptyMap()
+            Collections.emptyMap(),
+            null
         );
         assertTrue(future.isDone());
         ExecutionException ex = assertThrows(ExecutionException.class, () -> future.get().getContent());
@@ -410,7 +419,8 @@ public class RegisterRemoteModelStepTests extends OpenSearchTestCase {
             deployWorkflowData,
             Collections.emptyMap(),
             Collections.emptyMap(),
-            Collections.emptyMap()
+            Collections.emptyMap(),
+            null
         );
 
         assertTrue(future.isDone());

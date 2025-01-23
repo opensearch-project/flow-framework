@@ -65,7 +65,8 @@ public class DeployModelStep extends AbstractRetryableWorkflowStep {
         WorkflowData currentNodeInputs,
         Map<String, WorkflowData> outputs,
         Map<String, String> previousNodeInputs,
-        Map<String, String> params
+        Map<String, String> params,
+        String tenantId
     ) {
 
         PlainActionFuture<WorkflowData> deployModelFuture = PlainActionFuture.newFuture();
