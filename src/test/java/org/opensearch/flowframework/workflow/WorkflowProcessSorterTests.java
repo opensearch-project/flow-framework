@@ -629,7 +629,8 @@ public class WorkflowProcessSorterTests extends OpenSearchTestCase {
                 "1",
                 reprovisionTemplate,
                 reprovisionTemplate,
-                List.of(pipelineResource, indexResource)
+                List.of(pipelineResource, indexResource),
+                null
             )
         );
 
@@ -675,7 +676,8 @@ public class WorkflowProcessSorterTests extends OpenSearchTestCase {
                 "1",
                 reprovisionTemplate,
                 templateWithNoCreateIndex,
-                List.of(pipelineResource, indexResource)
+                List.of(pipelineResource, indexResource),
+                null
             )
         );
 
@@ -744,7 +746,8 @@ public class WorkflowProcessSorterTests extends OpenSearchTestCase {
             "1",
             reprovisionTemplate,
             templateWithAdditiveModification,
-            List.of(pipelineResource, indexResource)
+            List.of(pipelineResource, indexResource),
+            null
         );
 
         // Should result in a 3 step sequence
@@ -809,7 +812,8 @@ public class WorkflowProcessSorterTests extends OpenSearchTestCase {
             "1",
             reprovisionTemplate,
             templateWithModifiedNodes,
-            List.of(pipelineResource, indexResource)
+            List.of(pipelineResource, indexResource),
+            null
         );
 
         // Should result in a 2 step sequence

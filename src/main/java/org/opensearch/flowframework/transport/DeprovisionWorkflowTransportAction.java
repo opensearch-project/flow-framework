@@ -227,7 +227,7 @@ public class DeprovisionWorkflowTransportAction extends HandledTransportAction<W
                     this.threadPool,
                     DEPROVISION_WORKFLOW_THREAD_POOL,
                     flowFrameworkSettings.getRequestTimeout(),
-                    "fakeTenantId"
+                    tenantId
                 )
             );
         }
@@ -291,7 +291,7 @@ public class DeprovisionWorkflowTransportAction extends HandledTransportAction<W
                         this.threadPool,
                         DEPROVISION_WORKFLOW_THREAD_POOL,
                         pn.nodeTimeout(),
-                        "fakeTenantId"
+                        tenantId
                     );
                 }).collect(Collectors.toList());
                 // Pause briefly before next loop

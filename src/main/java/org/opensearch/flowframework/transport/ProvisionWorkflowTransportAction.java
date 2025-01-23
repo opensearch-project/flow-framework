@@ -210,7 +210,7 @@ public class ProvisionWorkflowTransportAction extends HandledTransportAction<Wor
                 provisionWorkflow,
                 workflowId,
                 request.getParams(),
-                "fakeTenantId"
+                tenantId
             );
             workflowProcessSorter.validate(provisionProcessSequence, pluginsService);
 

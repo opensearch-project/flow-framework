@@ -167,6 +167,7 @@ public class RegisterRemoteModelStep implements WorkflowStep {
                         currentNodeId,
                         getName(),
                         mlRegisterModelResponse.getModelId(),
+                        tenantId,
                         registerUpdateListener
                     );
                 }
@@ -184,6 +185,7 @@ public class RegisterRemoteModelStep implements WorkflowStep {
                         currentNodeId,
                         DeployModelStep.NAME,
                         mlRegisterModelResponse.getModelId(),
+                        tenantId,
                         deployUpdateListener
                     );
                 }

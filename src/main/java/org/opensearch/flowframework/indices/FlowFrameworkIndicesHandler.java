@@ -882,26 +882,6 @@ public class FlowFrameworkIndicesHandler {
      * @param nodeId current process node (workflow step) id
      * @param workflowStepName the workflow step name that created the resource
      * @param resourceId the id of the newly created resource
-     * @param listener the ActionListener for this step to handle completing the future after update
-     * @deprecated here temporarily until tenantID passed https://github.com/opensearch-project/flow-framework/issues/987
-     */
-    @Deprecated
-    public void addResourceToStateIndex(
-        WorkflowData currentNodeInputs,
-        String nodeId,
-        String workflowStepName,
-        String resourceId,
-        ActionListener<WorkflowData> listener
-    ) {
-        addResourceToStateIndex(currentNodeInputs, nodeId, workflowStepName, resourceId, "fakeTenantId", listener);
-    }
-
-    /**
-     * Adds a resource to the state index, including common exception handling
-     * @param currentNodeInputs Inputs to the current node
-     * @param nodeId current process node (workflow step) id
-     * @param workflowStepName the workflow step name that created the resource
-     * @param resourceId the id of the newly created resource
      * @param tenantId the tenant id
      * @param listener the ActionListener for this step to handle completing the future after update
      */
@@ -929,18 +909,6 @@ public class FlowFrameworkIndicesHandler {
                 ActionListener.runBefore(listener, context::restore)
             );
         }
-    }
-
-    /**
-     * Removes a resource from the state index, including common exception handling
-     * @param workflowId The workflow document id in the state index
-     * @param resourceToDelete The resource to delete
-     * @param listener the ActionListener for this step to handle completing the future after update
-     * @deprecated here temporarily until tenantID passed https://github.com/opensearch-project/flow-framework/issues/987
-     */
-    @Deprecated
-    public void deleteResourceFromStateIndex(String workflowId, ResourceCreated resourceToDelete, ActionListener<WorkflowData> listener) {
-        deleteResourceFromStateIndex(workflowId, "fakeTenantId", resourceToDelete, listener);
     }
 
     /**

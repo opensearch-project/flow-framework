@@ -91,6 +91,7 @@ public class CreateConnectorStep implements WorkflowStep {
                     currentNodeId,
                     getName(),
                     mlCreateConnectorResponse.getConnectorId(),
+                    tenantId,
                     createConnectorFuture
                 );
             }

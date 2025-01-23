@@ -155,7 +155,9 @@ public class ReprovisionWorkflowTransportActionTests extends OpenSearchTestCase 
         }).when(client).execute(any(), any(GetWorkflowStateRequest.class), any());
 
         // Stub reprovision sequence creation
-        when(workflowProcessSorter.createReprovisionSequence(any(), any(), any(), any())).thenReturn(List.of(mock(ProcessNode.class)));
+        when(workflowProcessSorter.createReprovisionSequence(any(), any(), any(), any(), any())).thenReturn(
+            List.of(mock(ProcessNode.class))
+        );
 
         // Bypass updateFlowFrameworkSystemIndexDoc and stub on response
         doAnswer(invocation -> {
@@ -283,7 +285,9 @@ public class ReprovisionWorkflowTransportActionTests extends OpenSearchTestCase 
         }).when(client).execute(any(), any(GetWorkflowStateRequest.class), any());
 
         // Stub reprovision sequence creation
-        when(workflowProcessSorter.createReprovisionSequence(any(), any(), any(), any())).thenReturn(List.of(mock(ProcessNode.class)));
+        when(workflowProcessSorter.createReprovisionSequence(any(), any(), any(), any(), any())).thenReturn(
+            List.of(mock(ProcessNode.class))
+        );
 
         // Bypass updateFlowFrameworkSystemIndexDoc and stub on response
         doAnswer(invocation -> {

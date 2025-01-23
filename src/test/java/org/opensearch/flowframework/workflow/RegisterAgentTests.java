@@ -38,6 +38,7 @@ import static org.opensearch.flowframework.common.CommonValue.ML_COMMONS_API_SPE
 import static org.opensearch.flowframework.common.WorkflowResources.AGENT_ID;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.nullable;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
@@ -107,10 +108,11 @@ public class RegisterAgentTests extends OpenSearchTestCase {
         }).when(machineLearningNodeClient).registerAgent(any(MLAgent.class), actionListenerCaptor.capture());
 
         doAnswer(invocation -> {
-            ActionListener<WorkflowData> updateResponseListener = invocation.getArgument(4);
+            ActionListener<WorkflowData> updateResponseListener = invocation.getArgument(5);
             updateResponseListener.onResponse(new WorkflowData(Map.of(AGENT_ID, agentId), "test-id", "test-node-id"));
             return null;
-        }).when(flowFrameworkIndicesHandler).addResourceToStateIndex(any(WorkflowData.class), anyString(), anyString(), anyString(), any());
+        }).when(flowFrameworkIndicesHandler)
+            .addResourceToStateIndex(any(WorkflowData.class), anyString(), anyString(), anyString(), nullable(String.class), any());
 
         PlainActionFuture<WorkflowData> future = registerAgentStep.execute(
             inputData.getNodeId(),
@@ -141,10 +143,11 @@ public class RegisterAgentTests extends OpenSearchTestCase {
         }).when(machineLearningNodeClient).registerAgent(any(MLAgent.class), actionListenerCaptor.capture());
 
         doAnswer(invocation -> {
-            ActionListener<WorkflowData> updateResponseListener = invocation.getArgument(4);
+            ActionListener<WorkflowData> updateResponseListener = invocation.getArgument(5);
             updateResponseListener.onResponse(new WorkflowData(Map.of(AGENT_ID, agentId), "test-id", "test-node-id"));
             return null;
-        }).when(flowFrameworkIndicesHandler).addResourceToStateIndex(any(WorkflowData.class), anyString(), anyString(), anyString(), any());
+        }).when(flowFrameworkIndicesHandler)
+            .addResourceToStateIndex(any(WorkflowData.class), anyString(), anyString(), anyString(), any(), any());
 
         PlainActionFuture<WorkflowData> future = registerAgentStep.execute(
             inputData.getNodeId(),

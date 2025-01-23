@@ -89,6 +89,7 @@ public class RegisterModelGroupStep implements WorkflowStep {
                     currentNodeId,
                     getName(),
                     mlRegisterModelGroupResponse.getModelGroupId(),
+                    tenantId,
                     resourceListener
                 );
             }

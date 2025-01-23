@@ -94,10 +94,11 @@ public class CreateConnectorStepTests extends OpenSearchTestCase {
         }).when(machineLearningNodeClient).createConnector(any(MLCreateConnectorInput.class), any());
 
         doAnswer(invocation -> {
-            ActionListener<WorkflowData> updateResponseListener = invocation.getArgument(4);
+            ActionListener<WorkflowData> updateResponseListener = invocation.getArgument(5);
             updateResponseListener.onResponse(new WorkflowData(Map.of(CONNECTOR_ID, connectorId), "test-id", "test-node-id"));
             return null;
-        }).when(flowFrameworkIndicesHandler).addResourceToStateIndex(any(WorkflowData.class), anyString(), anyString(), anyString(), any());
+        }).when(flowFrameworkIndicesHandler)
+            .addResourceToStateIndex(any(WorkflowData.class), anyString(), anyString(), anyString(), any(), any());
 
         PlainActionFuture<WorkflowData> future = createConnectorStep.execute(
             inputData.getNodeId(),

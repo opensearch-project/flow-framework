@@ -213,7 +213,7 @@ public class ReprovisionWorkflowTransportAction extends HandledTransportAction<R
                 provisionWorkflow,
                 request.getWorkflowId(),
                 Collections.emptyMap(), // TODO : Add suport to reprovision substitution templates
-                "fakeTenantId"
+                tenantId
             );
 
             try {
@@ -230,7 +230,8 @@ public class ReprovisionWorkflowTransportAction extends HandledTransportAction<R
                 workflowId,
                 originalTemplate,
                 updatedTemplate,
-                resourceCreated
+                resourceCreated,
+                tenantId
             );
 
             // Remove error field if any prior to subsequent execution

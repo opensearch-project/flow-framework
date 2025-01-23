@@ -44,6 +44,7 @@ import static org.opensearch.flowframework.common.WorkflowResources.CONNECTOR_ID
 import static org.opensearch.flowframework.common.WorkflowResources.MODEL_ID;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.nullable;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
@@ -95,10 +96,11 @@ public class RegisterRemoteModelStepTests extends OpenSearchTestCase {
         }).when(mlNodeClient).register(any(MLRegisterModelInput.class), any());
 
         doAnswer(invocation -> {
-            ActionListener<WorkflowData> updateResponseListener = invocation.getArgument(4);
+            ActionListener<WorkflowData> updateResponseListener = invocation.getArgument(5);
             updateResponseListener.onResponse(new WorkflowData(Map.of(MODEL_ID, modelId), "test-id", "test-node-id"));
             return null;
-        }).when(flowFrameworkIndicesHandler).addResourceToStateIndex(any(WorkflowData.class), anyString(), anyString(), anyString(), any());
+        }).when(flowFrameworkIndicesHandler)
+            .addResourceToStateIndex(any(WorkflowData.class), anyString(), anyString(), anyString(), any(), any());
 
         PlainActionFuture<WorkflowData> future = this.registerRemoteModelStep.execute(
             workflowData.getNodeId(),
@@ -116,6 +118,7 @@ public class RegisterRemoteModelStepTests extends OpenSearchTestCase {
             anyString(),
             anyString(),
             anyString(),
+            any(),
             any()
         );
 
@@ -138,10 +141,11 @@ public class RegisterRemoteModelStepTests extends OpenSearchTestCase {
         }).when(mlNodeClient).register(any(MLRegisterModelInput.class), any());
 
         doAnswer(invocation -> {
-            ActionListener<WorkflowData> updateResponseListener = invocation.getArgument(4);
+            ActionListener<WorkflowData> updateResponseListener = invocation.getArgument(5);
             updateResponseListener.onResponse(new WorkflowData(Map.of(MODEL_ID, modelId), "test-id", "test-node-id"));
             return null;
-        }).when(flowFrameworkIndicesHandler).addResourceToStateIndex(any(WorkflowData.class), anyString(), anyString(), anyString(), any());
+        }).when(flowFrameworkIndicesHandler)
+            .addResourceToStateIndex(any(WorkflowData.class), anyString(), anyString(), anyString(), any(), any());
 
         WorkflowData deployWorkflowData = new WorkflowData(
             Map.ofEntries(
@@ -170,6 +174,7 @@ public class RegisterRemoteModelStepTests extends OpenSearchTestCase {
             anyString(),
             anyString(),
             anyString(),
+            nullable(String.class),
             any()
         );
 
@@ -203,6 +208,7 @@ public class RegisterRemoteModelStepTests extends OpenSearchTestCase {
             anyString(),
             anyString(),
             anyString(),
+            nullable(String.class),
             any()
         );
 
@@ -246,10 +252,11 @@ public class RegisterRemoteModelStepTests extends OpenSearchTestCase {
         }).when(mlNodeClient).register(any(MLRegisterModelInput.class), any());
 
         doAnswer(invocation -> {
-            ActionListener<WorkflowData> updateResponseListener = invocation.getArgument(4);
+            ActionListener<WorkflowData> updateResponseListener = invocation.getArgument(5);
             updateResponseListener.onFailure(new RuntimeException("Failed to update register resource"));
             return null;
-        }).when(flowFrameworkIndicesHandler).addResourceToStateIndex(any(WorkflowData.class), anyString(), anyString(), anyString(), any());
+        }).when(flowFrameworkIndicesHandler)
+            .addResourceToStateIndex(any(WorkflowData.class), anyString(), anyString(), anyString(), any(), any());
 
         WorkflowData deployWorkflowData = new WorkflowData(
             Map.ofEntries(
@@ -291,7 +298,7 @@ public class RegisterRemoteModelStepTests extends OpenSearchTestCase {
 
         AtomicInteger invocationCount = new AtomicInteger(0);
         doAnswer(invocation -> {
-            ActionListener<WorkflowData> updateResponseListener = invocation.getArgument(4);
+            ActionListener<WorkflowData> updateResponseListener = invocation.getArgument(5);
             if (invocationCount.getAndIncrement() == 0) {
                 // succeed on first call (update register)
                 updateResponseListener.onResponse(new WorkflowData(Map.of(MODEL_ID, modelId), "test-id", "test-node-id"));
@@ -300,7 +307,8 @@ public class RegisterRemoteModelStepTests extends OpenSearchTestCase {
                 updateResponseListener.onFailure(new RuntimeException("Failed to update deploy resource"));
             }
             return null;
-        }).when(flowFrameworkIndicesHandler).addResourceToStateIndex(any(WorkflowData.class), anyString(), anyString(), anyString(), any());
+        }).when(flowFrameworkIndicesHandler)
+            .addResourceToStateIndex(any(WorkflowData.class), anyString(), anyString(), anyString(), nullable(String.class), any());
 
         WorkflowData deployWorkflowData = new WorkflowData(
             Map.ofEntries(
