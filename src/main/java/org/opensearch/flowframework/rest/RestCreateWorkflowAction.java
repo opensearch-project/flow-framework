@@ -25,7 +25,7 @@ import org.opensearch.flowframework.model.Template;
 import org.opensearch.flowframework.transport.CreateWorkflowAction;
 import org.opensearch.flowframework.transport.WorkflowRequest;
 import org.opensearch.flowframework.util.ParseUtils;
-import org.opensearch.flowframework.util.RestActionUtils;
+import org.opensearch.flowframework.util.TenantAwareHelper;
 import org.opensearch.rest.BaseRestHandler;
 import org.opensearch.rest.BytesRestResponse;
 import org.opensearch.rest.RestRequest;
@@ -115,7 +115,7 @@ public class RestCreateWorkflowAction extends BaseRestHandler {
                     new BytesRestResponse(ffe.getRestStatus(), ffe.toXContent(channel.newErrorBuilder(), ToXContent.EMPTY_PARAMS))
                 );
             }
-            String tenantId = RestActionUtils.getTenantID(flowFrameworkSettings.isMultiTenancyEnabled(), request);
+            String tenantId = TenantAwareHelper.getTenantID(flowFrameworkSettings.isMultiTenancyEnabled(), request);
             if (!provision && !params.isEmpty()) {
                 FlowFrameworkException ffe = new FlowFrameworkException(
                     "Only the parameters " + request.consumedParams() + " are permitted unless the provision parameter is set to true.",

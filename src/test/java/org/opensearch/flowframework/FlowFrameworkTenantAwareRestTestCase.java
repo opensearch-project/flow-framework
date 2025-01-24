@@ -55,8 +55,8 @@ public abstract class FlowFrameworkTenantAwareRestTestCase extends FlowFramework
     protected static final String EMPTY_CONTENT = "{}";
 
     // REST Response error reasons
-    protected static final String MISSING_TENANT_REASON = "Tenant ID header is missing";
-    protected static final String NO_PERMISSION_REASON = "You don't have permission to access this resource";
+    protected static final String MISSING_TENANT_REASON = "Tenant ID header is missing or has no value";
+    protected static final String NO_PERMISSION_REASON = "No permission to access this resource";
 
     protected String tenantId = randomAlphaOfLength(5);
     protected String otherTenantId = randomAlphaOfLength(6);

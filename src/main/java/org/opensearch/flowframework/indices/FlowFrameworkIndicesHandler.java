@@ -475,7 +475,7 @@ public class FlowFrameworkIndicesHandler {
                 documentId
             ).getFormattedMessage();
             logger.error(errorMessage);
-            listener.onFailure(new FlowFrameworkException(errorMessage, RestStatus.BAD_REQUEST));
+            listener.onFailure(new FlowFrameworkException(errorMessage, RestStatus.INTERNAL_SERVER_ERROR));
             return;
         }
         doesTemplateExist(documentId, tenantId, templateExists -> {
@@ -792,15 +792,14 @@ public class FlowFrameworkIndicesHandler {
                 sdkClient.updateDataObjectAsync(updateRequest).whenComplete((r, throwable) -> {
                     context.restore();
                     if (throwable == null) {
-                        UpdateResponse response;
                         try {
-                            response = UpdateResponse.fromXContent(r.parser());
-                            logger.info("Deleted workflow state doc: {}", documentId);
+                            UpdateResponse response = UpdateResponse.fromXContent(r.parser());
+                            logger.info("Updated workflow state doc: {}", documentId);
                             listener.onResponse(response);
                         } catch (Exception e) {
-                            logger.error("Failed to parse delete response", e);
+                            logger.error("Failed to parse update response", e);
                             listener.onFailure(
-                                new FlowFrameworkException("Failed to parse delete response", RestStatus.INTERNAL_SERVER_ERROR)
+                                new FlowFrameworkException("Failed to parse update response", RestStatus.INTERNAL_SERVER_ERROR)
                             );
                         }
                     } else {

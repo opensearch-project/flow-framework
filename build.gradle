@@ -192,9 +192,6 @@ dependencies {
     // Multi-tenant SDK Client
     implementation ("org.opensearch:opensearch-remote-metadata-sdk:${opensearch_build}") {
         exclude group: "org.apache.httpcomponents.client5", module: "httpclient5"
-        // Temporary pending merge of https://github.com/opensearch-project/opensearch-remote-metadata-sdk/pull/56
-        exclude group: "org.apache.logging.log4j", module: "log4j-api"
-        exclude group: "org.apache.logging.log4j", module: "log4j-core"
     }
     testImplementation 'org.junit.jupiter:junit-jupiter:5.11.4'
     testImplementation "com.fasterxml.jackson.core:jackson-annotations:${versions.jackson}"
@@ -281,7 +278,7 @@ integTest {
     if (System.getProperty("tests.rest.cluster") != null && System.getProperty("tests.rest.tenantaware") == null) {
         filter {
             includeTestsMatching "org.opensearch.flowframework.rest.*IT"
-            excludeTestsMatching "org.opensearch.ml.rest.*TenantAwareIT"
+            excludeTestsMatching "org.opensearch.flowframework.rest.*TenantAwareIT"
         }
     }
 
@@ -304,6 +301,7 @@ integTest {
         filter {
             includeTestsMatching "org.opensearch.flowframework.rest.FlowFrameworkSecureRestApiIT"
             excludeTestsMatching "org.opensearch.flowframework.rest.FlowFrameworkRestApiIT"
+            excludeTestsMatching "org.opensearch.flowframework.rest.*TenantAwareIT"
         }
     }
 

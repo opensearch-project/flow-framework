@@ -22,7 +22,7 @@ import org.opensearch.flowframework.common.FlowFrameworkSettings;
 import org.opensearch.flowframework.exception.FlowFrameworkException;
 import org.opensearch.flowframework.transport.ProvisionWorkflowAction;
 import org.opensearch.flowframework.transport.WorkflowRequest;
-import org.opensearch.flowframework.util.RestActionUtils;
+import org.opensearch.flowframework.util.TenantAwareHelper;
 import org.opensearch.rest.BaseRestHandler;
 import org.opensearch.rest.BytesRestResponse;
 import org.opensearch.rest.RestRequest;
@@ -86,7 +86,7 @@ public class RestProvisionWorkflowAction extends BaseRestHandler {
                     RestStatus.FORBIDDEN
                 );
             }
-            String tenantId = RestActionUtils.getTenantID(flowFrameworkFeatureEnabledSetting.isMultiTenancyEnabled(), request);
+            String tenantId = TenantAwareHelper.getTenantID(flowFrameworkFeatureEnabledSetting.isMultiTenancyEnabled(), request);
             // Validate params
             if (workflowId == null) {
                 throw new FlowFrameworkException("workflow_id cannot be null", RestStatus.BAD_REQUEST);
