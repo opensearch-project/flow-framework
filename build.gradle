@@ -192,6 +192,9 @@ dependencies {
     // Multi-tenant SDK Client
     implementation ("org.opensearch:opensearch-remote-metadata-sdk:${opensearch_build}") {
         exclude group: "org.apache.httpcomponents.client5", module: "httpclient5"
+        // Temporary pending merge of https://github.com/opensearch-project/opensearch-remote-metadata-sdk/pull/56
+        exclude group: "org.apache.logging.log4j", module: "log4j-api"
+        exclude group: "org.apache.logging.log4j", module: "log4j-core"
     }
     testImplementation 'org.junit.jupiter:junit-jupiter:5.11.4'
     testImplementation "com.fasterxml.jackson.core:jackson-annotations:${versions.jackson}"

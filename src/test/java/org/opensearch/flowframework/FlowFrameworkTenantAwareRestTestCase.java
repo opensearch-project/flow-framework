@@ -172,6 +172,10 @@ public abstract class FlowFrameworkTenantAwareRestTestCase extends FlowFramework
         assertEquals(RestStatus.UNAUTHORIZED.getStatus(), response.getStatusLine().getStatusCode());
     }
 
+    protected static void assertOkOrAccepted(Response response) {
+        assertTrue(List.of(RestStatus.OK.getStatus(), RestStatus.ACCEPTED.getStatus()).contains(response.getStatusLine().getStatusCode()));
+    }
+
     /**
      * Delete the specified document and wait until a search matches only the specified number of hits
      * @param tenantId The tenant ID to filter the search by

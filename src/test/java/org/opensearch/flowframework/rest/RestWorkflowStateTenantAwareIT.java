@@ -155,9 +155,7 @@ public class RestWorkflowStateTenantAwareIT extends FlowFrameworkTenantAwareRest
             Response restResponse = makeRequest(tenantRequest, GET, WORKFLOW_PATH + workflowId + STATUS_ALL);
             assertOK(restResponse);
             Map<String, Object> stateMap = responseToMap(restResponse);
-            // TODO TEmporary while ML Commons has bug with deploy
-            assertTrue("COMPLETED".equals(stateMap.get("state")) || "FAILED".equals(stateMap.get("state")));
-            // assertEquals("COMPLETED", stateMap.get("state"));
+            assertEquals("COMPLETED", stateMap.get("state"));
         }, 20, TimeUnit.SECONDS);
 
         /*
@@ -176,9 +174,7 @@ public class RestWorkflowStateTenantAwareIT extends FlowFrameworkTenantAwareRest
             Response restResponse = makeRequest(otherTenantRequest, GET, WORKFLOW_PATH + otherWorkflowId + STATUS_ALL);
             assertOK(restResponse);
             Map<String, Object> stateMap = responseToMap(restResponse);
-            // TODO TEmporary while ML Commons has bug with deploy
-            assertTrue("COMPLETED".equals(stateMap.get("state")) || "FAILED".equals(stateMap.get("state")));
-            // assertEquals("COMPLETED", stateMap.get("state"));
+            assertEquals("COMPLETED", stateMap.get("state"));
         }, 20, TimeUnit.SECONDS);
 
         // Retry these tests until they pass. Search requires refresh, can take 15s on DDB
@@ -296,9 +292,7 @@ public class RestWorkflowStateTenantAwareIT extends FlowFrameworkTenantAwareRest
         response = makeRequest(otherTenantRequest, GET, WORKFLOW_PATH + otherWorkflowId + STATUS_ALL);
         assertOK(response);
         map = responseToMap(response);
-        // TODO TEmporary while ML Commons has bug with deploy
-        assertTrue("COMPLETED".equals(map.get("state")) || "FAILED".equals(map.get("state")));
-        // assertEquals("COMPLETED", map.get("state"));
+        assertEquals("COMPLETED", map.get("state"));
 
         // Now try again with a null ID
         if (multiTenancyEnabled) {
@@ -316,13 +310,12 @@ public class RestWorkflowStateTenantAwareIT extends FlowFrameworkTenantAwareRest
         response = makeRequest(otherTenantRequest, GET, WORKFLOW_PATH + otherWorkflowId + STATUS_ALL);
         assertOK(response);
         map = responseToMap(response);
-        // TODO TEmporary while ML Commons has bug with deploy
-        assertTrue("COMPLETED".equals(map.get("state")) || "FAILED".equals(map.get("state")));
-        // assertEquals("COMPLETED", map.get("state"));
+        assertEquals("COMPLETED", map.get("state"));
 
         // Now finally deprovision the right way
         response = makeRequest(otherTenantRequest, POST, WORKFLOW_PATH + otherWorkflowId + DEPROVISION);
-        assertOK(response);
+        // Expect 200, may be 202
+        assertOkOrAccepted(response);
         map = responseToMap(response);
         assertTrue(map.containsKey(WORKFLOW_ID));
         assertEquals(otherWorkflowId, map.get(WORKFLOW_ID).toString());
