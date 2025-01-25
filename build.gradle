@@ -8,7 +8,8 @@ import java.nio.file.Paths
 
 buildscript {
     ext {
-        opensearch_version = System.getProperty("opensearch.version", "3.0.0-SNAPSHOT")
+        opensearch_version = System.getProperty("opensearch.version", "3.0.0-alpha1-SNAPSHOT")
+        // TODO: when upstream plugin dependencies are on alpha1, add alpha1 as the qualifier here
         buildVersionQualifier = System.getProperty("build.version_qualifier", "")
         isSnapshot = "true" == System.getProperty("build.snapshot", "true")
         version_tokens = opensearch_version.tokenize('-')
