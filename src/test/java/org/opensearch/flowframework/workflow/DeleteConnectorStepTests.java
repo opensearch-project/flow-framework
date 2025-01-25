@@ -29,6 +29,7 @@ import org.mockito.MockitoAnnotations;
 import static org.opensearch.flowframework.common.WorkflowResources.CONNECTOR_ID;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.nullable;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.verify;
 
@@ -54,12 +55,12 @@ public class DeleteConnectorStepTests extends OpenSearchTestCase {
 
         doAnswer(invocation -> {
             String connectorIdArg = invocation.getArgument(0);
-            ActionListener<DeleteResponse> actionListener = invocation.getArgument(1);
+            ActionListener<DeleteResponse> actionListener = invocation.getArgument(2);
             ShardId shardId = new ShardId(new Index("indexName", "uuid"), 1);
             DeleteResponse output = new DeleteResponse(shardId, connectorIdArg, 1, 1, 1, true);
             actionListener.onResponse(output);
             return null;
-        }).when(machineLearningNodeClient).deleteConnector(anyString(), anyActionListener());
+        }).when(machineLearningNodeClient).deleteConnector(anyString(), nullable(String.class), anyActionListener());
 
         PlainActionFuture<WorkflowData> future = deleteConnectorStep.execute(
             inputData.getNodeId(),
@@ -69,7 +70,7 @@ public class DeleteConnectorStepTests extends OpenSearchTestCase {
             Collections.emptyMap(),
             null
         );
-        verify(machineLearningNodeClient).deleteConnector(anyString(), anyActionListener());
+        verify(machineLearningNodeClient).deleteConnector(anyString(), nullable(String.class), anyActionListener());
 
         assertTrue(future.isDone());
         assertEquals(connectorId, future.get().getContent().get(CONNECTOR_ID));
@@ -97,10 +98,10 @@ public class DeleteConnectorStepTests extends OpenSearchTestCase {
         DeleteConnectorStep deleteConnectorStep = new DeleteConnectorStep(machineLearningNodeClient);
 
         doAnswer(invocation -> {
-            ActionListener<DeleteResponse> actionListener = invocation.getArgument(1);
+            ActionListener<DeleteResponse> actionListener = invocation.getArgument(2);
             actionListener.onFailure(new FlowFrameworkException("Failed to delete connector", RestStatus.INTERNAL_SERVER_ERROR));
             return null;
-        }).when(machineLearningNodeClient).deleteConnector(anyString(), anyActionListener());
+        }).when(machineLearningNodeClient).deleteConnector(anyString(), nullable(String.class), anyActionListener());
 
         PlainActionFuture<WorkflowData> future = deleteConnectorStep.execute(
             inputData.getNodeId(),
@@ -111,7 +112,7 @@ public class DeleteConnectorStepTests extends OpenSearchTestCase {
             null
         );
 
-        verify(machineLearningNodeClient).deleteConnector(anyString(), anyActionListener());
+        verify(machineLearningNodeClient).deleteConnector(anyString(), nullable(String.class), anyActionListener());
 
         assertTrue(future.isDone());
         ExecutionException ex = assertThrows(ExecutionException.class, () -> future.get().getContent());

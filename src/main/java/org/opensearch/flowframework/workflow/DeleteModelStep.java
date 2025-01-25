@@ -75,7 +75,7 @@ public class DeleteModelStep implements WorkflowStep {
 
             String modelId = inputs.get(MODEL_ID).toString();
 
-            mlClient.deleteModel(modelId, new ActionListener<>() {
+            mlClient.deleteModel(modelId, tenantId, new ActionListener<>() {
                 @Override
                 public void onResponse(DeleteResponse deleteResponse) {
                     deleteModelFuture.onResponse(

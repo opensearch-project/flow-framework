@@ -154,6 +154,7 @@ public class CreateConnectorStep implements WorkflowStep {
                 .parameters(parameters)
                 .credential(credentials)
                 .actions(actions)
+                .tenantId(tenantId)
                 .build();
 
             mlClient.createConnector(mlInput, actionListener);

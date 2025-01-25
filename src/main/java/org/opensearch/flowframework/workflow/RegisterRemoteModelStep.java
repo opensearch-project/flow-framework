@@ -104,7 +104,8 @@ public class RegisterRemoteModelStep implements WorkflowStep {
             MLRegisterModelInputBuilder builder = MLRegisterModelInput.builder()
                 .functionName(FunctionName.REMOTE)
                 .modelName(modelName)
-                .connectorId(connectorId);
+                .connectorId(connectorId)
+                .tenantId(tenantId);
 
             if (modelGroupId != null) {
                 builder.modelGroupId(modelGroupId);
