@@ -546,7 +546,7 @@ public class CreateWorkflowTransportAction extends HandledTransportAction<Workfl
                         context.restore();
                         try {
                             SearchResponse searchResponse = SearchResponse.fromXContent(r.parser());
-                            internalListener.onResponse(searchResponse.getHits().getTotalHits().value < maxWorkflow);
+                            internalListener.onResponse(searchResponse.getHits().getTotalHits().value() < maxWorkflow);
                         } catch (Exception e) {
                             logger.error("Failed to parse workflow searchResponse", e);
                             internalListener.onFailure(e);
