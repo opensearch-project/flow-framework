@@ -20,6 +20,7 @@ import org.opensearch.flowframework.common.FlowFrameworkSettings;
 import org.opensearch.flowframework.exception.FlowFrameworkException;
 import org.opensearch.flowframework.transport.GetWorkflowStateAction;
 import org.opensearch.flowframework.transport.GetWorkflowStateRequest;
+import org.opensearch.flowframework.util.TenantAwareHelper;
 import org.opensearch.rest.BaseRestHandler;
 import org.opensearch.rest.BytesRestResponse;
 import org.opensearch.rest.RestRequest;
@@ -65,6 +66,7 @@ public class RestGetWorkflowStateAction extends BaseRestHandler {
                     RestStatus.FORBIDDEN
                 );
             }
+            String tenantId = TenantAwareHelper.getTenantID(flowFrameworkFeatureEnabledSetting.isMultiTenancyEnabled(), request);
 
             // Always consume content to silently ignore it
             // https://github.com/opensearch-project/flow-framework/issues/578
@@ -75,7 +77,7 @@ public class RestGetWorkflowStateAction extends BaseRestHandler {
                 throw new FlowFrameworkException("workflow_id cannot be null", RestStatus.BAD_REQUEST);
             }
 
-            GetWorkflowStateRequest getWorkflowRequest = new GetWorkflowStateRequest(workflowId, all);
+            GetWorkflowStateRequest getWorkflowRequest = new GetWorkflowStateRequest(workflowId, all, tenantId);
             return channel -> client.execute(GetWorkflowStateAction.INSTANCE, getWorkflowRequest, ActionListener.wrap(response -> {
                 XContentBuilder builder = response.toXContent(channel.newBuilder(), ToXContent.EMPTY_PARAMS);
                 channel.sendResponse(new BytesRestResponse(RestStatus.OK, builder));

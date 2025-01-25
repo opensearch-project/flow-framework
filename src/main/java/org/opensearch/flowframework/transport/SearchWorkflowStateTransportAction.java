@@ -46,7 +46,13 @@ public class SearchWorkflowStateTransportAction extends HandledTransportAction<S
     @Override
     protected void doExecute(Task task, SearchRequest request, ActionListener<SearchResponse> actionListener) {
         try {
-            searchHandler.search(request, actionListener);
+            // We used the SearchRequest preference field to convey a tenant id if any
+            String tenantId = null;
+            if (request.preference() != null) {
+                tenantId = request.preference();
+                request.preference(null);
+            }
+            searchHandler.search(request, tenantId, actionListener);
         } catch (Exception e) {
             String errorMessage = "Failed to search workflow states in global context";
             logger.error(errorMessage, e);

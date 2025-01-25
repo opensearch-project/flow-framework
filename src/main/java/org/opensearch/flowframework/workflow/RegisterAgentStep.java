@@ -101,6 +101,7 @@ public class RegisterAgentStep implements WorkflowStep {
                     currentNodeId,
                     getName(),
                     mlRegisterAgentResponse.getAgentId(),
+                    tenantId,
                     registerAgentModelFuture
                 );
             }

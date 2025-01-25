@@ -167,17 +167,18 @@ configurations {
 
 dependencies {
     implementation "org.opensearch:opensearch:${opensearch_version}"
-    implementation 'org.junit.jupiter:junit-jupiter:5.11.4'
     api group: 'org.opensearch', name:'opensearch-ml-client', version: "${opensearch_build}"
-    api group: 'org.opensearch.client', name: 'opensearch-rest-client', version: "${opensearch_version}"
-    implementation group: 'org.apache.commons', name: 'commons-lang3', version: '3.17.0'
+    api(group: 'org.opensearch.client', name: 'opensearch-rest-client', version: "${opensearch_version}") {
+        exclude group: "org.apache.httpcomponents.client5", module: "httpclient5"
+    }
+    implementation "org.apache.commons:commons-lang3:${versions.commonslang}"
     implementation "org.opensearch:common-utils:${common_utils_version}"
     implementation "com.amazonaws:aws-encryption-sdk-java:3.0.1"
     implementation "software.amazon.cryptography:aws-cryptographic-material-providers:1.8.0"
     implementation "org.dafny:DafnyRuntime:4.9.1"
     implementation "software.amazon.smithy.dafny:conversion:0.1.1"
     implementation 'org.bouncycastle:bcprov-jdk18on:1.80'
-    api "org.apache.httpcomponents.core5:httpcore5:5.3.2"
+    api "org.apache.httpcomponents.core5:httpcore5:${versions.httpcore5}"
     implementation "jakarta.json.bind:jakarta.json.bind-api:3.0.1"
     implementation "org.glassfish:jakarta.json:2.0.1"
     implementation "org.eclipse:yasson:3.0.4"
@@ -188,7 +189,11 @@ dependencies {
     implementation "io.swagger.parser.v3:swagger-parser-core:${swaggerVersion}"
     implementation "io.swagger.parser.v3:swagger-parser:${swaggerVersion}"
     implementation "io.swagger.parser.v3:swagger-parser-v3:${swaggerVersion}"
-    // Declare Jackson dependencies for tests (from OpenSearch version catalog)
+    // Multi-tenant SDK Client
+    implementation ("org.opensearch:opensearch-remote-metadata-sdk:${opensearch_build}") {
+        exclude group: "org.apache.httpcomponents.client5", module: "httpclient5"
+    }
+    testImplementation 'org.junit.jupiter:junit-jupiter:5.11.4'
     testImplementation "com.fasterxml.jackson.core:jackson-annotations:${versions.jackson}"
     testImplementation "com.fasterxml.jackson.core:jackson-databind:${versions.jackson_databind}"
     testImplementation "com.fasterxml.jackson.datatype:jackson-datatype-jsr310:${versions.jackson_databind}"
@@ -202,7 +207,6 @@ dependencies {
     configurations.all {
         resolutionStrategy {
             force("com.google.guava:guava:33.4.0-jre") // CVE for 31.1, keep to force transitive dependencies
-            force("org.apache.httpcomponents.core5:httpcore5:5.3.2") // Dependency Jar Hell
         }
     }
 }
@@ -262,10 +266,19 @@ integTest {
     systemProperty('user', user)
     systemProperty('password', password)
 
+    // Only tenant aware test if set
+    if (System.getProperty("tests.rest.tenantaware") == "true") {
+        filter {
+            includeTestsMatching "org.opensearch.flowframework.*TenantAwareIT"
+        }
+        systemProperty "plugins.flow_framework.multi_tenancy_enabled", "true"
+    }
+
     // Only rest case can run with remote cluster
-    if (System.getProperty("tests.rest.cluster") != null) {
+    if (System.getProperty("tests.rest.cluster") != null && System.getProperty("tests.rest.tenantaware") == null) {
         filter {
             includeTestsMatching "org.opensearch.flowframework.rest.*IT"
+            excludeTestsMatching "org.opensearch.flowframework.rest.*TenantAwareIT"
         }
     }
 
@@ -288,11 +301,34 @@ integTest {
         filter {
             includeTestsMatching "org.opensearch.flowframework.rest.FlowFrameworkSecureRestApiIT"
             excludeTestsMatching "org.opensearch.flowframework.rest.FlowFrameworkRestApiIT"
+            excludeTestsMatching "org.opensearch.flowframework.rest.*TenantAwareIT"
         }
     }
 
     // doFirst delays this block until execution time
     doFirst {
+        if (System.getProperty("tests.rest.tenantaware") == "true") {
+            def ymlFile = file("$buildDir/testclusters/integTest-0/config/opensearch.yml")
+            if (ymlFile.exists()) {
+                ymlFile.withWriterAppend {
+                    writer ->
+                    writer.write("\n# Set multitenancy\n")
+                    writer.write("plugins.flow_framework.multi_tenancy_enabled: true\n")
+                }
+                // TODO this properly uses the remote client factory but needs a remote cluster set up
+                // TODO get the endpoint from a system property
+                if (System.getProperty("tests.rest.cluster") != null) {
+                    ymlFile.withWriterAppend { writer ->
+                        writer.write("\n# Use a remote cluster\n")
+                        writer.write("plugins.flow_framework.remote_metadata_type: RemoteOpenSearch\n")
+                        writer.write("plugins.flow_framework.remote_metadata_endpoint: https://127.0.0.1:9200\n")
+                    }
+                }
+            } else {
+                throw new GradleException("opensearch.yml not found at: $ymlFile")
+            }
+        }
+
         // Tell the test JVM if the cluster JVM is running under a debugger so that tests can
         // use longer timeouts for requests.
         def isDebuggingCluster = getDebug() || System.getProperty("test.debug") != null

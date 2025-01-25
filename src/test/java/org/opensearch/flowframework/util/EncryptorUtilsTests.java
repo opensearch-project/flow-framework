@@ -19,19 +19,18 @@ import org.opensearch.cluster.metadata.Metadata;
 import org.opensearch.cluster.service.ClusterService;
 import org.opensearch.common.settings.Settings;
 import org.opensearch.common.util.concurrent.ThreadContext;
-import org.opensearch.common.xcontent.XContentFactory;
 import org.opensearch.commons.authuser.User;
 import org.opensearch.core.action.ActionListener;
-import org.opensearch.core.common.bytes.BytesReference;
+import org.opensearch.core.rest.RestStatus;
 import org.opensearch.core.xcontent.NamedXContentRegistry;
-import org.opensearch.core.xcontent.ToXContent;
-import org.opensearch.core.xcontent.XContentBuilder;
 import org.opensearch.flowframework.TestHelpers;
 import org.opensearch.flowframework.exception.FlowFrameworkException;
 import org.opensearch.flowframework.model.Config;
 import org.opensearch.flowframework.model.Template;
 import org.opensearch.flowframework.model.Workflow;
 import org.opensearch.flowframework.model.WorkflowNode;
+import org.opensearch.remote.metadata.client.SdkClient;
+import org.opensearch.remote.metadata.client.impl.SdkClientFactory;
 import org.opensearch.test.OpenSearchTestCase;
 import org.opensearch.threadpool.ThreadPool;
 
@@ -41,8 +40,13 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
 
+import static org.opensearch.flowframework.common.CommonValue.CONFIG_INDEX;
 import static org.opensearch.flowframework.common.CommonValue.CREDENTIAL_FIELD;
+import static org.opensearch.flowframework.common.CommonValue.MASTER_KEY;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doAnswer;
@@ -53,6 +57,7 @@ public class EncryptorUtilsTests extends OpenSearchTestCase {
 
     private ClusterService clusterService;
     private Client client;
+    private SdkClient sdkClient;
     private NamedXContentRegistry xContentRegistry;
     private EncryptorUtils encryptorUtils;
     private String testMasterKey;
@@ -64,9 +69,10 @@ public class EncryptorUtilsTests extends OpenSearchTestCase {
     public void setUp() throws Exception {
         super.setUp();
         this.clusterService = mock(ClusterService.class);
-        this.client = mock(Client.class);
+        client = mock(Client.class);
         this.xContentRegistry = mock(NamedXContentRegistry.class);
-        this.encryptorUtils = new EncryptorUtils(clusterService, client, xContentRegistry);
+        this.sdkClient = SdkClientFactory.createSdkClient(client, xContentRegistry, Collections.emptyMap());
+        this.encryptorUtils = new EncryptorUtils(clusterService, client, sdkClient, xContentRegistry);
         this.testMasterKey = encryptorUtils.generateMasterKey();
         this.testCredentialKey = "credential_key";
         this.testCredentialValue = "12345";
@@ -93,6 +99,7 @@ public class EncryptorUtilsTests extends OpenSearchTestCase {
             TestHelpers.randomUser(),
             null,
             null,
+            null,
             null
         );
 
@@ -110,75 +117,71 @@ public class EncryptorUtilsTests extends OpenSearchTestCase {
 
     public void testGenerateMasterKey() {
         String generatedMasterKey = encryptorUtils.generateMasterKey();
-        encryptorUtils.setMasterKey(generatedMasterKey);
-        assertEquals(generatedMasterKey, encryptorUtils.getMasterKey());
+        encryptorUtils.setMasterKey(null, generatedMasterKey);
+        assertEquals(generatedMasterKey, encryptorUtils.getMasterKey(null));
     }
 
     public void testEncryptDecrypt() {
-        encryptorUtils.setMasterKey(testMasterKey);
+        encryptorUtils.setMasterKey(null, testMasterKey);
         String testString = "test";
-        String encrypted = encryptorUtils.encrypt(testString);
+        String encrypted = encryptorUtils.encrypt(testString, null);
         assertNotNull(encrypted);
 
-        String decrypted = encryptorUtils.decrypt(encrypted);
+        String decrypted = encryptorUtils.decrypt(encrypted, null);
         assertEquals(testString, decrypted);
     }
 
     public void testEncryptWithDifferentMasterKey() {
-        encryptorUtils.setMasterKey(testMasterKey);
+        encryptorUtils.setMasterKey(null, testMasterKey);
         String testString = "test";
-        String encrypted1 = encryptorUtils.encrypt(testString);
+        String encrypted1 = encryptorUtils.encrypt(testString, null);
         assertNotNull(encrypted1);
 
         // Change the master key prior to encryption
         String differentMasterKey = encryptorUtils.generateMasterKey();
-        encryptorUtils.setMasterKey(differentMasterKey);
-        String encrypted2 = encryptorUtils.encrypt(testString);
+        encryptorUtils.setMasterKey(null, differentMasterKey);
+        String encrypted2 = encryptorUtils.encrypt(testString, null);
 
         assertNotEquals(encrypted1, encrypted2);
     }
 
     public void testInitializeMasterKeySuccess() throws IOException {
-        encryptorUtils.setMasterKey(null);
-
         String masterKey = encryptorUtils.generateMasterKey();
 
         // Index exists case
-        BytesReference bytesRef;
-        try (XContentBuilder builder = XContentFactory.jsonBuilder()) {
-            Config config = new Config(masterKey, Instant.now());
-            XContentBuilder source = config.toXContent(builder, ToXContent.EMPTY_PARAMS);
-            bytesRef = BytesReference.bytes(source);
-        }
+        // reinitialize with blank master key
+        encryptorUtils = new EncryptorUtils(clusterService, client, sdkClient, xContentRegistry);
+        assertNull(encryptorUtils.getMasterKey(null));
+
         doAnswer(invocation -> {
+            GetResponse getMasterKeyResponse = TestHelpers.createGetResponse(
+                new Config(masterKey, Instant.now()),
+                MASTER_KEY,
+                CONFIG_INDEX
+            );
             ActionListener<GetResponse> getRequestActionListener = invocation.getArgument(1);
-
-            // Stub get response for success case
-            GetResponse getResponse = mock(GetResponse.class);
-            when(getResponse.isExists()).thenReturn(true);
-            when(getResponse.getSourceAsBytesRef()).thenReturn(bytesRef);
-
-            getRequestActionListener.onResponse(getResponse);
+            getRequestActionListener.onResponse(getMasterKeyResponse);
             return null;
         }).when(client).get(any(GetRequest.class), any());
 
         ActionListener<Boolean> listener = ActionListener.wrap(b -> {}, e -> {});
-        encryptorUtils.initializeMasterKey(listener);
-        assertEquals(masterKey, encryptorUtils.getMasterKey());
+
+        encryptorUtils.initializeMasterKey(null, listener);
+        assertEquals(masterKey, encryptorUtils.getMasterKey(null));
 
         // Test ifAbsent version
-        encryptorUtils.setMasterKey(null);
-        assertNull(encryptorUtils.getMasterKey());
+        // reinitialize with blank master key
+        encryptorUtils = new EncryptorUtils(clusterService, client, sdkClient, xContentRegistry);
+        assertNull(encryptorUtils.getMasterKey(null));
 
-        encryptorUtils.initializeMasterKeyIfAbsent();
-        assertEquals(masterKey, encryptorUtils.getMasterKey());
+        encryptorUtils.initializeMasterKeyIfAbsent(null);
+        assertEquals(masterKey, encryptorUtils.getMasterKey(null));
 
-        // No index exists case
+        // No key exists case
         doAnswer(invocation -> {
+            GetResponse getMasterKeyResponse = TestHelpers.createGetResponse(null, MASTER_KEY, CONFIG_INDEX);
             ActionListener<GetResponse> getRequestActionListener = invocation.getArgument(1);
-            GetResponse getResponse = mock(GetResponse.class);
-            when(getResponse.isExists()).thenReturn(false);
-            getRequestActionListener.onResponse(getResponse);
+            getRequestActionListener.onResponse(getMasterKeyResponse);
             return null;
         }).when(client).get(any(GetRequest.class), any());
         doAnswer(invocation -> {
@@ -189,31 +192,36 @@ public class EncryptorUtilsTests extends OpenSearchTestCase {
         }).when(client).index(any(IndexRequest.class), any());
 
         listener = ActionListener.wrap(b -> {}, e -> {});
-        encryptorUtils.initializeMasterKey(listener);
+        encryptorUtils.initializeMasterKey(null, listener);
         // This will generate a new master key 32 bytes -> base64 encoded
-        assertNotEquals(masterKey, encryptorUtils.getMasterKey());
-        assertEquals(masterKey.length(), encryptorUtils.getMasterKey().length());
+        assertNotEquals(masterKey, encryptorUtils.getMasterKey(null));
+        assertEquals(masterKey.length(), encryptorUtils.getMasterKey(null).length());
     }
 
-    public void testInitializeMasterKeyFailure() {
-        encryptorUtils.setMasterKey(null);
+    public void testInitializeMasterKeyFailure() throws IOException {
+        // reinitialize with blank master key
+        encryptorUtils = new EncryptorUtils(clusterService, client, sdkClient, xContentRegistry);
 
         doAnswer(invocation -> {
+            GetResponse getResponse = TestHelpers.createGetResponse(null, MASTER_KEY, CONFIG_INDEX);
             ActionListener<GetResponse> getRequestActionListener = invocation.getArgument(1);
-
-            // Stub get response for failure case
-            GetResponse getResponse = mock(GetResponse.class);
-            when(getResponse.isExists()).thenReturn(false);
             getRequestActionListener.onResponse(getResponse);
             return null;
         }).when(client).get(any(GetRequest.class), any());
 
-        FlowFrameworkException ex = expectThrows(FlowFrameworkException.class, () -> encryptorUtils.initializeMasterKeyIfAbsent());
-        assertEquals("Failed to get master key from config index", ex.getMessage());
+        CompletableFuture<Void> resultFuture = encryptorUtils.initializeMasterKeyIfAbsent(null);
+        ExecutionException executionException = assertThrows(ExecutionException.class, () -> resultFuture.get(5, TimeUnit.SECONDS));
+
+        Throwable cause = executionException.getCause();
+        assertNotNull(cause);
+        assertTrue(cause instanceof FlowFrameworkException);
+        FlowFrameworkException ffException = (FlowFrameworkException) cause;
+        assertEquals("Master key has not been initialized in config index", ffException.getMessage());
+        assertEquals(RestStatus.NOT_FOUND, ffException.status());
     }
 
     public void testEncryptDecryptTemplateCredential() {
-        encryptorUtils.setMasterKey(testMasterKey);
+        encryptorUtils.setMasterKey(null, testMasterKey);
 
         // Ecnrypt template with credential field
         Template processedtemplate = encryptorUtils.encryptTemplateCredentials(testTemplate);

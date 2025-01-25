@@ -20,6 +20,7 @@ import org.opensearch.common.util.concurrent.OpenSearchExecutors;
 import org.opensearch.common.util.concurrent.ThreadContext;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.core.rest.RestStatus;
+import org.opensearch.core.xcontent.NamedXContentRegistry;
 import org.opensearch.flowframework.common.FlowFrameworkSettings;
 import org.opensearch.flowframework.exception.FlowFrameworkException;
 import org.opensearch.flowframework.indices.FlowFrameworkIndicesHandler;
@@ -31,6 +32,8 @@ import org.opensearch.flowframework.workflow.DeleteIngestPipelineStep;
 import org.opensearch.flowframework.workflow.UndeployModelStep;
 import org.opensearch.flowframework.workflow.WorkflowData;
 import org.opensearch.flowframework.workflow.WorkflowStepFactory;
+import org.opensearch.remote.metadata.client.SdkClient;
+import org.opensearch.remote.metadata.client.impl.SdkClientFactory;
 import org.opensearch.tasks.Task;
 import org.opensearch.test.OpenSearchTestCase;
 import org.opensearch.threadpool.ScalingExecutorBuilder;
@@ -81,6 +84,7 @@ public class DeprovisionWorkflowTransportActionTests extends OpenSearchTestCase 
         )
     );
     private Client client;
+    private SdkClient sdkClient;
     private WorkflowStepFactory workflowStepFactory;
     private DeleteConnectorStep deleteConnectorStep;
     private UndeployModelStep undeployModelStep;
@@ -94,6 +98,12 @@ public class DeprovisionWorkflowTransportActionTests extends OpenSearchTestCase 
     public void setUp() throws Exception {
         super.setUp();
         this.client = mock(Client.class);
+        this.sdkClient = SdkClientFactory.createSdkClient(
+            client,
+            NamedXContentRegistry.EMPTY,
+            Collections.emptyMap(),
+            threadPool.executor(ThreadPool.Names.SAME)
+        );
         ThreadPool clientThreadPool = spy(threadPool);
         when(client.threadPool()).thenReturn(clientThreadPool);
         ThreadContext threadContext = new ThreadContext(Settings.EMPTY);
@@ -127,6 +137,7 @@ public class DeprovisionWorkflowTransportActionTests extends OpenSearchTestCase 
             mock(ActionFilters.class),
             clientThreadPool,
             client,
+            sdkClient,
             workflowStepFactory,
             flowFrameworkIndicesHandler,
             flowFrameworkSettings,
@@ -159,10 +170,10 @@ public class DeprovisionWorkflowTransportActionTests extends OpenSearchTestCase 
         }).when(client).execute(any(GetWorkflowStateAction.class), any(GetWorkflowStateRequest.class), any());
 
         doAnswer(invocation -> {
-            Consumer<Boolean> booleanConsumer = invocation.getArgument(1);
+            Consumer<Boolean> booleanConsumer = invocation.getArgument(2);
             booleanConsumer.accept(Boolean.TRUE);
             return null;
-        }).when(flowFrameworkIndicesHandler).doesTemplateExist(anyString(), any(), any());
+        }).when(flowFrameworkIndicesHandler).doesTemplateExist(anyString(), any(), any(), any());
 
         PlainActionFuture<WorkflowData> future = PlainActionFuture.newFuture();
         future.onResponse(WorkflowData.EMPTY);
@@ -177,7 +188,12 @@ public class DeprovisionWorkflowTransportActionTests extends OpenSearchTestCase 
         ArgumentCaptor<WorkflowResponse> responseCaptor = ArgumentCaptor.forClass(WorkflowResponse.class);
         verify(listener, times(1)).onResponse(responseCaptor.capture());
         assertEquals(workflowId, responseCaptor.getValue().getWorkflowId());
-        verify(flowFrameworkIndicesHandler, times(1)).deleteResourceFromStateIndex(anyString(), any(ResourceCreated.class), any());
+        verify(flowFrameworkIndicesHandler, times(1)).deleteResourceFromStateIndex(
+            anyString(),
+            nullable(String.class),
+            any(ResourceCreated.class),
+            any()
+        );
     }
 
     public void testFailToDeprovision() throws Exception {
@@ -212,7 +228,12 @@ public class DeprovisionWorkflowTransportActionTests extends OpenSearchTestCase 
         verify(listener, times(1)).onFailure(exceptionCaptor.capture());
         assertEquals(RestStatus.ACCEPTED, exceptionCaptor.getValue().getRestStatus());
         assertEquals("Failed to deprovision some resources: [model_id modelId].", exceptionCaptor.getValue().getMessage());
-        verify(flowFrameworkIndicesHandler, times(0)).deleteResourceFromStateIndex(anyString(), any(ResourceCreated.class), any());
+        verify(flowFrameworkIndicesHandler, times(0)).deleteResourceFromStateIndex(
+            anyString(),
+            nullable(String.class),
+            any(ResourceCreated.class),
+            any()
+        );
     }
 
     public void testAllowDeleteRequired() throws Exception {
@@ -232,10 +253,10 @@ public class DeprovisionWorkflowTransportActionTests extends OpenSearchTestCase 
         }).when(client).execute(any(GetWorkflowStateAction.class), any(GetWorkflowStateRequest.class), any());
 
         doAnswer(invocation -> {
-            Consumer<Boolean> booleanConsumer = invocation.getArgument(1);
+            Consumer<Boolean> booleanConsumer = invocation.getArgument(2);
             booleanConsumer.accept(Boolean.FALSE);
             return null;
-        }).when(flowFrameworkIndicesHandler).doesTemplateExist(anyString(), any(), any());
+        }).when(flowFrameworkIndicesHandler).doesTemplateExist(anyString(), any(), any(), any());
 
         // Test failure with no param
         WorkflowRequest workflowRequest = new WorkflowRequest(workflowId, null);
@@ -253,7 +274,12 @@ public class DeprovisionWorkflowTransportActionTests extends OpenSearchTestCase 
             "These resources require the allow_delete parameter to deprovision: [index_name test-index].",
             exceptionCaptor.getValue().getMessage()
         );
-        verify(flowFrameworkIndicesHandler, times(0)).deleteResourceFromStateIndex(anyString(), any(ResourceCreated.class), any());
+        verify(flowFrameworkIndicesHandler, times(0)).deleteResourceFromStateIndex(
+            anyString(),
+            nullable(String.class),
+            any(ResourceCreated.class),
+            any()
+        );
 
         // Test (2nd) failure with wrong allow_delete param
         workflowRequest = new WorkflowRequest(workflowId, null, Map.of(ALLOW_DELETE, "wrong-index"));
@@ -270,7 +296,12 @@ public class DeprovisionWorkflowTransportActionTests extends OpenSearchTestCase 
             "These resources require the allow_delete parameter to deprovision: [index_name test-index].",
             exceptionCaptor.getValue().getMessage()
         );
-        verify(flowFrameworkIndicesHandler, times(0)).deleteResourceFromStateIndex(anyString(), any(ResourceCreated.class), any());
+        verify(flowFrameworkIndicesHandler, times(0)).deleteResourceFromStateIndex(
+            anyString(),
+            nullable(String.class),
+            any(ResourceCreated.class),
+            any()
+        );
 
         // Test success with correct allow_delete param
         workflowRequest = new WorkflowRequest(workflowId, null, Map.of(ALLOW_DELETE, "wrong-index,test-index,other-index"));
@@ -288,7 +319,12 @@ public class DeprovisionWorkflowTransportActionTests extends OpenSearchTestCase 
         ArgumentCaptor<WorkflowResponse> responseCaptor = ArgumentCaptor.forClass(WorkflowResponse.class);
         verify(listener, times(1)).onResponse(responseCaptor.capture());
         assertEquals(workflowId, responseCaptor.getValue().getWorkflowId());
-        verify(flowFrameworkIndicesHandler, times(1)).deleteResourceFromStateIndex(anyString(), any(ResourceCreated.class), any());
+        verify(flowFrameworkIndicesHandler, times(1)).deleteResourceFromStateIndex(
+            anyString(),
+            nullable(String.class),
+            any(ResourceCreated.class),
+            any()
+        );
     }
 
     public void testFailToDeprovisionAndAllowDeleteRequired() throws Exception {
@@ -333,6 +369,11 @@ public class DeprovisionWorkflowTransportActionTests extends OpenSearchTestCase 
                 + " These resources require the allow_delete parameter to deprovision: [index_name test-index].",
             exceptionCaptor.getValue().getMessage()
         );
-        verify(flowFrameworkIndicesHandler, times(0)).deleteResourceFromStateIndex(anyString(), any(ResourceCreated.class), any());
+        verify(flowFrameworkIndicesHandler, times(0)).deleteResourceFromStateIndex(
+            anyString(),
+            nullable(String.class),
+            any(ResourceCreated.class),
+            any()
+        );
     }
 }

@@ -40,6 +40,7 @@ public class WorkflowTimeoutUtility {
      * @param client        The OpenSearch client used to interact with the cluster.
      * @param threadPool    The thread pool to schedule the timeout task.
      * @param workflowId    The unique identifier of the workflow being executed.
+     * @param tenantId      The tenant id.
      * @param listener      The listener to notify when the task completes or times out.
      * @param timeout       The timeout duration in milliseconds.
      * @param isResponseSent An atomic boolean to ensure the response is sent only once.
@@ -49,6 +50,7 @@ public class WorkflowTimeoutUtility {
         Client client,
         ThreadPool threadPool,
         final String workflowId,
+        final String tenantId,
         ActionListener<WorkflowResponse> listener,
         long timeout,
         AtomicBoolean isResponseSent
@@ -56,7 +58,7 @@ public class WorkflowTimeoutUtility {
         // Ensure timeout is within the valid range (non-negative)
         long adjustedTimeout = Math.max(timeout, TimeValue.timeValueMillis(0).millis());
         Scheduler.ScheduledCancellable scheduledCancellable = threadPool.schedule(
-            new WorkflowTimeoutListener(client, workflowId, listener, isResponseSent),
+            new WorkflowTimeoutListener(client, workflowId, tenantId, listener, isResponseSent),
             TimeValue.timeValueMillis(adjustedTimeout),
             PROVISION_WORKFLOW_THREAD_POOL
         );
@@ -70,12 +72,20 @@ public class WorkflowTimeoutUtility {
     private static class WorkflowTimeoutListener implements Runnable {
         private final Client client;
         private final String workflowId;
+        private final String tenantId;
         private final ActionListener<WorkflowResponse> listener;
         private final AtomicBoolean isResponseSent;
 
-        WorkflowTimeoutListener(Client client, String workflowId, ActionListener<WorkflowResponse> listener, AtomicBoolean isResponseSent) {
+        WorkflowTimeoutListener(
+            Client client,
+            String workflowId,
+            String tenantId,
+            ActionListener<WorkflowResponse> listener,
+            AtomicBoolean isResponseSent
+        ) {
             this.client = client;
             this.workflowId = workflowId;
+            this.tenantId = tenantId;
             this.listener = listener;
             this.isResponseSent = isResponseSent;
         }
@@ -85,7 +95,7 @@ public class WorkflowTimeoutUtility {
             // This AtomicBoolean ensures that the timeout logic is executed only once, preventing duplicate responses.
             if (isResponseSent.compareAndSet(false, true)) {
                 logger.warn("Workflow execution timed out for workflowId: {}", workflowId);
-                fetchWorkflowStateAfterTimeout(client, workflowId, listener);
+                fetchWorkflowStateAfterTimeout(client, workflowId, tenantId, listener);
             }
         }
     }
@@ -180,17 +190,19 @@ public class WorkflowTimeoutUtility {
      *
      * @param client      The OpenSearch client used to fetch the workflow state.
      * @param workflowId  The unique identifier of the workflow.
+     * @param tenantId    The tenant id
      * @param listener    The listener to notify with the updated state or failure.
      */
     public static void fetchWorkflowStateAfterTimeout(
         final Client client,
         final String workflowId,
+        final String tenantId,
         final ActionListener<WorkflowResponse> listener
     ) {
         logger.info("Fetching workflow state after timeout");
         client.execute(
             GetWorkflowStateAction.INSTANCE,
-            new GetWorkflowStateRequest(workflowId, false),
+            new GetWorkflowStateRequest(workflowId, false, tenantId),
             ActionListener.wrap(
                 response -> listener.onResponse(new WorkflowResponse(workflowId, response.getWorkflowState())),
                 exception -> listener.onFailure(

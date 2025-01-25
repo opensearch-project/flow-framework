@@ -156,6 +156,7 @@ public class WorkflowProcessSorter {
      * @param originalTemplate the original template currently indexed
      * @param updatedTemplate the updated template to be executed
      * @param resourcesCreated the resources previously created for the workflow
+     * @param tenantId the tenant id
      * @throws Exception for issues creating the reprovision sequence
      * @return A list of ProcessNode
      */
@@ -163,7 +164,8 @@ public class WorkflowProcessSorter {
         String workflowId,
         Template originalTemplate,
         Template updatedTemplate,
-        List<ResourceCreated> resourcesCreated
+        List<ResourceCreated> resourcesCreated,
+        String tenantId
     ) throws Exception {
 
         Workflow updatedWorkflow = updatedTemplate.workflows().get(PROVISION_WORKFLOW);
@@ -205,7 +207,8 @@ public class WorkflowProcessSorter {
             updatedWorkflow,
             sortedUpdatedNodes,
             originalTemplateMap,
-            resourcesCreated
+            resourcesCreated,
+            tenantId
         );
 
         // If the reprovision sequence consists entirely of WorkflowDataSteps, then no modifications were made to the exisiting template.
@@ -223,6 +226,7 @@ public class WorkflowProcessSorter {
      * @param sortedUpdatedNodes the topologically sorted updated template nodes
      * @param originalTemplateMap a map of node Id to workflow node of the original template
      * @param resourcesCreated a list of resources created for this template
+     * @param tenantId the tenant id
      * @return a list of process node representing the reprovision sequence
      * @throws Exception for issues creating the reprovision sequence
      */
@@ -231,7 +235,8 @@ public class WorkflowProcessSorter {
         Workflow updatedWorkflow,
         List<WorkflowNode> sortedUpdatedNodes,
         Map<String, WorkflowNode> originalTemplateMap,
-        List<ResourceCreated> resourcesCreated
+        List<ResourceCreated> resourcesCreated,
+        String tenantId
     ) throws Exception {
         Map<String, ProcessNode> idToNodeMap = new HashMap<>();
         List<ProcessNode> reprovisionSequence = new ArrayList<>();
@@ -243,7 +248,8 @@ public class WorkflowProcessSorter {
                 originalTemplateMap,
                 resourcesCreated,
                 workflowId,
-                idToNodeMap
+                idToNodeMap,
+                tenantId
             );
             if (processNode != null) {
                 idToNodeMap.put(processNode.id(), processNode);
@@ -262,6 +268,7 @@ public class WorkflowProcessSorter {
      * @param resourcesCreated a list of resources created for this template
      * @param workflowId the workflow ID associated with the template
      * @param idToNodeMap a map of the current reprovision sequence
+     * @param tenantId the tenant id
      * @return a ProcessNode
      * @throws Exception for issues creating the process node
      */
@@ -271,7 +278,8 @@ public class WorkflowProcessSorter {
         Map<String, WorkflowNode> originalTemplateMap,
         List<ResourceCreated> resourcesCreated,
         String workflowId,
-        Map<String, ProcessNode> idToNodeMap
+        Map<String, ProcessNode> idToNodeMap,
+        String tenantId
     ) throws Exception {
         WorkflowData data = new WorkflowData(node.userInputs(), updatedWorkflow.userParams(), workflowId, node.id());
         List<ProcessNode> predecessorNodes = updatedWorkflow.edges()
@@ -284,15 +292,15 @@ public class WorkflowProcessSorter {
 
         if (!originalTemplateMap.containsKey(node.id())) {
             // Case 1: Additive modification, create new node
-            return createNewProcessNode(node, data, predecessorNodes, nodeTimeout);
+            return createNewProcessNode(node, data, predecessorNodes, nodeTimeout, tenantId);
         } else {
             WorkflowNode originalNode = originalTemplateMap.get(node.id());
             if (shouldUpdateNode(node, originalNode)) {
                 // Case 2: Existing modification, create update step
-                return createUpdateProcessNode(node, data, predecessorNodes, nodeTimeout);
+                return createUpdateProcessNode(node, data, predecessorNodes, nodeTimeout, tenantId);
             } else {
                 // Case 4: No modification to existing node, create proxy step
-                return createWorkflowDataStepNode(node, data, predecessorNodes, nodeTimeout, resourcesCreated);
+                return createWorkflowDataStepNode(node, data, predecessorNodes, nodeTimeout, resourcesCreated, tenantId);
             }
         }
     }
@@ -303,13 +311,15 @@ public class WorkflowProcessSorter {
      * @param data the current node data
      * @param predecessorNodes the current node predecessors
      * @param nodeTimeout the current node timeout
+     * @param tenantId the tenant id
      * @return a Process Node
      */
     private ProcessNode createNewProcessNode(
         WorkflowNode node,
         WorkflowData data,
         List<ProcessNode> predecessorNodes,
-        TimeValue nodeTimeout
+        TimeValue nodeTimeout,
+        String tenantId
     ) {
         WorkflowStep step = workflowStepFactory.createStep(node.type());
         return new ProcessNode(
@@ -322,7 +332,7 @@ public class WorkflowProcessSorter {
             threadPool,
             PROVISION_WORKFLOW_THREAD_POOL,
             nodeTimeout,
-            "fakeTenantId"
+            tenantId
         );
     }
 
@@ -332,6 +342,7 @@ public class WorkflowProcessSorter {
      * @param data the current node data
      * @param predecessorNodes the current node predecessors
      * @param nodeTimeout the current node timeout
+     * @param tenantId the tenant id
      * @return a ProcessNode
      * @throws FlowFrameworkException if the current node does not support updates
      */
@@ -339,7 +350,8 @@ public class WorkflowProcessSorter {
         WorkflowNode node,
         WorkflowData data,
         List<ProcessNode> predecessorNodes,
-        TimeValue nodeTimeout
+        TimeValue nodeTimeout,
+        String tenantId
     ) throws FlowFrameworkException {
         String updateStepName = WorkflowResources.getUpdateStepByWorkflowStep(node.type());
         if (updateStepName != null) {
@@ -354,7 +366,7 @@ public class WorkflowProcessSorter {
                 threadPool,
                 PROVISION_WORKFLOW_THREAD_POOL,
                 nodeTimeout,
-                "fakeTenantId"
+                tenantId
             );
         } else {
             // Case 3 : Cannot update step (not supported)
@@ -372,6 +384,7 @@ public class WorkflowProcessSorter {
      * @param predecessorNodes the current node predecessors
      * @param nodeTimeout the current node timeout
      * @param resourcesCreated the list of resources created for the template assoicated with this node
+     * @param tenantId the tenant id
      * @return a Process node
      */
     private ProcessNode createWorkflowDataStepNode(
@@ -379,7 +392,8 @@ public class WorkflowProcessSorter {
         WorkflowData data,
         List<ProcessNode> predecessorNodes,
         TimeValue nodeTimeout,
-        List<ResourceCreated> resourcesCreated
+        List<ResourceCreated> resourcesCreated,
+        String tenantId
     ) {
         ResourceCreated nodeResource = resourcesCreated.stream()
             .filter(rc -> rc.workflowStepId().equals(node.id()))
@@ -397,7 +411,7 @@ public class WorkflowProcessSorter {
                 threadPool,
                 PROVISION_WORKFLOW_THREAD_POOL,
                 nodeTimeout,
-                "fakeTenantId"
+                tenantId
             );
         } else {
             return null;

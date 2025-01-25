@@ -133,10 +133,11 @@ public class DeployModelStepTests extends OpenSearchTestCase {
         }).when(machineLearningNodeClient).getTask(any(), any());
 
         doAnswer(invocation -> {
-            ActionListener<WorkflowData> updateResponseListener = invocation.getArgument(4);
+            ActionListener<WorkflowData> updateResponseListener = invocation.getArgument(5);
             updateResponseListener.onResponse(new WorkflowData(Map.of(MODEL_ID, modelId), "test-id", "test-node-id"));
             return null;
-        }).when(flowFrameworkIndicesHandler).addResourceToStateIndex(any(WorkflowData.class), anyString(), anyString(), anyString(), any());
+        }).when(flowFrameworkIndicesHandler)
+            .addResourceToStateIndex(any(WorkflowData.class), anyString(), anyString(), anyString(), any(), any());
 
         PlainActionFuture<WorkflowData> future = deployModel.execute(
             inputData.getNodeId(),

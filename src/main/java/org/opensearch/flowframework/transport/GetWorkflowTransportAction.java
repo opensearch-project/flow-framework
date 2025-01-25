@@ -12,7 +12,6 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.message.ParameterizedMessageFactory;
 import org.opensearch.ExceptionsHelper;
-import org.opensearch.action.get.GetRequest;
 import org.opensearch.action.support.ActionFilters;
 import org.opensearch.action.support.HandledTransportAction;
 import org.opensearch.client.Client;
@@ -24,11 +23,14 @@ import org.opensearch.commons.authuser.User;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.core.rest.RestStatus;
 import org.opensearch.core.xcontent.NamedXContentRegistry;
+import org.opensearch.flowframework.common.FlowFrameworkSettings;
 import org.opensearch.flowframework.exception.FlowFrameworkException;
 import org.opensearch.flowframework.indices.FlowFrameworkIndicesHandler;
 import org.opensearch.flowframework.model.Template;
 import org.opensearch.flowframework.util.EncryptorUtils;
 import org.opensearch.flowframework.util.ParseUtils;
+import org.opensearch.flowframework.util.TenantAwareHelper;
+import org.opensearch.remote.metadata.client.SdkClient;
 import org.opensearch.tasks.Task;
 import org.opensearch.transport.TransportService;
 
@@ -45,7 +47,9 @@ public class GetWorkflowTransportAction extends HandledTransportAction<WorkflowR
     private final Logger logger = LogManager.getLogger(GetWorkflowTransportAction.class);
 
     private final FlowFrameworkIndicesHandler flowFrameworkIndicesHandler;
+    private final FlowFrameworkSettings flowFrameworkSettings;
     private final Client client;
+    private final SdkClient sdkClient;
     private final EncryptorUtils encryptorUtils;
     private volatile Boolean filterByEnabled;
     private final ClusterService clusterService;
@@ -56,8 +60,10 @@ public class GetWorkflowTransportAction extends HandledTransportAction<WorkflowR
      * @param transportService the transport service
      * @param actionFilters action filters
      * @param flowFrameworkIndicesHandler The Flow Framework indices handler
+     * @param flowFrameworkSettings The Flow Framework settings
      * @param encryptorUtils Encryptor utils
      * @param client the Opensearch Client
+     * @param sdkClient the Multitenant Client
      * @param xContentRegistry contentRegister to parse get response
      * @param clusterService the cluster service
      * @param settings the plugin settings
@@ -67,7 +73,9 @@ public class GetWorkflowTransportAction extends HandledTransportAction<WorkflowR
         TransportService transportService,
         ActionFilters actionFilters,
         FlowFrameworkIndicesHandler flowFrameworkIndicesHandler,
+        FlowFrameworkSettings flowFrameworkSettings,
         Client client,
+        SdkClient sdkClient,
         EncryptorUtils encryptorUtils,
         ClusterService clusterService,
         NamedXContentRegistry xContentRegistry,
@@ -75,7 +83,9 @@ public class GetWorkflowTransportAction extends HandledTransportAction<WorkflowR
     ) {
         super(GetWorkflowAction.NAME, transportService, actionFilters, WorkflowRequest::new);
         this.flowFrameworkIndicesHandler = flowFrameworkIndicesHandler;
+        this.flowFrameworkSettings = flowFrameworkSettings;
         this.client = client;
+        this.sdkClient = sdkClient;
         this.encryptorUtils = encryptorUtils;
         filterByEnabled = FILTER_BY_BACKEND_ROLES.get(settings);
         this.xContentRegistry = xContentRegistry;
@@ -86,9 +96,11 @@ public class GetWorkflowTransportAction extends HandledTransportAction<WorkflowR
     @Override
     protected void doExecute(Task task, WorkflowRequest request, ActionListener<GetWorkflowResponse> listener) {
         if (flowFrameworkIndicesHandler.doesIndexExist(GLOBAL_CONTEXT_INDEX)) {
-
+            String tenantId = request.getTemplate() == null ? null : request.getTemplate().getTenantId();
+            if (!TenantAwareHelper.validateTenantId(flowFrameworkSettings.isMultiTenancyEnabled(), tenantId, listener)) {
+                return;
+            }
             String workflowId = request.getWorkflowId();
-
             User user = getUserContext(client);
 
             // Retrieve workflow by ID
@@ -97,11 +109,14 @@ public class GetWorkflowTransportAction extends HandledTransportAction<WorkflowR
                 resolveUserAndExecute(
                     user,
                     workflowId,
+                    tenantId,
                     filterByEnabled,
                     false,
+                    flowFrameworkSettings.isMultiTenancyEnabled(),
                     listener,
-                    () -> executeGetRequest(request, listener, context),
+                    () -> executeGetRequest(request, tenantId, listener, context),
                     client,
+                    sdkClient,
                     clusterService,
                     xContentRegistry
                 );
@@ -129,15 +144,13 @@ public class GetWorkflowTransportAction extends HandledTransportAction<WorkflowR
      */
     private void executeGetRequest(
         WorkflowRequest request,
+        String tenantId,
         ActionListener<GetWorkflowResponse> listener,
         ThreadContext.StoredContext context
     ) {
         String workflowId = request.getWorkflowId();
-        GetRequest getRequest = new GetRequest(GLOBAL_CONTEXT_INDEX, workflowId);
         logger.info("Querying workflow from global context: {}", workflowId);
-        client.get(getRequest, ActionListener.wrap(response -> {
-            context.restore();
-
+        flowFrameworkIndicesHandler.getTemplate(workflowId, tenantId, ActionListener.wrap(response -> {
             if (!response.isExists()) {
                 String errorMessage = ParameterizedMessageFactory.INSTANCE.newMessage(
                     "Failed to retrieve template ({}) from global context.",
@@ -158,6 +171,6 @@ public class GetWorkflowTransportAction extends HandledTransportAction<WorkflowR
             ).getFormattedMessage();
             logger.error(errorMessage, exception);
             listener.onFailure(new FlowFrameworkException(errorMessage, ExceptionsHelper.status(exception)));
-        }));
+        }), context);
     }
 }

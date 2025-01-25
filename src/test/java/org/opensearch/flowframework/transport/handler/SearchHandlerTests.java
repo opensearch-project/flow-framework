@@ -17,10 +17,15 @@ import org.opensearch.common.settings.Settings;
 import org.opensearch.common.util.concurrent.ThreadContext;
 import org.opensearch.commons.ConfigConstants;
 import org.opensearch.core.action.ActionListener;
+import org.opensearch.core.xcontent.NamedXContentRegistry;
 import org.opensearch.flowframework.common.FlowFrameworkSettings;
+import org.opensearch.remote.metadata.client.SdkClient;
+import org.opensearch.remote.metadata.client.impl.SdkClientFactory;
 import org.opensearch.test.OpenSearchTestCase;
 import org.opensearch.threadpool.ThreadPool;
 import org.junit.Before;
+
+import java.util.Collections;
 
 import static org.opensearch.flowframework.TestHelpers.clusterSetting;
 import static org.opensearch.flowframework.TestHelpers.matchAllRequest;
@@ -35,6 +40,7 @@ import static org.mockito.Mockito.when;
 public class SearchHandlerTests extends OpenSearchTestCase {
 
     private Client client;
+    private SdkClient sdkClient;
     private Settings settings;
     private ClusterService clusterService;
     private SearchHandler searchHandler;
@@ -53,11 +59,12 @@ public class SearchHandlerTests extends OpenSearchTestCase {
         clusterSettings = clusterSetting(settings, FILTER_BY_BACKEND_ROLES);
         clusterService = new ClusterService(settings, clusterSettings, mock(ThreadPool.class), null);
         client = mock(Client.class);
-        searchHandler = new SearchHandler(settings, clusterService, client, FlowFrameworkSettings.FILTER_BY_BACKEND_ROLES);
+        sdkClient = SdkClientFactory.createSdkClient(client, NamedXContentRegistry.EMPTY, Collections.emptyMap());
+        searchHandler = new SearchHandler(settings, clusterService, client, sdkClient, FlowFrameworkSettings.FILTER_BY_BACKEND_ROLES);
 
         ThreadContext threadContext = new ThreadContext(settings);
         threadContext.putTransient(ConfigConstants.OPENSEARCH_SECURITY_USER_INFO_THREAD_CONTEXT, "alice|odfe,aes|engineering,operations");
-        org.opensearch.threadpool.ThreadPool mockThreadPool = mock(ThreadPool.class);
+        ThreadPool mockThreadPool = mock(ThreadPool.class);
         when(client.threadPool()).thenReturn(mockThreadPool);
         when(client.threadPool().getThreadContext()).thenReturn(threadContext);
         when(mockThreadPool.getThreadContext()).thenReturn(threadContext);
@@ -68,7 +75,8 @@ public class SearchHandlerTests extends OpenSearchTestCase {
 
     public void testSearchException() {
         doThrow(new RuntimeException("test")).when(client).search(any(), any());
-        searchHandler.search(request, listener);
+        searchHandler.search(request, null, listener);
+
         verify(listener, times(1)).onFailure(any());
     }
 
@@ -76,8 +84,10 @@ public class SearchHandlerTests extends OpenSearchTestCase {
         settings = Settings.builder().put(FILTER_BY_BACKEND_ROLES.getKey(), true).build();
         clusterService = new ClusterService(settings, clusterSettings, mock(ThreadPool.class), null);
 
-        searchHandler = new SearchHandler(settings, clusterService, client, FlowFrameworkSettings.FILTER_BY_BACKEND_ROLES);
-        searchHandler.search(request, listener);
+        searchHandler = new SearchHandler(settings, clusterService, client, sdkClient, FlowFrameworkSettings.FILTER_BY_BACKEND_ROLES);
+
+        searchHandler.search(request, null, listener);
+
         verify(listener, times(1)).onFailure(any());
     }
 
@@ -85,9 +95,10 @@ public class SearchHandlerTests extends OpenSearchTestCase {
         settings = Settings.builder().put(FILTER_BY_BACKEND_ROLES.getKey(), true).build();
         clusterService = new ClusterService(settings, clusterSettings, mock(ThreadPool.class), null);
 
-        searchHandler = new SearchHandler(settings, clusterService, client, FlowFrameworkSettings.FILTER_BY_BACKEND_ROLES);
-        searchHandler.search(matchAllRequest(), listener);
+        searchHandler = new SearchHandler(settings, clusterService, client, sdkClient, FlowFrameworkSettings.FILTER_BY_BACKEND_ROLES);
+
+        searchHandler.search(matchAllRequest(), null, listener);
+
         verify(client, times(1)).search(any(), any());
     }
-
 }

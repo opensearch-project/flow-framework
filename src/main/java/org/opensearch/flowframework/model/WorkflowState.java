@@ -21,6 +21,7 @@ import org.opensearch.core.xcontent.ToXContentObject;
 import org.opensearch.core.xcontent.XContentBuilder;
 import org.opensearch.core.xcontent.XContentParseException;
 import org.opensearch.core.xcontent.XContentParser;
+import org.opensearch.flowframework.common.CommonValue;
 import org.opensearch.flowframework.exception.FlowFrameworkException;
 import org.opensearch.flowframework.util.ParseUtils;
 
@@ -38,6 +39,7 @@ import static org.opensearch.flowframework.common.CommonValue.PROVISION_END_TIME
 import static org.opensearch.flowframework.common.CommonValue.PROVISION_START_TIME_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.RESOURCES_CREATED_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.STATE_FIELD;
+import static org.opensearch.flowframework.common.CommonValue.TENANT_ID_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.USER_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.USER_OUTPUTS_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.WORKFLOW_ID_FIELD;
@@ -58,6 +60,7 @@ public class WorkflowState implements ToXContentObject, Writeable {
     private User user;
     private Map<String, Object> userOutputs;
     private List<ResourceCreated> resourcesCreated;
+    private String tenantId;
 
     /**
      * Instantiate the object representing the workflow state
@@ -71,6 +74,7 @@ public class WorkflowState implements ToXContentObject, Writeable {
      * @param user The user extracted from the thread context from the request
      * @param userOutputs A map of essential API responses for backend to use and lookup.
      * @param resourcesCreated A list of all the resources created.
+     * @param tenantId The tenant id
      */
     public WorkflowState(
         String workflowId,
@@ -81,7 +85,8 @@ public class WorkflowState implements ToXContentObject, Writeable {
         Instant provisionEndTime,
         User user,
         Map<String, Object> userOutputs,
-        List<ResourceCreated> resourcesCreated
+        List<ResourceCreated> resourcesCreated,
+        String tenantId
     ) {
         this.workflowId = workflowId;
         this.error = error;
@@ -92,6 +97,7 @@ public class WorkflowState implements ToXContentObject, Writeable {
         this.user = user;
         this.userOutputs = Map.copyOf(userOutputs);
         this.resourcesCreated = List.copyOf(resourcesCreated);
+        this.tenantId = tenantId;
     }
 
     private WorkflowState() {}
@@ -115,6 +121,9 @@ public class WorkflowState implements ToXContentObject, Writeable {
         this.resourcesCreated = new ArrayList<>(resourceCount);
         for (int r = 0; r < resourceCount; r++) {
             resourcesCreated.add(new ResourceCreated(input));
+        }
+        if (input.getVersion().onOrAfter(CommonValue.VERSION_2_19_0)) {
+            this.tenantId = input.readOptionalString();
         }
     }
 
@@ -148,6 +157,7 @@ public class WorkflowState implements ToXContentObject, Writeable {
         private User user = null;
         private Map<String, Object> userOutputs = null;
         private List<ResourceCreated> resourcesCreated = null;
+        private String tenantId = null;
 
         /**
          * Empty Constructor for the Builder object
@@ -168,6 +178,7 @@ public class WorkflowState implements ToXContentObject, Writeable {
             this.user = existingState.getUser();
             this.userOutputs = existingState.userOutputs();
             this.resourcesCreated = existingState.resourcesCreated();
+            this.tenantId = existingState.getTenantId();
         }
 
         /**
@@ -261,6 +272,16 @@ public class WorkflowState implements ToXContentObject, Writeable {
         }
 
         /**
+         * Builder method for adding tenant id
+         * @param tenantId tenant id
+         * @return the Builder object
+         */
+        public Builder tenantId(String tenantId) {
+            this.tenantId = tenantId;
+            return this;
+        }
+
+        /**
          * Allows building a workflowState
          * @return WorkflowState workflowState Object containing all needed fields
          */
@@ -275,6 +296,7 @@ public class WorkflowState implements ToXContentObject, Writeable {
             workflowState.user = this.user;
             workflowState.userOutputs = this.userOutputs;
             workflowState.resourcesCreated = this.resourcesCreated;
+            workflowState.tenantId = this.tenantId;
             return workflowState;
         }
     }
@@ -314,6 +336,9 @@ public class WorkflowState implements ToXContentObject, Writeable {
         if (stateWithNewFields.resourcesCreated() != null) {
             builder.resourcesCreated(stateWithNewFields.resourcesCreated());
         }
+        if (stateWithNewFields.getTenantId() != null) {
+            builder.tenantId(stateWithNewFields.getTenantId());
+        }
         return builder.build();
     }
 
@@ -347,6 +372,9 @@ public class WorkflowState implements ToXContentObject, Writeable {
         if (resourcesCreated != null && !resourcesCreated.isEmpty()) {
             xContentBuilder.field(RESOURCES_CREATED_FIELD, resourcesCreated.toArray());
         }
+        if (tenantId != null) {
+            xContentBuilder.field(TENANT_ID_FIELD, tenantId);
+        }
         return xContentBuilder.endObject();
     }
 
@@ -377,6 +405,9 @@ public class WorkflowState implements ToXContentObject, Writeable {
         for (ResourceCreated resource : resourcesCreated) {
             resource.writeTo(output);
         }
+        if (output.getVersion().onOrAfter(CommonValue.VERSION_2_19_0)) {
+            output.writeOptionalString(tenantId);
+        }
     }
 
     /**
@@ -396,6 +427,7 @@ public class WorkflowState implements ToXContentObject, Writeable {
         User user = null;
         Map<String, Object> userOutputs = new HashMap<>();
         List<ResourceCreated> resourcesCreated = new ArrayList<>();
+        String tenantId = null;
 
         ensureExpectedToken(XContentParser.Token.START_OBJECT, parser.currentToken(), parser);
         while (parser.nextToken() != XContentParser.Token.END_OBJECT) {
@@ -455,6 +487,9 @@ public class WorkflowState implements ToXContentObject, Writeable {
                         throw e;
                     }
                     break;
+                case TENANT_ID_FIELD:
+                    tenantId = parser.text();
+                    break;
                 default:
                     throw new FlowFrameworkException(
                         "Unable to parse field [" + fieldName + "] in a workflowState object.",
@@ -471,6 +506,7 @@ public class WorkflowState implements ToXContentObject, Writeable {
             .user(user)
             .userOutputs(userOutputs)
             .resourcesCreated(resourcesCreated)
+            .tenantId(tenantId)
             .build();
     }
 
@@ -560,6 +596,14 @@ public class WorkflowState implements ToXContentObject, Writeable {
      */
     public List<ResourceCreated> resourcesCreated() {
         return resourcesCreated;
+    }
+
+    /**
+     * The tenant id associated with this workflow-state
+     * @return the tenantId
+     */
+    public String getTenantId() {
+        return tenantId;
     }
 
     @Override

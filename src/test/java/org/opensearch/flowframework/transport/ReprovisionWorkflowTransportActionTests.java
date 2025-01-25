@@ -17,6 +17,7 @@ import org.opensearch.common.settings.Settings;
 import org.opensearch.common.unit.TimeValue;
 import org.opensearch.common.util.concurrent.ThreadContext;
 import org.opensearch.core.action.ActionListener;
+import org.opensearch.core.xcontent.NamedXContentRegistry;
 import org.opensearch.flowframework.common.FlowFrameworkSettings;
 import org.opensearch.flowframework.indices.FlowFrameworkIndicesHandler;
 import org.opensearch.flowframework.model.ResourceCreated;
@@ -29,6 +30,8 @@ import org.opensearch.flowframework.workflow.ProcessNode;
 import org.opensearch.flowframework.workflow.WorkflowProcessSorter;
 import org.opensearch.flowframework.workflow.WorkflowStepFactory;
 import org.opensearch.plugins.PluginsService;
+import org.opensearch.remote.metadata.client.SdkClient;
+import org.opensearch.remote.metadata.client.impl.SdkClientFactory;
 import org.opensearch.tasks.Task;
 import org.opensearch.test.OpenSearchTestCase;
 import org.opensearch.threadpool.ThreadPool;
@@ -46,6 +49,7 @@ import org.mockito.ArgumentCaptor;
 import static org.opensearch.flowframework.common.CommonValue.PROVISION_WORKFLOW;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyMap;
+import static org.mockito.ArgumentMatchers.nullable;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.mock;
@@ -59,6 +63,7 @@ public class ReprovisionWorkflowTransportActionTests extends OpenSearchTestCase 
     private ActionFilters actionFilters;
     private ThreadPool threadPool;
     private Client client;
+    private SdkClient sdkClient;
     private WorkflowStepFactory workflowStepFactory;
     private WorkflowProcessSorter workflowProcessSorter;
     private FlowFrameworkIndicesHandler flowFrameworkIndicesHandler;
@@ -76,9 +81,16 @@ public class ReprovisionWorkflowTransportActionTests extends OpenSearchTestCase 
         this.actionFilters = mock(ActionFilters.class);
         this.threadPool = mock(ThreadPool.class);
         this.client = mock(Client.class);
+        this.sdkClient = SdkClientFactory.createSdkClient(
+            client,
+            NamedXContentRegistry.EMPTY,
+            Collections.emptyMap(),
+            threadPool.executor(ThreadPool.Names.SAME)
+        );
         this.workflowStepFactory = mock(WorkflowStepFactory.class);
         this.workflowProcessSorter = mock(WorkflowProcessSorter.class);
         this.flowFrameworkIndicesHandler = mock(FlowFrameworkIndicesHandler.class);
+        this.flowFrameworkSettings = mock(FlowFrameworkSettings.class);
         this.encryptorUtils = mock(EncryptorUtils.class);
         this.pluginsService = mock(PluginsService.class);
 
@@ -94,6 +106,7 @@ public class ReprovisionWorkflowTransportActionTests extends OpenSearchTestCase 
             actionFilters,
             threadPool,
             client,
+            sdkClient,
             workflowStepFactory,
             workflowProcessSorter,
             flowFrameworkIndicesHandler,
@@ -142,14 +155,16 @@ public class ReprovisionWorkflowTransportActionTests extends OpenSearchTestCase 
         }).when(client).execute(any(), any(GetWorkflowStateRequest.class), any());
 
         // Stub reprovision sequence creation
-        when(workflowProcessSorter.createReprovisionSequence(any(), any(), any(), any())).thenReturn(List.of(mock(ProcessNode.class)));
+        when(workflowProcessSorter.createReprovisionSequence(any(), any(), any(), any(), any())).thenReturn(
+            List.of(mock(ProcessNode.class))
+        );
 
         // Bypass updateFlowFrameworkSystemIndexDoc and stub on response
         doAnswer(invocation -> {
-            ActionListener<UpdateResponse> actionListener = invocation.getArgument(2);
+            ActionListener<UpdateResponse> actionListener = invocation.getArgument(3);
             actionListener.onResponse(mock(UpdateResponse.class));
             return null;
-        }).when(flowFrameworkIndicesHandler).updateFlowFrameworkSystemIndexDoc(any(), anyMap(), any());
+        }).when(flowFrameworkIndicesHandler).updateFlowFrameworkSystemIndexDoc(any(), nullable(String.class), anyMap(), any());
 
         @SuppressWarnings("unchecked")
         ActionListener<WorkflowResponse> listener = mock(ActionListener.class);
@@ -270,14 +285,16 @@ public class ReprovisionWorkflowTransportActionTests extends OpenSearchTestCase 
         }).when(client).execute(any(), any(GetWorkflowStateRequest.class), any());
 
         // Stub reprovision sequence creation
-        when(workflowProcessSorter.createReprovisionSequence(any(), any(), any(), any())).thenReturn(List.of(mock(ProcessNode.class)));
+        when(workflowProcessSorter.createReprovisionSequence(any(), any(), any(), any(), any())).thenReturn(
+            List.of(mock(ProcessNode.class))
+        );
 
         // Bypass updateFlowFrameworkSystemIndexDoc and stub on response
         doAnswer(invocation -> {
-            ActionListener<UpdateResponse> actionListener = invocation.getArgument(2);
+            ActionListener<UpdateResponse> actionListener = invocation.getArgument(3);
             actionListener.onFailure(new Exception("failed"));
             return null;
-        }).when(flowFrameworkIndicesHandler).updateFlowFrameworkSystemIndexDoc(any(), anyMap(), any());
+        }).when(flowFrameworkIndicesHandler).updateFlowFrameworkSystemIndexDoc(any(), nullable(String.class), anyMap(), any());
 
         @SuppressWarnings("unchecked")
         ActionListener<WorkflowResponse> listener = mock(ActionListener.class);

@@ -20,8 +20,11 @@ import org.opensearch.common.util.concurrent.ThreadContext;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.core.index.Index;
 import org.opensearch.core.index.shard.ShardId;
+import org.opensearch.core.xcontent.NamedXContentRegistry;
 import org.opensearch.flowframework.common.FlowFrameworkSettings;
 import org.opensearch.flowframework.indices.FlowFrameworkIndicesHandler;
+import org.opensearch.remote.metadata.client.SdkClient;
+import org.opensearch.remote.metadata.client.impl.SdkClientFactory;
 import org.opensearch.tasks.Task;
 import org.opensearch.test.OpenSearchTestCase;
 import org.opensearch.threadpool.ThreadPool;
@@ -44,14 +47,18 @@ import static org.mockito.Mockito.when;
 public class DeleteWorkflowTransportActionTests extends OpenSearchTestCase {
 
     private Client client;
+    private SdkClient sdkClient;
     private DeleteWorkflowTransportAction deleteWorkflowTransportAction;
     private FlowFrameworkIndicesHandler flowFrameworkIndicesHandler;
+    private FlowFrameworkSettings flowFrameworkSettings;
 
     @Override
     public void setUp() throws Exception {
         super.setUp();
         this.client = mock(Client.class);
+        this.sdkClient = SdkClientFactory.createSdkClient(client, NamedXContentRegistry.EMPTY, Collections.emptyMap());
         this.flowFrameworkIndicesHandler = mock(FlowFrameworkIndicesHandler.class);
+        this.flowFrameworkSettings = mock(FlowFrameworkSettings.class);
 
         ClusterService clusterService = mock(ClusterService.class);
         ClusterSettings clusterSettings = new ClusterSettings(
@@ -64,7 +71,9 @@ public class DeleteWorkflowTransportActionTests extends OpenSearchTestCase {
             mock(TransportService.class),
             mock(ActionFilters.class),
             flowFrameworkIndicesHandler,
+            flowFrameworkSettings,
             client,
+            sdkClient,
             clusterService,
             xContentRegistry(),
             Settings.EMPTY
@@ -75,7 +84,6 @@ public class DeleteWorkflowTransportActionTests extends OpenSearchTestCase {
 
         when(client.threadPool()).thenReturn(clientThreadPool);
         when(clientThreadPool.getThreadContext()).thenReturn(threadContext);
-
     }
 
     public void testDeleteWorkflowNoGlobalContext() {

@@ -32,10 +32,12 @@ import org.opensearch.flowframework.indices.FlowFrameworkIndicesHandler;
 import org.opensearch.flowframework.model.ProvisioningProgress;
 import org.opensearch.flowframework.model.ResourceCreated;
 import org.opensearch.flowframework.model.State;
+import org.opensearch.flowframework.util.TenantAwareHelper;
 import org.opensearch.flowframework.workflow.ProcessNode;
 import org.opensearch.flowframework.workflow.WorkflowData;
 import org.opensearch.flowframework.workflow.WorkflowStep;
 import org.opensearch.flowframework.workflow.WorkflowStepFactory;
+import org.opensearch.remote.metadata.client.SdkClient;
 import org.opensearch.tasks.Task;
 import org.opensearch.threadpool.ThreadPool;
 import org.opensearch.transport.TransportService;
@@ -72,6 +74,7 @@ public class DeprovisionWorkflowTransportAction extends HandledTransportAction<W
 
     private final ThreadPool threadPool;
     private final Client client;
+    private final SdkClient sdkClient;
     private final WorkflowStepFactory workflowStepFactory;
     private final FlowFrameworkIndicesHandler flowFrameworkIndicesHandler;
     private final FlowFrameworkSettings flowFrameworkSettings;
@@ -85,6 +88,7 @@ public class DeprovisionWorkflowTransportAction extends HandledTransportAction<W
      * @param actionFilters action filters
      * @param threadPool The OpenSearch thread pool
      * @param client The node client to retrieve a stored use case template
+     * @param sdkClient the Multitenant Client
      * @param workflowStepFactory The factory instantiating workflow steps
      * @param flowFrameworkIndicesHandler Class to handle all internal system indices actions
      * @param flowFrameworkSettings The plugin settings
@@ -98,6 +102,7 @@ public class DeprovisionWorkflowTransportAction extends HandledTransportAction<W
         ActionFilters actionFilters,
         ThreadPool threadPool,
         Client client,
+        SdkClient sdkClient,
         WorkflowStepFactory workflowStepFactory,
         FlowFrameworkIndicesHandler flowFrameworkIndicesHandler,
         FlowFrameworkSettings flowFrameworkSettings,
@@ -108,6 +113,7 @@ public class DeprovisionWorkflowTransportAction extends HandledTransportAction<W
         super(DeprovisionWorkflowAction.NAME, transportService, actionFilters, WorkflowRequest::new);
         this.threadPool = threadPool;
         this.client = client;
+        this.sdkClient = sdkClient;
         this.workflowStepFactory = workflowStepFactory;
         this.flowFrameworkIndicesHandler = flowFrameworkIndicesHandler;
         this.flowFrameworkSettings = flowFrameworkSettings;
@@ -119,8 +125,11 @@ public class DeprovisionWorkflowTransportAction extends HandledTransportAction<W
 
     @Override
     protected void doExecute(Task task, WorkflowRequest request, ActionListener<WorkflowResponse> listener) {
+        String tenantId = request.getTemplate() == null ? null : request.getTemplate().getTenantId();
+        if (!TenantAwareHelper.validateTenantId(flowFrameworkSettings.isMultiTenancyEnabled(), tenantId, listener)) {
+            return;
+        }
         String workflowId = request.getWorkflowId();
-
         User user = getUserContext(client);
 
         // Stash thread context to interact with system index
@@ -128,11 +137,14 @@ public class DeprovisionWorkflowTransportAction extends HandledTransportAction<W
             resolveUserAndExecute(
                 user,
                 workflowId,
+                tenantId,
                 filterByEnabled,
                 true,
+                flowFrameworkSettings.isMultiTenancyEnabled(),
                 listener,
-                () -> executeDeprovisionRequest(request, listener, context, user),
+                () -> executeDeprovisionRequest(request, tenantId, listener, context, user),
                 client,
+                sdkClient,
                 clusterService,
                 xContentRegistry
             );
@@ -146,13 +158,14 @@ public class DeprovisionWorkflowTransportAction extends HandledTransportAction<W
 
     private void executeDeprovisionRequest(
         WorkflowRequest request,
+        String tenantId,
         ActionListener<WorkflowResponse> listener,
         ThreadContext.StoredContext context,
         User user
     ) {
         String workflowId = request.getWorkflowId();
         String allowDelete = request.getParams().get(ALLOW_DELETE);
-        GetWorkflowStateRequest getStateRequest = new GetWorkflowStateRequest(workflowId, true);
+        GetWorkflowStateRequest getStateRequest = new GetWorkflowStateRequest(workflowId, true, tenantId);
         logger.info("Querying state for workflow: {}", workflowId);
         client.execute(GetWorkflowStateAction.INSTANCE, getStateRequest, ActionListener.wrap(response -> {
             context.restore();
@@ -163,6 +176,7 @@ public class DeprovisionWorkflowTransportAction extends HandledTransportAction<W
                 .execute(
                     () -> executeDeprovisionSequence(
                         workflowId,
+                        tenantId,
                         response.getWorkflowState().resourcesCreated(),
                         deleteAllowedResources,
                         listener,
@@ -181,6 +195,7 @@ public class DeprovisionWorkflowTransportAction extends HandledTransportAction<W
 
     private void executeDeprovisionSequence(
         String workflowId,
+        String tenantId,
         List<ResourceCreated> resourcesCreated,
         Set<String> deleteAllowedResources,
         ActionListener<WorkflowResponse> listener,
@@ -212,7 +227,7 @@ public class DeprovisionWorkflowTransportAction extends HandledTransportAction<W
                     this.threadPool,
                     DEPROVISION_WORKFLOW_THREAD_POOL,
                     flowFrameworkSettings.getRequestTimeout(),
-                    "fakeTenantId"
+                    tenantId
                 )
             );
         }
@@ -236,7 +251,7 @@ public class DeprovisionWorkflowTransportAction extends HandledTransportAction<W
                     deprovisionFuture.get();
                     logger.info("Successful {} for {}", deprovisionNode.id(), resourceNameAndId);
                     // Remove from state index resource list
-                    flowFrameworkIndicesHandler.deleteResourceFromStateIndex(workflowId, resource, stateUpdateFuture);
+                    flowFrameworkIndicesHandler.deleteResourceFromStateIndex(workflowId, tenantId, resource, stateUpdateFuture);
                     try {
                         // Wait at most 1 second for state index update.
                         stateUpdateFuture.actionGet(1, TimeUnit.SECONDS);
@@ -276,7 +291,7 @@ public class DeprovisionWorkflowTransportAction extends HandledTransportAction<W
                         this.threadPool,
                         DEPROVISION_WORKFLOW_THREAD_POOL,
                         pn.nodeTimeout(),
-                        "fakeTenantId"
+                        tenantId
                     );
                 }).collect(Collectors.toList());
                 // Pause briefly before next loop
@@ -300,11 +315,12 @@ public class DeprovisionWorkflowTransportAction extends HandledTransportAction<W
             logger.info("Resources requiring allow_delete: {}.", deleteNotAllowed);
         }
         // This is a redundant best-effort backup to the incremental deletion done earlier
-        updateWorkflowState(workflowId, remainingResources, deleteNotAllowed, listener, user);
+        updateWorkflowState(workflowId, tenantId, remainingResources, deleteNotAllowed, listener, user);
     }
 
     private void updateWorkflowState(
         String workflowId,
+        String tenantId,
         List<ResourceCreated> remainingResources,
         List<ResourceCreated> deleteNotAllowed,
         ActionListener<WorkflowResponse> listener,
@@ -312,15 +328,24 @@ public class DeprovisionWorkflowTransportAction extends HandledTransportAction<W
     ) {
         if (remainingResources.isEmpty() && deleteNotAllowed.isEmpty()) {
             // Successful deprovision of all resources, reset state to initial
-            flowFrameworkIndicesHandler.doesTemplateExist(workflowId, templateExists -> {
+            flowFrameworkIndicesHandler.doesTemplateExist(workflowId, tenantId, templateExists -> {
                 if (Boolean.TRUE.equals(templateExists)) {
-                    flowFrameworkIndicesHandler.putInitialStateToWorkflowState(workflowId, user, ActionListener.wrap(indexResponse -> {
-                        logger.info("Reset workflow {} state to NOT_STARTED", workflowId);
-                    }, exception -> { logger.error("Failed to reset to initial workflow state for {}", workflowId, exception); }));
+                    flowFrameworkIndicesHandler.putInitialStateToWorkflowState(
+                        workflowId,
+                        tenantId,
+                        user,
+                        ActionListener.wrap(indexResponse -> {
+                            logger.info("Reset workflow {} state to NOT_STARTED", workflowId);
+                        }, exception -> { logger.error("Failed to reset to initial workflow state for {}", workflowId, exception); })
+                    );
                 } else {
-                    flowFrameworkIndicesHandler.deleteFlowFrameworkSystemIndexDoc(workflowId, ActionListener.wrap(deleteResponse -> {
-                        logger.info("Deleted workflow {} state", workflowId);
-                    }, exception -> { logger.error("Failed to delete workflow state for {}", workflowId, exception); }));
+                    flowFrameworkIndicesHandler.deleteFlowFrameworkSystemIndexDoc(
+                        workflowId,
+                        tenantId,
+                        ActionListener.wrap(deleteResponse -> {
+                            logger.info("Deleted workflow {} state", workflowId);
+                        }, exception -> { logger.error("Failed to delete workflow state for {}", workflowId, exception); })
+                    );
                 }
                 // return workflow ID
                 listener.onResponse(new WorkflowResponse(workflowId));
@@ -332,6 +357,7 @@ public class DeprovisionWorkflowTransportAction extends HandledTransportAction<W
             stateIndexResources.addAll(deleteNotAllowed);
             flowFrameworkIndicesHandler.updateFlowFrameworkSystemIndexDoc(
                 workflowId,
+                tenantId,
                 Map.ofEntries(
                     Map.entry(STATE_FIELD, State.COMPLETED),
                     Map.entry(PROVISIONING_PROGRESS_FIELD, ProvisioningProgress.DONE),

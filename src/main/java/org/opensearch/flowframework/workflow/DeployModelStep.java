@@ -99,6 +99,7 @@ public class DeployModelStep extends AbstractRetryableWorkflowStep {
                         deployModelFuture,
                         taskId,
                         "Deploy model",
+                        tenantId,
                         ActionListener.wrap(
                             deployModelFuture::onResponse,
                             e -> deployModelFuture.onFailure(
