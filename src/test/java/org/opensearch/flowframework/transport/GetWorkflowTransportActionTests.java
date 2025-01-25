@@ -31,6 +31,8 @@ import org.opensearch.flowframework.model.WorkflowEdge;
 import org.opensearch.flowframework.model.WorkflowNode;
 import org.opensearch.flowframework.util.EncryptorUtils;
 import org.opensearch.index.get.GetResult;
+import org.opensearch.remote.metadata.client.SdkClient;
+import org.opensearch.remote.metadata.client.impl.SdkClientFactory;
 import org.opensearch.tasks.Task;
 import org.opensearch.test.OpenSearchTestCase;
 import org.opensearch.threadpool.ThreadPool;
@@ -48,7 +50,9 @@ import static org.opensearch.flowframework.common.CommonValue.GLOBAL_CONTEXT_IND
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -56,9 +60,11 @@ import static org.mockito.Mockito.when;
 public class GetWorkflowTransportActionTests extends OpenSearchTestCase {
 
     private Client client;
+    private SdkClient sdkClient;
     private NamedXContentRegistry xContentRegistry;
     private GetWorkflowTransportAction getTemplateTransportAction;
     private FlowFrameworkIndicesHandler flowFrameworkIndicesHandler;
+    private FlowFrameworkSettings flowFrameworkSettings;
     private Template template;
     private EncryptorUtils encryptorUtils;
 
@@ -67,20 +73,26 @@ public class GetWorkflowTransportActionTests extends OpenSearchTestCase {
         super.setUp();
         this.client = mock(Client.class);
         this.xContentRegistry = mock(NamedXContentRegistry.class);
-        this.flowFrameworkIndicesHandler = mock(FlowFrameworkIndicesHandler.class);
-        this.encryptorUtils = new EncryptorUtils(mock(ClusterService.class), client, xContentRegistry);
+        this.flowFrameworkSettings = mock(FlowFrameworkSettings.class);
+        this.sdkClient = SdkClientFactory.createSdkClient(client, xContentRegistry, Collections.emptyMap());
+        this.encryptorUtils = new EncryptorUtils(mock(ClusterService.class), client, sdkClient, xContentRegistry);
         ClusterService clusterService = mock(ClusterService.class);
         ClusterSettings clusterSettings = new ClusterSettings(
             Settings.EMPTY,
             Collections.unmodifiableSet(new HashSet<>(Arrays.asList(FlowFrameworkSettings.FILTER_BY_BACKEND_ROLES)))
         );
         when(clusterService.getClusterSettings()).thenReturn(clusterSettings);
+        this.flowFrameworkIndicesHandler = spy(
+            new FlowFrameworkIndicesHandler(client, sdkClient, clusterService, encryptorUtils, xContentRegistry)
+        );
 
         this.getTemplateTransportAction = new GetWorkflowTransportAction(
             mock(TransportService.class),
             mock(ActionFilters.class),
             flowFrameworkIndicesHandler,
+            flowFrameworkSettings,
             client,
+            sdkClient,
             encryptorUtils,
             clusterService,
             xContentRegistry,
@@ -107,6 +119,7 @@ public class GetWorkflowTransportActionTests extends OpenSearchTestCase {
             TestHelpers.randomUser(),
             null,
             null,
+            null,
             null
         );
 
@@ -115,12 +128,11 @@ public class GetWorkflowTransportActionTests extends OpenSearchTestCase {
 
         when(client.threadPool()).thenReturn(clientThreadPool);
         when(clientThreadPool.getThreadContext()).thenReturn(threadContext);
-
     }
 
     public void testGetWorkflowNoGlobalContext() {
 
-        when(flowFrameworkIndicesHandler.doesIndexExist(anyString())).thenReturn(false);
+        doReturn(false).when(flowFrameworkIndicesHandler).doesIndexExist(anyString());
         @SuppressWarnings("unchecked")
         ActionListener<GetWorkflowResponse> listener = mock(ActionListener.class);
         WorkflowRequest workflowRequest = new WorkflowRequest("1", null);
@@ -137,7 +149,7 @@ public class GetWorkflowTransportActionTests extends OpenSearchTestCase {
         ActionListener<GetWorkflowResponse> listener = mock(ActionListener.class);
         WorkflowRequest workflowRequest = new WorkflowRequest(workflowId, null);
 
-        when(flowFrameworkIndicesHandler.doesIndexExist(anyString())).thenReturn(true);
+        doReturn(true).when(flowFrameworkIndicesHandler).doesIndexExist(anyString());
 
         // Stub client.get to force on response
         doAnswer(invocation -> {
@@ -164,7 +176,7 @@ public class GetWorkflowTransportActionTests extends OpenSearchTestCase {
         ActionListener<GetWorkflowResponse> listener = mock(ActionListener.class);
         WorkflowRequest workflowRequest = new WorkflowRequest(workflowId, null);
 
-        when(flowFrameworkIndicesHandler.doesIndexExist(anyString())).thenReturn(true);
+        doReturn(true).when(flowFrameworkIndicesHandler).doesIndexExist(anyString());
 
         // Stub client.get to force on failure
         doAnswer(invocation -> {

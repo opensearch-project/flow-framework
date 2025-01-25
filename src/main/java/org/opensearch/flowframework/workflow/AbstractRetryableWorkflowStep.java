@@ -68,6 +68,7 @@ public abstract class AbstractRetryableWorkflowStep implements WorkflowStep {
      * @param future the workflow step future
      * @param taskId the ml task id
      * @param workflowStep the workflow step which requires a retry get ml task functionality
+     * @param tenantId the tenant ID
      * @param mlTaskListener the ML Task Listener
      */
     protected void retryableGetMlTask(
@@ -76,6 +77,7 @@ public abstract class AbstractRetryableWorkflowStep implements WorkflowStep {
         PlainActionFuture<WorkflowData> future,
         String taskId,
         String workflowStep,
+        String tenantId,
         ActionListener<WorkflowData> mlTaskListener
     ) {
         CompletableFuture.runAsync(() -> {
@@ -91,7 +93,14 @@ public abstract class AbstractRetryableWorkflowStep implements WorkflowStep {
                                 content.put(REGISTER_MODEL_STATUS, response.getState().toString());
                                 mlTaskListener.onResponse(new WorkflowData(content, r.getWorkflowId(), r.getNodeId()));
                             }, mlTaskListener::onFailure);
-                            flowFrameworkIndicesHandler.addResourceToStateIndex(currentNodeInputs, nodeId, getName(), id, resourceListener);
+                            flowFrameworkIndicesHandler.addResourceToStateIndex(
+                                currentNodeInputs,
+                                nodeId,
+                                getName(),
+                                id,
+                                tenantId,
+                                resourceListener
+                            );
                             break;
                         case FAILED:
                         case COMPLETED_WITH_ERROR:

@@ -53,9 +53,13 @@ import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import static org.opensearch.flowframework.common.CommonValue.MASTER_KEY;
 import static org.opensearch.index.seqno.SequenceNumbers.UNASSIGNED_SEQ_NO;
 import static org.opensearch.test.OpenSearchTestCase.randomAlphaOfLength;
 import static org.apache.http.entity.ContentType.APPLICATION_JSON;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 public class TestHelpers {
 
@@ -191,6 +195,22 @@ public class TestHelpers {
     }
 
     public static GetResponse createGetResponse(ToXContentObject o, String id, String indexName) throws IOException {
+        if (o == null) {
+            GetResponse getResponse = mock(GetResponse.class);
+            when(getResponse.getId()).thenReturn(MASTER_KEY);
+            when(getResponse.getSource()).thenReturn(null);
+            when(getResponse.toXContent(any(XContentBuilder.class), any())).thenAnswer(invocation -> {
+                XContentBuilder builder = invocation.getArgument(0);
+                builder.startObject()
+                    .field("_index", indexName)
+                    .field("_id", id)
+                    .field("found", false)
+                    // .nullField("_source")
+                    .endObject();
+                return builder;
+            });
+            return getResponse;
+        }
         XContentBuilder content = o.toXContent(XContentFactory.jsonBuilder(), ToXContent.EMPTY_PARAMS);
         return new GetResponse(
             new GetResult(

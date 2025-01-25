@@ -38,6 +38,7 @@ import static org.opensearch.flowframework.common.CommonValue.DESCRIPTION_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.LAST_PROVISIONED_TIME_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.LAST_UPDATED_TIME_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.NAME_FIELD;
+import static org.opensearch.flowframework.common.CommonValue.TENANT_ID_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.UI_METADATA_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.USER_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.VERSION_FIELD;
@@ -75,6 +76,7 @@ public class Template implements ToXContentObject {
     private final Instant createdTime;
     private final Instant lastUpdatedTime;
     private final Instant lastProvisionedTime;
+    private String tenantId;
 
     /**
      * Instantiate the object representing a use case template
@@ -90,6 +92,7 @@ public class Template implements ToXContentObject {
      * @param createdTime Created time as an Instant
      * @param lastUpdatedTime Last Updated time as an Instant
      * @param lastProvisionedTime Last Provisioned time as an Instant
+     * @param tenantId The tenant id
      */
     public Template(
         String name,
@@ -102,7 +105,8 @@ public class Template implements ToXContentObject {
         User user,
         Instant createdTime,
         Instant lastUpdatedTime,
-        Instant lastProvisionedTime
+        Instant lastProvisionedTime,
+        String tenantId
     ) {
         this.name = name;
         this.description = description;
@@ -115,6 +119,7 @@ public class Template implements ToXContentObject {
         this.createdTime = createdTime;
         this.lastUpdatedTime = lastUpdatedTime;
         this.lastProvisionedTime = lastProvisionedTime;
+        this.tenantId = tenantId;
     }
 
     /**
@@ -132,6 +137,7 @@ public class Template implements ToXContentObject {
         private Instant createdTime = null;
         private Instant lastUpdatedTime = null;
         private Instant lastProvisionedTime = null;
+        private String tenantId = null;
 
         /**
          * Empty Constructor for the Builder object
@@ -160,6 +166,7 @@ public class Template implements ToXContentObject {
             this.createdTime = t.createdTime();
             this.lastUpdatedTime = t.lastUpdatedTime();
             this.lastProvisionedTime = t.lastProvisionedTime();
+            this.tenantId = t.getTenantId();
         }
 
         /**
@@ -273,6 +280,16 @@ public class Template implements ToXContentObject {
         }
 
         /**
+         * Builder method for adding user
+         * @param tenantId the tenant id
+         * @return the Builder object
+         */
+        public Builder tenantId(String tenantId) {
+            this.tenantId = tenantId;
+            return this;
+        }
+
+        /**
          * Allows building a template
          * @return Template Object containing all needed fields
          */
@@ -288,7 +305,8 @@ public class Template implements ToXContentObject {
                 this.user,
                 this.createdTime,
                 this.lastUpdatedTime,
-                this.lastProvisionedTime
+                this.lastProvisionedTime,
+                this.tenantId
             );
         }
     }
@@ -358,6 +376,10 @@ public class Template implements ToXContentObject {
             xContentBuilder.field(LAST_PROVISIONED_TIME_FIELD, lastProvisionedTime.toEpochMilli());
         }
 
+        if (tenantId != null) {
+            xContentBuilder.field(TENANT_ID_FIELD, tenantId);
+        }
+
         return xContentBuilder.endObject();
     }
 
@@ -421,6 +443,7 @@ public class Template implements ToXContentObject {
         Instant createdTime = null;
         Instant lastUpdatedTime = null;
         Instant lastProvisionedTime = null;
+        String tenantId = null;
 
         ensureExpectedToken(XContentParser.Token.START_OBJECT, parser.currentToken(), parser);
         while (parser.nextToken() != XContentParser.Token.END_OBJECT) {
@@ -488,6 +511,9 @@ public class Template implements ToXContentObject {
                 case LAST_PROVISIONED_TIME_FIELD:
                     lastProvisionedTime = ParseUtils.parseInstant(parser);
                     break;
+                case TENANT_ID_FIELD:
+                    tenantId = parser.text();
+                    break;
                 default:
                     throw new FlowFrameworkException(
                         "Unable to parse field [" + fieldName + "] in a template object.",
@@ -507,7 +533,7 @@ public class Template implements ToXContentObject {
             }
         }
 
-        return new Builder().name(name)
+        Template template = new Builder().name(name)
             .description(description)
             .useCase(useCase)
             .templateVersion(templateVersion)
@@ -518,7 +544,9 @@ public class Template implements ToXContentObject {
             .createdTime(createdTime)
             .lastUpdatedTime(lastUpdatedTime)
             .lastProvisionedTime(lastProvisionedTime)
+            .tenantId(tenantId)
             .build();
+        return template;
     }
 
     /**
@@ -539,6 +567,20 @@ public class Template implements ToXContentObject {
             ensureExpectedToken(XContentParser.Token.START_OBJECT, parser.nextToken(), parser);
             return parse(parser);
         }
+    }
+
+    /**
+     * Creates an empty template with the given tenant ID
+     *
+     * @param tenantId the tenantID
+     * @return an empty template containing the tenant id if it's not null, null otherwise
+     */
+    public static Template createEmptyTemplateWithTenantId(String tenantId) {
+        if (tenantId == null) {
+            return null;
+        }
+        Template emptyTemplate = builder().name("").tenantId(tenantId).build();
+        return emptyTemplate;
     }
 
     /**
@@ -655,6 +697,22 @@ public class Template implements ToXContentObject {
      */
     public Instant lastProvisionedTime() {
         return lastProvisionedTime;
+    }
+
+    /**
+     * The tenant id
+     * @return the tenant id
+     */
+    public String getTenantId() {
+        return tenantId;
+    }
+
+    /**
+     * Sets the tenant id
+     * @param tenantId the tenant id to set
+     */
+    public void setTenantId(String tenantId) {
+        this.tenantId = tenantId;
     }
 
     @Override

@@ -54,6 +54,7 @@ public class ReprovisionWorkflowRequestTests extends OpenSearchTestCase {
             TestHelpers.randomUser(),
             null,
             null,
+            null,
             null
         );
 
@@ -66,6 +67,7 @@ public class ReprovisionWorkflowRequestTests extends OpenSearchTestCase {
             Map.of("workflow", updatedWorkflow),
             Collections.emptyMap(),
             TestHelpers.randomUser(),
+            null,
             null,
             null,
             null

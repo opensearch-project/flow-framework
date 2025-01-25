@@ -116,6 +116,7 @@ public class CreateIndexStep implements WorkflowStep {
                     currentNodeId,
                     getName(),
                     indexName,
+                    tenantId,
                     createIndexFuture
                 );
             }, ex -> {

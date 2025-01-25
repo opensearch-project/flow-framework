@@ -65,6 +65,8 @@ import org.opensearch.ml.client.MachineLearningNodeClient;
 import org.opensearch.plugins.ActionPlugin;
 import org.opensearch.plugins.Plugin;
 import org.opensearch.plugins.SystemIndexPlugin;
+import org.opensearch.remote.metadata.client.SdkClient;
+import org.opensearch.remote.metadata.client.impl.SdkClientFactory;
 import org.opensearch.repositories.RepositoriesService;
 import org.opensearch.rest.RestController;
 import org.opensearch.rest.RestHandler;
@@ -75,7 +77,9 @@ import org.opensearch.threadpool.ThreadPool;
 import org.opensearch.watcher.ResourceWatcherService;
 
 import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.function.Supplier;
 
 import static org.opensearch.flowframework.common.CommonValue.CONFIG_INDEX;
@@ -83,14 +87,26 @@ import static org.opensearch.flowframework.common.CommonValue.DEPROVISION_WORKFL
 import static org.opensearch.flowframework.common.CommonValue.FLOW_FRAMEWORK_THREAD_POOL_PREFIX;
 import static org.opensearch.flowframework.common.CommonValue.GLOBAL_CONTEXT_INDEX;
 import static org.opensearch.flowframework.common.CommonValue.PROVISION_WORKFLOW_THREAD_POOL;
+import static org.opensearch.flowframework.common.CommonValue.TENANT_ID_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.WORKFLOW_STATE_INDEX;
 import static org.opensearch.flowframework.common.CommonValue.WORKFLOW_THREAD_POOL;
 import static org.opensearch.flowframework.common.FlowFrameworkSettings.FILTER_BY_BACKEND_ROLES;
 import static org.opensearch.flowframework.common.FlowFrameworkSettings.FLOW_FRAMEWORK_ENABLED;
+import static org.opensearch.flowframework.common.FlowFrameworkSettings.FLOW_FRAMEWORK_MULTI_TENANCY_ENABLED;
 import static org.opensearch.flowframework.common.FlowFrameworkSettings.MAX_WORKFLOWS;
 import static org.opensearch.flowframework.common.FlowFrameworkSettings.MAX_WORKFLOW_STEPS;
+import static org.opensearch.flowframework.common.FlowFrameworkSettings.REMOTE_METADATA_ENDPOINT;
+import static org.opensearch.flowframework.common.FlowFrameworkSettings.REMOTE_METADATA_REGION;
+import static org.opensearch.flowframework.common.FlowFrameworkSettings.REMOTE_METADATA_SERVICE_NAME;
+import static org.opensearch.flowframework.common.FlowFrameworkSettings.REMOTE_METADATA_TYPE;
 import static org.opensearch.flowframework.common.FlowFrameworkSettings.TASK_REQUEST_RETRY_DURATION;
 import static org.opensearch.flowframework.common.FlowFrameworkSettings.WORKFLOW_REQUEST_TIMEOUT;
+import static org.opensearch.remote.metadata.common.CommonValue.REMOTE_METADATA_ENDPOINT_KEY;
+import static org.opensearch.remote.metadata.common.CommonValue.REMOTE_METADATA_REGION_KEY;
+import static org.opensearch.remote.metadata.common.CommonValue.REMOTE_METADATA_SERVICE_NAME_KEY;
+import static org.opensearch.remote.metadata.common.CommonValue.REMOTE_METADATA_TYPE_KEY;
+import static org.opensearch.remote.metadata.common.CommonValue.TENANT_AWARE_KEY;
+import static org.opensearch.remote.metadata.common.CommonValue.TENANT_ID_FIELD_KEY;
 
 /**
  * An OpenSearch plugin that enables builders to innovate AI apps on OpenSearch.
@@ -121,9 +137,28 @@ public class FlowFrameworkPlugin extends Plugin implements ActionPlugin, SystemI
         Settings settings = environment.settings();
         flowFrameworkSettings = new FlowFrameworkSettings(clusterService, settings);
         MachineLearningNodeClient mlClient = new MachineLearningNodeClient(client);
-        EncryptorUtils encryptorUtils = new EncryptorUtils(clusterService, client, xContentRegistry);
+        SdkClient sdkClient = SdkClientFactory.createSdkClient(
+            client,
+            xContentRegistry,
+            // Here we assume remote metadata client is only used with tenant awareness.
+            // This may change in the future allowing more options for this map
+            FLOW_FRAMEWORK_MULTI_TENANCY_ENABLED.get(settings)
+                ? Map.ofEntries(
+                    Map.entry(REMOTE_METADATA_TYPE_KEY, REMOTE_METADATA_TYPE.get(settings)),
+                    Map.entry(REMOTE_METADATA_ENDPOINT_KEY, REMOTE_METADATA_ENDPOINT.get(settings)),
+                    Map.entry(REMOTE_METADATA_REGION_KEY, REMOTE_METADATA_REGION.get(settings)),
+                    Map.entry(REMOTE_METADATA_SERVICE_NAME_KEY, REMOTE_METADATA_SERVICE_NAME.get(settings)),
+                    Map.entry(TENANT_AWARE_KEY, "true"),
+                    Map.entry(TENANT_ID_FIELD_KEY, TENANT_ID_FIELD)
+                )
+                : Collections.emptyMap(),
+            // TODO: Find a better thread pool or make one
+            client.threadPool().executor(ThreadPool.Names.GENERIC)
+        );
+        EncryptorUtils encryptorUtils = new EncryptorUtils(clusterService, client, sdkClient, xContentRegistry);
         FlowFrameworkIndicesHandler flowFrameworkIndicesHandler = new FlowFrameworkIndicesHandler(
             client,
+            sdkClient,
             clusterService,
             encryptorUtils,
             xContentRegistry
@@ -137,7 +172,13 @@ public class FlowFrameworkPlugin extends Plugin implements ActionPlugin, SystemI
         );
         WorkflowProcessSorter workflowProcessSorter = new WorkflowProcessSorter(workflowStepFactory, threadPool, flowFrameworkSettings);
 
-        SearchHandler searchHandler = new SearchHandler(settings, clusterService, client, FlowFrameworkSettings.FILTER_BY_BACKEND_ROLES);
+        SearchHandler searchHandler = new SearchHandler(
+            settings,
+            clusterService,
+            client,
+            sdkClient,
+            FlowFrameworkSettings.FILTER_BY_BACKEND_ROLES
+        );
 
         return List.of(
             workflowStepFactory,
@@ -145,7 +186,8 @@ public class FlowFrameworkPlugin extends Plugin implements ActionPlugin, SystemI
             encryptorUtils,
             flowFrameworkIndicesHandler,
             searchHandler,
-            flowFrameworkSettings
+            flowFrameworkSettings,
+            sdkClient
         );
     }
 
@@ -196,7 +238,12 @@ public class FlowFrameworkPlugin extends Plugin implements ActionPlugin, SystemI
             MAX_WORKFLOW_STEPS,
             WORKFLOW_REQUEST_TIMEOUT,
             TASK_REQUEST_RETRY_DURATION,
-            FILTER_BY_BACKEND_ROLES
+            FILTER_BY_BACKEND_ROLES,
+            FLOW_FRAMEWORK_MULTI_TENANCY_ENABLED,
+            REMOTE_METADATA_TYPE,
+            REMOTE_METADATA_ENDPOINT,
+            REMOTE_METADATA_REGION,
+            REMOTE_METADATA_SERVICE_NAME
         );
     }
 
@@ -206,21 +253,21 @@ public class FlowFrameworkPlugin extends Plugin implements ActionPlugin, SystemI
             new ScalingExecutorBuilder(
                 WORKFLOW_THREAD_POOL,
                 1,
-                Math.max(2, OpenSearchExecutors.allocatedProcessors(settings) - 1),
+                Math.max(4, OpenSearchExecutors.allocatedProcessors(settings) - 1),
                 TimeValue.timeValueMinutes(1),
                 FLOW_FRAMEWORK_THREAD_POOL_PREFIX + WORKFLOW_THREAD_POOL
             ),
             new ScalingExecutorBuilder(
                 PROVISION_WORKFLOW_THREAD_POOL,
                 1,
-                Math.max(4, OpenSearchExecutors.allocatedProcessors(settings) - 1),
+                Math.max(8, OpenSearchExecutors.allocatedProcessors(settings) - 1),
                 TimeValue.timeValueMinutes(5),
                 FLOW_FRAMEWORK_THREAD_POOL_PREFIX + PROVISION_WORKFLOW_THREAD_POOL
             ),
             new ScalingExecutorBuilder(
                 DEPROVISION_WORKFLOW_THREAD_POOL,
                 1,
-                Math.max(2, OpenSearchExecutors.allocatedProcessors(settings) - 1),
+                Math.max(4, OpenSearchExecutors.allocatedProcessors(settings) - 1),
                 TimeValue.timeValueMinutes(1),
                 FLOW_FRAMEWORK_THREAD_POOL_PREFIX + DEPROVISION_WORKFLOW_THREAD_POOL
             )
