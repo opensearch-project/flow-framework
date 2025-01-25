@@ -69,7 +69,7 @@ public class FlowFrameworkRestApiIT extends FlowFrameworkRestTestCase {
         // Hit Search Workflows API
         String termIdQuery = "{\"query\":{\"ids\":{\"values\":[\"" + workflowId + "\"]}}}";
         SearchResponse searchResponse = searchWorkflows(client(), termIdQuery);
-        assertEquals(1, searchResponse.getHits().getTotalHits().value);
+        assertEquals(1, searchResponse.getHits().getTotalHits().value());
     }
 
     public void testFailedUpdateWorkflow() throws Exception {
@@ -285,7 +285,7 @@ public class FlowFrameworkRestApiIT extends FlowFrameworkRestTestCase {
         // Hit Search State API with the workflow id created above
         String query = "{\"query\":{\"ids\":{\"values\":[\"" + workflowId + "\"]}}}";
         SearchResponse searchResponse = searchWorkflowState(client(), query);
-        assertEquals(1, searchResponse.getHits().getTotalHits().value);
+        assertEquals(1, searchResponse.getHits().getTotalHits().value());
         String searchHitSource = searchResponse.getHits().getAt(0).getSourceAsString();
         WorkflowState searchHitWorkflowState = WorkflowState.parse(searchHitSource);
 
