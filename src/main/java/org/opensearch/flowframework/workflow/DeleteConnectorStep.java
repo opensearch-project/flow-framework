@@ -72,7 +72,7 @@ public class DeleteConnectorStep implements WorkflowStep {
             );
             String connectorId = (String) inputs.get(CONNECTOR_ID);
 
-            mlClient.deleteConnector(connectorId, new ActionListener<>() {
+            mlClient.deleteConnector(connectorId, tenantId, new ActionListener<>() {
                 @Override
                 public void onResponse(DeleteResponse deleteResponse) {
                     deleteConnectorFuture.onResponse(
