@@ -17,6 +17,7 @@ import org.opensearch.core.xcontent.ToXContent;
 import org.opensearch.core.xcontent.ToXContentObject;
 import org.opensearch.flowframework.common.FlowFrameworkSettings;
 import org.opensearch.flowframework.exception.FlowFrameworkException;
+import org.opensearch.flowframework.util.TenantAwareHelper;
 import org.opensearch.rest.BaseRestHandler;
 import org.opensearch.rest.BytesRestResponse;
 import org.opensearch.rest.RestChannel;
@@ -73,22 +74,32 @@ public abstract class AbstractSearchWorkflowAction<T extends ToXContentObject> e
 
     @Override
     protected RestChannelConsumer prepareRequest(RestRequest request, NodeClient client) throws IOException {
-        if (!flowFrameworkSettings.isFlowFrameworkEnabled()) {
-            FlowFrameworkException ffe = new FlowFrameworkException(
-                "This API is disabled. To enable it, update the setting [" + FLOW_FRAMEWORK_ENABLED.getKey() + "] to true.",
-                RestStatus.FORBIDDEN
-            );
+        try {
+            if (!flowFrameworkSettings.isFlowFrameworkEnabled()) {
+                FlowFrameworkException ffe = new FlowFrameworkException(
+                    "This API is disabled. To enable it, update the setting [" + FLOW_FRAMEWORK_ENABLED.getKey() + "] to true.",
+                    RestStatus.FORBIDDEN
+                );
+                return channel -> channel.sendResponse(
+                    new BytesRestResponse(ffe.getRestStatus(), ffe.toXContent(channel.newErrorBuilder(), ToXContent.EMPTY_PARAMS))
+                );
+            }
+            String tenantId = TenantAwareHelper.getTenantID(flowFrameworkSettings.isMultiTenancyEnabled(), request);
+            SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder();
+            searchSourceBuilder.parseXContent(request.contentOrSourceParamParser());
+            searchSourceBuilder.seqNoAndPrimaryTerm(true).version(true);
+            searchSourceBuilder.timeout(flowFrameworkSettings.getRequestTimeout());
+
+            // The transport action needs the tenant id but also only takes a SearchRequest.
+            // The tenant filtering will be handled by the metadata client.
+            // We'll use the preference field to communicate the tenant ID and strip it on the other end
+            SearchRequest searchRequest = new SearchRequest().source(searchSourceBuilder).indices(index).preference(tenantId);
+            return channel -> client.execute(actionType, searchRequest, search(channel));
+        } catch (FlowFrameworkException ex) {
             return channel -> channel.sendResponse(
-                new BytesRestResponse(ffe.getRestStatus(), ffe.toXContent(channel.newErrorBuilder(), ToXContent.EMPTY_PARAMS))
+                new BytesRestResponse(ex.getRestStatus(), ex.toXContent(channel.newErrorBuilder(), ToXContent.EMPTY_PARAMS))
             );
         }
-        SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder();
-        searchSourceBuilder.parseXContent(request.contentOrSourceParamParser());
-        searchSourceBuilder.seqNoAndPrimaryTerm(true).version(true);
-        searchSourceBuilder.timeout(flowFrameworkSettings.getRequestTimeout());
-
-        SearchRequest searchRequest = new SearchRequest().source(searchSourceBuilder).indices(index);
-        return channel -> client.execute(actionType, searchRequest, search(channel));
     }
 
     /**

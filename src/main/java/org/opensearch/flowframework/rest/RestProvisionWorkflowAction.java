@@ -22,6 +22,7 @@ import org.opensearch.flowframework.common.FlowFrameworkSettings;
 import org.opensearch.flowframework.exception.FlowFrameworkException;
 import org.opensearch.flowframework.transport.ProvisionWorkflowAction;
 import org.opensearch.flowframework.transport.WorkflowRequest;
+import org.opensearch.flowframework.util.TenantAwareHelper;
 import org.opensearch.rest.BaseRestHandler;
 import org.opensearch.rest.BytesRestResponse;
 import org.opensearch.rest.RestRequest;
@@ -38,6 +39,7 @@ import static org.opensearch.flowframework.common.CommonValue.WAIT_FOR_COMPLETIO
 import static org.opensearch.flowframework.common.CommonValue.WORKFLOW_ID;
 import static org.opensearch.flowframework.common.CommonValue.WORKFLOW_URI;
 import static org.opensearch.flowframework.common.FlowFrameworkSettings.FLOW_FRAMEWORK_ENABLED;
+import static org.opensearch.flowframework.model.Template.createEmptyTemplateWithTenantId;
 
 /**
  * Rest action to facilitate requests to provision a workflow from an inline defined or stored use case template
@@ -84,12 +86,18 @@ public class RestProvisionWorkflowAction extends BaseRestHandler {
                     RestStatus.FORBIDDEN
                 );
             }
+            String tenantId = TenantAwareHelper.getTenantID(flowFrameworkFeatureEnabledSetting.isMultiTenancyEnabled(), request);
             // Validate params
             if (workflowId == null) {
                 throw new FlowFrameworkException("workflow_id cannot be null", RestStatus.BAD_REQUEST);
             }
             // Create request and provision
-            WorkflowRequest workflowRequest = new WorkflowRequest(workflowId, null, params, waitForCompletionTimeout);
+            WorkflowRequest workflowRequest = new WorkflowRequest(
+                workflowId,
+                createEmptyTemplateWithTenantId(tenantId),
+                params,
+                waitForCompletionTimeout
+            );
             return channel -> client.execute(ProvisionWorkflowAction.INSTANCE, workflowRequest, ActionListener.wrap(response -> {
                 XContentBuilder builder = response.toXContent(channel.newBuilder(), ToXContent.EMPTY_PARAMS);
                 channel.sendResponse(new BytesRestResponse(RestStatus.OK, builder));

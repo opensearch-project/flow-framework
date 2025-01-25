@@ -43,7 +43,8 @@ public class FlowFrameworkSettingsTests extends OpenSearchTestCase {
                 FlowFrameworkSettings.TASK_REQUEST_RETRY_DURATION,
                 FlowFrameworkSettings.MAX_WORKFLOW_STEPS,
                 FlowFrameworkSettings.MAX_WORKFLOWS,
-                FlowFrameworkSettings.WORKFLOW_REQUEST_TIMEOUT
+                FlowFrameworkSettings.WORKFLOW_REQUEST_TIMEOUT,
+                FlowFrameworkSettings.FLOW_FRAMEWORK_MULTI_TENANCY_ENABLED
             )
         ).collect(Collectors.toSet());
         clusterSettings = new ClusterSettings(settings, settingsSet);
@@ -63,5 +64,6 @@ public class FlowFrameworkSettingsTests extends OpenSearchTestCase {
         assertEquals(Optional.of(50), Optional.ofNullable(flowFrameworkSettings.getMaxWorkflowSteps()));
         assertEquals(Optional.of(1000), Optional.ofNullable(flowFrameworkSettings.getMaxWorkflows()));
         assertEquals(Optional.of(TimeValue.timeValueSeconds(10)), Optional.ofNullable(flowFrameworkSettings.getRequestTimeout()));
+        assertFalse(flowFrameworkSettings.isMultiTenancyEnabled());
     }
 }

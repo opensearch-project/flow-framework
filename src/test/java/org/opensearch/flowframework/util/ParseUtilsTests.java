@@ -31,8 +31,6 @@ import java.util.Map;
 import java.util.Set;
 
 import static org.opensearch.flowframework.util.ParseUtils.isAdmin;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
 
 public class ParseUtilsTests extends OpenSearchTestCase {
     public void testResourceToStringToJson() throws IOException {

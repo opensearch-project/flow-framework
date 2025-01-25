@@ -34,7 +34,6 @@ jobs:
     steps:
       - name: Run start commands
         run: ${{ needs.Get-CI-Image-Tag.outputs.ci-image-start-command }}
-
       - name: Checkout Flow Framework
         uses: actions/checkout@v4
       - name: Setup Java ${{ matrix.java }}

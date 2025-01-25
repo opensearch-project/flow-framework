@@ -88,7 +88,7 @@ public class FlowFrameworkRestApiIT extends FlowFrameworkRestTestCase {
         Map<String, Object> responseMap = entityAsMap(response);
         String workflowId = (String) responseMap.get(WORKFLOW_ID);
 
-        Response provisionResponse = provisionResponse = provisionWorkflow(client(), workflowId);
+        Response provisionResponse = provisionWorkflow(client(), workflowId);
         assertEquals(RestStatus.OK, TestHelpers.restStatus(provisionResponse));
         getAndAssertWorkflowStatus(client(), workflowId, State.PROVISIONING, ProvisioningProgress.IN_PROGRESS);
 
@@ -277,6 +277,8 @@ public class FlowFrameworkRestApiIT extends FlowFrameworkRestTestCase {
             120,
             TimeUnit.SECONDS
         );
+        // Force a refresh so that search results are up to date
+        refreshAllIndices();
 
         // Hit Search State API with the workflow id created above
         String query = "{\"query\":{\"ids\":{\"values\":[\"" + workflowId + "\"]}}}";

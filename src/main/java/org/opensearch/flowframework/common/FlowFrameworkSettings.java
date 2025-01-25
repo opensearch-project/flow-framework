@@ -10,8 +10,14 @@ package org.opensearch.flowframework.common;
 
 import org.opensearch.cluster.service.ClusterService;
 import org.opensearch.common.settings.Setting;
+import org.opensearch.common.settings.Setting.Property;
 import org.opensearch.common.settings.Settings;
 import org.opensearch.common.unit.TimeValue;
+
+import static org.opensearch.remote.metadata.common.CommonValue.REMOTE_METADATA_ENDPOINT_KEY;
+import static org.opensearch.remote.metadata.common.CommonValue.REMOTE_METADATA_REGION_KEY;
+import static org.opensearch.remote.metadata.common.CommonValue.REMOTE_METADATA_SERVICE_NAME_KEY;
+import static org.opensearch.remote.metadata.common.CommonValue.REMOTE_METADATA_TYPE_KEY;
 
 /** The common settings of flow framework  */
 public class FlowFrameworkSettings {
@@ -25,6 +31,8 @@ public class FlowFrameworkSettings {
     protected volatile Integer maxWorkflows;
     /** Timeout for internal requests*/
     protected volatile TimeValue requestTimeout;
+    /** Whether multitenancy is enabled */
+    private final Boolean isMultiTenancyEnabled;
 
     /** The upper limit of max workflows that can be created  */
     public static final int MAX_WORKFLOWS_LIMIT = 10000;
@@ -84,6 +92,72 @@ public class FlowFrameworkSettings {
     );
 
     /**
+     * Indicates whether multi-tenancy is enabled in Flow Framework.
+     *
+     * This is a static setting that must be configured before starting OpenSearch. The corresponding setting {@code plugins.ml_commons.multi_tenancy_enabled} in the ML Commons plugin should match.
+     *
+     * It can be set in the following ways, in priority order:
+     *
+     * <ol>
+     *   <li>As a command-line argument using the <code>-E</code> flag (this overrides other options):
+     *       <pre>
+     *       ./bin/opensearch -Eplugins.flow_framework.multi_tenancy_enabled=true
+     *       </pre>
+     *   </li>
+     *   <li>As a system property using <code>OPENSEARCH_JAVA_OPTS</code> (this overrides <code>opensearch.yml</code>):
+     *       <pre>
+     *       export OPENSEARCH_JAVA_OPTS="-Dplugins.flow_framework.multi_tenancy_enabled=true"
+     *       ./bin/opensearch
+     *       </pre>
+     *       Or inline when starting OpenSearch:
+     *       <pre>
+     *       OPENSEARCH_JAVA_OPTS="-Dplugins.flow_framework.multi_tenancy_enabled=true" ./bin/opensearch
+     *       </pre>
+     *   </li>
+     *   <li>In the <code>opensearch.yml</code> configuration file:
+     *       <pre>
+     *       plugins.flow_framework.multi_tenancy_enabled: true
+     *       </pre>
+     *   </li>
+     * </ol>
+     *
+     * After setting this option, a full cluster restart is required for the changes to take effect.
+     */
+    public static final Setting<Boolean> FLOW_FRAMEWORK_MULTI_TENANCY_ENABLED = Setting.boolSetting(
+        "plugins.flow_framework.multi_tenancy_enabled",
+        false,
+        Setting.Property.NodeScope
+    );
+
+    /** This setting sets the remote metadata type */
+    public static final Setting<String> REMOTE_METADATA_TYPE = Setting.simpleString(
+        "plugins.flow_framework." + REMOTE_METADATA_TYPE_KEY,
+        Property.NodeScope,
+        Property.Final
+    );
+
+    /** This setting sets the remote metadata endpoint */
+    public static final Setting<String> REMOTE_METADATA_ENDPOINT = Setting.simpleString(
+        "plugins.flow_framework." + REMOTE_METADATA_ENDPOINT_KEY,
+        Property.NodeScope,
+        Property.Final
+    );
+
+    /** This setting sets the remote metadata region */
+    public static final Setting<String> REMOTE_METADATA_REGION = Setting.simpleString(
+        "plugins.flow_framework." + REMOTE_METADATA_REGION_KEY,
+        Property.NodeScope,
+        Property.Final
+    );
+
+    /** This setting sets the remote metadata service name */
+    public static final Setting<String> REMOTE_METADATA_SERVICE_NAME = Setting.simpleString(
+        "plugins.flow_framework." + REMOTE_METADATA_SERVICE_NAME_KEY,
+        Property.NodeScope,
+        Property.Final
+    );
+
+    /**
      * Instantiate this class.
      *
      * @param clusterService OpenSearch cluster service
@@ -97,6 +171,7 @@ public class FlowFrameworkSettings {
         this.maxWorkflowSteps = MAX_WORKFLOW_STEPS.get(settings);
         this.maxWorkflows = MAX_WORKFLOWS.get(settings);
         this.requestTimeout = WORKFLOW_REQUEST_TIMEOUT.get(settings);
+        this.isMultiTenancyEnabled = FLOW_FRAMEWORK_MULTI_TENANCY_ENABLED.get(settings);
         clusterService.getClusterSettings().addSettingsUpdateConsumer(FLOW_FRAMEWORK_ENABLED, it -> isFlowFrameworkEnabled = it);
         clusterService.getClusterSettings().addSettingsUpdateConsumer(TASK_REQUEST_RETRY_DURATION, it -> retryDuration = it);
         clusterService.getClusterSettings().addSettingsUpdateConsumer(MAX_WORKFLOW_STEPS, it -> maxWorkflowSteps = it);
@@ -142,5 +217,13 @@ public class FlowFrameworkSettings {
      */
     public TimeValue getRequestTimeout() {
         return requestTimeout;
+    }
+
+    /**
+     * Whether multitenancy is enabled.
+     * @return whether Flow Framework multitenancy is enabled.
+     */
+    public boolean isMultiTenancyEnabled() {
+        return isMultiTenancyEnabled;
     }
 }

@@ -105,6 +105,7 @@ public abstract class AbstractCreatePipelineStep implements WorkflowStep {
                         currentNodeId,
                         getName(),
                         pipelineId,
+                        tenantId,
                         createPipelineFuture
                     );
                 }

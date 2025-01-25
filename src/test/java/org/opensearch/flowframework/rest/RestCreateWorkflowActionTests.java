@@ -83,6 +83,7 @@ public class RestCreateWorkflowActionTests extends OpenSearchTestCase {
             TestHelpers.randomUser(),
             null,
             null,
+            null,
             null
         );
 
@@ -176,7 +177,7 @@ public class RestCreateWorkflowActionTests extends OpenSearchTestCase {
             channel.capturedResponse()
                 .content()
                 .utf8ToString()
-                .contains("are not allowed unless the 'provision' or 'reprovision' parameter is set to true.")
+                .contains("is not allowed unless the 'provision' or 'reprovision' parameter is set to true.")
         );
     }
 

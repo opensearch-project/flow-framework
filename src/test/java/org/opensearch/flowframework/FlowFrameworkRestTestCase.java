@@ -18,6 +18,7 @@ import org.apache.hc.client5.http.impl.nio.PoolingAsyncClientConnectionManagerBu
 import org.apache.hc.client5.http.ssl.ClientTlsStrategyBuilder;
 import org.apache.hc.client5.http.ssl.NoopHostnameVerifier;
 import org.apache.hc.core5.http.Header;
+import org.apache.hc.core5.http.HttpEntity;
 import org.apache.hc.core5.http.HttpHeaders;
 import org.apache.hc.core5.http.HttpHost;
 import org.apache.hc.core5.http.message.BasicHeader;
@@ -144,6 +145,19 @@ public abstract class FlowFrameworkRestTestCase extends OpenSearchRestTestCase {
     @Override
     protected String getProtocol() {
         return isHttps() ? "https" : "http";
+    }
+
+    public static Map<String, Object> responseToMap(Response response) throws IOException {
+        HttpEntity entity = response.getEntity();
+        assertNotNull(response);
+        String entityString = TestHelpers.httpEntityToString(entity);
+        XContentParser parser = JsonXContent.jsonXContent.createParser(
+            NamedXContentRegistry.EMPTY,
+            LoggingDeprecationHandler.INSTANCE,
+            entityString
+        );
+        parser.nextToken();
+        return parser.map();
     }
 
     // Utility fn for deleting indices. Should only be used when not allowed in a regular context
