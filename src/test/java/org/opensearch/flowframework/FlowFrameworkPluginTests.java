@@ -30,8 +30,13 @@ import java.util.stream.Stream;
 
 import static org.opensearch.flowframework.common.FlowFrameworkSettings.FILTER_BY_BACKEND_ROLES;
 import static org.opensearch.flowframework.common.FlowFrameworkSettings.FLOW_FRAMEWORK_ENABLED;
+import static org.opensearch.flowframework.common.FlowFrameworkSettings.FLOW_FRAMEWORK_MULTI_TENANCY_ENABLED;
 import static org.opensearch.flowframework.common.FlowFrameworkSettings.MAX_WORKFLOWS;
 import static org.opensearch.flowframework.common.FlowFrameworkSettings.MAX_WORKFLOW_STEPS;
+import static org.opensearch.flowframework.common.FlowFrameworkSettings.REMOTE_METADATA_ENDPOINT;
+import static org.opensearch.flowframework.common.FlowFrameworkSettings.REMOTE_METADATA_REGION;
+import static org.opensearch.flowframework.common.FlowFrameworkSettings.REMOTE_METADATA_SERVICE_NAME;
+import static org.opensearch.flowframework.common.FlowFrameworkSettings.REMOTE_METADATA_TYPE;
 import static org.opensearch.flowframework.common.FlowFrameworkSettings.TASK_REQUEST_RETRY_DURATION;
 import static org.opensearch.flowframework.common.FlowFrameworkSettings.WORKFLOW_REQUEST_TIMEOUT;
 import static org.mockito.Mockito.mock;
@@ -59,6 +64,7 @@ public class FlowFrameworkPluginTests extends OpenSearchTestCase {
         when(client.admin()).thenReturn(adminClient);
         when(adminClient.cluster()).thenReturn(clusterAdminClient);
         threadPool = new TestThreadPool(FlowFrameworkPluginTests.class.getName());
+        when(client.threadPool()).thenReturn(threadPool);
 
         environment = mock(Environment.class);
         settings = Settings.builder().build();
@@ -72,7 +78,12 @@ public class FlowFrameworkPluginTests extends OpenSearchTestCase {
                 MAX_WORKFLOW_STEPS,
                 WORKFLOW_REQUEST_TIMEOUT,
                 TASK_REQUEST_RETRY_DURATION,
-                FILTER_BY_BACKEND_ROLES
+                FILTER_BY_BACKEND_ROLES,
+                FLOW_FRAMEWORK_MULTI_TENANCY_ENABLED,
+                REMOTE_METADATA_TYPE,
+                REMOTE_METADATA_ENDPOINT,
+                REMOTE_METADATA_REGION,
+                REMOTE_METADATA_SERVICE_NAME
             )
         ).collect(Collectors.toSet());
         clusterSettings = new ClusterSettings(settings, settingsSet);
@@ -89,13 +100,13 @@ public class FlowFrameworkPluginTests extends OpenSearchTestCase {
     public void testPlugin() throws IOException {
         try (FlowFrameworkPlugin ffp = new FlowFrameworkPlugin()) {
             assertEquals(
-                6,
+                7,
                 ffp.createComponents(client, clusterService, threadPool, null, null, null, environment, null, null, null, null).size()
             );
             assertEquals(9, ffp.getRestHandlers(settings, null, null, null, null, null, null).size());
             assertEquals(10, ffp.getActions().size());
             assertEquals(3, ffp.getExecutorBuilders(settings).size());
-            assertEquals(6, ffp.getSettings().size());
+            assertEquals(11, ffp.getSettings().size());
 
             Collection<SystemIndexDescriptor> systemIndexDescriptors = ffp.getSystemIndexDescriptors(Settings.EMPTY);
             assertEquals(3, systemIndexDescriptors.size());

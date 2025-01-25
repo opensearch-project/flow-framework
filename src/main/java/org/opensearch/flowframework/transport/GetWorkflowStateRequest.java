@@ -13,6 +13,7 @@ import org.opensearch.action.ActionRequestValidationException;
 import org.opensearch.common.Nullable;
 import org.opensearch.core.common.io.stream.StreamInput;
 import org.opensearch.core.common.io.stream.StreamOutput;
+import org.opensearch.flowframework.common.CommonValue;
 
 import java.io.IOException;
 
@@ -32,14 +33,18 @@ public class GetWorkflowStateRequest extends ActionRequest {
      */
     private boolean all;
 
+    private String tenantId;
+
     /**
      * Instantiates a new GetWorkflowStateRequest
      * @param workflowId the documentId of the workflow
      * @param all whether the get request is looking for all fields in status
+     * @param tenantId the tenant id
      */
-    public GetWorkflowStateRequest(@Nullable String workflowId, boolean all) {
+    public GetWorkflowStateRequest(@Nullable String workflowId, boolean all, String tenantId) {
         this.workflowId = workflowId;
         this.all = all;
+        this.tenantId = tenantId;
     }
 
     /**
@@ -51,6 +56,9 @@ public class GetWorkflowStateRequest extends ActionRequest {
         super(in);
         this.workflowId = in.readString();
         this.all = in.readBoolean();
+        if (in.getVersion().onOrAfter(CommonValue.VERSION_2_19_0)) {
+            this.tenantId = in.readOptionalString();
+        }
     }
 
     /**
@@ -70,11 +78,22 @@ public class GetWorkflowStateRequest extends ActionRequest {
         return this.all;
     }
 
+    /**
+     * Gets the tenant Id
+     * @return the tenant id
+     */
+    public String getTenantId() {
+        return this.tenantId;
+    }
+
     @Override
     public void writeTo(StreamOutput out) throws IOException {
         super.writeTo(out);
         out.writeString(workflowId);
         out.writeBoolean(all);
+        if (out.getVersion().onOrAfter(CommonValue.VERSION_2_19_0)) {
+            out.writeOptionalString(tenantId);
+        }
     }
 
     @Override

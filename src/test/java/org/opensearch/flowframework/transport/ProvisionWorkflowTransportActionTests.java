@@ -23,6 +23,7 @@ import org.opensearch.common.xcontent.XContentFactory;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.core.common.bytes.BytesReference;
 import org.opensearch.core.index.shard.ShardId;
+import org.opensearch.core.xcontent.NamedXContentRegistry;
 import org.opensearch.core.xcontent.XContentBuilder;
 import org.opensearch.flowframework.TestHelpers;
 import org.opensearch.flowframework.common.FlowFrameworkSettings;
@@ -36,6 +37,8 @@ import org.opensearch.flowframework.util.EncryptorUtils;
 import org.opensearch.flowframework.workflow.WorkflowProcessSorter;
 import org.opensearch.index.get.GetResult;
 import org.opensearch.plugins.PluginsService;
+import org.opensearch.remote.metadata.client.SdkClient;
+import org.opensearch.remote.metadata.client.impl.SdkClientFactory;
 import org.opensearch.tasks.Task;
 import org.opensearch.test.OpenSearchTestCase;
 import org.opensearch.threadpool.ThreadPool;
@@ -55,30 +58,33 @@ import static org.opensearch.flowframework.common.CommonValue.GLOBAL_CONTEXT_IND
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyMap;
+import static org.mockito.ArgumentMatchers.nullable;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 public class ProvisionWorkflowTransportActionTests extends OpenSearchTestCase {
 
-    private ThreadPool threadPool;
     private Client client;
+    private SdkClient sdkClient;
     private WorkflowProcessSorter workflowProcessSorter;
     private ProvisionWorkflowTransportAction provisionWorkflowTransportAction;
     private Template template;
     private FlowFrameworkIndicesHandler flowFrameworkIndicesHandler;
+    private FlowFrameworkSettings flowFrameworkSettings;
     private EncryptorUtils encryptorUtils;
     private PluginsService pluginsService;
 
     @Override
     public void setUp() throws Exception {
         super.setUp();
-        this.threadPool = mock(ThreadPool.class);
         this.client = mock(Client.class);
+        this.sdkClient = SdkClientFactory.createSdkClient(client, NamedXContentRegistry.EMPTY, Collections.emptyMap());
         this.workflowProcessSorter = mock(WorkflowProcessSorter.class);
-        this.flowFrameworkIndicesHandler = mock(FlowFrameworkIndicesHandler.class);
+        this.flowFrameworkSettings = mock(FlowFrameworkSettings.class);
         this.encryptorUtils = mock(EncryptorUtils.class);
         this.pluginsService = mock(PluginsService.class);
         ClusterService clusterService = mock(ClusterService.class);
@@ -87,14 +93,18 @@ public class ProvisionWorkflowTransportActionTests extends OpenSearchTestCase {
             Collections.unmodifiableSet(new HashSet<>(Arrays.asList(FlowFrameworkSettings.FILTER_BY_BACKEND_ROLES)))
         );
         when(clusterService.getClusterSettings()).thenReturn(clusterSettings);
+        this.flowFrameworkIndicesHandler = spy(
+            new FlowFrameworkIndicesHandler(client, sdkClient, clusterService, encryptorUtils, xContentRegistry())
+        );
 
         this.provisionWorkflowTransportAction = new ProvisionWorkflowTransportAction(
             mock(TransportService.class),
             mock(ActionFilters.class),
-            threadPool,
             client,
+            sdkClient,
             workflowProcessSorter,
             flowFrameworkIndicesHandler,
+            flowFrameworkSettings,
             encryptorUtils,
             pluginsService,
             clusterService,
@@ -120,6 +130,7 @@ public class ProvisionWorkflowTransportActionTests extends OpenSearchTestCase {
             Map.of("provision", workflow),
             Collections.emptyMap(),
             TestHelpers.randomUser(),
+            null,
             null,
             null,
             null
@@ -155,17 +166,17 @@ public class ProvisionWorkflowTransportActionTests extends OpenSearchTestCase {
 
         // Bypass isWorkflowNotStarted and force true response
         doAnswer(invocation -> {
-            Consumer<Optional<ProvisioningProgress>> progressConsumer = invocation.getArgument(1);
+            Consumer<Optional<ProvisioningProgress>> progressConsumer = invocation.getArgument(2);
             progressConsumer.accept(Optional.of(ProvisioningProgress.NOT_STARTED));
             return null;
-        }).when(flowFrameworkIndicesHandler).getProvisioningProgress(any(), any(), any());
+        }).when(flowFrameworkIndicesHandler).getProvisioningProgress(any(), any(), any(), any());
 
         // Bypass updateFlowFrameworkSystemIndexDoc and stub on response
         doAnswer(invocation -> {
-            ActionListener<UpdateResponse> actionListener = invocation.getArgument(2);
+            ActionListener<UpdateResponse> actionListener = invocation.getArgument(3);
             actionListener.onResponse(mock(UpdateResponse.class));
             return null;
-        }).when(flowFrameworkIndicesHandler).updateFlowFrameworkSystemIndexDoc(any(), anyMap(), any());
+        }).when(flowFrameworkIndicesHandler).updateFlowFrameworkSystemIndexDoc(any(), nullable(String.class), anyMap(), any());
 
         doAnswer(invocation -> {
             ActionListener<IndexResponse> responseListener = invocation.getArgument(2);
@@ -174,6 +185,7 @@ public class ProvisionWorkflowTransportActionTests extends OpenSearchTestCase {
         }).when(flowFrameworkIndicesHandler).updateTemplateInGlobalContext(any(), any(Template.class), any(), anyBoolean());
 
         provisionWorkflowTransportAction.doExecute(mock(Task.class), workflowRequest, listener);
+
         ArgumentCaptor<WorkflowResponse> responseCaptor = ArgumentCaptor.forClass(WorkflowResponse.class);
         verify(listener, times(1)).onResponse(responseCaptor.capture());
         assertEquals(workflowId, responseCaptor.getValue().getWorkflowId());
@@ -197,24 +209,24 @@ public class ProvisionWorkflowTransportActionTests extends OpenSearchTestCase {
             responseListener.onResponse(new GetResponse(getResult));
             return null;
         }).when(client).get(any(GetRequest.class), any());
-
         when(encryptorUtils.decryptTemplateCredentials(any())).thenReturn(template);
 
         // Bypass isWorkflowNotStarted and force false response
         doAnswer(invocation -> {
-            Consumer<Optional<ProvisioningProgress>> progressConsumer = invocation.getArgument(1);
+            Consumer<Optional<ProvisioningProgress>> progressConsumer = invocation.getArgument(2);
             progressConsumer.accept(Optional.of(ProvisioningProgress.DONE));
             return null;
-        }).when(flowFrameworkIndicesHandler).getProvisioningProgress(any(), any(), any());
+        }).when(flowFrameworkIndicesHandler).getProvisioningProgress(any(), any(), any(), any());
 
         // Bypass updateFlowFrameworkSystemIndexDoc and stub on response
         doAnswer(invocation -> {
             ActionListener<UpdateResponse> actionListener = invocation.getArgument(2);
             actionListener.onResponse(mock(UpdateResponse.class));
             return null;
-        }).when(flowFrameworkIndicesHandler).updateFlowFrameworkSystemIndexDoc(any(), anyMap(), any());
+        }).when(flowFrameworkIndicesHandler).updateFlowFrameworkSystemIndexDoc(any(), nullable(String.class), anyMap(), any());
 
         provisionWorkflowTransportAction.doExecute(mock(Task.class), workflowRequest, listener);
+
         ArgumentCaptor<Exception> exceptionCaptor = ArgumentCaptor.forClass(Exception.class);
         verify(listener, times(1)).onFailure(exceptionCaptor.capture());
         assertEquals(
@@ -227,6 +239,7 @@ public class ProvisionWorkflowTransportActionTests extends OpenSearchTestCase {
         @SuppressWarnings("unchecked")
         ActionListener<WorkflowResponse> listener = mock(ActionListener.class);
         WorkflowRequest request = new WorkflowRequest("1", null);
+
         doAnswer(invocation -> {
             ActionListener<GetResponse> responseListener = invocation.getArgument(1);
             responseListener.onFailure(new Exception("failed"));
@@ -234,10 +247,11 @@ public class ProvisionWorkflowTransportActionTests extends OpenSearchTestCase {
         }).when(client).get(any(GetRequest.class), any());
 
         provisionWorkflowTransportAction.doExecute(mock(Task.class), request, listener);
+
         ArgumentCaptor<Exception> exceptionCaptor = ArgumentCaptor.forClass(Exception.class);
 
         verify(listener, times(1)).onFailure(exceptionCaptor.capture());
-        assertEquals("Failed to retrieve template from global context for workflow 1", exceptionCaptor.getValue().getMessage());
+        assertEquals("Failed to get template 1", exceptionCaptor.getValue().getMessage());
     }
 
 }

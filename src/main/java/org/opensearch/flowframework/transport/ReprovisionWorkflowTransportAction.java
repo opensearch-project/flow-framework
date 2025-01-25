@@ -35,11 +35,13 @@ import org.opensearch.flowframework.model.Template;
 import org.opensearch.flowframework.model.Workflow;
 import org.opensearch.flowframework.model.WorkflowState;
 import org.opensearch.flowframework.util.EncryptorUtils;
+import org.opensearch.flowframework.util.TenantAwareHelper;
 import org.opensearch.flowframework.util.WorkflowTimeoutUtility;
 import org.opensearch.flowframework.workflow.ProcessNode;
 import org.opensearch.flowframework.workflow.WorkflowProcessSorter;
 import org.opensearch.flowframework.workflow.WorkflowStepFactory;
 import org.opensearch.plugins.PluginsService;
+import org.opensearch.remote.metadata.client.SdkClient;
 import org.opensearch.tasks.Task;
 import org.opensearch.threadpool.ThreadPool;
 import org.opensearch.transport.TransportService;
@@ -75,6 +77,7 @@ public class ReprovisionWorkflowTransportAction extends HandledTransportAction<R
 
     private final ThreadPool threadPool;
     private final Client client;
+    private final SdkClient sdkClient;
     private final WorkflowStepFactory workflowStepFactory;
     private final WorkflowProcessSorter workflowProcessSorter;
     private final FlowFrameworkIndicesHandler flowFrameworkIndicesHandler;
@@ -91,6 +94,7 @@ public class ReprovisionWorkflowTransportAction extends HandledTransportAction<R
      * @param actionFilters action filters
      * @param threadPool The OpenSearch thread pool
      * @param client The node client to retrieve a stored use case template
+     * @param sdkClient the Multitenant Client
      * @param workflowStepFactory The factory instantiating workflow steps
      * @param workflowProcessSorter Utility class to generate a togologically sorted list of Process nodes
      * @param flowFrameworkIndicesHandler Class to handle all internal system indices actions
@@ -107,6 +111,7 @@ public class ReprovisionWorkflowTransportAction extends HandledTransportAction<R
         ActionFilters actionFilters,
         ThreadPool threadPool,
         Client client,
+        SdkClient sdkClient,
         WorkflowStepFactory workflowStepFactory,
         WorkflowProcessSorter workflowProcessSorter,
         FlowFrameworkIndicesHandler flowFrameworkIndicesHandler,
@@ -120,6 +125,7 @@ public class ReprovisionWorkflowTransportAction extends HandledTransportAction<R
         super(ReprovisionWorkflowAction.NAME, transportService, actionFilters, ReprovisionWorkflowRequest::new);
         this.threadPool = threadPool;
         this.client = client;
+        this.sdkClient = sdkClient;
         this.workflowStepFactory = workflowStepFactory;
         this.workflowProcessSorter = workflowProcessSorter;
         this.flowFrameworkIndicesHandler = flowFrameworkIndicesHandler;
@@ -134,7 +140,10 @@ public class ReprovisionWorkflowTransportAction extends HandledTransportAction<R
 
     @Override
     protected void doExecute(Task task, ReprovisionWorkflowRequest request, ActionListener<WorkflowResponse> listener) {
-
+        String tenantId = request.getUpdatedTemplate() == null ? null : request.getUpdatedTemplate().getTenantId();
+        if (!TenantAwareHelper.validateTenantId(flowFrameworkSettings.isMultiTenancyEnabled(), tenantId, listener)) {
+            return;
+        }
         String workflowId = request.getWorkflowId();
         User user = getUserContext(client);
 
@@ -142,11 +151,14 @@ public class ReprovisionWorkflowTransportAction extends HandledTransportAction<R
             resolveUserAndExecute(
                 user,
                 workflowId,
+                tenantId,
                 filterByEnabled,
                 false,
+                flowFrameworkSettings.isMultiTenancyEnabled(),
                 listener,
-                () -> executeReprovisionRequest(request, listener, context),
+                () -> executeReprovisionRequest(request, tenantId, listener, context),
                 client,
+                sdkClient,
                 clusterService,
                 xContentRegistry
             );
@@ -164,18 +176,20 @@ public class ReprovisionWorkflowTransportAction extends HandledTransportAction<R
     /**
      * Execute the reprovision request
      * @param request the reprovision request
+     * @param tenantId
      * @param listener the action listener
      * @param context the thread context
      */
     private void executeReprovisionRequest(
         ReprovisionWorkflowRequest request,
+        String tenantId,
         ActionListener<WorkflowResponse> listener,
         ThreadContext.StoredContext context
     ) {
         String workflowId = request.getWorkflowId();
         logger.info("Querying state for workflow: {}", workflowId);
         // Retrieve state and resources created
-        GetWorkflowStateRequest getStateRequest = new GetWorkflowStateRequest(workflowId, true);
+        GetWorkflowStateRequest getStateRequest = new GetWorkflowStateRequest(workflowId, true, tenantId);
         client.execute(GetWorkflowStateAction.INSTANCE, getStateRequest, ActionListener.wrap(response -> {
             context.restore();
 
@@ -199,7 +213,7 @@ public class ReprovisionWorkflowTransportAction extends HandledTransportAction<R
                 provisionWorkflow,
                 request.getWorkflowId(),
                 Collections.emptyMap(), // TODO : Add suport to reprovision substitution templates
-                "fakeTenantId"
+                tenantId
             );
 
             try {
@@ -216,25 +230,34 @@ public class ReprovisionWorkflowTransportAction extends HandledTransportAction<R
                 workflowId,
                 originalTemplate,
                 updatedTemplate,
-                resourceCreated
+                resourceCreated,
+                tenantId
             );
 
             // Remove error field if any prior to subsequent execution
             if (response.getWorkflowState().getError() != null) {
                 WorkflowState newState = WorkflowState.builder(response.getWorkflowState()).error(null).build();
-                flowFrameworkIndicesHandler.updateFlowFrameworkSystemIndexDoc(workflowId, newState, ActionListener.wrap(updateResponse -> {
+                flowFrameworkIndicesHandler.updateFlowFrameworkSystemIndexDoc(
+                    workflowId,
+                    tenantId,
+                    newState,
+                    ActionListener.wrap(updateResponse -> {
 
-                }, exception -> {
-                    String errorMessage = ParameterizedMessageFactory.INSTANCE.newMessage("Failed to update workflow state: {}", workflowId)
-                        .getFormattedMessage();
-                    logger.error(errorMessage, exception);
-                    listener.onFailure(new FlowFrameworkException(errorMessage, ExceptionsHelper.status(exception)));
-                }));
+                    }, exception -> {
+                        String errorMessage = ParameterizedMessageFactory.INSTANCE.newMessage(
+                            "Failed to update workflow state: {}",
+                            workflowId
+                        ).getFormattedMessage();
+                        logger.error(errorMessage, exception);
+                        listener.onFailure(new FlowFrameworkException(errorMessage, ExceptionsHelper.status(exception)));
+                    })
+                );
             }
 
             // Update State Index, maintain resources created for subsequent execution
             flowFrameworkIndicesHandler.updateFlowFrameworkSystemIndexDoc(
                 workflowId,
+                tenantId,
                 Map.ofEntries(
                     Map.entry(STATE_FIELD, State.PROVISIONING),
                     Map.entry(PROVISIONING_PROGRESS_FIELD, ProvisioningProgress.IN_PROGRESS),
@@ -337,7 +360,15 @@ public class ReprovisionWorkflowTransportAction extends HandledTransportAction<R
                 WorkflowTimeoutUtility.handleFailure(workflowId, ex, isResponseSent, listener);
             }
         }, threadPool.executor(PROVISION_WORKFLOW_THREAD_POOL));
-        WorkflowTimeoutUtility.scheduleTimeoutHandler(client, threadPool, workflowId, listener, timeout, isResponseSent);
+        WorkflowTimeoutUtility.scheduleTimeoutHandler(
+            client,
+            threadPool,
+            workflowId,
+            template.getTenantId(),
+            listener,
+            timeout,
+            isResponseSent
+        );
     }
 
     /**
@@ -396,6 +427,7 @@ public class ReprovisionWorkflowTransportAction extends HandledTransportAction<R
             logger.info("Reprovisioning completed successfully for workflow {}", workflowId);
             flowFrameworkIndicesHandler.updateFlowFrameworkSystemIndexDoc(
                 workflowId,
+                template.getTenantId(),
                 Map.ofEntries(
                     Map.entry(STATE_FIELD, State.COMPLETED),
                     Map.entry(PROVISIONING_PROGRESS_FIELD, ProvisioningProgress.DONE),
@@ -407,7 +439,7 @@ public class ReprovisionWorkflowTransportAction extends HandledTransportAction<R
                     if (isSyncExecution) {
                         client.execute(
                             GetWorkflowStateAction.INSTANCE,
-                            new GetWorkflowStateRequest(workflowId, false),
+                            new GetWorkflowStateRequest(workflowId, false, template.getTenantId()),
                             ActionListener.wrap(response -> {
                                 listener.onResponse(new WorkflowResponse(workflowId, response.getWorkflowState()));
                             }, exception -> {
@@ -438,6 +470,7 @@ public class ReprovisionWorkflowTransportAction extends HandledTransportAction<R
                 + status.toString();
             flowFrameworkIndicesHandler.updateFlowFrameworkSystemIndexDoc(
                 workflowId,
+                template.getTenantId(),
                 Map.ofEntries(
                     Map.entry(STATE_FIELD, State.FAILED),
                     Map.entry(ERROR_FIELD, errorMessage),

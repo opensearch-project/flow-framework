@@ -195,6 +195,7 @@ public abstract class AbstractRegisterLocalModelStep extends AbstractRetryableWo
                     registerLocalModelFuture,
                     taskId,
                     "Local model registration",
+                    tenantId,
                     ActionListener.wrap(mlTaskWorkflowData -> {
                         // Registered Model Resource has been updated
                         String resourceName = getResourceByWorkflowStep(getName());
@@ -219,6 +220,7 @@ public abstract class AbstractRegisterLocalModelStep extends AbstractRetryableWo
                                 currentNodeId,
                                 DeployModelStep.NAME,
                                 id,
+                                tenantId,
                                 deployUpdateListener
                             );
                         } else {
