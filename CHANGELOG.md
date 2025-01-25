@@ -12,7 +12,7 @@ Inspired from [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ### Documentation
 - Add text to visualization agent template ([#936](https://github.com/opensearch-project/flow-framework/pull/936))
-
+- Update template for alert summary with new log pattern tools ([#1021](https://github.com/opensearch-project/flow-framework/pull/1021))
 ### Maintenance
 ### Refactoring
 
