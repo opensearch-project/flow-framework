@@ -32,6 +32,7 @@ import org.mockito.MockitoAnnotations;
 import static org.opensearch.flowframework.common.CommonValue.SUCCESS;
 import static org.opensearch.flowframework.common.WorkflowResources.MODEL_ID;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.nullable;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.verify;
 
@@ -57,7 +58,7 @@ public class UndeployModelStepTests extends OpenSearchTestCase {
 
         doAnswer(invocation -> {
             ClusterName clusterName = new ClusterName("clusterName");
-            ActionListener<MLUndeployModelsResponse> actionListener = invocation.getArgument(2);
+            ActionListener<MLUndeployModelsResponse> actionListener = invocation.getArgument(3);
             MLUndeployModelNodesResponse mlUndeployModelNodesResponse = new MLUndeployModelNodesResponse(
                 clusterName,
                 Collections.emptyList(),
@@ -66,7 +67,7 @@ public class UndeployModelStepTests extends OpenSearchTestCase {
             MLUndeployModelsResponse output = new MLUndeployModelsResponse(mlUndeployModelNodesResponse);
             actionListener.onResponse(output);
             return null;
-        }).when(machineLearningNodeClient).undeploy(any(String[].class), any(), any());
+        }).when(machineLearningNodeClient).undeploy(any(String[].class), any(), nullable(String.class), any());
 
         PlainActionFuture<WorkflowData> future = UndeployModelStep.execute(
             inputData.getNodeId(),
@@ -76,7 +77,7 @@ public class UndeployModelStepTests extends OpenSearchTestCase {
             Collections.emptyMap(),
             null
         );
-        verify(machineLearningNodeClient).undeploy(any(String[].class), any(), any());
+        verify(machineLearningNodeClient).undeploy(any(String[].class), any(), nullable(String.class), any());
 
         assertTrue(future.isDone());
         assertTrue((boolean) future.get().getContent().get(SUCCESS));
@@ -105,7 +106,7 @@ public class UndeployModelStepTests extends OpenSearchTestCase {
 
         doAnswer(invocation -> {
             ClusterName clusterName = new ClusterName("clusterName");
-            ActionListener<MLUndeployModelsResponse> actionListener = invocation.getArgument(2);
+            ActionListener<MLUndeployModelsResponse> actionListener = invocation.getArgument(3);
             MLUndeployModelNodesResponse mlUndeployModelNodesResponse = new MLUndeployModelNodesResponse(
                 clusterName,
                 Collections.emptyList(),
@@ -116,7 +117,7 @@ public class UndeployModelStepTests extends OpenSearchTestCase {
 
             actionListener.onFailure(new FlowFrameworkException("Failed to undeploy model", RestStatus.INTERNAL_SERVER_ERROR));
             return null;
-        }).when(machineLearningNodeClient).undeploy(any(String[].class), any(), any());
+        }).when(machineLearningNodeClient).undeploy(any(String[].class), any(), nullable(String.class), any());
 
         PlainActionFuture<WorkflowData> future = UndeployModelStep.execute(
             inputData.getNodeId(),
@@ -127,7 +128,7 @@ public class UndeployModelStepTests extends OpenSearchTestCase {
             null
         );
 
-        verify(machineLearningNodeClient).undeploy(any(String[].class), any(), any());
+        verify(machineLearningNodeClient).undeploy(any(String[].class), any(), nullable(String.class), any());
 
         assertTrue(future.isDone());
         ExecutionException ex = assertThrows(ExecutionException.class, () -> future.get().getContent());

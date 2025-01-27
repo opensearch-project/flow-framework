@@ -86,7 +86,7 @@ public class DeployModelStep extends AbstractRetryableWorkflowStep {
 
             String modelId = (String) inputs.get(MODEL_ID);
 
-            mlClient.deploy(modelId, new ActionListener<>() {
+            mlClient.deploy(modelId, tenantId, new ActionListener<>() {
                 @Override
                 public void onResponse(MLDeployModelResponse mlDeployModelResponse) {
                     logger.info("Model deployment state {}", mlDeployModelResponse.getStatus());

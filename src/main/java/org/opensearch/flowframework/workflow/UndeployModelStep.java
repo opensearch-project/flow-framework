@@ -78,7 +78,7 @@ public class UndeployModelStep implements WorkflowStep {
 
             String modelId = inputs.get(MODEL_ID).toString();
 
-            mlClient.undeploy(new String[] { modelId }, null, new ActionListener<>() {
+            mlClient.undeploy(new String[] { modelId }, null, tenantId, new ActionListener<>() {
                 @Override
                 public void onResponse(MLUndeployModelsResponse mlUndeployModelsResponse) {
                     List<FailedNodeException> failures = mlUndeployModelsResponse.getResponse().failures();
