@@ -29,6 +29,7 @@ import org.mockito.MockitoAnnotations;
 
 import static org.opensearch.flowframework.common.WorkflowResources.AGENT_ID;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.nullable;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.verify;
 
@@ -54,12 +55,12 @@ public class DeleteAgentStepTests extends OpenSearchTestCase {
 
         doAnswer(invocation -> {
             String agentIdArg = invocation.getArgument(0);
-            ActionListener<DeleteResponse> actionListener = invocation.getArgument(1);
+            ActionListener<DeleteResponse> actionListener = invocation.getArgument(2);
             ShardId shardId = new ShardId(new Index("indexName", "uuid"), 1);
             DeleteResponse output = new DeleteResponse(shardId, agentIdArg, 1, 1, 1, true);
             actionListener.onResponse(output);
             return null;
-        }).when(machineLearningNodeClient).deleteAgent(any(String.class), any());
+        }).when(machineLearningNodeClient).deleteAgent(any(String.class), nullable(String.class), any());
 
         PlainActionFuture<WorkflowData> future = deleteAgentStep.execute(
             inputData.getNodeId(),
@@ -69,7 +70,7 @@ public class DeleteAgentStepTests extends OpenSearchTestCase {
             Collections.emptyMap(),
             null
         );
-        verify(machineLearningNodeClient).deleteAgent(any(String.class), any());
+        verify(machineLearningNodeClient).deleteAgent(any(String.class), nullable(String.class), any());
 
         assertTrue(future.isDone());
         assertEquals(agentId, future.get().getContent().get(AGENT_ID));
@@ -81,10 +82,10 @@ public class DeleteAgentStepTests extends OpenSearchTestCase {
         DeleteAgentStep deleteAgentStep = new DeleteAgentStep(machineLearningNodeClient);
 
         doAnswer(invocation -> {
-            ActionListener<DeleteResponse> actionListener = invocation.getArgument(1);
+            ActionListener<DeleteResponse> actionListener = invocation.getArgument(2);
             actionListener.onFailure(new OpenSearchStatusException("No agent found with that id", RestStatus.NOT_FOUND));
             return null;
-        }).when(machineLearningNodeClient).deleteAgent(any(String.class), any());
+        }).when(machineLearningNodeClient).deleteAgent(any(String.class), nullable(String.class), any());
 
         PlainActionFuture<WorkflowData> future = deleteAgentStep.execute(
             inputData.getNodeId(),
@@ -94,7 +95,7 @@ public class DeleteAgentStepTests extends OpenSearchTestCase {
             Collections.emptyMap(),
             null
         );
-        verify(machineLearningNodeClient).deleteAgent(any(String.class), any());
+        verify(machineLearningNodeClient).deleteAgent(any(String.class), nullable(String.class), any());
 
         assertTrue(future.isDone());
         assertEquals(agentId, future.get().getContent().get(AGENT_ID));
@@ -122,10 +123,10 @@ public class DeleteAgentStepTests extends OpenSearchTestCase {
         DeleteAgentStep deleteAgentStep = new DeleteAgentStep(machineLearningNodeClient);
 
         doAnswer(invocation -> {
-            ActionListener<DeleteResponse> actionListener = invocation.getArgument(1);
+            ActionListener<DeleteResponse> actionListener = invocation.getArgument(2);
             actionListener.onFailure(new FlowFrameworkException("Failed to delete agent", RestStatus.INTERNAL_SERVER_ERROR));
             return null;
-        }).when(machineLearningNodeClient).deleteAgent(any(String.class), any());
+        }).when(machineLearningNodeClient).deleteAgent(any(String.class), nullable(String.class), any());
 
         PlainActionFuture<WorkflowData> future = deleteAgentStep.execute(
             inputData.getNodeId(),
@@ -136,7 +137,7 @@ public class DeleteAgentStepTests extends OpenSearchTestCase {
             null
         );
 
-        verify(machineLearningNodeClient).deleteAgent(any(String.class), any());
+        verify(machineLearningNodeClient).deleteAgent(any(String.class), nullable(String.class), any());
 
         assertTrue(future.isDone());
         ExecutionException ex = assertThrows(ExecutionException.class, () -> future.get().getContent());
