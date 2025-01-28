@@ -182,7 +182,8 @@ public class RegisterAgentStep implements WorkflowStep {
                 .parameters(parametersMap)
                 .createdTime(createdTime)
                 .lastUpdateTime(lastUpdateTime)
-                .appType(appType);
+                .appType(appType)
+                .tenantId(tenantId);
 
             MLAgent mlAgent = builder.build();
 
