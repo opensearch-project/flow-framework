@@ -74,7 +74,7 @@ public class DeleteAgentStep implements WorkflowStep {
             );
             String agentId = (String) inputs.get(AGENT_ID);
 
-            mlClient.deleteAgent(agentId, new ActionListener<>() {
+            mlClient.deleteAgent(agentId, tenantId, new ActionListener<>() {
                 @Override
                 public void onResponse(DeleteResponse deleteResponse) {
                     deleteAgentFuture.onResponse(

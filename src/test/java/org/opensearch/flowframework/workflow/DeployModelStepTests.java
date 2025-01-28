@@ -47,6 +47,7 @@ import static org.opensearch.flowframework.common.WorkflowResources.MODEL_ID;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.nullable;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
@@ -118,11 +119,11 @@ public class DeployModelStepTests extends OpenSearchTestCase {
         ArgumentCaptor<ActionListener<MLDeployModelResponse>> actionListenerCaptor = ArgumentCaptor.forClass(ActionListener.class);
 
         doAnswer(invocation -> {
-            ActionListener<MLDeployModelResponse> actionListener = invocation.getArgument(1);
+            ActionListener<MLDeployModelResponse> actionListener = invocation.getArgument(2);
             MLDeployModelResponse output = new MLDeployModelResponse(taskId, mlTaskType, status);
             actionListener.onResponse(output);
             return null;
-        }).when(machineLearningNodeClient).deploy(eq(modelId), actionListenerCaptor.capture());
+        }).when(machineLearningNodeClient).deploy(eq(modelId), nullable(String.class), actionListenerCaptor.capture());
 
         // Stub getTask for success case
         doAnswer(invocation -> {
@@ -150,7 +151,7 @@ public class DeployModelStepTests extends OpenSearchTestCase {
 
         future.actionGet();
 
-        verify(machineLearningNodeClient, times(1)).deploy(any(String.class), any());
+        verify(machineLearningNodeClient, times(1)).deploy(any(String.class), nullable(String.class), any());
         verify(machineLearningNodeClient, times(1)).getTask(any(), any());
 
         assertEquals(modelId, future.get().getContent().get(MODEL_ID));
@@ -162,10 +163,10 @@ public class DeployModelStepTests extends OpenSearchTestCase {
         ArgumentCaptor<ActionListener<MLDeployModelResponse>> actionListenerCaptor = ArgumentCaptor.forClass(ActionListener.class);
 
         doAnswer(invocation -> {
-            ActionListener<MLDeployModelResponse> actionListener = invocation.getArgument(1);
+            ActionListener<MLDeployModelResponse> actionListener = invocation.getArgument(2);
             actionListener.onFailure(new FlowFrameworkException("Failed to deploy model", RestStatus.INTERNAL_SERVER_ERROR));
             return null;
-        }).when(machineLearningNodeClient).deploy(eq("modelId"), actionListenerCaptor.capture());
+        }).when(machineLearningNodeClient).deploy(eq("modelId"), nullable(String.class), actionListenerCaptor.capture());
 
         PlainActionFuture<WorkflowData> future = deployModel.execute(
             inputData.getNodeId(),
@@ -176,7 +177,7 @@ public class DeployModelStepTests extends OpenSearchTestCase {
             null
         );
 
-        verify(machineLearningNodeClient).deploy(eq("modelId"), actionListenerCaptor.capture());
+        verify(machineLearningNodeClient).deploy(eq("modelId"), nullable(String.class), actionListenerCaptor.capture());
 
         ExecutionException ex = assertThrows(ExecutionException.class, () -> future.get().getContent());
         assertTrue(ex.getCause() instanceof FlowFrameworkException);
@@ -194,11 +195,11 @@ public class DeployModelStepTests extends OpenSearchTestCase {
         ArgumentCaptor<ActionListener<MLDeployModelResponse>> actionListenerCaptor = ArgumentCaptor.forClass(ActionListener.class);
 
         doAnswer(invocation -> {
-            ActionListener<MLDeployModelResponse> actionListener = invocation.getArgument(1);
+            ActionListener<MLDeployModelResponse> actionListener = invocation.getArgument(2);
             MLDeployModelResponse output = new MLDeployModelResponse(taskId, mlTaskType, status);
             actionListener.onResponse(output);
             return null;
-        }).when(machineLearningNodeClient).deploy(eq(modelId), actionListenerCaptor.capture());
+        }).when(machineLearningNodeClient).deploy(eq(modelId), nullable(String.class), actionListenerCaptor.capture());
 
         // Stub getTask for success case
         doAnswer(invocation -> {
