@@ -199,6 +199,8 @@ dependencies {
     testImplementation "com.fasterxml.jackson.datatype:jackson-datatype-jsr310:${versions.jackson_databind}"
 
     // ZipArchive dependencies used for integration tests
+    // Check the order in case of transitive dependencies
+    zipArchive group: 'org.opensearch.plugin', name:'opensearch-job-scheduler', version: "${opensearch_build}"
     zipArchive group: 'org.opensearch.plugin', name:'opensearch-ml-plugin', version: "${opensearch_build}"
     zipArchive group: 'org.opensearch.plugin', name:'opensearch-knn', version: "${opensearch_build}"
     zipArchive group: 'org.opensearch.plugin', name:'neural-search', version: "${opensearch_build}"
@@ -537,6 +539,17 @@ task integTestRemote(type: RestIntegTestTask) {
 }
 
 List<Provider<RegularFile>> plugins = [
+        provider(new Callable<RegularFile>(){
+            @Override
+            RegularFile call() throws Exception {
+                return new RegularFile() {
+                    @Override
+                    File getAsFile() {
+                        return configurations.zipArchive.asFileTree.matching{include "**/opensearch-job-scheduler-${opensearch_build}.zip"}.getSingleFile()
+                    }
+                }
+            }
+        }),
         provider(new Callable<RegularFile>(){
             @Override
             RegularFile call() throws Exception {
