@@ -131,7 +131,7 @@ public class DeployModelStepTests extends OpenSearchTestCase {
             MLTask output = MLTask.builder().taskId(taskId).modelId(modelId).state(MLTaskState.COMPLETED).async(false).build();
             actionListener.onResponse(output);
             return null;
-        }).when(machineLearningNodeClient).getTask(any(), any());
+        }).when(machineLearningNodeClient).getTask(any(), nullable(String.class), any());
 
         doAnswer(invocation -> {
             ActionListener<WorkflowData> updateResponseListener = invocation.getArgument(5);
@@ -152,7 +152,7 @@ public class DeployModelStepTests extends OpenSearchTestCase {
         future.actionGet();
 
         verify(machineLearningNodeClient, times(1)).deploy(any(String.class), nullable(String.class), any());
-        verify(machineLearningNodeClient, times(1)).getTask(any(), any());
+        verify(machineLearningNodeClient, times(1)).getTask(any(), nullable(String.class), any());
 
         assertEquals(modelId, future.get().getContent().get(MODEL_ID));
     }
