@@ -486,6 +486,9 @@ public class RestWorkflowStateTenantAwareIT extends FlowFrameworkTenantAwareRest
         String otherModelId = resourcesCreated.get(1).get("resource_id").toString();
         assertNotNull(otherModelId);
 
+        String otherModelGroupId = resourcesCreated.get(2).get("resource_id").toString();
+        assertNotNull(otherModelGroupId);
+
         String otherAgentId = resourcesCreated.get(3).get("resource_id").toString();
         assertNotNull(otherAgentId);
 
