@@ -82,7 +82,7 @@ public abstract class AbstractRetryableWorkflowStep implements WorkflowStep {
     ) {
         CompletableFuture.runAsync(() -> {
             do {
-                mlClient.getTask(taskId, ActionListener.wrap(response -> {
+                mlClient.getTask(taskId, tenantId, ActionListener.wrap(response -> {
                     String resourceName = getResourceByWorkflowStep(getName());
                     String id = getResourceId(response);
                     switch (response.getState()) {
