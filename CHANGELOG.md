@@ -11,6 +11,8 @@ Inspired from [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 - Set Java target compatibility to JDK 21 ([#730](https://github.com/opensearch-project/flow-framework/pull/730))
 
 ### Documentation
+- Add alert summary agent template ([#873](https://github.com/opensearch-project/flow-framework/pull/873))
+- Add alert summary with log pattern agent template ([#945](https://github.com/opensearch-project/flow-framework/pull/945))
 - Add text to visualization agent template ([#936](https://github.com/opensearch-project/flow-framework/pull/936))
 
 ### Maintenance
