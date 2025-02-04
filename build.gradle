@@ -274,6 +274,7 @@ integTest {
             includeTestsMatching "org.opensearch.flowframework.*TenantAwareIT"
         }
         systemProperty "plugins.flow_framework.multi_tenancy_enabled", "true"
+        systemProperty "plugins.ml_commons.multi_tenancy_enabled", "true"
     }
 
     // Only rest case can run with remote cluster
@@ -316,6 +317,7 @@ integTest {
                     writer ->
                     writer.write("\n# Set multitenancy\n")
                     writer.write("plugins.flow_framework.multi_tenancy_enabled: true\n")
+                    writer.write("plugins.ml_commons.multi_tenancy_enabled: true\n")
                 }
                 // TODO this properly uses the remote client factory but needs a remote cluster set up
                 // TODO get the endpoint from a system property
