@@ -247,13 +247,15 @@ public class FlowFrameworkRestApiIT extends FlowFrameworkRestTestCase {
         List<ResourceCreated> resourcesCreated = getResourcesCreated(client(), workflowId, 30);
 
         // This template should create 3 resources, connector_id, registered model_id and deployed model_id
-        assertEquals(3, resourcesCreated.size());
+        assertEquals(4, resourcesCreated.size());
         assertEquals("create_connector", resourcesCreated.get(0).workflowStepName());
         assertNotNull(resourcesCreated.get(0).resourceId());
         assertEquals("register_remote_model", resourcesCreated.get(1).workflowStepName());
         assertNotNull(resourcesCreated.get(1).resourceId());
         assertEquals("deploy_model", resourcesCreated.get(2).workflowStepName());
         assertNotNull(resourcesCreated.get(2).resourceId());
+        assertEquals("register_agent", resourcesCreated.get(3).workflowStepName());
+        assertNotNull(resourcesCreated.get(3).resourceId());
 
         // Delete the workflow without deleting the resources
         Response deleteResponse = deleteWorkflow(client(), workflowId, "?clear_status=true");
