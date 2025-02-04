@@ -53,6 +53,7 @@ import static org.opensearch.flowframework.common.WorkflowResources.MODEL_GROUP_
 import static org.opensearch.flowframework.common.WorkflowResources.MODEL_ID;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.nullable;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
@@ -140,11 +141,11 @@ public class RegisterLocalPretrainedModelStepTests extends OpenSearchTestCase {
 
         // Stub getTask for success case
         doAnswer(invocation -> {
-            ActionListener<MLTask> actionListener = invocation.getArgument(1);
+            ActionListener<MLTask> actionListener = invocation.getArgument(2);
             MLTask output = MLTask.builder().taskId(taskId).modelId(modelId).state(MLTaskState.COMPLETED).async(false).build();
             actionListener.onResponse(output);
             return null;
-        }).when(machineLearningNodeClient).getTask(any(), any());
+        }).when(machineLearningNodeClient).getTask(any(), nullable(String.class), any());
 
         doAnswer(invocation -> {
             ActionListener<WorkflowData> updateResponseListener = invocation.getArgument(5);
@@ -165,7 +166,7 @@ public class RegisterLocalPretrainedModelStepTests extends OpenSearchTestCase {
         future.actionGet();
 
         verify(machineLearningNodeClient, times(1)).register(any(MLRegisterModelInput.class), any());
-        verify(machineLearningNodeClient, times(1)).getTask(any(), any());
+        verify(machineLearningNodeClient, times(1)).getTask(any(), nullable(String.class), any());
 
         assertEquals(modelId, future.get().getContent().get(MODEL_ID));
         assertEquals(status, future.get().getContent().get(REGISTER_MODEL_STATUS));
@@ -195,7 +196,7 @@ public class RegisterLocalPretrainedModelStepTests extends OpenSearchTestCase {
         future.actionGet();
 
         verify(machineLearningNodeClient, times(2)).register(any(MLRegisterModelInput.class), any());
-        verify(machineLearningNodeClient, times(2)).getTask(any(), any());
+        verify(machineLearningNodeClient, times(2)).getTask(any(), nullable(String.class), any());
 
         assertEquals(modelId, future.get().getContent().get(MODEL_ID));
         assertEquals(status, future.get().getContent().get(REGISTER_MODEL_STATUS));
@@ -239,7 +240,7 @@ public class RegisterLocalPretrainedModelStepTests extends OpenSearchTestCase {
 
         // Stub get ml task for failure case
         doAnswer(invocation -> {
-            ActionListener<MLTask> actionListener = invocation.getArgument(1);
+            ActionListener<MLTask> actionListener = invocation.getArgument(2);
             MLTask output = MLTask.builder()
                 .taskId(taskId)
                 .modelId(modelId)
@@ -249,7 +250,7 @@ public class RegisterLocalPretrainedModelStepTests extends OpenSearchTestCase {
                 .build();
             actionListener.onResponse(output);
             return null;
-        }).when(machineLearningNodeClient).getTask(any(), any());
+        }).when(machineLearningNodeClient).getTask(any(), nullable(String.class), any());
 
         PlainActionFuture<WorkflowData> future = this.registerLocalPretrainedModelStep.execute(
             workflowData.getNodeId(),
