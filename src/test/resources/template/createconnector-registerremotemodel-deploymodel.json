@@ -54,6 +54,28 @@
           "previous_node_inputs": {
             "workflow_step_2": "model_id"
           }
+        },
+        {
+          "id": "workflow_step_4",
+          "type": "register_agent",
+          "previous_node_inputs": {
+            "workflow_step_3": "model_id"
+          },
+          "user_inputs": {
+            "name": "Test Agent",
+            "type": "conversational",
+            "parameters": {
+              "greeting": "Hello! How can I assist you?"
+            },
+            "llm.parameters": {
+              "max_iteration": "5",
+              "stop_when_no_tool_found": "true"
+            },
+            "memory": {
+              "type": "conversation_index"
+            },
+            "app_type": "chatbot"
+          }
         }
       ],
       "edges": [
@@ -64,6 +86,10 @@
         {
           "source": "workflow_step_2",
           "dest": "workflow_step_3"
+        },
+        {
+          "source": "workflow_step_3",
+          "dest": "workflow_step_4"
         }
       ]
     }
