@@ -182,7 +182,7 @@ dependencies {
     implementation "jakarta.json.bind:jakarta.json.bind-api:3.0.1"
     implementation "org.glassfish:jakarta.json:2.0.1"
     implementation "org.eclipse:yasson:3.0.4"
-    implementation "com.google.code.gson:gson:2.12.0"
+    implementation "com.google.code.gson:gson:2.12.1"
     // Swagger-Parser dependencies for API consistency tests
     implementation "io.swagger.core.v3:swagger-models:${swaggerCoreVersion}"
     implementation "io.swagger.core.v3:swagger-core:${swaggerCoreVersion}"
