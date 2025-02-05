@@ -40,6 +40,8 @@ public class ApiSpecFetcher {
         PARSE_OPTIONS.setResolveFully(true);
     }
 
+    private ApiSpecFetcher() {}
+
     /**
      * Parses the OpenAPI specification directly from the URI.
      *
@@ -87,23 +89,13 @@ public class ApiSpecFetcher {
     }
 
     private static Content getContent(RestRequest.Method method, PathItem pathItem) throws IllegalArgumentException, ApiSpecParseException {
-        Operation operation;
-        switch (method) {
-            case POST:
-                operation = pathItem.getPost();
-                break;
-            case GET:
-                operation = pathItem.getGet();
-                break;
-            case PUT:
-                operation = pathItem.getPut();
-                break;
-            case DELETE:
-                operation = pathItem.getDelete();
-                break;
-            default:
-                throw new IllegalArgumentException("Unsupported HTTP method: " + method);
-        }
+        Operation operation = switch (method) {
+            case POST -> pathItem.getPost();
+            case GET -> pathItem.getGet();
+            case PUT -> pathItem.getPut();
+            case DELETE -> pathItem.getDelete();
+            default -> throw new IllegalArgumentException("Unsupported HTTP method: " + method);
+        };
 
         if (operation == null) {
             throw new IllegalArgumentException("No operation found for the specified method: " + method);
