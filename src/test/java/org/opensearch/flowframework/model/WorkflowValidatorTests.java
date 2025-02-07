@@ -8,7 +8,6 @@
  */
 package org.opensearch.flowframework.model;
 
-import org.opensearch.client.Client;
 import org.opensearch.flowframework.common.FlowFrameworkSettings;
 import org.opensearch.flowframework.indices.FlowFrameworkIndicesHandler;
 import org.opensearch.flowframework.workflow.WorkflowProcessSorter;
@@ -17,6 +16,7 @@ import org.opensearch.flowframework.workflow.WorkflowStepFactory.WorkflowSteps;
 import org.opensearch.ml.client.MachineLearningNodeClient;
 import org.opensearch.test.OpenSearchTestCase;
 import org.opensearch.threadpool.ThreadPool;
+import org.opensearch.transport.client.Client;
 
 import java.io.IOException;
 import java.util.ArrayList;

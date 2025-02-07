@@ -9,8 +9,6 @@
 package org.opensearch.flowframework.workflow;
 
 import org.opensearch.Version;
-import org.opensearch.client.AdminClient;
-import org.opensearch.client.Client;
 import org.opensearch.cluster.service.ClusterService;
 import org.opensearch.common.settings.ClusterSettings;
 import org.opensearch.common.settings.Setting;
@@ -32,6 +30,8 @@ import org.opensearch.test.OpenSearchTestCase;
 import org.opensearch.threadpool.ScalingExecutorBuilder;
 import org.opensearch.threadpool.TestThreadPool;
 import org.opensearch.threadpool.ThreadPool;
+import org.opensearch.transport.client.AdminClient;
+import org.opensearch.transport.client.Client;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 

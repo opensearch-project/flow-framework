@@ -11,7 +11,6 @@ package org.opensearch.flowframework.workflow;
 import org.apache.lucene.tests.util.LuceneTestCase;
 import org.opensearch.OpenSearchException;
 import org.opensearch.action.support.PlainActionFuture;
-import org.opensearch.client.Client;
 import org.opensearch.common.Randomness;
 import org.opensearch.common.unit.TimeValue;
 import org.opensearch.core.action.ActionListener;
@@ -20,6 +19,7 @@ import org.opensearch.index.reindex.BulkByScrollResponse;
 import org.opensearch.index.reindex.BulkByScrollTask;
 import org.opensearch.index.reindex.ReindexRequest;
 import org.opensearch.test.OpenSearchTestCase;
+import org.opensearch.transport.client.Client;
 
 import java.io.IOException;
 import java.util.Collections;

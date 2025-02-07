@@ -9,7 +9,6 @@
 package org.opensearch.flowframework;
 
 import org.opensearch.action.ActionRequest;
-import org.opensearch.client.Client;
 import org.opensearch.cluster.metadata.IndexNameExpressionResolver;
 import org.opensearch.cluster.node.DiscoveryNodes;
 import org.opensearch.cluster.service.ClusterService;
@@ -74,6 +73,7 @@ import org.opensearch.script.ScriptService;
 import org.opensearch.threadpool.ExecutorBuilder;
 import org.opensearch.threadpool.ScalingExecutorBuilder;
 import org.opensearch.threadpool.ThreadPool;
+import org.opensearch.transport.client.Client;
 import org.opensearch.watcher.ResourceWatcherService;
 
 import java.util.Collection;
@@ -136,7 +136,8 @@ public class FlowFrameworkPlugin extends Plugin implements ActionPlugin, SystemI
     ) {
         Settings settings = environment.settings();
         flowFrameworkSettings = new FlowFrameworkSettings(clusterService, settings);
-        MachineLearningNodeClient mlClient = new MachineLearningNodeClient(client);
+        // TODO: Commented out to compile. Uncomment out when ML Commons is on alpha1
+        MachineLearningNodeClient mlClient = null; // new MachineLearningNodeClient(client);
         SdkClient sdkClient = SdkClientFactory.createSdkClient(
             client,
             xContentRegistry,

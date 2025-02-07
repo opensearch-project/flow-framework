@@ -206,7 +206,7 @@ public abstract class FlowFrameworkTenantAwareRestTestCase extends FlowFramework
             Response response = makeRequest(searchRequest, GET, restPath + "_search");
             assertOK(response);
             SearchResponse searchResponse = searchResponseFromResponse(response);
-            assertEquals(hits, searchResponse.getHits().getTotalHits().value);
+            assertEquals(hits, searchResponse.getHits().getTotalHits().value());
         }, 20, TimeUnit.SECONDS);
     }
 }

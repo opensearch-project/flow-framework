@@ -8,7 +8,6 @@
  */
 package org.opensearch.flowframework.util;
 
-import org.opensearch.client.Client;
 import org.opensearch.common.unit.TimeValue;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.flowframework.TestHelpers;
@@ -19,6 +18,7 @@ import org.opensearch.flowframework.transport.WorkflowResponse;
 import org.opensearch.test.OpenSearchTestCase;
 import org.opensearch.threadpool.Scheduler;
 import org.opensearch.threadpool.ThreadPool;
+import org.opensearch.transport.client.Client;
 
 import java.time.Instant;
 import java.util.Collections;

@@ -13,7 +13,6 @@ import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.message.ParameterizedMessageFactory;
 import org.opensearch.ExceptionsHelper;
 import org.opensearch.action.support.PlainActionFuture;
-import org.opensearch.client.Client;
 import org.opensearch.common.Booleans;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.core.common.Strings;
@@ -25,6 +24,7 @@ import org.opensearch.flowframework.util.ParseUtils;
 import org.opensearch.index.reindex.BulkByScrollResponse;
 import org.opensearch.index.reindex.ReindexAction;
 import org.opensearch.index.reindex.ReindexRequest;
+import org.opensearch.transport.client.Client;
 
 import java.util.Map;
 import java.util.Set;

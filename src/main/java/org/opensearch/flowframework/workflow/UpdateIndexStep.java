@@ -15,7 +15,6 @@ import org.opensearch.ExceptionsHelper;
 import org.opensearch.action.admin.indices.settings.get.GetSettingsRequest;
 import org.opensearch.action.admin.indices.settings.put.UpdateSettingsRequest;
 import org.opensearch.action.support.PlainActionFuture;
-import org.opensearch.client.Client;
 import org.opensearch.common.settings.Settings;
 import org.opensearch.common.xcontent.XContentHelper;
 import org.opensearch.core.action.ActionListener;
@@ -26,6 +25,7 @@ import org.opensearch.core.xcontent.MediaTypeRegistry;
 import org.opensearch.flowframework.exception.FlowFrameworkException;
 import org.opensearch.flowframework.exception.WorkflowStepException;
 import org.opensearch.flowframework.util.ParseUtils;
+import org.opensearch.transport.client.Client;
 
 import java.nio.charset.StandardCharsets;
 import java.util.Collections;
