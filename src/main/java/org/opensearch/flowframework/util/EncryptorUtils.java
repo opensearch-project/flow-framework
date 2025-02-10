@@ -76,7 +76,7 @@ public class EncryptorUtils {
     private static final String WRAPPING_ALGORITHM = "AES/GCM/NOPADDING";
 
     // concurrent map can't have null as a key. This key is to support single tenancy
-    public static final String DEFAULT_TENANT_ID = "";
+    private static final String DEFAULT_TENANT_ID = "";
 
     private final ClusterService clusterService;
     private final Client client;

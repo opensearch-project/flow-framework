@@ -6,8 +6,7 @@ allprojects {
             target '**/*.java'
 
             removeUnusedImports()
-            importOrder(
-                    'de.thetaphi',
+            importOrder('de.thetaphi',
                     'com.carrotsearch',
                     'com.fasterxml',
                     'com.avast',
@@ -19,11 +18,10 @@ allprojects {
                     'javax',
                     'java',
                     '',
-                    '\\#java|\\#org.opensearch|\\#org.hamcrest|\\#'
-            )
+                    '\\#java|\\#org.opensearch|\\#org.hamcrest|\\#')
             eclipse().configFile rootProject.file('formatter/formatterConfig.xml')
             trimTrailingWhitespace()
-            endWithNewline();
+            endWithNewline()
 
             // See DEVELOPER_GUIDE.md for details of when to enable this.
             if (System.getProperty('spotless.paddedcell') != null) {
@@ -35,10 +33,10 @@ allprojects {
 
             trimTrailingWhitespace()
             endWithNewline()
-            indentWithSpaces()
+            leadingTabsToSpaces()
         }
         format("license", {
-            licenseHeaderFile("${rootProject.file("formatter/license-header.txt")}", "package ");
+            licenseHeaderFile("${rootProject.file("formatter/license-header.txt")}", "package ")
             target("src/*/java/**/*.java")
         })
     }

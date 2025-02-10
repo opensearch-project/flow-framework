@@ -23,6 +23,8 @@ import java.util.Objects;
  */
 public class TenantAwareHelper {
 
+    private TenantAwareHelper() {}
+
     /**
      * Validates the tenant ID based on the multi-tenancy feature setting.
      *

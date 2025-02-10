@@ -34,6 +34,8 @@ public class WorkflowTimeoutUtility {
 
     private static final Logger logger = LogManager.getLogger(WorkflowTimeoutUtility.class);
 
+    private WorkflowTimeoutUtility() {}
+
     /**
      * Schedules a timeout task for a workflow execution.
      *
