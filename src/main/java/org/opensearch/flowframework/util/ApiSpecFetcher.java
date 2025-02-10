@@ -40,6 +40,8 @@ public class ApiSpecFetcher {
         PARSE_OPTIONS.setResolveFully(true);
     }
 
+    private ApiSpecFetcher() {}
+
     /**
      * Parses the OpenAPI specification directly from the URI.
      *
