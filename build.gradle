@@ -15,14 +15,10 @@ buildscript {
         opensearch_build = version_tokens[0] + '.0'
         plugin_no_snapshot = opensearch_build
         if (buildVersionQualifier) {
-            // TODO: when upstream plugin dependencies are on alpha1, switch to opensearch_build and remove this
-            opensearch_build_noalpha = opensearch_build
             opensearch_build += "-${buildVersionQualifier}"
             plugin_no_snapshot += "-${buildVersionQualifier}"
         }
         if (isSnapshot) {
-            // TODO: when upstream plugin dependencies are on alpha1, switch to opensearch_build and remove this
-            opensearch_build_noalpha += "-SNAPSHOT"
             opensearch_build += "-SNAPSHOT"
         }
         opensearch_group = "org.opensearch"
@@ -171,8 +167,7 @@ configurations {
 
 dependencies {
     implementation "org.opensearch:opensearch:${opensearch_version}"
-    // TODO remove _noalpha
-    api group: 'org.opensearch', name:'opensearch-ml-client', version: "${opensearch_build_noalpha}"
+    api group: 'org.opensearch', name:'opensearch-ml-client', version: "${opensearch_build}"
     api(group: 'org.opensearch.client', name: 'opensearch-rest-client', version: "${opensearch_version}") {
         exclude group: "org.apache.httpcomponents.client5", module: "httpclient5"
     }
@@ -206,11 +201,9 @@ dependencies {
     // ZipArchive dependencies used for integration tests
     // Check the order in case of transitive dependencies
     zipArchive group: 'org.opensearch.plugin', name:'opensearch-job-scheduler', version: "${opensearch_build}"
-    // TODO remove _noalpha
-    zipArchive group: 'org.opensearch.plugin', name:'opensearch-ml-plugin', version: "${opensearch_build_noalpha}"
+    zipArchive group: 'org.opensearch.plugin', name:'opensearch-ml-plugin', version: "${opensearch_build}"
     zipArchive group: 'org.opensearch.plugin', name:'opensearch-knn', version: "${opensearch_build}"
-    // TODO remove _noalpha
-    zipArchive group: 'org.opensearch.plugin', name:'neural-search', version: "${opensearch_build_noalpha}"
+    zipArchive group: 'org.opensearch.plugin', name:'neural-search', version: "${opensearch_build}"
     secureIntegTestPluginArchive group: 'org.opensearch.plugin', name:'opensearch-security', version: "${opensearch_build}"
 
     configurations.all {
