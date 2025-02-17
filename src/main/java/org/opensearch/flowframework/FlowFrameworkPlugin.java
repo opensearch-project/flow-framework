@@ -136,8 +136,7 @@ public class FlowFrameworkPlugin extends Plugin implements ActionPlugin, SystemI
     ) {
         Settings settings = environment.settings();
         flowFrameworkSettings = new FlowFrameworkSettings(clusterService, settings);
-        // TODO: Commented out to compile. Uncomment out when ML Commons is on alpha1
-        MachineLearningNodeClient mlClient = null; // new MachineLearningNodeClient(client);
+        MachineLearningNodeClient mlClient = new MachineLearningNodeClient(client);
         SdkClient sdkClient = SdkClientFactory.createSdkClient(
             client,
             xContentRegistry,
