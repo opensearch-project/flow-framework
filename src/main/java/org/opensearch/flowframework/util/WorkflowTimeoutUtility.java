@@ -11,7 +11,6 @@ package org.opensearch.flowframework.util;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.opensearch.ExceptionsHelper;
-import org.opensearch.client.Client;
 import org.opensearch.common.unit.TimeValue;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.flowframework.exception.FlowFrameworkException;
@@ -20,6 +19,7 @@ import org.opensearch.flowframework.transport.GetWorkflowStateRequest;
 import org.opensearch.flowframework.transport.WorkflowResponse;
 import org.opensearch.threadpool.Scheduler;
 import org.opensearch.threadpool.ThreadPool;
+import org.opensearch.transport.client.Client;
 
 import java.util.concurrent.atomic.AtomicBoolean;
 

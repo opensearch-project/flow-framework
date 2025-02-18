@@ -16,7 +16,6 @@ import org.opensearch.action.get.GetResponse;
 import org.opensearch.action.search.SearchResponse;
 import org.opensearch.action.support.ActionFilters;
 import org.opensearch.action.support.HandledTransportAction;
-import org.opensearch.client.Client;
 import org.opensearch.cluster.service.ClusterService;
 import org.opensearch.common.inject.Inject;
 import org.opensearch.common.settings.Settings;
@@ -46,6 +45,7 @@ import org.opensearch.remote.metadata.common.SdkClientUtils;
 import org.opensearch.search.builder.SearchSourceBuilder;
 import org.opensearch.tasks.Task;
 import org.opensearch.transport.TransportService;
+import org.opensearch.transport.client.Client;
 
 import java.io.IOException;
 import java.time.Instant;
@@ -546,7 +546,7 @@ public class CreateWorkflowTransportAction extends HandledTransportAction<Workfl
                         context.restore();
                         try {
                             SearchResponse searchResponse = SearchResponse.fromXContent(r.parser());
-                            internalListener.onResponse(searchResponse.getHits().getTotalHits().value < maxWorkflow);
+                            internalListener.onResponse(searchResponse.getHits().getTotalHits().value() < maxWorkflow);
                         } catch (Exception e) {
                             logger.error("Failed to parse workflow searchResponse", e);
                             internalListener.onFailure(e);

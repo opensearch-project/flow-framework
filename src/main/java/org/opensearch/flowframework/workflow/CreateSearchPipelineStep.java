@@ -8,8 +8,8 @@
  */
 package org.opensearch.flowframework.workflow;
 
-import org.opensearch.client.Client;
 import org.opensearch.flowframework.indices.FlowFrameworkIndicesHandler;
+import org.opensearch.transport.client.Client;
 
 /**
  * Step to create a search pipeline
