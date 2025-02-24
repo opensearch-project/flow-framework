@@ -8,12 +8,12 @@
  */
 package org.opensearch.flowframework.transport;
 
-import org.opensearch.Version;
 import org.opensearch.action.ActionRequest;
 import org.opensearch.action.ActionRequestValidationException;
 import org.opensearch.common.unit.TimeValue;
 import org.opensearch.core.common.io.stream.StreamInput;
 import org.opensearch.core.common.io.stream.StreamOutput;
+import org.opensearch.flowframework.common.CommonValue;
 import org.opensearch.flowframework.model.Template;
 
 import java.io.IOException;
@@ -70,7 +70,7 @@ public class ReprovisionWorkflowRequest extends ActionRequest {
         this.workflowId = in.readString();
         this.originalTemplate = Template.parse(in.readString());
         this.updatedTemplate = Template.parse(in.readString());
-        if (in.getVersion().onOrAfter(Version.V_2_19_0)) {
+        if (in.getVersion().onOrAfter(CommonValue.VERSION_2_19_0)) {
             this.waitForCompletionTimeout = in.readTimeValue();
         }
 
@@ -82,7 +82,7 @@ public class ReprovisionWorkflowRequest extends ActionRequest {
         out.writeString(workflowId);
         out.writeString(originalTemplate.toJson());
         out.writeString(updatedTemplate.toJson());
-        if (out.getVersion().onOrAfter(Version.V_2_19_0)) {
+        if (out.getVersion().onOrAfter(CommonValue.VERSION_2_19_0)) {
             out.writeTimeValue(waitForCompletionTimeout);
         }
     }
