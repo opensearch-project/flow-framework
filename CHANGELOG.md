@@ -26,3 +26,4 @@ Inspired from [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 - Update template for alert summary with new log pattern tools ([#1021](https://github.com/opensearch-project/flow-framework/pull/1021))
 ### Maintenance
 ### Refactoring
+- Use string-based version parsing to improve portability ([#1067](https://github.com/opensearch-project/flow-framework/pull/1067))
