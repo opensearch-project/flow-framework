@@ -14,6 +14,7 @@ import org.opensearch.cluster.service.ClusterService;
 import org.opensearch.common.settings.ClusterSettings;
 import org.opensearch.common.settings.Settings;
 import org.opensearch.common.unit.TimeValue;
+import org.opensearch.common.util.concurrent.OpenSearchExecutors;
 import org.opensearch.common.util.concurrent.ThreadContext;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.core.xcontent.NamedXContentRegistry;
@@ -49,6 +50,7 @@ import org.mockito.ArgumentCaptor;
 import static org.opensearch.flowframework.common.CommonValue.PROVISION_WORKFLOW;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyMap;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.nullable;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doNothing;
@@ -61,7 +63,6 @@ public class ReprovisionWorkflowTransportActionTests extends OpenSearchTestCase 
 
     private TransportService transportService;
     private ActionFilters actionFilters;
-    private ThreadPool threadPool;
     private Client client;
     private SdkClient sdkClient;
     private WorkflowStepFactory workflowStepFactory;
@@ -79,14 +80,8 @@ public class ReprovisionWorkflowTransportActionTests extends OpenSearchTestCase 
 
         this.transportService = mock(TransportService.class);
         this.actionFilters = mock(ActionFilters.class);
-        this.threadPool = mock(ThreadPool.class);
         this.client = mock(Client.class);
-        this.sdkClient = SdkClientFactory.createSdkClient(
-            client,
-            NamedXContentRegistry.EMPTY,
-            Collections.emptyMap(),
-            threadPool.executor(ThreadPool.Names.SAME)
-        );
+        this.sdkClient = SdkClientFactory.createSdkClient(client, NamedXContentRegistry.EMPTY, Collections.emptyMap());
         this.workflowStepFactory = mock(WorkflowStepFactory.class);
         this.workflowProcessSorter = mock(WorkflowProcessSorter.class);
         this.flowFrameworkIndicesHandler = mock(FlowFrameworkIndicesHandler.class);
@@ -101,10 +96,17 @@ public class ReprovisionWorkflowTransportActionTests extends OpenSearchTestCase 
         );
         when(clusterService.getClusterSettings()).thenReturn(clusterSettings);
 
+        ThreadPool clientThreadPool = mock(ThreadPool.class);
+        ThreadContext threadContext = new ThreadContext(Settings.EMPTY);
+
+        when(client.threadPool()).thenReturn(clientThreadPool);
+        when(clientThreadPool.getThreadContext()).thenReturn(threadContext);
+        when(clientThreadPool.executor(anyString())).thenReturn(OpenSearchExecutors.newDirectExecutorService());
+
         this.reprovisionWorkflowTransportAction = new ReprovisionWorkflowTransportAction(
             transportService,
             actionFilters,
-            threadPool,
+            clientThreadPool,
             client,
             sdkClient,
             workflowStepFactory,
@@ -118,11 +120,6 @@ public class ReprovisionWorkflowTransportActionTests extends OpenSearchTestCase 
             Settings.EMPTY
         );
 
-        ThreadPool clientThreadPool = mock(ThreadPool.class);
-        ThreadContext threadContext = new ThreadContext(Settings.EMPTY);
-
-        when(client.threadPool()).thenReturn(clientThreadPool);
-        when(clientThreadPool.getThreadContext()).thenReturn(threadContext);
     }
 
     public void testReprovisionWorkflow() throws Exception {

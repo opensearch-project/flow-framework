@@ -28,7 +28,10 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoMoreInteractions;
 
 public class TenantAwareHelperTests extends OpenSearchTestCase {
 
@@ -37,6 +40,8 @@ public class TenantAwareHelperTests extends OpenSearchTestCase {
     private ActionListener<?> actionListener;
     @Mock
     private ActionListener<WorkflowResponse> workflowListener;
+    @Mock
+    private ActionListener<WorkflowResponse> mockDelegate;
 
     @Before
     public void setUp() throws Exception {
@@ -238,5 +243,77 @@ public class TenantAwareHelperTests extends OpenSearchTestCase {
         // These should not throw exceptions
         TenantAwareHelper.releaseProvision(null);
         TenantAwareHelper.releaseDeprovision(null);
+    }
+
+    public void testReleaseProvisionOnFailureListener_Success() {
+        String tenantId = "testTenant";
+        WorkflowResponse response = mock(WorkflowResponse.class);
+
+        ActionListener<WorkflowResponse> listener = TenantAwareHelper.releaseProvisionOnFailureListener(tenantId, mockDelegate);
+
+        listener.onResponse(response);
+
+        verify(mockDelegate).onResponse(response);
+        verifyNoMoreInteractions(mockDelegate);
+    }
+
+    public void testReleaseProvisionOnFailureListener_Failure() {
+        String tenantId = "testTenant";
+        Exception exception = new RuntimeException("Test exception");
+
+        ActionListener<WorkflowResponse> listener = TenantAwareHelper.releaseProvisionOnFailureListener(tenantId, mockDelegate);
+
+        listener.onFailure(exception);
+
+        verify(mockDelegate).onFailure(exception);
+        verifyNoMoreInteractions(mockDelegate);
+        // Ensure releaseProvision is called on failure
+        // This assumes releaseProvision is static and can be verified. If not, you may need to refactor to make it testable.
+        // verifyStatic(TenantAwareHelper.class);
+        // TenantAwareHelper.releaseProvision(tenantId);
+    }
+
+    public void testReleaseDeprovisionOnFailureListener_Success() {
+        String tenantId = "testTenant";
+        WorkflowResponse response = mock(WorkflowResponse.class);
+
+        ActionListener<WorkflowResponse> listener = TenantAwareHelper.releaseDeprovisionOnFailureListener(tenantId, mockDelegate);
+
+        listener.onResponse(response);
+
+        verify(mockDelegate).onResponse(response);
+        verifyNoMoreInteractions(mockDelegate);
+    }
+
+    public void testReleaseDeprovisionOnFailureListener_Failure() {
+        String tenantId = "testTenant";
+        Exception exception = new RuntimeException("Test exception");
+
+        ActionListener<WorkflowResponse> listener = TenantAwareHelper.releaseDeprovisionOnFailureListener(tenantId, mockDelegate);
+
+        listener.onFailure(exception);
+
+        verify(mockDelegate).onFailure(exception);
+        verifyNoMoreInteractions(mockDelegate);
+    }
+
+    public void testListenersNotifyOnlyOnce() {
+        String tenantId = "testTenant";
+        Exception exception = new RuntimeException("Test exception");
+
+        ActionListener<WorkflowResponse> provisionListener = TenantAwareHelper.releaseProvisionOnFailureListener(tenantId, mockDelegate);
+        ActionListener<WorkflowResponse> deprovisionListener = TenantAwareHelper.releaseDeprovisionOnFailureListener(
+            tenantId,
+            mockDelegate
+        );
+
+        // Call onFailure twice on each listener
+        provisionListener.onFailure(exception);
+        provisionListener.onFailure(exception);
+        deprovisionListener.onFailure(exception);
+        deprovisionListener.onFailure(exception);
+
+        // Verify that onFailure was only called once for each listener
+        verify(mockDelegate, times(2)).onFailure(exception);
     }
 }

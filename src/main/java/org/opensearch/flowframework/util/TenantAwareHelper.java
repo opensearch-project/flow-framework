@@ -192,4 +192,46 @@ public class TenantAwareHelper {
             count.decrementAndGet();
         }
     }
+
+    public static ActionListener<WorkflowResponse> releaseProvisionOnFailureListener(
+        String tenantId,
+        ActionListener<WorkflowResponse> delegate
+    ) {
+        return ActionListener.notifyOnce(new ActionListener<>() {
+            @Override
+            public void onResponse(WorkflowResponse response) {
+                delegate.onResponse(response);
+            }
+
+            @Override
+            public void onFailure(Exception e) {
+                try {
+                    releaseProvision(tenantId);
+                } finally {
+                    delegate.onFailure(e);
+                }
+            }
+        });
+    }
+
+    public static ActionListener<WorkflowResponse> releaseDeprovisionOnFailureListener(
+        String tenantId,
+        ActionListener<WorkflowResponse> delegate
+    ) {
+        return ActionListener.notifyOnce(new ActionListener<>() {
+            @Override
+            public void onResponse(WorkflowResponse response) {
+                delegate.onResponse(response);
+            }
+
+            @Override
+            public void onFailure(Exception e) {
+                try {
+                    releaseDeprovision(tenantId);
+                } finally {
+                    delegate.onFailure(e);
+                }
+            }
+        });
+    }
 }

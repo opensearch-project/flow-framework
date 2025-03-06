@@ -127,12 +127,16 @@ public class ProvisionWorkflowTransportAction extends HandledTransportAction<Wor
     }
 
     @Override
-    protected void doExecute(Task task, WorkflowRequest request, ActionListener<WorkflowResponse> listener) {
+    protected void doExecute(Task task, WorkflowRequest request, ActionListener<WorkflowResponse> workflowListener) {
         // Retrieve use case template from global context
         String tenantId = request.getTemplate() == null ? null : request.getTemplate().getTenantId();
-        if (!TenantAwareHelper.validateTenantId(flowFrameworkSettings.isMultiTenancyEnabled(), tenantId, listener)) {
+        if (!TenantAwareHelper.validateTenantId(flowFrameworkSettings.isMultiTenancyEnabled(), tenantId, workflowListener)) {
             return;
         }
+        if (!TenantAwareHelper.tryAcquireProvision(flowFrameworkSettings.getMaxActiveProvisionsPerTenant(), tenantId, workflowListener)) {
+            return;
+        }
+        ActionListener<WorkflowResponse> listener = TenantAwareHelper.releaseProvisionOnFailureListener(tenantId, workflowListener);
         String workflowId = request.getWorkflowId();
         User user = getUserContext(client);
 
@@ -312,6 +316,7 @@ public class ProvisionWorkflowTransportAction extends HandledTransportAction<Wor
         ActionListener<WorkflowResponse> listener
     ) {
         try {
+            System.err.println("HERE 1");
             client.threadPool().executor(PROVISION_WORKFLOW_THREAD_POOL).execute(() -> {
                 executeWorkflow(workflowSequence, workflowId, tenantId, listener, false);
             });

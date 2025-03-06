@@ -98,12 +98,7 @@ public class DeprovisionWorkflowTransportActionTests extends OpenSearchTestCase 
     public void setUp() throws Exception {
         super.setUp();
         this.client = mock(Client.class);
-        this.sdkClient = SdkClientFactory.createSdkClient(
-            client,
-            NamedXContentRegistry.EMPTY,
-            Collections.emptyMap(),
-            threadPool.executor(ThreadPool.Names.SAME)
-        );
+        this.sdkClient = SdkClientFactory.createSdkClient(client, NamedXContentRegistry.EMPTY, Collections.emptyMap());
         ThreadPool clientThreadPool = spy(threadPool);
         when(client.threadPool()).thenReturn(clientThreadPool);
         ThreadContext threadContext = new ThreadContext(Settings.EMPTY);

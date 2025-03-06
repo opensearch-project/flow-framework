@@ -124,11 +124,19 @@ public class DeprovisionWorkflowTransportAction extends HandledTransportAction<W
     }
 
     @Override
-    protected void doExecute(Task task, WorkflowRequest request, ActionListener<WorkflowResponse> listener) {
-        String tenantId = request.getTemplate() == null ? null : request.getTemplate().getTenantId();
-        if (!TenantAwareHelper.validateTenantId(flowFrameworkSettings.isMultiTenancyEnabled(), tenantId, listener)) {
+    protected void doExecute(Task task, WorkflowRequest request, ActionListener<WorkflowResponse> workflowListener) {
+        final String tenantId = request.getTemplate() == null ? null : request.getTemplate().getTenantId();
+        if (!TenantAwareHelper.validateTenantId(flowFrameworkSettings.isMultiTenancyEnabled(), tenantId, workflowListener)) {
             return;
         }
+        if (!TenantAwareHelper.tryAcquireDeprovision(
+            flowFrameworkSettings.getMaxActiveDeprovisionsPerTenant(),
+            tenantId,
+            workflowListener
+        )) {
+            return;
+        }
+        ActionListener<WorkflowResponse> listener = TenantAwareHelper.releaseDeprovisionOnFailureListener(tenantId, workflowListener);
         String workflowId = request.getWorkflowId();
         User user = getUserContext(client);
 
