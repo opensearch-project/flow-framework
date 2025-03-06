@@ -139,11 +139,15 @@ public class ReprovisionWorkflowTransportAction extends HandledTransportAction<R
     }
 
     @Override
-    protected void doExecute(Task task, ReprovisionWorkflowRequest request, ActionListener<WorkflowResponse> listener) {
+    protected void doExecute(Task task, ReprovisionWorkflowRequest request, ActionListener<WorkflowResponse> workflowListener) {
         String tenantId = request.getUpdatedTemplate() == null ? null : request.getUpdatedTemplate().getTenantId();
-        if (!TenantAwareHelper.validateTenantId(flowFrameworkSettings.isMultiTenancyEnabled(), tenantId, listener)) {
+        if (!TenantAwareHelper.validateTenantId(flowFrameworkSettings.isMultiTenancyEnabled(), tenantId, workflowListener)) {
             return;
         }
+        if (!TenantAwareHelper.tryAcquireProvision(flowFrameworkSettings.getMaxActiveProvisionsPerTenant(), tenantId, workflowListener)) {
+            return;
+        }
+        ActionListener<WorkflowResponse> listener = TenantAwareHelper.releaseProvisionOnFailureListener(tenantId, workflowListener);
         String workflowId = request.getWorkflowId();
         User user = getUserContext(client);
 
