@@ -12,6 +12,7 @@ import org.opensearch.core.action.ActionListener;
 import org.opensearch.core.rest.RestStatus;
 import org.opensearch.flowframework.common.CommonValue;
 import org.opensearch.flowframework.exception.FlowFrameworkException;
+import org.opensearch.flowframework.transport.WorkflowResponse;
 import org.opensearch.rest.RestRequest;
 import org.opensearch.test.OpenSearchTestCase;
 import org.opensearch.test.rest.FakeRestRequest;
@@ -34,6 +35,8 @@ public class TenantAwareHelperTests extends OpenSearchTestCase {
     private static final String NO_PERMISSION_TO_ACCESS = "No permission to access this resource";
     @Mock
     private ActionListener<?> actionListener;
+    @Mock
+    private ActionListener<WorkflowResponse> workflowListener;
 
     @Before
     public void setUp() throws Exception {
@@ -155,4 +158,85 @@ public class TenantAwareHelperTests extends OpenSearchTestCase {
         assertEquals("", actualTenantID);
     }
 
+    public void testTryAcquireProvision_BelowLimit() {
+        String tenantId = "test-tenant1";
+        int maxExecutions = 2;
+
+        assertTrue(TenantAwareHelper.tryAcquireProvision(maxExecutions, tenantId, workflowListener));
+        assertTrue(TenantAwareHelper.tryAcquireProvision(maxExecutions, tenantId, workflowListener));
+    }
+
+    public void testTryAcquireProvision_AtLimit() {
+        String tenantId = "test-tenant2";
+        int maxExecutions = 1;
+
+        assertTrue(TenantAwareHelper.tryAcquireProvision(maxExecutions, tenantId, workflowListener));
+        assertFalse(TenantAwareHelper.tryAcquireProvision(maxExecutions, tenantId, workflowListener));
+
+        ArgumentCaptor<FlowFrameworkException> captor = ArgumentCaptor.forClass(FlowFrameworkException.class);
+        verify(workflowListener).onFailure(captor.capture());
+        FlowFrameworkException exception = captor.getValue();
+        assertEquals(RestStatus.TOO_MANY_REQUESTS, exception.status());
+        assertEquals("Exceeded max simultaneous provisioning requests: 1", exception.getMessage());
+    }
+
+    public void testTryAcquireDeprovision_BelowLimit() {
+        String tenantId = "test-tenant3";
+        int maxExecutions = 2;
+
+        assertTrue(TenantAwareHelper.tryAcquireDeprovision(maxExecutions, tenantId, workflowListener));
+        assertTrue(TenantAwareHelper.tryAcquireDeprovision(maxExecutions, tenantId, workflowListener));
+    }
+
+    public void testTryAcquireDeprovision_AtLimit() {
+        String tenantId = "test-tenant4";
+        int maxExecutions = 1;
+
+        assertTrue(TenantAwareHelper.tryAcquireDeprovision(maxExecutions, tenantId, workflowListener));
+        assertFalse(TenantAwareHelper.tryAcquireDeprovision(maxExecutions, tenantId, workflowListener));
+
+        ArgumentCaptor<FlowFrameworkException> captor = ArgumentCaptor.forClass(FlowFrameworkException.class);
+        verify(workflowListener).onFailure(captor.capture());
+        FlowFrameworkException exception = captor.getValue();
+        assertEquals(RestStatus.TOO_MANY_REQUESTS, exception.status());
+        assertEquals("Exceeded max simultaneous deprovisioning requests: 1", exception.getMessage());
+    }
+
+    public void testReleaseProvision() {
+        String tenantId = "test-tenant5";
+        int maxExecutions = 1;
+
+        assertTrue(TenantAwareHelper.tryAcquireProvision(maxExecutions, tenantId, workflowListener));
+        assertFalse(TenantAwareHelper.tryAcquireProvision(maxExecutions, tenantId, workflowListener));
+
+        TenantAwareHelper.releaseProvision(tenantId);
+
+        assertTrue(TenantAwareHelper.tryAcquireProvision(maxExecutions, tenantId, workflowListener));
+    }
+
+    public void testReleaseDeprovision() {
+        String tenantId = "test-tenant6";
+        int maxExecutions = 1;
+
+        assertTrue(TenantAwareHelper.tryAcquireDeprovision(maxExecutions, tenantId, workflowListener));
+        assertFalse(TenantAwareHelper.tryAcquireDeprovision(maxExecutions, tenantId, workflowListener));
+
+        TenantAwareHelper.releaseDeprovision(tenantId);
+
+        assertTrue(TenantAwareHelper.tryAcquireDeprovision(maxExecutions, tenantId, workflowListener));
+    }
+
+    public void testNullTenantId() {
+        int maxExecutions = 1;
+
+        // Doesn't limit with null tenant id
+        assertTrue(TenantAwareHelper.tryAcquireProvision(maxExecutions, null, workflowListener));
+        assertTrue(TenantAwareHelper.tryAcquireProvision(maxExecutions, null, workflowListener));
+        assertTrue(TenantAwareHelper.tryAcquireDeprovision(maxExecutions, null, workflowListener));
+        assertTrue(TenantAwareHelper.tryAcquireDeprovision(maxExecutions, null, workflowListener));
+
+        // These should not throw exceptions
+        TenantAwareHelper.releaseProvision(null);
+        TenantAwareHelper.releaseDeprovision(null);
+    }
 }
