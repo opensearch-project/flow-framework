@@ -316,7 +316,6 @@ public class ProvisionWorkflowTransportAction extends HandledTransportAction<Wor
         ActionListener<WorkflowResponse> listener
     ) {
         try {
-            System.err.println("HERE 1");
             client.threadPool().executor(PROVISION_WORKFLOW_THREAD_POOL).execute(() -> {
                 executeWorkflow(workflowSequence, workflowId, tenantId, listener, false);
             });
@@ -407,6 +406,7 @@ public class ProvisionWorkflowTransportAction extends HandledTransportAction<Wor
             }
 
             logger.info("Provisioning completed successfully for workflow {}", workflowId);
+            // Need to call TenantAwareHelper.releaseProvision in cases listener.onFailure is not called
             flowFrameworkIndicesHandler.updateFlowFrameworkSystemIndexDoc(
                 workflowId,
                 tenantId,
@@ -422,6 +422,8 @@ public class ProvisionWorkflowTransportAction extends HandledTransportAction<Wor
                             GetWorkflowStateAction.INSTANCE,
                             new GetWorkflowStateRequest(workflowId, false, tenantId),
                             ActionListener.wrap(response -> {
+                                // We've completed provisioning and responding synchronously
+                                TenantAwareHelper.releaseProvision(tenantId);
                                 listener.onResponse(new WorkflowResponse(workflowId, response.getWorkflowState()));
                             }, exception -> {
                                 String errorMessage = "Failed to get workflow state.";
@@ -433,8 +435,15 @@ public class ProvisionWorkflowTransportAction extends HandledTransportAction<Wor
                                 }
                             })
                         );
+                    } else {
+                        // We've completed provisioning asynchronously
+                        TenantAwareHelper.releaseProvision(tenantId);
                     }
-                }, exception -> { logger.error("Failed to update workflow state for workflow {}", workflowId, exception); })
+                }, exception -> {
+                    // We've completed provisioning asynchronously but failed state update
+                    TenantAwareHelper.releaseProvision(tenantId);
+                    logger.error("Failed to update workflow state for workflow {}", workflowId, exception);
+                })
             );
         } catch (Exception ex) {
             RestStatus status;
