@@ -136,7 +136,7 @@ public class DeprovisionWorkflowTransportAction extends HandledTransportAction<W
         )) {
             return;
         }
-        ActionListener<WorkflowResponse> listener = TenantAwareHelper.releaseDeprovisionOnFailureListener(tenantId, workflowListener);
+        ActionListener<WorkflowResponse> listener = TenantAwareHelper.releaseDeprovisionListener(tenantId, workflowListener);
         String workflowId = request.getWorkflowId();
         User user = getUserContext(client);
 

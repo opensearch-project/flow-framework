@@ -277,7 +277,7 @@ public class TenantAwareHelperTests extends OpenSearchTestCase {
         String tenantId = "testTenant";
         WorkflowResponse response = mock(WorkflowResponse.class);
 
-        ActionListener<WorkflowResponse> listener = TenantAwareHelper.releaseDeprovisionOnFailureListener(tenantId, mockDelegate);
+        ActionListener<WorkflowResponse> listener = TenantAwareHelper.releaseDeprovisionListener(tenantId, mockDelegate);
 
         listener.onResponse(response);
 
@@ -289,7 +289,7 @@ public class TenantAwareHelperTests extends OpenSearchTestCase {
         String tenantId = "testTenant";
         Exception exception = new RuntimeException("Test exception");
 
-        ActionListener<WorkflowResponse> listener = TenantAwareHelper.releaseDeprovisionOnFailureListener(tenantId, mockDelegate);
+        ActionListener<WorkflowResponse> listener = TenantAwareHelper.releaseDeprovisionListener(tenantId, mockDelegate);
 
         listener.onFailure(exception);
 
@@ -297,23 +297,29 @@ public class TenantAwareHelperTests extends OpenSearchTestCase {
         verifyNoMoreInteractions(mockDelegate);
     }
 
-    public void testListenersNotifyOnlyOnce() {
+    public void testProvisionListenerNotifyOnlyOnce() {
         String tenantId = "testTenant";
         Exception exception = new RuntimeException("Test exception");
 
         ActionListener<WorkflowResponse> provisionListener = TenantAwareHelper.releaseProvisionOnFailureListener(tenantId, mockDelegate);
-        ActionListener<WorkflowResponse> deprovisionListener = TenantAwareHelper.releaseDeprovisionOnFailureListener(
-            tenantId,
-            mockDelegate
-        );
-
-        // Call onFailure twice on each listener
+        // Call onFailure then onresponse
         provisionListener.onFailure(exception);
-        provisionListener.onFailure(exception);
-        deprovisionListener.onFailure(exception);
-        deprovisionListener.onFailure(exception);
+        provisionListener.onResponse(null);
+        // Verify that onFailure was only called
+        verify(mockDelegate, times(1)).onFailure(exception);
+        verify(mockDelegate, times(0)).onResponse(null);
+    }
 
-        // Verify that onFailure was only called once for each listener
-        verify(mockDelegate, times(2)).onFailure(exception);
+    public void testDerovisionListenerNotifyOnlyOnce() {
+        String tenantId = "testTenant";
+        Exception exception = new RuntimeException("Test exception");
+
+        ActionListener<WorkflowResponse> deprovisionListener = TenantAwareHelper.releaseDeprovisionListener(tenantId, mockDelegate);
+        // Call onResponse onFailure then onfailure
+        deprovisionListener.onResponse(null);
+        deprovisionListener.onFailure(exception);
+        // Verify that onResponse was only called
+        verify(mockDelegate, times(1)).onResponse(null);
+        verify(mockDelegate, times(0)).onFailure(exception);
     }
 }

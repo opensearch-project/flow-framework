@@ -214,14 +214,15 @@ public class TenantAwareHelper {
         });
     }
 
-    public static ActionListener<WorkflowResponse> releaseDeprovisionOnFailureListener(
-        String tenantId,
-        ActionListener<WorkflowResponse> delegate
-    ) {
+    public static ActionListener<WorkflowResponse> releaseDeprovisionListener(String tenantId, ActionListener<WorkflowResponse> delegate) {
         return ActionListener.notifyOnce(new ActionListener<>() {
             @Override
             public void onResponse(WorkflowResponse response) {
-                delegate.onResponse(response);
+                try {
+                    releaseDeprovision(tenantId);
+                } finally {
+                    delegate.onResponse(response);
+                }
             }
 
             @Override
