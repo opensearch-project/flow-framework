@@ -12,8 +12,14 @@ import org.apache.hc.core5.http.HttpHeaders;
 import org.apache.hc.core5.http.message.BasicHeader;
 import org.opensearch.client.Response;
 import org.opensearch.client.ResponseException;
+import org.opensearch.common.xcontent.XContentFactory;
+import org.opensearch.common.xcontent.json.JsonXContent;
+import org.opensearch.core.xcontent.DeprecationHandler;
+import org.opensearch.core.xcontent.NamedXContentRegistry;
+import org.opensearch.core.xcontent.XContentBuilder;
 import org.opensearch.flowframework.FlowFrameworkTenantAwareRestTestCase;
 import org.opensearch.flowframework.TestHelpers;
+import org.opensearch.flowframework.common.CommonValue;
 import org.opensearch.flowframework.model.Template;
 import org.opensearch.flowframework.model.Workflow;
 import org.opensearch.flowframework.model.WorkflowNode;
@@ -21,13 +27,18 @@ import org.opensearch.rest.RestRequest;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CompletionException;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 import static org.opensearch.flowframework.common.CommonValue.WORKFLOW_ID;
 import static org.opensearch.flowframework.common.CommonValue.WORKFLOW_URI;
@@ -243,86 +254,70 @@ public class RestWorkflowProvisionTenantAwareIT extends FlowFrameworkTenantAware
         /*
          * Deprovision
          */
-        // Deprovision API is synchronous so we have to multithread
-        // Since no-op template doesn't have resources this really only takes as long as the state update
-        CompletableFuture<Response> future1 = CompletableFuture.supplyAsync(() -> {
-            try {
-                return makeRequest(tenantRequest, POST, WORKFLOW_PATH + workflowId1 + DEPROVISION);
-            } catch (IOException e) {
-                throw new CompletionException(e);
-            }
-        });
-        CompletableFuture<Response> future2 = CompletableFuture.supplyAsync(() -> {
-            try {
-                return makeRequest(tenantRequest, POST, WORKFLOW_PATH + workflowId2 + DEPROVISION);
-            } catch (IOException e) {
-                throw new CompletionException(e);
-            }
-        });
-        CompletableFuture<Response> otherFuture = CompletableFuture.supplyAsync(() -> {
-            try {
-                return makeRequest(otherTenantRequest, POST, WORKFLOW_PATH + otherWorkflowId + DEPROVISION);
-            } catch (IOException e) {
-                throw new CompletionException(e);
-            }
-        });
-
-        CompletableFuture<Void> combinedFuture = CompletableFuture.allOf(future1, future2, otherFuture);
-        if (multiTenancyEnabled) {
-            // Wait for all futures to complete, but don't throw exceptions
-            combinedFuture.handle((v, e) -> null).get(20, TimeUnit.SECONDS);
-        } else {
-            // Should not get any exceptions
-            combinedFuture.get(20, TimeUnit.SECONDS);
+        // Deprovision API is synchronous so we have to multithread.
+        // Since no-op template doesn't have resources, deprovisioning is mostly a state index update
+        // So we hack in some fake resources to generate >10s of delay time
+        String fakeResources = createFakeResources();
+        for (String workflowId : new String[] { workflowId1, workflowId2, otherWorkflowId }) {
+            response = TestHelpers.makeRequest(
+                client(),
+                "POST",
+                CommonValue.WORKFLOW_STATE_INDEX + "/_update/" + workflowId,
+                null,
+                fakeResources,
+                List.of(new BasicHeader(HttpHeaders.USER_AGENT, ""))
+            );
+            assertOK(response);
         }
 
-        // otherfuture should be successful always.
-        // Expect 200, may be 202
-        assertOkOrAccepted(otherFuture.get());
-        map = responseToMap(otherFuture.get());
-        assertTrue(map.containsKey(WORKFLOW_ID));
-        assertEquals(otherWorkflowId, map.get(WORKFLOW_ID).toString());
-
-        // in multitenancy, at least one of future1/future2 should be OK
-        // no more than one of the other is throttled
-        // otherwise both should be successful
-        int successCount = 0;
-        int throttledCount = 0;
-
+        // Create our own thread pool for the test so we can shut it down cleanly when done
+        ExecutorService executor = Executors.newFixedThreadPool(3);
         try {
-            Response response1 = future1.get();
-            assertOkOrAccepted(response1);
-            successCount++;
-        } catch (ExecutionException e) {
-            if (e.getCause() instanceof ResponseException) {
-                ResponseException re = (ResponseException) e.getCause();
-                assertTooManyRequests(re.getResponse());
-                throttledCount++;
-            } else {
-                fail("Unexpected exception type");
-            }
-        }
+            Future<Response> future1 = executor.submit(() -> makeRequest(tenantRequest, POST, WORKFLOW_PATH + workflowId1 + DEPROVISION));
+            Future<Response> otherFuture = executor.submit(
+                () -> makeRequest(otherTenantRequest, POST, WORKFLOW_PATH + otherWorkflowId + DEPROVISION)
+            );
+            Future<Response> future2 = executor.submit(() -> makeRequest(tenantRequest, POST, WORKFLOW_PATH + workflowId2 + DEPROVISION));
 
-        try {
-            Response response2 = future2.get();
-            assertOkOrAccepted(response2);
-            successCount++;
-        } catch (ExecutionException e) {
-            if (e.getCause() instanceof ResponseException) {
-                ResponseException re = (ResponseException) e.getCause();
-                assertTooManyRequests(re.getResponse());
-                throttledCount++;
-            } else {
-                fail("Unexpected exception type");
-            }
-        }
+            // Wait for all futures to complete
+            executor.shutdown();
+            assertTrue(executor.awaitTermination(30, TimeUnit.SECONDS));
 
-        if (multiTenancyEnabled) {
-            assertTrue(successCount >= 1);
-            assertTrue(throttledCount <= 1);
-        } else {
-            assertEquals(2, successCount);
-            assertEquals(0, throttledCount);
+            // otherfuture should be successful always.
+            // Expect 200, may be 202
+            assertOkOrAccepted(otherFuture.get());
+
+            // in multitenancy, one of future1/future2 should be OK, the other is throttled
+            // otherwise both should be successful
+            int successCount = 0;
+            int throttledCount = 0;
+
+            for (Future<Response> future : Arrays.asList(future1, future2)) {
+                try {
+                    Response r = future.get();
+                    assertOkOrAccepted(r);
+                    successCount++;
+                } catch (ExecutionException e) {
+                    if (e.getCause() instanceof ResponseException) {
+                        ResponseException re = (ResponseException) e.getCause();
+                        assertTooManyRequests(re.getResponse());
+                        throttledCount++;
+                    } else {
+                        fail("Unexpected exception type");
+                    }
+                }
+            }
+
+            if (multiTenancyEnabled) {
+                assertEquals(1, successCount);
+                assertEquals(1, throttledCount);
+            } else {
+                assertEquals(2, successCount);
+                assertEquals(0, throttledCount);
+            }
+        } finally {
+            // Shut down even if an exception occurs
+            executor.shutdownNow();
         }
 
         /*
@@ -354,5 +349,29 @@ public class RestWorkflowProvisionTenantAwareIT extends FlowFrameworkTenantAware
         }
         Workflow provisionWorkflow = new Workflow(Collections.emptyMap(), nodes, Collections.emptyList());
         return Template.builder().name("noop").workflows(Map.of("provision", provisionWorkflow)).build().toJson();
+    }
+
+    private static String createFakeResources() throws IOException {
+        // Generate some reindex resources which use NoOpStep for deprovisioning
+        // Need deprovisioning to last >10s to beat retry; 100ms per step delay means >100
+        String resourceFormat =
+            "{\"workflow_step_name\":\"reindex\",\"workflow_step_id\":\"reindex_%d\",\"resource_type\":\"index\",\"resource_id\":\"FakeIndex\"}";
+        String fakeResources = IntStream.rangeClosed(1, 120)
+            .mapToObj(i -> String.format(Locale.ROOT, resourceFormat, i))
+            .collect(Collectors.joining(",", "[", "]"));
+
+        XContentBuilder builder = XContentFactory.jsonBuilder();
+        builder.startObject();
+        builder.startObject("script").field("source", "ctx._source.resources_created = params.resources");
+        builder.startObject("params")
+            .field(
+                "resources",
+                JsonXContent.jsonXContent.createParser(NamedXContentRegistry.EMPTY, DeprecationHandler.IGNORE_DEPRECATIONS, fakeResources)
+                    .list()
+            );
+        builder.endObject();
+        builder.endObject();
+        builder.endObject();
+        return builder.toString();
     }
 }
