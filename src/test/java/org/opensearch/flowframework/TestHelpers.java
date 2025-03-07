@@ -16,6 +16,7 @@ import org.opensearch.action.search.SearchRequest;
 import org.opensearch.client.Request;
 import org.opensearch.client.RequestOptions;
 import org.opensearch.client.Response;
+import org.opensearch.client.ResponseException;
 import org.opensearch.client.RestClient;
 import org.opensearch.client.WarningsHandler;
 import org.opensearch.common.settings.ClusterSettings;
@@ -126,6 +127,9 @@ public class TestHelpers {
         }
         try {
             return client.performRequest(request);
+        } catch (ResponseException e) {
+            // Make sure response exceptions aren't retried
+            throw e;
         } catch (IOException e) {
             // In restricted resource cluster, initialization of REST clients on other nodes takes time
             // Wait 10 seconds and try again
