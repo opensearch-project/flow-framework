@@ -101,7 +101,7 @@ public class RestWorkflowProvisionTenantAwareIT extends FlowFrameworkTenantAware
         map = responseToMap(response);
         assertTrue(map.containsKey(WORKFLOW_ID));
         assertEquals(workflowId1, map.get(WORKFLOW_ID).toString());
-        // During the 12 second async provisioning, try another one
+        // During the 3 second async provisioning, try another one
         // Another workflow should be fine
         response = makeRequest(otherTenantRequest, POST, WORKFLOW_PATH + otherWorkflowId + PROVISION);
         assertOK(response);
@@ -181,7 +181,7 @@ public class RestWorkflowProvisionTenantAwareIT extends FlowFrameworkTenantAware
         assertTrue(map.containsKey(WORKFLOW_ID));
         assertEquals(workflowId1, map.get(WORKFLOW_ID).toString());
 
-        // During the 12 second async reprovisioning, try another one
+        // During the 3 second async reprovisioning, try another one
         // Another workflow should be fine
         otherWorkflowRequest = getRestRequestWithHeadersAndContent(otherTenantId, createNoOpTemplateWithDelayNodes(2));
         response = makeRequest(otherWorkflowRequest, PUT, WORKFLOW_PATH + otherWorkflowId + "?reprovision=true");
@@ -256,7 +256,7 @@ public class RestWorkflowProvisionTenantAwareIT extends FlowFrameworkTenantAware
          */
         // Deprovision API is synchronous so we have to multithread.
         // Since no-op template doesn't have resources, deprovisioning is mostly a state index update
-        // So we hack in some fake resources to generate >10s of delay time
+        // So we hack in some fake resources to generate 3s of delay time
         String fakeResources = createFakeResources();
         for (String workflowId : new String[] { workflowId1, workflowId2, otherWorkflowId }) {
             response = TestHelpers.makeRequest(
@@ -344,8 +344,7 @@ public class RestWorkflowProvisionTenantAwareIT extends FlowFrameworkTenantAware
     private static String createNoOpTemplateWithDelayNodes(int numNodes) throws IOException {
         List<WorkflowNode> nodes = new ArrayList<>();
         for (int i = 0; i < numNodes; i++) {
-            // Fun fact: TestHelpers retries failed requests once after 10 seconds so we need a longer delay
-            nodes.add(new WorkflowNode("no-op-" + i, "noop", Collections.emptyMap(), Map.of("delay", "12s")));
+            nodes.add(new WorkflowNode("no-op-" + i, "noop", Collections.emptyMap(), Map.of("delay", "3s")));
         }
         Workflow provisionWorkflow = new Workflow(Collections.emptyMap(), nodes, Collections.emptyList());
         return Template.builder().name("noop").workflows(Map.of("provision", provisionWorkflow)).build().toJson();
@@ -353,10 +352,10 @@ public class RestWorkflowProvisionTenantAwareIT extends FlowFrameworkTenantAware
 
     private static String createFakeResources() throws IOException {
         // Generate some reindex resources which use NoOpStep for deprovisioning
-        // Need deprovisioning to last >10s to beat retry; 100ms per step delay means >100
+        // 100ms delay between steps so using 30 steps for a 3s delay
         String resourceFormat =
             "{\"workflow_step_name\":\"reindex\",\"workflow_step_id\":\"reindex_%d\",\"resource_type\":\"index\",\"resource_id\":\"FakeIndex\"}";
-        String fakeResources = IntStream.rangeClosed(1, 120)
+        String fakeResources = IntStream.rangeClosed(1, 30)
             .mapToObj(i -> String.format(Locale.ROOT, resourceFormat, i))
             .collect(Collectors.joining(",", "[", "]"));
 
