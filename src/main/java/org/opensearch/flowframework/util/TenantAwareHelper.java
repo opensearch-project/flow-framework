@@ -167,7 +167,6 @@ public class TenantAwareHelper {
         if (tenantId == null) {
             return true; // No throttling for null tenantId
         }
-
         AtomicInteger count = executionsMap.computeIfAbsent(tenantId, k -> new AtomicInteger(0));
         if (count.incrementAndGet() <= maxExecutions) {
             return true;
@@ -193,6 +192,12 @@ public class TenantAwareHelper {
         }
     }
 
+    /**
+     * Create an action listener that releases provision throttle on failure only
+     * @param tenantId The tenant ID
+     * @param delegate the wrapped listener
+     * @return a listener wrapping the delegate that calls {@link #releaseProvision(String)} on failure of the wrapped listener.
+     */
     public static ActionListener<WorkflowResponse> releaseProvisionOnFailureListener(
         String tenantId,
         ActionListener<WorkflowResponse> delegate
@@ -214,6 +219,12 @@ public class TenantAwareHelper {
         });
     }
 
+    /**
+     * Create an action listener that releases deprovision throttle
+     * @param tenantId The tenant ID
+     * @param delegate the wrapped listener
+     * @return a listener wrapping the delegate that calls {@link #releaseDeprovision(String)} on the wrapped listener.
+     */
     public static ActionListener<WorkflowResponse> releaseDeprovisionListener(String tenantId, ActionListener<WorkflowResponse> delegate) {
         return ActionListener.notifyOnce(new ActionListener<>() {
             @Override
