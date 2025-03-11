@@ -171,7 +171,8 @@ public class TenantAwareHelper {
         if (count.incrementAndGet() <= maxExecutions) {
             return true;
         } else {
-            count.decrementAndGet(); // Rollback the increment
+            // If we're here we have exceeded maxExecutions, roll back
+            count.decrementAndGet();
             return false;
         }
     }
@@ -186,10 +187,11 @@ public class TenantAwareHelper {
         if (tenantId == null) {
             return; // No throttling for null tenantId
         }
-        AtomicInteger count = executionsMap.get(tenantId);
-        if (count != null) {
-            count.decrementAndGet();
-        }
+        executionsMap.computeIfPresent(tenantId, (key, count) -> {
+            int newValue = count.decrementAndGet();
+            // returning null from computeIfPresent removes from the map
+            return newValue > 0 ? count : null;
+        });
     }
 
     /**
@@ -202,6 +204,7 @@ public class TenantAwareHelper {
         String tenantId,
         ActionListener<WorkflowResponse> delegate
     ) {
+        // Since this is only called on async failure we can't use runBefore, so we just copy its code in one case
         return ActionListener.notifyOnce(new ActionListener<>() {
             @Override
             public void onResponse(WorkflowResponse response) {
@@ -226,24 +229,7 @@ public class TenantAwareHelper {
      * @return a listener wrapping the delegate that calls {@link #releaseDeprovision(String)} on the wrapped listener.
      */
     public static ActionListener<WorkflowResponse> releaseDeprovisionListener(String tenantId, ActionListener<WorkflowResponse> delegate) {
-        return ActionListener.notifyOnce(new ActionListener<>() {
-            @Override
-            public void onResponse(WorkflowResponse response) {
-                try {
-                    releaseDeprovision(tenantId);
-                } finally {
-                    delegate.onResponse(response);
-                }
-            }
-
-            @Override
-            public void onFailure(Exception e) {
-                try {
-                    releaseDeprovision(tenantId);
-                } finally {
-                    delegate.onFailure(e);
-                }
-            }
-        });
+        // Since this is only called on synchronous calls we release on both success and failure
+        return ActionListener.notifyOnce(ActionListener.runBefore(delegate, () -> releaseDeprovision(tenantId)));
     }
 }
