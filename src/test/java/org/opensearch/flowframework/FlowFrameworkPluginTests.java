@@ -31,6 +31,8 @@ import java.util.stream.Stream;
 import static org.opensearch.flowframework.common.FlowFrameworkSettings.FILTER_BY_BACKEND_ROLES;
 import static org.opensearch.flowframework.common.FlowFrameworkSettings.FLOW_FRAMEWORK_ENABLED;
 import static org.opensearch.flowframework.common.FlowFrameworkSettings.FLOW_FRAMEWORK_MULTI_TENANCY_ENABLED;
+import static org.opensearch.flowframework.common.FlowFrameworkSettings.MAX_ACTIVE_DEPROVISIONS_PER_TENANT;
+import static org.opensearch.flowframework.common.FlowFrameworkSettings.MAX_ACTIVE_PROVISIONS_PER_TENANT;
 import static org.opensearch.flowframework.common.FlowFrameworkSettings.MAX_WORKFLOWS;
 import static org.opensearch.flowframework.common.FlowFrameworkSettings.MAX_WORKFLOW_STEPS;
 import static org.opensearch.flowframework.common.FlowFrameworkSettings.REMOTE_METADATA_ENDPOINT;
@@ -80,6 +82,8 @@ public class FlowFrameworkPluginTests extends OpenSearchTestCase {
                 TASK_REQUEST_RETRY_DURATION,
                 FILTER_BY_BACKEND_ROLES,
                 FLOW_FRAMEWORK_MULTI_TENANCY_ENABLED,
+                MAX_ACTIVE_PROVISIONS_PER_TENANT,
+                MAX_ACTIVE_DEPROVISIONS_PER_TENANT,
                 REMOTE_METADATA_TYPE,
                 REMOTE_METADATA_ENDPOINT,
                 REMOTE_METADATA_REGION,
@@ -106,7 +110,7 @@ public class FlowFrameworkPluginTests extends OpenSearchTestCase {
             assertEquals(9, ffp.getRestHandlers(settings, null, null, null, null, null, null).size());
             assertEquals(10, ffp.getActions().size());
             assertEquals(3, ffp.getExecutorBuilders(settings).size());
-            assertEquals(11, ffp.getSettings().size());
+            assertEquals(13, ffp.getSettings().size());
 
             Collection<SystemIndexDescriptor> systemIndexDescriptors = ffp.getSystemIndexDescriptors(Settings.EMPTY);
             assertEquals(3, systemIndexDescriptors.size());

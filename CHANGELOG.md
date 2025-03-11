@@ -5,6 +5,8 @@ Inspired from [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ## [Unreleased 3.0](https://github.com/opensearch-project/flow-framework/compare/2.x...HEAD)
 ### Features
+- Add per-tenant provisioning throttling ([#1074](https://github.com/opensearch-project/flow-framework/pull/1074))
+
 ### Enhancements
 ### Bug Fixes
 ### Infrastructure

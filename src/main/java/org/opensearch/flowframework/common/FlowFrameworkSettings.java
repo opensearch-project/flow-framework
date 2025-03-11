@@ -33,6 +33,10 @@ public class FlowFrameworkSettings {
     protected volatile TimeValue requestTimeout;
     /** Whether multitenancy is enabled */
     private final Boolean isMultiTenancyEnabled;
+    /** Max simultaneous provision requests */
+    private volatile Integer maxActiveProvisionsPerTenant;
+    /** Max simultaneous deprovision requests */
+    private volatile Integer maxActiveDeprovisionsPerTenant;
 
     /** The upper limit of max workflows that can be created  */
     public static final int MAX_WORKFLOWS_LIMIT = 10000;
@@ -129,6 +133,25 @@ public class FlowFrameworkSettings {
         Setting.Property.NodeScope
     );
 
+    /** This setting sets max workflows that can be simultaneously provisioned, or reprovisioned by the same tenant */
+    public static final Setting<Integer> MAX_ACTIVE_PROVISIONS_PER_TENANT = Setting.intSetting(
+        "plugins.flow_framework.max_active_provisions_per_tenant",
+        2,
+        1,
+        4,
+        Setting.Property.NodeScope,
+        Setting.Property.Dynamic
+    );
+
+    /** This setting sets max workflows that can be simultaneously deprovisioned by the same tenant */
+    public static final Setting<Integer> MAX_ACTIVE_DEPROVISIONS_PER_TENANT = Setting.intSetting(
+        "plugins.flow_framework.max_active_deprovisions_per_tenant",
+        1,
+        1,
+        2,
+        Setting.Property.NodeScope,
+        Setting.Property.Dynamic
+    );
     /** This setting sets the remote metadata type */
     public static final Setting<String> REMOTE_METADATA_TYPE = Setting.simpleString(
         "plugins.flow_framework." + REMOTE_METADATA_TYPE_KEY,
@@ -172,11 +195,17 @@ public class FlowFrameworkSettings {
         this.maxWorkflows = MAX_WORKFLOWS.get(settings);
         this.requestTimeout = WORKFLOW_REQUEST_TIMEOUT.get(settings);
         this.isMultiTenancyEnabled = FLOW_FRAMEWORK_MULTI_TENANCY_ENABLED.get(settings);
+        this.maxActiveProvisionsPerTenant = MAX_ACTIVE_PROVISIONS_PER_TENANT.get(settings);
+        this.maxActiveDeprovisionsPerTenant = MAX_ACTIVE_DEPROVISIONS_PER_TENANT.get(settings);
         clusterService.getClusterSettings().addSettingsUpdateConsumer(FLOW_FRAMEWORK_ENABLED, it -> isFlowFrameworkEnabled = it);
         clusterService.getClusterSettings().addSettingsUpdateConsumer(TASK_REQUEST_RETRY_DURATION, it -> retryDuration = it);
         clusterService.getClusterSettings().addSettingsUpdateConsumer(MAX_WORKFLOW_STEPS, it -> maxWorkflowSteps = it);
         clusterService.getClusterSettings().addSettingsUpdateConsumer(MAX_WORKFLOWS, it -> maxWorkflows = it);
         clusterService.getClusterSettings().addSettingsUpdateConsumer(WORKFLOW_REQUEST_TIMEOUT, it -> requestTimeout = it);
+        clusterService.getClusterSettings()
+            .addSettingsUpdateConsumer(MAX_ACTIVE_PROVISIONS_PER_TENANT, it -> maxActiveProvisionsPerTenant = it);
+        clusterService.getClusterSettings()
+            .addSettingsUpdateConsumer(MAX_ACTIVE_DEPROVISIONS_PER_TENANT, it -> maxActiveDeprovisionsPerTenant = it);
     }
 
     /**
@@ -225,5 +254,21 @@ public class FlowFrameworkSettings {
      */
     public boolean isMultiTenancyEnabled() {
         return isMultiTenancyEnabled;
+    }
+
+    /**
+     * Getter for max active provisions per tenant
+     * @return max active provisions
+     */
+    public Integer getMaxActiveProvisionsPerTenant() {
+        return maxActiveProvisionsPerTenant;
+    }
+
+    /**
+     * Getter for max active deprovisions per tenant
+     * @return max active deprovisions
+     */
+    public Integer getMaxActiveDeprovisionsPerTenant() {
+        return maxActiveDeprovisionsPerTenant;
     }
 }
