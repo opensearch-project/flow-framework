@@ -253,11 +253,7 @@ public class RestCreateWorkflowAction extends BaseRestHandler {
 
             return channel -> client.execute(CreateWorkflowAction.INSTANCE, workflowRequest, ActionListener.wrap(response -> {
                 XContentBuilder builder = response.toXContent(channel.newBuilder(), ToXContent.EMPTY_PARAMS);
-                if (provision || reprovision) {
-                    channel.sendResponse(new BytesRestResponse(RestStatus.ACCEPTED, builder));
-                } else {
-                    channel.sendResponse(new BytesRestResponse(RestStatus.CREATED, builder));
-                }
+                channel.sendResponse(new BytesRestResponse(provision || reprovision ? RestStatus.ACCEPTED : RestStatus.CREATED, builder));
             }, exception -> {
                 try {
                     FlowFrameworkException ex = exception instanceof FlowFrameworkException
