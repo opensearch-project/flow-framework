@@ -9,6 +9,8 @@ Inspired from [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ### Enhancements
 ### Bug Fixes
+- Change REST status codes for RBAC and provisioning ([#1083](https://github.com/opensearch-project/flow-framework/pull/1083))
+
 ### Infrastructure
 ### Documentation
 ### Maintenance

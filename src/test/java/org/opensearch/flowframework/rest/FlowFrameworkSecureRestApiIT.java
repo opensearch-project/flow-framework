@@ -323,7 +323,7 @@ public class FlowFrameworkSecureRestApiIT extends FlowFrameworkRestTestCase {
         Map<String, Object> responseMap = entityAsMap(aliceWorkflow);
         String workflowId = (String) responseMap.get(WORKFLOW_ID);
         Response response = provisionWorkflow(aliceClient, workflowId);
-        assertEquals(RestStatus.OK, TestHelpers.restStatus(response));
+        assertEquals(RestStatus.ACCEPTED, TestHelpers.restStatus(response));
     }
 
     public void testReprovisionWorkflowWithWriteAccess() throws Exception {
@@ -333,7 +333,7 @@ public class FlowFrameworkSecureRestApiIT extends FlowFrameworkRestTestCase {
 
         enableFilterBy();
         Response response = createWorkflowWithProvision(aliceClient, template);
-        assertEquals(RestStatus.CREATED, TestHelpers.restStatus(response));
+        assertEquals(RestStatus.ACCEPTED, TestHelpers.restStatus(response));
 
         Map<String, Object> responseMap = entityAsMap(response);
         String workflowId = (String) responseMap.get(WORKFLOW_ID);
@@ -356,7 +356,7 @@ public class FlowFrameworkSecureRestApiIT extends FlowFrameworkRestTestCase {
         // Reprovision template to add ingest pipeline which uses the model ID
         template = TestHelpers.createTemplateFromFile("registerremotemodel-ingestpipeline-createindex.json");
         response = reprovisionWorkflow(aliceClient, workflowId, template);
-        assertEquals(RestStatus.CREATED, TestHelpers.restStatus(response));
+        assertEquals(RestStatus.ACCEPTED, TestHelpers.restStatus(response));
 
         resourcesCreated = getResourcesCreated(aliceClient, workflowId, 30);
         assertEquals(5, resourcesCreated.size());
@@ -426,7 +426,7 @@ public class FlowFrameworkSecureRestApiIT extends FlowFrameworkRestTestCase {
         } else {
             response = provisionWorkflow(aliceClient, workflowId);
         }
-        assertEquals(RestStatus.OK, TestHelpers.restStatus(response));
+        assertEquals(RestStatus.ACCEPTED, TestHelpers.restStatus(response));
 
         // Invoke status API
         response = getWorkflowStatus(aliceClient, workflowId, false);

@@ -97,14 +97,14 @@ public class RestWorkflowProvisionTenantAwareIT extends FlowFrameworkTenantAware
          */
         // Kick off a provisioning
         response = makeRequest(tenantRequest, POST, WORKFLOW_PATH + workflowId1 + PROVISION);
-        assertOK(response);
+        assertOkOrAccepted(response);
         map = responseToMap(response);
         assertTrue(map.containsKey(WORKFLOW_ID));
         assertEquals(workflowId1, map.get(WORKFLOW_ID).toString());
         // During the 3 second async provisioning, try another one
         // Another workflow should be fine
         response = makeRequest(otherTenantRequest, POST, WORKFLOW_PATH + otherWorkflowId + PROVISION);
-        assertOK(response);
+        assertOkOrAccepted(response);
         map = responseToMap(response);
         assertTrue(map.containsKey(WORKFLOW_ID));
         assertEquals(otherWorkflowId, map.get(WORKFLOW_ID).toString());
@@ -130,14 +130,14 @@ public class RestWorkflowProvisionTenantAwareIT extends FlowFrameworkTenantAware
 
             // Provision should work now
             response = makeRequest(tenantRequest, POST, WORKFLOW_PATH + workflowId2 + PROVISION);
-            assertOK(response);
+            assertOkOrAccepted(response);
             map = responseToMap(response);
             assertTrue(map.containsKey(WORKFLOW_ID));
             assertEquals(workflowId2, map.get(WORKFLOW_ID).toString());
         } else {
             // No throttling at all without multitenancy
             response = makeRequest(tenantRequest, POST, WORKFLOW_PATH + workflowId2 + PROVISION);
-            assertOK(response);
+            assertOkOrAccepted(response);
             map = responseToMap(response);
             assertTrue(map.containsKey(WORKFLOW_ID));
             assertEquals(workflowId2, map.get(WORKFLOW_ID).toString());
@@ -176,7 +176,7 @@ public class RestWorkflowProvisionTenantAwareIT extends FlowFrameworkTenantAware
         // Reprovision a workflow with a tenant id
         RestRequest updateWorkflowRequest = getRestRequestWithHeadersAndContent(tenantId, createNoOpTemplateWithDelayNodes(2));
         response = makeRequest(updateWorkflowRequest, PUT, WORKFLOW_PATH + workflowId1 + "?reprovision=true");
-        assertOK(response);
+        assertOkOrAccepted(response);
         map = responseToMap(response);
         assertTrue(map.containsKey(WORKFLOW_ID));
         assertEquals(workflowId1, map.get(WORKFLOW_ID).toString());
@@ -185,7 +185,7 @@ public class RestWorkflowProvisionTenantAwareIT extends FlowFrameworkTenantAware
         // Another workflow should be fine
         otherWorkflowRequest = getRestRequestWithHeadersAndContent(otherTenantId, createNoOpTemplateWithDelayNodes(2));
         response = makeRequest(otherWorkflowRequest, PUT, WORKFLOW_PATH + otherWorkflowId + "?reprovision=true");
-        assertOK(response);
+        assertOkOrAccepted(response);
         map = responseToMap(response);
         assertTrue(map.containsKey(WORKFLOW_ID));
         assertEquals(otherWorkflowId, map.get(WORKFLOW_ID).toString());
@@ -211,14 +211,14 @@ public class RestWorkflowProvisionTenantAwareIT extends FlowFrameworkTenantAware
 
             // Reprovision should work now
             response = makeRequest(updateWorkflowRequest, PUT, WORKFLOW_PATH + workflowId2 + "?reprovision=true");
-            assertOK(response);
+            assertOkOrAccepted(response);
             map = responseToMap(response);
             assertTrue(map.containsKey(WORKFLOW_ID));
             assertEquals(workflowId2, map.get(WORKFLOW_ID).toString());
         } else {
             // No throttling at all without multitenancy
             response = makeRequest(updateWorkflowRequest, PUT, WORKFLOW_PATH + workflowId2 + "?reprovision=true");
-            assertOK(response);
+            assertOkOrAccepted(response);
             map = responseToMap(response);
             assertTrue(map.containsKey(WORKFLOW_ID));
             assertEquals(workflowId2, map.get(WORKFLOW_ID).toString());

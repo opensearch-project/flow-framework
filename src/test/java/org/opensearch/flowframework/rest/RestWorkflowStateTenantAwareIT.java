@@ -152,7 +152,7 @@ public class RestWorkflowStateTenantAwareIT extends FlowFrameworkTenantAwareRest
 
         // Now finally provision the right way
         response = makeRequest(tenantRequest, POST, WORKFLOW_PATH + workflowId + PROVISION);
-        assertOK(response);
+        assertOkOrAccepted(response);
         map = responseToMap(response);
         assertTrue(map.containsKey(WORKFLOW_ID));
         assertEquals(workflowId, map.get(WORKFLOW_ID).toString());
@@ -331,7 +331,7 @@ public class RestWorkflowStateTenantAwareIT extends FlowFrameworkTenantAwareRest
         // Create and provision second workflow using otherTenantId
         RestRequest otherWorkflowRequest = getRestRequestWithHeadersAndContent(otherTenantId, createRemoteModelTemplate());
         response = makeRequest(otherWorkflowRequest, POST, WORKFLOW_URI + "?provision=true");
-        assertOK(response);
+        assertOkOrAccepted(response);
         map = responseToMap(response);
         assertTrue(map.containsKey(WORKFLOW_ID));
         String otherWorkflowId = map.get(WORKFLOW_ID).toString();
