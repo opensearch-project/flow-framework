@@ -193,7 +193,7 @@ dependencies {
     implementation ("org.opensearch:opensearch-remote-metadata-sdk:${opensearch_build}") {
         exclude group: "org.apache.httpcomponents.client5", module: "httpclient5"
     }
-    testImplementation 'org.junit.jupiter:junit-jupiter:5.12.0'
+    testImplementation 'org.junit.jupiter:junit-jupiter:5.12.1'
     testImplementation "com.fasterxml.jackson.core:jackson-annotations:${versions.jackson}"
     testImplementation "com.fasterxml.jackson.core:jackson-databind:${versions.jackson_databind}"
     testImplementation "com.fasterxml.jackson.datatype:jackson-datatype-jsr310:${versions.jackson_databind}"
