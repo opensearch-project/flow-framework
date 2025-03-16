@@ -89,7 +89,7 @@ public class FlowFrameworkRestApiIT extends FlowFrameworkRestTestCase {
         String workflowId = (String) responseMap.get(WORKFLOW_ID);
 
         Response provisionResponse = provisionWorkflow(client(), workflowId);
-        assertEquals(RestStatus.OK, TestHelpers.restStatus(provisionResponse));
+        assertEquals(RestStatus.ACCEPTED, TestHelpers.restStatus(provisionResponse));
         getAndAssertWorkflowStatus(client(), workflowId, State.PROVISIONING, ProvisioningProgress.IN_PROGRESS);
 
         // Failed update since provisioning has started
@@ -111,7 +111,7 @@ public class FlowFrameworkRestApiIT extends FlowFrameworkRestTestCase {
         String workflowId = (String) responseMap.get(WORKFLOW_ID);
 
         Response provisionResponse = provisionWorkflow(client(), workflowId);
-        assertEquals(RestStatus.OK, TestHelpers.restStatus(provisionResponse));
+        assertEquals(RestStatus.ACCEPTED, TestHelpers.restStatus(provisionResponse));
         getAndAssertWorkflowStatus(client(), workflowId, State.PROVISIONING, ProvisioningProgress.IN_PROGRESS);
 
         // Attempt to update with update_fields with illegal field
@@ -179,7 +179,7 @@ public class FlowFrameworkRestApiIT extends FlowFrameworkRestTestCase {
 
         // Reattempt Provision
         response = provisionWorkflow(client(), workflowId);
-        assertEquals(RestStatus.OK, TestHelpers.restStatus(response));
+        assertEquals(RestStatus.ACCEPTED, TestHelpers.restStatus(response));
         getAndAssertWorkflowStatus(client(), workflowId, State.PROVISIONING, ProvisioningProgress.IN_PROGRESS);
 
         // Wait until provisioning has completed successfully before attempting to retrieve created resources
@@ -240,7 +240,7 @@ public class FlowFrameworkRestApiIT extends FlowFrameworkRestTestCase {
         getAndAssertWorkflowStatus(client(), workflowId, State.NOT_STARTED, ProvisioningProgress.NOT_STARTED);
 
         response = provisionWorkflow(client(), workflowId);
-        assertEquals(RestStatus.OK, TestHelpers.restStatus(response));
+        assertEquals(RestStatus.ACCEPTED, TestHelpers.restStatus(response));
         getAndAssertWorkflowStatus(client(), workflowId, State.PROVISIONING, ProvisioningProgress.IN_PROGRESS);
 
         // Wait until provisioning has completed successfully before attempting to retrieve created resources
@@ -270,7 +270,7 @@ public class FlowFrameworkRestApiIT extends FlowFrameworkRestTestCase {
 
         // Hit Create Workflow API to create agent-framework template, with template validation check and provision parameter
         Response response = createWorkflowWithProvision(client(), template);
-        assertEquals(RestStatus.CREATED, TestHelpers.restStatus(response));
+        assertEquals(RestStatus.ACCEPTED, TestHelpers.restStatus(response));
         Map<String, Object> responseMap = entityAsMap(response);
         String workflowId = (String) responseMap.get(WORKFLOW_ID);
         // wait and ensure state is completed/done
@@ -345,7 +345,7 @@ public class FlowFrameworkRestApiIT extends FlowFrameworkRestTestCase {
 
         // Hit Create Workflow API to create agent-framework template, with template validation check and provision parameter
         Response response = createWorkflowWithProvision(client(), template);
-        assertEquals(RestStatus.CREATED, TestHelpers.restStatus(response));
+        assertEquals(RestStatus.ACCEPTED, TestHelpers.restStatus(response));
         Map<String, Object> responseMap = entityAsMap(response);
         String workflowId = (String) responseMap.get(WORKFLOW_ID);
         // wait and ensure state is completed/done
@@ -417,7 +417,7 @@ public class FlowFrameworkRestApiIT extends FlowFrameworkRestTestCase {
         Template template = TestHelpers.createTemplateFromFile("registerremotemodel.json");
 
         Response response = createWorkflowWithProvision(client(), template);
-        assertEquals(RestStatus.CREATED, TestHelpers.restStatus(response));
+        assertEquals(RestStatus.ACCEPTED, TestHelpers.restStatus(response));
         Map<String, Object> responseMap = entityAsMap(response);
         String workflowId = (String) responseMap.get(WORKFLOW_ID);
         // wait and ensure state is completed/done
@@ -438,7 +438,7 @@ public class FlowFrameworkRestApiIT extends FlowFrameworkRestTestCase {
         // Reprovision template to add ingest pipeline which uses the model ID
         template = TestHelpers.createTemplateFromFile("registerremotemodel-ingestpipeline.json");
         response = reprovisionWorkflow(client(), workflowId, template);
-        assertEquals(RestStatus.CREATED, TestHelpers.restStatus(response));
+        assertEquals(RestStatus.ACCEPTED, TestHelpers.restStatus(response));
 
         resourcesCreated = getResourcesCreated(client(), workflowId, 30);
         assertEquals(4, resourcesCreated.size());
@@ -457,7 +457,7 @@ public class FlowFrameworkRestApiIT extends FlowFrameworkRestTestCase {
         // Reprovision template to add index which uses default ingest pipeline
         template = TestHelpers.createTemplateFromFile("registerremotemodel-ingestpipeline-createindex.json");
         response = reprovisionWorkflow(client(), workflowId, template);
-        assertEquals(RestStatus.CREATED, TestHelpers.restStatus(response));
+        assertEquals(RestStatus.ACCEPTED, TestHelpers.restStatus(response));
 
         resourcesCreated = getResourcesCreated(client(), workflowId, 30);
         assertEquals(5, resourcesCreated.size());
@@ -475,7 +475,7 @@ public class FlowFrameworkRestApiIT extends FlowFrameworkRestTestCase {
         // Reprovision template to remove default ingest pipeline
         template = TestHelpers.createTemplateFromFile("registerremotemodel-ingestpipeline-updateindex.json");
         response = reprovisionWorkflow(client(), workflowId, template);
-        assertEquals(RestStatus.CREATED, TestHelpers.restStatus(response));
+        assertEquals(RestStatus.ACCEPTED, TestHelpers.restStatus(response));
 
         resourcesCreated = getResourcesCreated(client(), workflowId, 30);
         // resource count should remain unchanged when updating an existing node
@@ -504,7 +504,7 @@ public class FlowFrameworkRestApiIT extends FlowFrameworkRestTestCase {
         Template template = TestHelpers.createTemplateFromFile("registerremotemodel-createindex.json");
 
         Response response = createWorkflowWithProvision(client(), template);
-        assertEquals(RestStatus.CREATED, TestHelpers.restStatus(response));
+        assertEquals(RestStatus.ACCEPTED, TestHelpers.restStatus(response));
         Map<String, Object> responseMap = entityAsMap(response);
         String workflowId = (String) responseMap.get(WORKFLOW_ID);
         // wait and ensure state is completed/done
@@ -526,7 +526,7 @@ public class FlowFrameworkRestApiIT extends FlowFrameworkRestTestCase {
         // Reprovision template to add ingest pipeline which uses the model ID
         template = TestHelpers.createTemplateFromFile("registerremotemodel-ingestpipeline-createindex.json");
         response = reprovisionWorkflow(client(), workflowId, template);
-        assertEquals(RestStatus.CREATED, TestHelpers.restStatus(response));
+        assertEquals(RestStatus.ACCEPTED, TestHelpers.restStatus(response));
 
         resourcesCreated = getResourcesCreated(client(), workflowId, 30);
         assertEquals(5, resourcesCreated.size());
@@ -565,7 +565,7 @@ public class FlowFrameworkRestApiIT extends FlowFrameworkRestTestCase {
         Template template = TestHelpers.createTemplateFromFile("registerremotemodel-ingestpipeline-createindex.json");
 
         Response response = createWorkflowWithProvision(client(), template);
-        assertEquals(RestStatus.CREATED, TestHelpers.restStatus(response));
+        assertEquals(RestStatus.ACCEPTED, TestHelpers.restStatus(response));
         Map<String, Object> responseMap = entityAsMap(response);
         String workflowId = (String) responseMap.get(WORKFLOW_ID);
         // wait and ensure state is completed/done
@@ -602,7 +602,7 @@ public class FlowFrameworkRestApiIT extends FlowFrameworkRestTestCase {
         Template template = TestHelpers.createTemplateFromFile("registerremotemodel-ingestpipeline-createindex.json");
 
         Response response = createWorkflowWithProvision(client(), template);
-        assertEquals(RestStatus.CREATED, TestHelpers.restStatus(response));
+        assertEquals(RestStatus.ACCEPTED, TestHelpers.restStatus(response));
         Map<String, Object> responseMap = entityAsMap(response);
         String workflowId = (String) responseMap.get(WORKFLOW_ID);
         // wait and ensure state is completed/done
@@ -670,7 +670,7 @@ public class FlowFrameworkRestApiIT extends FlowFrameworkRestTestCase {
 
         // Provision the template, should have created and updated same as before and provisioned newer
         response = provisionWorkflow(client(), workflowId);
-        assertEquals(RestStatus.OK.getStatus(), response.getStatusLine().getStatusCode());
+        assertEquals(RestStatus.ACCEPTED.getStatus(), response.getStatusLine().getStatusCode());
 
         response = getWorkflow(client(), workflowId);
         assertEquals(RestStatus.OK.getStatus(), response.getStatusLine().getStatusCode());
@@ -698,7 +698,7 @@ public class FlowFrameworkRestApiIT extends FlowFrameworkRestTestCase {
         getAndAssertWorkflowStatus(client(), workflowId, State.NOT_STARTED, ProvisioningProgress.NOT_STARTED);
 
         response = provisionWorkflow(client(), workflowId);
-        assertEquals(RestStatus.OK, TestHelpers.restStatus(response));
+        assertEquals(RestStatus.ACCEPTED, TestHelpers.restStatus(response));
         getAndAssertWorkflowStatus(client(), workflowId, State.PROVISIONING, ProvisioningProgress.IN_PROGRESS);
 
         // Wait until provisioning has completed successfully before attempting to retrieve created resources
@@ -744,7 +744,7 @@ public class FlowFrameworkRestApiIT extends FlowFrameworkRestTestCase {
         getAndAssertWorkflowStatus(client(), workflowId, State.NOT_STARTED, ProvisioningProgress.NOT_STARTED);
 
         response = provisionWorkflow(client(), workflowId);
-        assertEquals(RestStatus.OK, TestHelpers.restStatus(response));
+        assertEquals(RestStatus.ACCEPTED, TestHelpers.restStatus(response));
         getAndAssertWorkflowStatus(client(), workflowId, State.PROVISIONING, ProvisioningProgress.IN_PROGRESS);
 
         // Wait until provisioning has completed successfully before attempting to retrieve created resources
@@ -788,7 +788,7 @@ public class FlowFrameworkRestApiIT extends FlowFrameworkRestTestCase {
         getAndAssertWorkflowStatus(client(), workflowId, State.NOT_STARTED, ProvisioningProgress.NOT_STARTED);
 
         response = provisionWorkflow(client(), workflowId);
-        assertEquals(RestStatus.OK, TestHelpers.restStatus(response));
+        assertEquals(RestStatus.ACCEPTED, TestHelpers.restStatus(response));
         getAndAssertWorkflowStatus(client(), workflowId, State.FAILED, ProvisioningProgress.FAILED);
     }
 
@@ -824,7 +824,7 @@ public class FlowFrameworkRestApiIT extends FlowFrameworkRestTestCase {
         defaults.put("text_embedding.field_map.output.dimension", 384);
 
         Response response = createAndProvisionWorkflowWithUseCaseWithContent(client(), "semantic_search_with_local_model", defaults);
-        assertEquals(RestStatus.CREATED, TestHelpers.restStatus(response));
+        assertEquals(RestStatus.ACCEPTED, TestHelpers.restStatus(response));
 
         Map<String, Object> responseMap = entityAsMap(response);
         String workflowId = (String) responseMap.get(WORKFLOW_ID);

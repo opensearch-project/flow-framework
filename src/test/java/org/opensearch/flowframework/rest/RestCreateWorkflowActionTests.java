@@ -126,7 +126,7 @@ public class RestCreateWorkflowActionTests extends OpenSearchTestCase {
             return null;
         }).when(nodeClient).execute(any(), any(WorkflowRequest.class), any());
         createWorkflowRestAction.handleRequest(request, channel, nodeClient);
-        assertEquals(RestStatus.CREATED, channel.capturedResponse().status());
+        assertEquals(RestStatus.ACCEPTED, channel.capturedResponse().status());
         assertTrue(channel.capturedResponse().content().utf8ToString().contains("id-123"));
     }
 
@@ -146,7 +146,7 @@ public class RestCreateWorkflowActionTests extends OpenSearchTestCase {
 
         createWorkflowRestAction.handleRequest(request, channel, nodeClient);
 
-        assertEquals(RestStatus.CREATED, channel.capturedResponse().status());
+        assertEquals(RestStatus.ACCEPTED, channel.capturedResponse().status());
         assertTrue(channel.capturedResponse().content().utf8ToString().contains("workflow_1"));
     }
 

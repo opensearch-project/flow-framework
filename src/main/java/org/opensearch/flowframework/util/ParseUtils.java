@@ -509,10 +509,7 @@ public class ParseUtils {
                 } else {
                     logger.debug("User: " + requestUser.getName() + " does not have permissions to access workflow: " + workflowId);
                     listener.onFailure(
-                        new FlowFrameworkException(
-                            "User does not have permissions to access workflow: " + workflowId,
-                            RestStatus.BAD_REQUEST
-                        )
+                        new FlowFrameworkException("User does not have permissions to access workflow: " + workflowId, RestStatus.FORBIDDEN)
                     );
                 }
             } catch (Exception e) {
