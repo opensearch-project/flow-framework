@@ -14,6 +14,8 @@ Inspired from [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 ### Infrastructure
 ### Documentation
 ### Maintenance
+- Set bouncycastle version inline ([#1087](https://github.com/opensearch-project/flow-framework/pull/1087))
+
 ### Refactoring
 
 ## [Unreleased 2.x](https://github.com/opensearch-project/flow-framework/compare/2.18...2.x)
