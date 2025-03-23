@@ -208,8 +208,8 @@ dependencies {
 
     configurations.all {
         resolutionStrategy {
-            force("com.google.guava:guava:33.4.0-jre")
-            force("org.bouncycastle:bcprov-jdk18on:1.80")// CVE for 31.1, keep to force transitive dependencies
+            force("org.bouncycastle:bcprov-jdk18on:1.80")
+            force("com.google.guava:guava:33.4.5-jre") // CVE for 31.1, keep to force transitive dependencies
         }
     }
 }
