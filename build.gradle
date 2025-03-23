@@ -8,8 +8,8 @@ import java.nio.file.Paths
 
 buildscript {
     ext {
-        opensearch_version = System.getProperty("opensearch.version", "3.0.0-alpha1-SNAPSHOT")
-        buildVersionQualifier = System.getProperty("build.version_qualifier", "alpha1")
+        opensearch_version = System.getProperty("opensearch.version", "3.0.0-beta1-SNAPSHOT")
+        buildVersionQualifier = System.getProperty("build.version_qualifier", "beta1")
         isSnapshot = "true" == System.getProperty("build.snapshot", "true")
         version_tokens = opensearch_version.tokenize('-')
         opensearch_build = version_tokens[0] + '.0'
@@ -178,7 +178,7 @@ dependencies {
     implementation "org.dafny:DafnyRuntime:4.10.0"
     implementation "software.amazon.smithy.dafny:conversion:0.1.1"
     // needed by aws-encryption-sdk-java
-    implementation "org.bouncycastle:bc-fips:2.0.0"
+    implementation "org.bouncycastle:bc-fips:${versions.bouncycastle_jce}"
     api "org.apache.httpcomponents.core5:httpcore5:${versions.httpcore5}"
     implementation "jakarta.json.bind:jakarta.json.bind-api:3.0.1"
     implementation "org.glassfish:jakarta.json:2.0.1"
