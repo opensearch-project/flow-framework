@@ -177,6 +177,8 @@ dependencies {
     implementation "software.amazon.cryptography:aws-cryptographic-material-providers:1.9.0"
     implementation "org.dafny:DafnyRuntime:4.10.0"
     implementation "software.amazon.smithy.dafny:conversion:0.1.1"
+    // needed by aws-encryption-sdk-java
+    implementation "org.bouncycastle:bc-fips:${versions.bouncycastle_jce}"
     api "org.apache.httpcomponents.core5:httpcore5:${versions.httpcore5}"
     implementation "jakarta.json.bind:jakarta.json.bind-api:3.0.1"
     implementation "org.glassfish:jakarta.json:2.0.1"
