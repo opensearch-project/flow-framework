@@ -14,7 +14,7 @@ Inspired from [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 ### Infrastructure
 ### Documentation
 ### Maintenance
-- Remove unused bouncycastle ([#1087](https://github.com/opensearch-project/flow-framework/pull/1087))
+- Migrate from BC to BCFIPS libraries ([#1087](https://github.com/opensearch-project/flow-framework/pull/1087))
 
 ### Refactoring
 
