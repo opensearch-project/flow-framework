@@ -13,10 +13,12 @@ import org.opensearch.action.get.GetRequest;
 import org.opensearch.action.get.GetResponse;
 import org.opensearch.action.index.IndexResponse;
 import org.opensearch.action.support.ActionFilters;
+import org.opensearch.action.support.PlainActionFuture;
 import org.opensearch.action.update.UpdateResponse;
 import org.opensearch.cluster.service.ClusterService;
 import org.opensearch.common.settings.ClusterSettings;
 import org.opensearch.common.settings.Settings;
+import org.opensearch.common.unit.TimeValue;
 import org.opensearch.common.util.concurrent.OpenSearchExecutors;
 import org.opensearch.common.util.concurrent.ThreadContext;
 import org.opensearch.common.xcontent.XContentFactory;
@@ -27,6 +29,7 @@ import org.opensearch.core.xcontent.NamedXContentRegistry;
 import org.opensearch.core.xcontent.XContentBuilder;
 import org.opensearch.flowframework.TestHelpers;
 import org.opensearch.flowframework.common.FlowFrameworkSettings;
+import org.opensearch.flowframework.exception.FlowFrameworkException;
 import org.opensearch.flowframework.indices.FlowFrameworkIndicesHandler;
 import org.opensearch.flowframework.model.ProvisioningProgress;
 import org.opensearch.flowframework.model.Template;
@@ -34,6 +37,8 @@ import org.opensearch.flowframework.model.Workflow;
 import org.opensearch.flowframework.model.WorkflowEdge;
 import org.opensearch.flowframework.model.WorkflowNode;
 import org.opensearch.flowframework.util.EncryptorUtils;
+import org.opensearch.flowframework.workflow.ProcessNode;
+import org.opensearch.flowframework.workflow.WorkflowData;
 import org.opensearch.flowframework.workflow.WorkflowProcessSorter;
 import org.opensearch.index.get.GetResult;
 import org.opensearch.plugins.PluginsService;
@@ -257,4 +262,58 @@ public class ProvisionWorkflowTransportActionTests extends OpenSearchTestCase {
         assertEquals("Failed to get template 1", exceptionCaptor.getValue().getMessage());
     }
 
+    public void testProvisionWorkflowExecutionException() {
+
+        String workflowId = "1";
+        @SuppressWarnings("unchecked")
+        ActionListener<WorkflowResponse> listener = mock(ActionListener.class);
+        WorkflowRequest workflowRequest = new WorkflowRequest(workflowId, null, Collections.emptyMap(), TimeValue.timeValueSeconds(5));
+
+        // Bypass client.get and stub success case
+        doAnswer(invocation -> {
+            ActionListener<GetResponse> responseListener = invocation.getArgument(1);
+
+            XContentBuilder builder = XContentFactory.jsonBuilder();
+            this.template.toXContent(builder, null);
+            BytesReference templateBytesRef = BytesReference.bytes(builder);
+            GetResult getResult = new GetResult(GLOBAL_CONTEXT_INDEX, workflowId, 1, 1, 1, true, templateBytesRef, null, null);
+            responseListener.onResponse(new GetResponse(getResult));
+            return null;
+        }).when(client).get(any(GetRequest.class), any());
+
+        when(encryptorUtils.decryptTemplateCredentials(any())).thenReturn(template);
+
+        // Bypass isWorkflowNotStarted and force true response
+        doAnswer(invocation -> {
+            Consumer<Optional<ProvisioningProgress>> progressConsumer = invocation.getArgument(2);
+            progressConsumer.accept(Optional.of(ProvisioningProgress.NOT_STARTED));
+            return null;
+        }).when(flowFrameworkIndicesHandler).getProvisioningProgress(any(), any(), any(), any());
+
+        // Bypass updateFlowFrameworkSystemIndexDoc and stub on response
+        doAnswer(invocation -> {
+            ActionListener<UpdateResponse> actionListener = invocation.getArgument(3);
+            actionListener.onResponse(mock(UpdateResponse.class));
+            return null;
+        }).when(flowFrameworkIndicesHandler).updateFlowFrameworkSystemIndexDoc(any(), nullable(String.class), anyMap(), any());
+
+        doAnswer(invocation -> {
+            ActionListener<IndexResponse> responseListener = invocation.getArgument(2);
+            responseListener.onResponse(new IndexResponse(new ShardId(GLOBAL_CONTEXT_INDEX, "", 1), "1", 1L, 1L, 1L, true));
+            return null;
+        }).when(flowFrameworkIndicesHandler).updateTemplateInGlobalContext(any(), any(Template.class), any(), anyBoolean());
+
+        // Create a failed future for the workflow execution
+        PlainActionFuture<WorkflowData> failedFuture = PlainActionFuture.newFuture();
+        failedFuture.onFailure(new RuntimeException("Simulated failure during workflow execution"));
+        ProcessNode failedProcessNode = mock(ProcessNode.class);
+        when(failedProcessNode.execute()).thenReturn(failedFuture);
+        when(workflowProcessSorter.sortProcessNodes(any(), any(), any(), any())).thenReturn(Collections.singletonList(failedProcessNode));
+
+        provisionWorkflowTransportAction.doExecute(mock(Task.class), workflowRequest, listener);
+
+        ArgumentCaptor<FlowFrameworkException> responseCaptor = ArgumentCaptor.forClass(FlowFrameworkException.class);
+        verify(listener, times(1)).onFailure(responseCaptor.capture());
+        assertEquals("Failed to execute workflow 1", responseCaptor.getValue().getMessage());
+    }
 }
