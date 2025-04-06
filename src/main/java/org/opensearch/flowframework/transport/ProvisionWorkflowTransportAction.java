@@ -469,9 +469,25 @@ public class ProvisionWorkflowTransportAction extends HandledTransportAction<Wor
                 ),
                 ActionListener.wrap(updateResponse -> {
                     logger.info("updated workflow {} state to {}", workflowId, State.FAILED);
-                }, exceptionState -> { logger.error("Failed to update workflow state for workflow {}", workflowId, exceptionState); })
+                    if (isSyncExecution) {
+                        listener.onFailure(new FlowFrameworkException(errorMessage, status));
+                    } else {
+                        TenantAwareHelper.releaseProvision(tenantId);
+                    }
+                }, exceptionState -> {
+                    logger.error("Failed to update workflow state for workflow {}", workflowId, exceptionState);
+                    if (isSyncExecution) {
+                        listener.onFailure(
+                            new FlowFrameworkException(
+                                errorMessage + ". Failed to update workflow state after execution failure.",
+                                RestStatus.INTERNAL_SERVER_ERROR
+                            )
+                        );
+                    } else {
+                        TenantAwareHelper.releaseProvision(tenantId);
+                    }
+                })
             );
         }
     }
-
 }
