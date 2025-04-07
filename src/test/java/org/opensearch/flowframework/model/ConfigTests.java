@@ -85,10 +85,10 @@ public class ConfigTests extends OpenSearchTestCase {
         // Case 1: tenant_id is present and non-null
         try (XContentBuilder builder = XContentFactory.jsonBuilder()) {
             builder.startObject()
-                    .field("master_key", masterKey)
-                    .field("create_time", createTime.toEpochMilli())
-                    .field("tenant_id", "tenant-123")
-                    .endObject();
+                .field("master_key", masterKey)
+                .field("create_time", createTime.toEpochMilli())
+                .field("tenant_id", "tenant-123")
+                .endObject();
 
             BytesReference bytesRef = BytesReference.bytes(builder);
             try (XContentParser parser = ParseUtils.createXContentParserFromRegistry(xContentRegistry, bytesRef)) {
@@ -101,10 +101,10 @@ public class ConfigTests extends OpenSearchTestCase {
         // Case 2: tenant_id is explicitly null
         try (XContentBuilder builder = XContentFactory.jsonBuilder()) {
             builder.startObject()
-                    .field("master_key", masterKey)
-                    .field("create_time", createTime.toEpochMilli())
-                    .nullField("tenant_id")
-                    .endObject();
+                .field("master_key", masterKey)
+                .field("create_time", createTime.toEpochMilli())
+                .nullField("tenant_id")
+                .endObject();
 
             BytesReference bytesRef = BytesReference.bytes(builder);
             try (XContentParser parser = ParseUtils.createXContentParserFromRegistry(xContentRegistry, bytesRef)) {
@@ -116,10 +116,7 @@ public class ConfigTests extends OpenSearchTestCase {
 
         // Case 3: tenant_id is absent
         try (XContentBuilder builder = XContentFactory.jsonBuilder()) {
-            builder.startObject()
-                    .field("master_key", masterKey)
-                    .field("create_time", createTime.toEpochMilli())
-                    .endObject();
+            builder.startObject().field("master_key", masterKey).field("create_time", createTime.toEpochMilli()).endObject();
 
             BytesReference bytesRef = BytesReference.bytes(builder);
             try (XContentParser parser = ParseUtils.createXContentParserFromRegistry(xContentRegistry, bytesRef)) {
@@ -129,6 +126,5 @@ public class ConfigTests extends OpenSearchTestCase {
             }
         }
     }
-
 
 }

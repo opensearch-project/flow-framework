@@ -8,8 +8,6 @@
  */
 package org.opensearch.flowframework.model;
 
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import org.opensearch.core.rest.RestStatus;
 import org.opensearch.core.xcontent.ToXContentObject;
 import org.opensearch.core.xcontent.XContentBuilder;
@@ -60,7 +58,7 @@ public class Config implements ToXContentObject {
     @Override
     public XContentBuilder toXContent(XContentBuilder builder, Params params) throws IOException {
         XContentBuilder xContentBuilder = builder.startObject();
-        if(tenantId != null) {
+        if (tenantId != null) {
             xContentBuilder.field(TENANT_ID_FIELD, this.tenantId);
         }
         xContentBuilder.field(MASTER_KEY, this.masterKey);
