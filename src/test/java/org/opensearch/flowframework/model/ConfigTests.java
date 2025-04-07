@@ -78,4 +78,57 @@ public class ConfigTests extends OpenSearchTestCase {
         }
     }
 
+    public void testTenantIdVariants() throws IOException {
+        String masterKey = "foo";
+        Instant createTime = Instant.now().truncatedTo(ChronoUnit.MILLIS);
+
+        // Case 1: tenant_id is present and non-null
+        try (XContentBuilder builder = XContentFactory.jsonBuilder()) {
+            builder.startObject()
+                    .field("master_key", masterKey)
+                    .field("create_time", createTime.toEpochMilli())
+                    .field("tenant_id", "tenant-123")
+                    .endObject();
+
+            BytesReference bytesRef = BytesReference.bytes(builder);
+            try (XContentParser parser = ParseUtils.createXContentParserFromRegistry(xContentRegistry, bytesRef)) {
+                ensureExpectedToken(XContentParser.Token.START_OBJECT, parser.nextToken(), parser);
+                Config config = Config.parse(parser);
+                assertEquals("tenant-123", config.tenantId());
+            }
+        }
+
+        // Case 2: tenant_id is explicitly null
+        try (XContentBuilder builder = XContentFactory.jsonBuilder()) {
+            builder.startObject()
+                    .field("master_key", masterKey)
+                    .field("create_time", createTime.toEpochMilli())
+                    .nullField("tenant_id")
+                    .endObject();
+
+            BytesReference bytesRef = BytesReference.bytes(builder);
+            try (XContentParser parser = ParseUtils.createXContentParserFromRegistry(xContentRegistry, bytesRef)) {
+                ensureExpectedToken(XContentParser.Token.START_OBJECT, parser.nextToken(), parser);
+                Config config = Config.parse(parser);
+                assertNull(config.tenantId());
+            }
+        }
+
+        // Case 3: tenant_id is absent
+        try (XContentBuilder builder = XContentFactory.jsonBuilder()) {
+            builder.startObject()
+                    .field("master_key", masterKey)
+                    .field("create_time", createTime.toEpochMilli())
+                    .endObject();
+
+            BytesReference bytesRef = BytesReference.bytes(builder);
+            try (XContentParser parser = ParseUtils.createXContentParserFromRegistry(xContentRegistry, bytesRef)) {
+                ensureExpectedToken(XContentParser.Token.START_OBJECT, parser.nextToken(), parser);
+                Config config = Config.parse(parser);
+                assertNull(config.tenantId());
+            }
+        }
+    }
+
+
 }
