@@ -314,6 +314,6 @@ public class ProvisionWorkflowTransportActionTests extends OpenSearchTestCase {
 
         ArgumentCaptor<FlowFrameworkException> responseCaptor = ArgumentCaptor.forClass(FlowFrameworkException.class);
         verify(listener, times(1)).onFailure(responseCaptor.capture());
-        assertEquals("Failed to execute workflow 1", responseCaptor.getValue().getMessage());
+        assertTrue(responseCaptor.getValue().getMessage().startsWith("Simulated failure during workflow execution"));
     }
 }

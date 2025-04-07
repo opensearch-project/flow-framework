@@ -355,11 +355,11 @@ public class ReprovisionWorkflowTransportAction extends HandledTransportAction<R
 
                     @Override
                     public void onFailure(Exception e) {
-                        WorkflowTimeoutUtility.handleFailure(workflowId, e, isResponseSent, listener);
+                        WorkflowTimeoutUtility.handleFailure(workflowId, e, listener);
                     }
                 }, true);
             } catch (Exception ex) {
-                WorkflowTimeoutUtility.handleFailure(workflowId, ex, isResponseSent, listener);
+                WorkflowTimeoutUtility.handleFailure(workflowId, ex, listener);
             }
         }, threadPool.executor(PROVISION_WORKFLOW_THREAD_POOL));
         WorkflowTimeoutUtility.scheduleTimeoutHandler(

@@ -30,6 +30,7 @@ import org.opensearch.flowframework.util.EncryptorUtils;
 import org.opensearch.flowframework.workflow.ProcessNode;
 import org.opensearch.flowframework.workflow.WorkflowData;
 import org.opensearch.flowframework.workflow.WorkflowProcessSorter;
+import org.opensearch.flowframework.workflow.WorkflowStep;
 import org.opensearch.flowframework.workflow.WorkflowStepFactory;
 import org.opensearch.plugins.PluginsService;
 import org.opensearch.remote.metadata.client.SdkClient;
@@ -368,6 +369,9 @@ public class ReprovisionWorkflowTransportActionTests extends OpenSearchTestCase 
         failedFuture.onFailure(new RuntimeException("Simulated failure during workflow execution"));
         ProcessNode failedProcessNode = mock(ProcessNode.class);
         when(failedProcessNode.execute()).thenReturn(failedFuture);
+        WorkflowStep mockStep = mock(WorkflowStep.class);
+        when(mockStep.getName()).thenReturn("FakeStep");
+        when(failedProcessNode.workflowStep()).thenReturn(mockStep);
 
         // Stub reprovision sequence creation with the failed process node
         when(workflowProcessSorter.createReprovisionSequence(any(), any(), any(), any(), any())).thenReturn(List.of(failedProcessNode));
@@ -392,7 +396,7 @@ public class ReprovisionWorkflowTransportActionTests extends OpenSearchTestCase 
 
         ArgumentCaptor<Exception> exceptionCaptor = ArgumentCaptor.forClass(Exception.class);
         verify(listener, times(1)).onFailure(exceptionCaptor.capture());
-        assertTrue(exceptionCaptor.getValue().getMessage().contains("Failed to execute workflow"));
+        assertTrue(exceptionCaptor.getValue().getMessage().startsWith("Simulated failure during workflow execution"));
     }
 
 }

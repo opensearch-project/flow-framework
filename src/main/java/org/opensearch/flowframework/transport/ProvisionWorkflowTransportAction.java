@@ -352,11 +352,11 @@ public class ProvisionWorkflowTransportAction extends HandledTransportAction<Wor
 
                     @Override
                     public void onFailure(Exception e) {
-                        WorkflowTimeoutUtility.handleFailure(workflowId, e, isResponseSent, listener);
+                        WorkflowTimeoutUtility.handleFailure(workflowId, e, listener);
                     }
                 }, true);
             } catch (Exception ex) {
-                WorkflowTimeoutUtility.handleFailure(workflowId, ex, isResponseSent, listener);
+                WorkflowTimeoutUtility.handleFailure(workflowId, ex, listener);
             }
         }, client.threadPool().executor(PROVISION_WORKFLOW_THREAD_POOL));
 
