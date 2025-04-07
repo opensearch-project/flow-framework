@@ -21,6 +21,7 @@ import java.time.Instant;
 import static org.opensearch.core.xcontent.XContentParserUtils.ensureExpectedToken;
 import static org.opensearch.flowframework.common.CommonValue.CREATE_TIME;
 import static org.opensearch.flowframework.common.CommonValue.MASTER_KEY;
+import static org.opensearch.flowframework.common.CommonValue.TENANT_ID_FIELD;
 
 /**
  * Flow Framework Configuration
@@ -29,21 +30,37 @@ public class Config implements ToXContentObject {
 
     private final String masterKey;
     private final Instant createTime;
+    private final String tenantId;
 
     /**
      * Instantiate this object
      *
-     * @param masterKey The encryption master key
+     * @param masterKey  The encryption master key
+     * @param createTime The config creation time
+     * @param tenantId   The tenantId
+     */
+    public Config(String masterKey, Instant createTime, String tenantId) {
+        this.masterKey = masterKey;
+        this.createTime = createTime;
+        this.tenantId = tenantId;
+    }
+
+    /**
+     * Instantiate this object
+     *
+     * @param masterKey  The encryption master key
      * @param createTime The config creation time
      */
     public Config(String masterKey, Instant createTime) {
-        this.masterKey = masterKey;
-        this.createTime = createTime;
+        this(masterKey, createTime, null);
     }
 
     @Override
     public XContentBuilder toXContent(XContentBuilder builder, Params params) throws IOException {
         XContentBuilder xContentBuilder = builder.startObject();
+        if (tenantId != null) {
+            xContentBuilder.field(TENANT_ID_FIELD, this.tenantId);
+        }
         xContentBuilder.field(MASTER_KEY, this.masterKey);
         xContentBuilder.field(CREATE_TIME, this.createTime.toEpochMilli());
         return xContentBuilder.endObject();
@@ -59,12 +76,16 @@ public class Config implements ToXContentObject {
     public static Config parse(XContentParser parser) throws IOException {
         String masterKey = null;
         Instant createTime = Instant.now();
+        String tenantId = null;
 
         ensureExpectedToken(XContentParser.Token.START_OBJECT, parser.currentToken(), parser);
         while (parser.nextToken() != XContentParser.Token.END_OBJECT) {
             String fieldName = parser.currentName();
             parser.nextToken();
             switch (fieldName) {
+                case TENANT_ID_FIELD:
+                    tenantId = (String) parser.objectText();
+                    break;
                 case MASTER_KEY:
                     masterKey = parser.text();
                     break;
@@ -81,7 +102,7 @@ public class Config implements ToXContentObject {
         if (masterKey == null) {
             throw new FlowFrameworkException("The config object requires a master key.", RestStatus.BAD_REQUEST);
         }
-        return new Config(masterKey, createTime);
+        return new Config(masterKey, createTime, tenantId);
     }
 
     /**
@@ -96,5 +117,12 @@ public class Config implements ToXContentObject {
      */
     public Instant createTime() {
         return createTime;
+    }
+
+    /**
+     * @return the tenantId
+     */
+    public Object tenantId() {
+        return this.tenantId;
     }
 }
