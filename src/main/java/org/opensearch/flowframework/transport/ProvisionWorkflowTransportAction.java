@@ -352,11 +352,11 @@ public class ProvisionWorkflowTransportAction extends HandledTransportAction<Wor
 
                     @Override
                     public void onFailure(Exception e) {
-                        WorkflowTimeoutUtility.handleFailure(workflowId, e, isResponseSent, listener);
+                        WorkflowTimeoutUtility.handleFailure(workflowId, e, listener);
                     }
                 }, true);
             } catch (Exception ex) {
-                WorkflowTimeoutUtility.handleFailure(workflowId, ex, isResponseSent, listener);
+                WorkflowTimeoutUtility.handleFailure(workflowId, ex, listener);
             }
         }, client.threadPool().executor(PROVISION_WORKFLOW_THREAD_POOL));
 
@@ -469,9 +469,25 @@ public class ProvisionWorkflowTransportAction extends HandledTransportAction<Wor
                 ),
                 ActionListener.wrap(updateResponse -> {
                     logger.info("updated workflow {} state to {}", workflowId, State.FAILED);
-                }, exceptionState -> { logger.error("Failed to update workflow state for workflow {}", workflowId, exceptionState); })
+                    if (isSyncExecution) {
+                        listener.onFailure(new FlowFrameworkException(errorMessage, status));
+                    } else {
+                        TenantAwareHelper.releaseProvision(tenantId);
+                    }
+                }, exceptionState -> {
+                    logger.error("Failed to update workflow state for workflow {}", workflowId, exceptionState);
+                    if (isSyncExecution) {
+                        listener.onFailure(
+                            new FlowFrameworkException(
+                                errorMessage + ". Failed to update workflow state after execution failure.",
+                                RestStatus.INTERNAL_SERVER_ERROR
+                            )
+                        );
+                    } else {
+                        TenantAwareHelper.releaseProvision(tenantId);
+                    }
+                })
             );
         }
     }
-
 }

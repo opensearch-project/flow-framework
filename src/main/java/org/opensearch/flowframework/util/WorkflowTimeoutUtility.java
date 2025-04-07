@@ -14,6 +14,7 @@ import org.opensearch.ExceptionsHelper;
 import org.opensearch.common.unit.TimeValue;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.flowframework.exception.FlowFrameworkException;
+import org.opensearch.flowframework.model.WorkflowState;
 import org.opensearch.flowframework.transport.GetWorkflowStateAction;
 import org.opensearch.flowframework.transport.GetWorkflowStateRequest;
 import org.opensearch.flowframework.transport.WorkflowResponse;
@@ -164,25 +165,13 @@ public class WorkflowTimeoutUtility {
      *
      * @param workflowId    The unique identifier of the workflow.
      * @param e             The exception that occurred during workflow execution.
-     * @param isResponseSent An atomic boolean to ensure the response is sent only once.
      * @param listener       The listener to notify of the workflow failure.
      */
-    public static void handleFailure(
-        String workflowId,
-        Exception e,
-        AtomicBoolean isResponseSent,
-        ActionListener<WorkflowResponse> listener
-    ) {
-        // Check if the failure has already been reported, and report it only if it hasn't been reported yet.
-        if (isResponseSent.compareAndSet(false, true)) {
-            FlowFrameworkException exception = new FlowFrameworkException(
-                "Failed to execute workflow " + workflowId,
-                ExceptionsHelper.status(e)
-            );
-            listener.onFailure(exception);
-        } else {
-            logger.info("Ignoring onFailure for workflowId: {} as timeout already occurred", workflowId);
-        }
+    public static void handleFailure(String workflowId, Exception e, ActionListener<WorkflowResponse> listener) {
+        FlowFrameworkException exception = e instanceof FlowFrameworkException
+            ? (FlowFrameworkException) e
+            : new FlowFrameworkException("Failed to execute workflow " + workflowId, ExceptionsHelper.status(e));
+        listener.onFailure(exception);
     }
 
     /**
@@ -207,8 +196,16 @@ public class WorkflowTimeoutUtility {
             new GetWorkflowStateRequest(workflowId, false, tenantId),
             ActionListener.wrap(
                 response -> listener.onResponse(new WorkflowResponse(workflowId, response.getWorkflowState())),
-                exception -> listener.onFailure(
-                    new FlowFrameworkException("Failed to get workflow state after timeout", ExceptionsHelper.status(exception))
+                // we don't want to fail the listener as provisioning is still ongoing
+                exception -> listener.onResponse(
+                    new WorkflowResponse(
+                        workflowId,
+                        WorkflowState.builder()
+                            .workflowId(workflowId)
+                            .error("Workflow timed out, failed to fetch current state")
+                            .state("UNKNOWN")
+                            .build()
+                    )
                 )
             )
         );

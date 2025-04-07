@@ -9,6 +9,7 @@
 package org.opensearch.flowframework.transport;
 
 import org.opensearch.action.support.ActionFilters;
+import org.opensearch.action.support.PlainActionFuture;
 import org.opensearch.action.update.UpdateResponse;
 import org.opensearch.cluster.service.ClusterService;
 import org.opensearch.common.settings.ClusterSettings;
@@ -27,7 +28,9 @@ import org.opensearch.flowframework.model.Workflow;
 import org.opensearch.flowframework.model.WorkflowState;
 import org.opensearch.flowframework.util.EncryptorUtils;
 import org.opensearch.flowframework.workflow.ProcessNode;
+import org.opensearch.flowframework.workflow.WorkflowData;
 import org.opensearch.flowframework.workflow.WorkflowProcessSorter;
+import org.opensearch.flowframework.workflow.WorkflowStep;
 import org.opensearch.flowframework.workflow.WorkflowStepFactory;
 import org.opensearch.plugins.PluginsService;
 import org.opensearch.remote.metadata.client.SdkClient;
@@ -333,6 +336,67 @@ public class ReprovisionWorkflowTransportActionTests extends OpenSearchTestCase 
         ArgumentCaptor<Exception> exceptionCaptor = ArgumentCaptor.forClass(Exception.class);
         verify(listener, times(1)).onFailure(exceptionCaptor.capture());
         assertEquals("Failed to get workflow state for workflow 1", exceptionCaptor.getValue().getMessage());
+    }
+
+    public void testReprovisionWorkflowExecutionException() throws Exception {
+        String workflowId = "1";
+
+        Template mockTemplate = mock(Template.class);
+        Workflow mockWorkflow = mock(Workflow.class);
+        Map<String, Workflow> mockWorkflows = new HashMap<>();
+        mockWorkflows.put(PROVISION_WORKFLOW, mockWorkflow);
+
+        // Stub validations
+        when(mockTemplate.workflows()).thenReturn(mockWorkflows);
+        when(workflowProcessSorter.sortProcessNodes(any(), any(), any(), any())).thenReturn(List.of());
+        doNothing().when(workflowProcessSorter).validate(any(), any());
+        when(encryptorUtils.decryptTemplateCredentials(any())).thenReturn(mockTemplate);
+
+        // Stub state and resources created
+        doAnswer(invocation -> {
+            ActionListener<GetWorkflowStateResponse> listener = invocation.getArgument(2);
+            WorkflowState state = mock(WorkflowState.class);
+            ResourceCreated resourceCreated = new ResourceCreated("stepName", workflowId, "resourceType", "resourceId");
+            when(state.getState()).thenReturn(State.COMPLETED.toString());
+            when(state.resourcesCreated()).thenReturn(List.of(resourceCreated));
+            when(state.getError()).thenReturn(null);
+            listener.onResponse(new GetWorkflowStateResponse(state, true));
+            return null;
+        }).when(client).execute(any(), any(GetWorkflowStateRequest.class), any());
+
+        // Create a failed future for the workflow execution
+        PlainActionFuture<WorkflowData> failedFuture = PlainActionFuture.newFuture();
+        failedFuture.onFailure(new RuntimeException("Simulated failure during workflow execution"));
+        ProcessNode failedProcessNode = mock(ProcessNode.class);
+        when(failedProcessNode.execute()).thenReturn(failedFuture);
+        WorkflowStep mockStep = mock(WorkflowStep.class);
+        when(mockStep.getName()).thenReturn("FakeStep");
+        when(failedProcessNode.workflowStep()).thenReturn(mockStep);
+
+        // Stub reprovision sequence creation with the failed process node
+        when(workflowProcessSorter.createReprovisionSequence(any(), any(), any(), any(), any())).thenReturn(List.of(failedProcessNode));
+
+        // Bypass updateFlowFrameworkSystemIndexDoc and stub on response
+        doAnswer(invocation -> {
+            ActionListener<UpdateResponse> actionListener = invocation.getArgument(3);
+            actionListener.onResponse(mock(UpdateResponse.class));
+            return null;
+        }).when(flowFrameworkIndicesHandler).updateFlowFrameworkSystemIndexDoc(any(), nullable(String.class), anyMap(), any());
+
+        @SuppressWarnings("unchecked")
+        ActionListener<WorkflowResponse> listener = mock(ActionListener.class);
+        ReprovisionWorkflowRequest request = new ReprovisionWorkflowRequest(
+            workflowId,
+            mockTemplate,
+            mockTemplate,
+            TimeValue.timeValueSeconds(5)
+        );
+
+        reprovisionWorkflowTransportAction.doExecute(mock(Task.class), request, listener);
+
+        ArgumentCaptor<Exception> exceptionCaptor = ArgumentCaptor.forClass(Exception.class);
+        verify(listener, times(1)).onFailure(exceptionCaptor.capture());
+        assertTrue(exceptionCaptor.getValue().getMessage().startsWith("Simulated failure during workflow execution"));
     }
 
 }

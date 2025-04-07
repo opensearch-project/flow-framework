@@ -78,7 +78,6 @@ public class ReprovisionWorkflowTransportAction extends HandledTransportAction<R
     private final ThreadPool threadPool;
     private final Client client;
     private final SdkClient sdkClient;
-    private final WorkflowStepFactory workflowStepFactory;
     private final WorkflowProcessSorter workflowProcessSorter;
     private final FlowFrameworkIndicesHandler flowFrameworkIndicesHandler;
     private final FlowFrameworkSettings flowFrameworkSettings;
@@ -126,7 +125,6 @@ public class ReprovisionWorkflowTransportAction extends HandledTransportAction<R
         this.threadPool = threadPool;
         this.client = client;
         this.sdkClient = sdkClient;
-        this.workflowStepFactory = workflowStepFactory;
         this.workflowProcessSorter = workflowProcessSorter;
         this.flowFrameworkIndicesHandler = flowFrameworkIndicesHandler;
         this.flowFrameworkSettings = flowFrameworkSettings;
@@ -357,11 +355,11 @@ public class ReprovisionWorkflowTransportAction extends HandledTransportAction<R
 
                     @Override
                     public void onFailure(Exception e) {
-                        WorkflowTimeoutUtility.handleFailure(workflowId, e, isResponseSent, listener);
+                        WorkflowTimeoutUtility.handleFailure(workflowId, e, listener);
                     }
                 }, true);
             } catch (Exception ex) {
-                WorkflowTimeoutUtility.handleFailure(workflowId, ex, isResponseSent, listener);
+                WorkflowTimeoutUtility.handleFailure(workflowId, ex, listener);
             }
         }, threadPool.executor(PROVISION_WORKFLOW_THREAD_POOL));
         WorkflowTimeoutUtility.scheduleTimeoutHandler(
@@ -494,7 +492,24 @@ public class ReprovisionWorkflowTransportAction extends HandledTransportAction<R
                 ),
                 ActionListener.wrap(updateResponse -> {
                     logger.info("updated workflow {} state to {}", workflowId, State.FAILED);
-                }, exceptionState -> { logger.error("Failed to update workflow state for workflow {}", workflowId, exceptionState); })
+                    if (isSyncExecution) {
+                        listener.onFailure(new FlowFrameworkException(errorMessage, status));
+                    } else {
+                        TenantAwareHelper.releaseProvision(template.getTenantId());
+                    }
+                }, exceptionState -> {
+                    logger.error("Failed to update workflow state for workflow {}", workflowId, exceptionState);
+                    if (isSyncExecution) {
+                        listener.onFailure(
+                            new FlowFrameworkException(
+                                errorMessage + ". Failed to update workflow state after execution failure.",
+                                RestStatus.INTERNAL_SERVER_ERROR
+                            )
+                        );
+                    } else {
+                        TenantAwareHelper.releaseProvision(template.getTenantId());
+                    }
+                })
             );
         }
     }
