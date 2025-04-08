@@ -5,19 +5,11 @@ Inspired from [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ## [Unreleased 3.0](https://github.com/opensearch-project/flow-framework/compare/2.x...HEAD)
 ### Features
-- Add per-tenant provisioning throttling ([#1074](https://github.com/opensearch-project/flow-framework/pull/1074))
-
 ### Enhancements
 ### Bug Fixes
-- Change REST status codes for RBAC and provisioning ([#1083](https://github.com/opensearch-project/flow-framework/pull/1083))
-- Fix Config parser does not handle tenant_id field ([#1096](https://github.com/opensearch-project/flow-framework/pull/1096))
-- Complete action listener on failed synchronous workflow provisioning ([#1098](https://github.com/opensearch-project/opensearch-remote-metadata-sdk/pull/1098))
-
 ### Infrastructure
 ### Documentation
 ### Maintenance
-- Migrate from BC to BCFIPS libraries ([#1087](https://github.com/opensearch-project/flow-framework/pull/1087))
-
 ### Refactoring
 
 ## [Unreleased 2.x](https://github.com/opensearch-project/flow-framework/compare/2.18...2.x)
