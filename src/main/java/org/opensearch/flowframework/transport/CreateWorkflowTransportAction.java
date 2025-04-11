@@ -465,7 +465,11 @@ public class CreateWorkflowTransportAction extends HandledTransportAction<Workfl
         );
         logger.info("Reprovisioning parameter is set, continuing to reprovision workflow {}", workflowId);
         client.execute(ReprovisionWorkflowAction.INSTANCE, reprovisionRequest, ActionListener.wrap(reprovisionResponse -> {
-            listener.onResponse(new WorkflowResponse(reprovisionResponse.getWorkflowId()));
+            listener.onResponse(
+                reprovisionRequest.getWaitForCompletionTimeout() == TimeValue.MINUS_ONE
+                    ? new WorkflowResponse(reprovisionResponse.getWorkflowId())
+                    : new WorkflowResponse(reprovisionResponse.getWorkflowId(), reprovisionResponse.getWorkflowState())
+            );
         }, exception -> {
             String errorMessage = ParameterizedMessageFactory.INSTANCE.newMessage("Reprovisioning failed for workflow {}", workflowId)
                 .getFormattedMessage();
