@@ -16,6 +16,8 @@ Inspired from [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 ### Features
 ### Enhancements
 ### Bug Fixes
+- Fix bug handleReprovision missing wait_for_completion_timeout response ([#1107](https://github.com/opensearch-project/flow-framework/pull/1107))
+
 ### Infrastructure
 ### Documentation
 - Update template for alert summary with new log pattern tools ([#1021](https://github.com/opensearch-project/flow-framework/pull/1021))
