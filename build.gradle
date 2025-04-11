@@ -163,6 +163,7 @@ repositories {
 configurations {
     zipArchive
     secureIntegTestPluginArchive
+    agent
 }
 
 dependencies {
@@ -206,6 +207,10 @@ dependencies {
     zipArchive group: 'org.opensearch.plugin', name:'opensearch-knn', version: "${opensearch_build}"
     zipArchive group: 'org.opensearch.plugin', name:'neural-search', version: "${opensearch_build}"
     secureIntegTestPluginArchive group: 'org.opensearch.plugin', name:'opensearch-security', version: "${opensearch_build}"
+
+    agent "org.opensearch:opensearch-agent-bootstrap:${opensearch_version}"
+    agent "org.opensearch:opensearch-agent:${opensearch_version}"
+    agent "net.bytebuddy:byte-buddy:${versions.bytebuddy}"
 
     configurations.all {
         resolutionStrategy {
@@ -775,4 +780,14 @@ tasks.withType(AbstractPublishToMaven) {
     onlyIf("Publishing only ZIP distributions") {
         predicate.get()
     }
+}
+
+task prepareAgent(type: Copy) {
+  from(configurations.agent)
+  into "$buildDir/agent"
+}
+
+tasks.withType(Test) {
+  dependsOn prepareAgent
+  jvmArgs += ["-javaagent:" + project.layout.buildDirectory.file("agent/opensearch-agent-${opensearch_version}.jar").get()]
 }
