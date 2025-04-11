@@ -584,11 +584,11 @@ public class CreateWorkflowTransportActionTests extends OpenSearchTestCase {
 
         assertEquals("1", responseCaptor.getValue().getWorkflowId());
     }
-    
+
     public void testHandleReprovisionWithMinusOneTimeout() throws IOException {
         @SuppressWarnings("unchecked")
         ActionListener<WorkflowResponse> listener = mock(ActionListener.class);
-        
+
         // Create a request with TimeValue.MINUS_ONE for waitForCompletionTimeout
         WorkflowRequest workflowRequest = new WorkflowRequest(
             "1",
@@ -611,10 +611,10 @@ public class CreateWorkflowTransportActionTests extends OpenSearchTestCase {
         doAnswer(invocation -> {
             ReprovisionWorkflowRequest reprovisionRequest = invocation.getArgument(1);
             ActionListener<WorkflowResponse> responseListener = invocation.getArgument(2);
-            
+
             // Verify that the reprovision request has TimeValue.MINUS_ONE
             assertEquals(TimeValue.MINUS_ONE, reprovisionRequest.getWaitForCompletionTimeout());
-            
+
             // Return a response with just the workflow ID
             WorkflowResponse reprovisionResponse = new WorkflowResponse("1");
             responseListener.onResponse(reprovisionResponse);
@@ -630,11 +630,11 @@ public class CreateWorkflowTransportActionTests extends OpenSearchTestCase {
         assertEquals("1", responseCaptor.getValue().getWorkflowId());
         assertNull(responseCaptor.getValue().getWorkflowState());
     }
-    
+
     public void testHandleReprovisionWithSpecifiedTimeout() throws IOException {
         @SuppressWarnings("unchecked")
         ActionListener<WorkflowResponse> listener = mock(ActionListener.class);
-        
+
         // Create a request with a specific timeout value
         WorkflowRequest workflowRequest = new WorkflowRequest(
             "1",
@@ -671,10 +671,10 @@ public class CreateWorkflowTransportActionTests extends OpenSearchTestCase {
         doAnswer(invocation -> {
             ReprovisionWorkflowRequest reprovisionRequest = invocation.getArgument(1);
             ActionListener<WorkflowResponse> responseListener = invocation.getArgument(2);
-            
+
             // Verify that the reprovision request has the specified timeout
             assertEquals(TimeValue.timeValueSeconds(5), reprovisionRequest.getWaitForCompletionTimeout());
-            
+
             // Return a response with both workflow ID and state
             WorkflowResponse reprovisionResponse = new WorkflowResponse("1", mockState);
             responseListener.onResponse(reprovisionResponse);
