@@ -85,6 +85,9 @@
             "description": "A general tool to calculate any math problem. The action input must be valid math expression, like 2+3",
             "parameters": {
               "max_iteration": 5
+            },
+            "attributes": {
+                "test_attribute": "test_value"
             }
           }
         },

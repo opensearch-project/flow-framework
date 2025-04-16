@@ -172,14 +172,10 @@ public class CommonValue {
     public static final String TOOLS_FIELD = "tools";
     /** The tools order field for an agent */
     public static final String TOOLS_ORDER_FIELD = "tools_order";
-    /** The tools config field */
-    public static final String CONFIG_FIELD = "config";
     /** The memory field for an agent */
     public static final String MEMORY_FIELD = "memory";
     /** The app type field for an agent */
     public static final String APP_TYPE_FIELD = "app_type";
-    /** To include field for an agent response */
-    public static final String INCLUDE_OUTPUT_IN_AGENT_RESPONSE = "include_output_in_agent_response";
     /** Pipeline ID, also corresponds to pipeline name */
     public static final String PIPELINE_ID = "pipeline_id";
     /** Pipeline Configurations */
