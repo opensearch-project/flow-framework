@@ -36,7 +36,7 @@ buildscript {
 
         isSameMajorVersion = opensearch_version.split("\\.")[0] == bwcVersionShort.split("\\.")[0]
         swaggerVersion = "2.1.26"
-        swaggerCoreVersion = "2.2.29"
+        swaggerCoreVersion = "2.2.30"
     }
 
     repositories {
