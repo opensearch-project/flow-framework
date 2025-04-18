@@ -585,6 +585,113 @@ public class CreateWorkflowTransportActionTests extends OpenSearchTestCase {
         assertEquals("1", responseCaptor.getValue().getWorkflowId());
     }
 
+    public void testHandleReprovisionWithMinusOneTimeout() throws IOException {
+        @SuppressWarnings("unchecked")
+        ActionListener<WorkflowResponse> listener = mock(ActionListener.class);
+
+        // Create a request with TimeValue.MINUS_ONE for waitForCompletionTimeout
+        WorkflowRequest workflowRequest = new WorkflowRequest(
+            "1",
+            template,
+            new String[] { "off" },
+            false,
+            Collections.emptyMap(),
+            true,
+            null
+        );
+
+        GetResponse getWorkflowResponse = TestHelpers.createGetResponse(template, "123", GLOBAL_CONTEXT_INDEX);
+        doAnswer(invocation -> {
+            ActionListener<GetResponse> getListener = invocation.getArgument(1);
+            getListener.onResponse(getWorkflowResponse);
+            return null;
+        }).when(client).get(any(GetRequest.class), any());
+
+        // Mock the reprovision response with a workflow ID but no state
+        doAnswer(invocation -> {
+            ReprovisionWorkflowRequest reprovisionRequest = invocation.getArgument(1);
+            ActionListener<WorkflowResponse> responseListener = invocation.getArgument(2);
+
+            // Verify that the reprovision request has TimeValue.MINUS_ONE
+            assertEquals(TimeValue.MINUS_ONE, reprovisionRequest.getWaitForCompletionTimeout());
+
+            // Return a response with just the workflow ID
+            WorkflowResponse reprovisionResponse = new WorkflowResponse("1");
+            responseListener.onResponse(reprovisionResponse);
+            return null;
+        }).when(client).execute(eq(ReprovisionWorkflowAction.INSTANCE), any(ReprovisionWorkflowRequest.class), any());
+
+        createWorkflowTransportAction.doExecute(mock(Task.class), workflowRequest, listener);
+
+        ArgumentCaptor<WorkflowResponse> responseCaptor = ArgumentCaptor.forClass(WorkflowResponse.class);
+        verify(listener, times(1)).onResponse(responseCaptor.capture());
+
+        // Verify that the response only contains the workflow ID
+        assertEquals("1", responseCaptor.getValue().getWorkflowId());
+        assertNull(responseCaptor.getValue().getWorkflowState());
+    }
+
+    public void testHandleReprovisionWithSpecifiedTimeout() throws IOException {
+        @SuppressWarnings("unchecked")
+        ActionListener<WorkflowResponse> listener = mock(ActionListener.class);
+
+        // Create a request with a specific timeout value
+        WorkflowRequest workflowRequest = new WorkflowRequest(
+            "1",
+            template,
+            new String[] { "off" },
+            false,
+            Map.of(WAIT_FOR_COMPLETION_TIMEOUT, "5s"),
+            true,
+            null
+        );
+
+        GetResponse getWorkflowResponse = TestHelpers.createGetResponse(template, "123", GLOBAL_CONTEXT_INDEX);
+        doAnswer(invocation -> {
+            ActionListener<GetResponse> getListener = invocation.getArgument(1);
+            getListener.onResponse(getWorkflowResponse);
+            return null;
+        }).when(client).get(any(GetRequest.class), any());
+
+        // Create a mock workflow state for the response
+        WorkflowState mockState = new WorkflowState(
+            "1",
+            "test",
+            "PROVISIONING",
+            "IN_PROGRESS",
+            Instant.now(),
+            Instant.now(),
+            TestHelpers.randomUser(),
+            Collections.emptyMap(),
+            Collections.emptyList(),
+            null
+        );
+
+        // Mock the reprovision response with both workflow ID and state
+        doAnswer(invocation -> {
+            ReprovisionWorkflowRequest reprovisionRequest = invocation.getArgument(1);
+            ActionListener<WorkflowResponse> responseListener = invocation.getArgument(2);
+
+            // Verify that the reprovision request has the specified timeout
+            assertEquals(TimeValue.timeValueSeconds(5), reprovisionRequest.getWaitForCompletionTimeout());
+
+            // Return a response with both workflow ID and state
+            WorkflowResponse reprovisionResponse = new WorkflowResponse("1", mockState);
+            responseListener.onResponse(reprovisionResponse);
+            return null;
+        }).when(client).execute(eq(ReprovisionWorkflowAction.INSTANCE), any(ReprovisionWorkflowRequest.class), any());
+
+        createWorkflowTransportAction.doExecute(mock(Task.class), workflowRequest, listener);
+
+        ArgumentCaptor<WorkflowResponse> responseCaptor = ArgumentCaptor.forClass(WorkflowResponse.class);
+        verify(listener, times(1)).onResponse(responseCaptor.capture());
+
+        // Verify that the response contains both workflow ID and state
+        assertEquals("1", responseCaptor.getValue().getWorkflowId());
+        assertNotNull(responseCaptor.getValue().getWorkflowState());
+        assertEquals("PROVISIONING", responseCaptor.getValue().getWorkflowState().getState());
+    }
+
     public void testFailedToUpdateWorkflowWithReprovision() throws IOException {
         @SuppressWarnings("unchecked")
         ActionListener<WorkflowResponse> listener = mock(ActionListener.class);
