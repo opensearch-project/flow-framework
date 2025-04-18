@@ -8,6 +8,7 @@ Inspired from [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 ### Enhancements
 ### Bug Fixes
 - Fix bug handleReprovision missing wait_for_completion_timeout response ([#1107](https://github.com/opensearch-project/flow-framework/pull/1107))
+- Add new attributes field to ToolStep ([#1113](https://github.com/opensearch-project/flow-framework/pull/1113))
 
 ### Infrastructure
 ### Documentation

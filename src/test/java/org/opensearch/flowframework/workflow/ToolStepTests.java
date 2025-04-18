@@ -24,6 +24,7 @@ import static org.opensearch.flowframework.common.WorkflowResources.MODEL_ID;
 
 public class ToolStepTests extends OpenSearchTestCase {
     private WorkflowData inputData;
+    private WorkflowData inputDataWithAttributes;
     private WorkflowData inputDataWithConnectorId;
     private WorkflowData inputDataWithModelId;
     private WorkflowData inputDataWithAgentId;
@@ -47,6 +48,18 @@ public class ToolStepTests extends OpenSearchTestCase {
                 Map.entry("name", "name"),
                 Map.entry("description", "description"),
                 Map.entry("parameters", Collections.emptyMap()),
+                Map.entry("include_output_in_agent_response", false)
+            ),
+            "test-id",
+            "test-node-id"
+        );
+        inputDataWithAttributes = new WorkflowData(
+            Map.ofEntries(
+                Map.entry("type", "type"),
+                Map.entry("name", "name"),
+                Map.entry("description", "description"),
+                Map.entry("parameters", Collections.emptyMap()),
+                Map.entry("attributes", Map.of("key1", "value1", "key2", "value2")),
                 Map.entry("include_output_in_agent_response", false)
             ),
             "test-id",
@@ -126,6 +139,24 @@ public class ToolStepTests extends OpenSearchTestCase {
         WorkflowStepException w = (WorkflowStepException) e.getCause();
         assertEquals("Failed to parse value [yes] as only [true] or [false] are allowed.", w.getMessage());
         assertEquals(RestStatus.BAD_REQUEST, w.getRestStatus());
+    }
+
+    public void testToolWithAttributes() throws ExecutionException, InterruptedException {
+        ToolStep toolStep = new ToolStep();
+
+        PlainActionFuture<WorkflowData> future = toolStep.execute(
+            inputDataWithAttributes.getNodeId(),
+            inputDataWithAttributes,
+            Collections.emptyMap(),
+            Collections.emptyMap(),
+            Collections.emptyMap(),
+            null
+        );
+        assertTrue(future.isDone());
+        Object tools = future.get().getContent().get("tools");
+        assertEquals(MLToolSpec.class, tools.getClass());
+        MLToolSpec mlToolSpec = (MLToolSpec) tools;
+        assertEquals(Map.of("key1", "value1", "key2", "value2"), mlToolSpec.getAttributes());
     }
 
     public void testToolWithConnectorId() throws ExecutionException, InterruptedException {

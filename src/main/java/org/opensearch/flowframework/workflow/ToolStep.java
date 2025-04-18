@@ -23,16 +23,17 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 
-import static org.opensearch.flowframework.common.CommonValue.CONFIG_FIELD;
-import static org.opensearch.flowframework.common.CommonValue.DESCRIPTION_FIELD;
-import static org.opensearch.flowframework.common.CommonValue.INCLUDE_OUTPUT_IN_AGENT_RESPONSE;
-import static org.opensearch.flowframework.common.CommonValue.NAME_FIELD;
-import static org.opensearch.flowframework.common.CommonValue.PARAMETERS_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.TOOLS_FIELD;
-import static org.opensearch.flowframework.common.CommonValue.TYPE;
 import static org.opensearch.flowframework.common.WorkflowResources.AGENT_ID;
 import static org.opensearch.flowframework.common.WorkflowResources.CONNECTOR_ID;
 import static org.opensearch.flowframework.common.WorkflowResources.MODEL_ID;
+import static org.opensearch.ml.common.agent.MLToolSpec.ATTRIBUTES_FIELD;
+import static org.opensearch.ml.common.agent.MLToolSpec.CONFIG_FIELD;
+import static org.opensearch.ml.common.agent.MLToolSpec.DESCRIPTION_FIELD;
+import static org.opensearch.ml.common.agent.MLToolSpec.INCLUDE_OUTPUT_IN_AGENT_RESPONSE;
+import static org.opensearch.ml.common.agent.MLToolSpec.PARAMETERS_FIELD;
+import static org.opensearch.ml.common.agent.MLToolSpec.TOOL_NAME_FIELD;
+import static org.opensearch.ml.common.agent.MLToolSpec.TOOL_TYPE_FIELD;
 
 /**
  * Step to register a tool for an agent
@@ -45,12 +46,13 @@ public class ToolStep implements WorkflowStep {
     /** The name of this step, used as a key in the template and the {@link WorkflowStepFactory} */
     public static final String NAME = "create_tool";
     /** Required input keys */
-    public static final Set<String> REQUIRED_INPUTS = Set.of(TYPE);
+    public static final Set<String> REQUIRED_INPUTS = Set.of(TOOL_TYPE_FIELD);
     /** Optional input keys */
     public static final Set<String> OPTIONAL_INPUTS = Set.of(
-        NAME_FIELD,
+        TOOL_NAME_FIELD,
         DESCRIPTION_FIELD,
         PARAMETERS_FIELD,
+        ATTRIBUTES_FIELD,
         CONFIG_FIELD,
         INCLUDE_OUTPUT_IN_AGENT_RESPONSE
     );
@@ -76,8 +78,8 @@ public class ToolStep implements WorkflowStep {
                 params
             );
 
-            String type = (String) inputs.get(TYPE);
-            String name = (String) inputs.get(NAME_FIELD);
+            String type = (String) inputs.get(TOOL_TYPE_FIELD);
+            String name = (String) inputs.get(TOOL_NAME_FIELD);
             String description = (String) inputs.get(DESCRIPTION_FIELD);
             Boolean includeOutputInAgentResponse = ParseUtils.parseIfExists(inputs, INCLUDE_OUTPUT_IN_AGENT_RESPONSE, Boolean.class);
 
@@ -89,6 +91,7 @@ public class ToolStep implements WorkflowStep {
                 outputs,
                 toolParameterKeys
             );
+            Map<String, String> attributes = (Map<String, String>) inputs.get(ATTRIBUTES_FIELD);
             @SuppressWarnings("unchecked")
             Map<String, String> config = (Map<String, String>) inputs.getOrDefault(CONFIG_FIELD, Collections.emptyMap());
 
@@ -103,6 +106,9 @@ public class ToolStep implements WorkflowStep {
             }
             if (parameters != null) {
                 builder.parameters(parameters);
+            }
+            if (attributes != null) {
+                builder.attributes(attributes);
             }
             if (includeOutputInAgentResponse != null) {
                 builder.includeOutputInAgentResponse(includeOutputInAgentResponse);

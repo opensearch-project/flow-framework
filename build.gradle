@@ -36,7 +36,7 @@ buildscript {
 
         isSameMajorVersion = opensearch_version.split("\\.")[0] == bwcVersionShort.split("\\.")[0]
         swaggerVersion = "2.1.26"
-        swaggerCoreVersion = "2.2.29"
+        swaggerCoreVersion = "2.2.30"
     }
 
     repositories {
@@ -64,6 +64,7 @@ apply plugin: 'idea'
 apply plugin: 'opensearch.opensearchplugin'
 apply plugin: 'opensearch.yaml-rest-test'
 apply plugin: 'opensearch.pluginzip'
+apply plugin: 'opensearch.java-agent'
 // for formatting and license headers
 apply plugin: 'com.diffplug.spotless'
 apply from: 'formatter/formatting.gradle'
