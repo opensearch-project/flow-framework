@@ -208,7 +208,7 @@ dependencies {
 
     configurations.all {
         resolutionStrategy {
-            force("com.google.guava:guava:33.4.6-jre") // CVE for 31.1, keep to force transitive dependencies
+            force("com.google.guava:guava:33.4.8-jre") // CVE for 31.1, keep to force transitive dependencies
         }
     }
 }
