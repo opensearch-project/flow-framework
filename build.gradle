@@ -175,7 +175,7 @@ dependencies {
     implementation("org.apache.commons:commons-lang3:${versions.commonslang}")
     implementation("org.opensearch:common-utils:${common_utils_version}")
     implementation("com.amazonaws:aws-encryption-sdk-java:3.0.1")
-    implementation("software.amazon.cryptography:aws-cryptographic-material-providers:1.9.0")
+    implementation("software.amazon.cryptography:aws-cryptographic-material-providers:1.10.1")
     implementation("org.dafny:DafnyRuntime:4.10.0")
     implementation("software.amazon.smithy.dafny:conversion:0.1.1")
     implementation("org.bouncycastle:bc-fips:${versions.bouncycastle_jce}")
