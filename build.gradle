@@ -49,7 +49,7 @@ buildscript {
 
     dependencies {
         classpath "org.opensearch.gradle:build-tools:${opensearch_version}"
-        classpath "com.diffplug.spotless:spotless-plugin-gradle:7.0.2"
+        classpath "com.diffplug.spotless:spotless-plugin-gradle:7.0.3"
     }
 }
 
