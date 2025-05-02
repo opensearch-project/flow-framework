@@ -6,6 +6,7 @@ This document contains a list of maintainers in this repo. See [opensearch-proje
 
 | Maintainer        | GitHub ID                                               | Affiliation |
 | ----------------- | ------------------------------------------------------- | ----------- |
+| Junwei Dai        | [junweid62](https://github.com/junweid62)               | Amazon      |
 | Amit Galitzky     | [amitgalitz](https://github.com/amitgalitz)             | Amazon      |
 | Jackie Han        | [jackiehanyang](https://github.com/jackiehanyang)       | Amazon      |
 | Owais Kazi        | [owaiskazi19](https://github.com/owaiskazi19)           | Amazon      |
