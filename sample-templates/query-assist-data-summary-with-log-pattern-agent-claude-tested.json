@@ -76,9 +76,22 @@
             }
           },
           {
+            "id": "create_log_pattern_tool",
+            "type": "create_tool",
+            "user_inputs": {
+              "parameters": {
+                "doc_size": "2000"
+              },
+              "include_output_in_agent_response": false,
+              "name": "LogPatternTool",
+              "type": "LogPatternTool"
+            }
+          },
+          {
             "id": "create_query_assist_data_summary_with_log_pattern_agent",
             "type": "register_agent",
             "previous_node_inputs": {
+              "create_log_pattern_tool": "tools",
               "create_query_assist_data_summary_with_log_pattern_ml_model_tool": "tools"
             },
             "user_inputs": {
