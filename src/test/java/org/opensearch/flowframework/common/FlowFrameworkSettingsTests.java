@@ -45,7 +45,10 @@ public class FlowFrameworkSettingsTests extends OpenSearchTestCase {
                 FlowFrameworkSettings.MAX_WORKFLOWS,
                 FlowFrameworkSettings.WORKFLOW_REQUEST_TIMEOUT,
                 FlowFrameworkSettings.FLOW_FRAMEWORK_MULTI_TENANCY_ENABLED,
+                FlowFrameworkSettings.WORKFLOW_THREAD_POOL_SIZE,
+                FlowFrameworkSettings.PROVISION_THREAD_POOL_SIZE,
                 FlowFrameworkSettings.MAX_ACTIVE_PROVISIONS_PER_TENANT,
+                FlowFrameworkSettings.DEPROVISION_THREAD_POOL_SIZE,
                 FlowFrameworkSettings.MAX_ACTIVE_DEPROVISIONS_PER_TENANT
             )
         ).collect(Collectors.toSet());
@@ -67,7 +70,10 @@ public class FlowFrameworkSettingsTests extends OpenSearchTestCase {
         assertEquals(Optional.of(1000), Optional.ofNullable(flowFrameworkSettings.getMaxWorkflows()));
         assertEquals(Optional.of(TimeValue.timeValueSeconds(10)), Optional.ofNullable(flowFrameworkSettings.getRequestTimeout()));
         assertFalse(flowFrameworkSettings.isMultiTenancyEnabled());
+        assertEquals(Optional.of(4), Optional.ofNullable(flowFrameworkSettings.getWorkflowThreadPoolSize()));
+        assertEquals(Optional.of(8), Optional.ofNullable(flowFrameworkSettings.getProvisionThreadPoolSize()));
         assertEquals(Optional.of(2), Optional.ofNullable(flowFrameworkSettings.getMaxActiveProvisionsPerTenant()));
+        assertEquals(Optional.of(4), Optional.ofNullable(flowFrameworkSettings.getDeprovisionThreadPoolSize()));
         assertEquals(Optional.of(1), Optional.ofNullable(flowFrameworkSettings.getMaxActiveDeprovisionsPerTenant()));
     }
 }

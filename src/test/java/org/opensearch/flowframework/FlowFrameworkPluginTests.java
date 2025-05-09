@@ -110,7 +110,7 @@ public class FlowFrameworkPluginTests extends OpenSearchTestCase {
             assertEquals(9, ffp.getRestHandlers(settings, null, null, null, null, null, null).size());
             assertEquals(10, ffp.getActions().size());
             assertEquals(3, ffp.getExecutorBuilders(settings).size());
-            assertEquals(13, ffp.getSettings().size());
+            assertEquals(16, ffp.getSettings().size());
 
             Collection<SystemIndexDescriptor> systemIndexDescriptors = ffp.getSystemIndexDescriptors(Settings.EMPTY);
             assertEquals(3, systemIndexDescriptors.size());

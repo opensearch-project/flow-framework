@@ -90,6 +90,7 @@ import static org.opensearch.flowframework.common.CommonValue.PROVISION_WORKFLOW
 import static org.opensearch.flowframework.common.CommonValue.TENANT_ID_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.WORKFLOW_STATE_INDEX;
 import static org.opensearch.flowframework.common.CommonValue.WORKFLOW_THREAD_POOL;
+import static org.opensearch.flowframework.common.FlowFrameworkSettings.DEPROVISION_THREAD_POOL_SIZE;
 import static org.opensearch.flowframework.common.FlowFrameworkSettings.FILTER_BY_BACKEND_ROLES;
 import static org.opensearch.flowframework.common.FlowFrameworkSettings.FLOW_FRAMEWORK_ENABLED;
 import static org.opensearch.flowframework.common.FlowFrameworkSettings.FLOW_FRAMEWORK_MULTI_TENANCY_ENABLED;
@@ -97,12 +98,14 @@ import static org.opensearch.flowframework.common.FlowFrameworkSettings.MAX_ACTI
 import static org.opensearch.flowframework.common.FlowFrameworkSettings.MAX_ACTIVE_PROVISIONS_PER_TENANT;
 import static org.opensearch.flowframework.common.FlowFrameworkSettings.MAX_WORKFLOWS;
 import static org.opensearch.flowframework.common.FlowFrameworkSettings.MAX_WORKFLOW_STEPS;
+import static org.opensearch.flowframework.common.FlowFrameworkSettings.PROVISION_THREAD_POOL_SIZE;
 import static org.opensearch.flowframework.common.FlowFrameworkSettings.REMOTE_METADATA_ENDPOINT;
 import static org.opensearch.flowframework.common.FlowFrameworkSettings.REMOTE_METADATA_REGION;
 import static org.opensearch.flowframework.common.FlowFrameworkSettings.REMOTE_METADATA_SERVICE_NAME;
 import static org.opensearch.flowframework.common.FlowFrameworkSettings.REMOTE_METADATA_TYPE;
 import static org.opensearch.flowframework.common.FlowFrameworkSettings.TASK_REQUEST_RETRY_DURATION;
 import static org.opensearch.flowframework.common.FlowFrameworkSettings.WORKFLOW_REQUEST_TIMEOUT;
+import static org.opensearch.flowframework.common.FlowFrameworkSettings.WORKFLOW_THREAD_POOL_SIZE;
 import static org.opensearch.remote.metadata.common.CommonValue.REMOTE_METADATA_ENDPOINT_KEY;
 import static org.opensearch.remote.metadata.common.CommonValue.REMOTE_METADATA_REGION_KEY;
 import static org.opensearch.remote.metadata.common.CommonValue.REMOTE_METADATA_SERVICE_NAME_KEY;
@@ -242,7 +245,10 @@ public class FlowFrameworkPlugin extends Plugin implements ActionPlugin, SystemI
             TASK_REQUEST_RETRY_DURATION,
             FILTER_BY_BACKEND_ROLES,
             FLOW_FRAMEWORK_MULTI_TENANCY_ENABLED,
+            WORKFLOW_THREAD_POOL_SIZE,
+            PROVISION_THREAD_POOL_SIZE,
             MAX_ACTIVE_PROVISIONS_PER_TENANT,
+            DEPROVISION_THREAD_POOL_SIZE,
             MAX_ACTIVE_DEPROVISIONS_PER_TENANT,
             REMOTE_METADATA_TYPE,
             REMOTE_METADATA_ENDPOINT,
@@ -253,25 +259,26 @@ public class FlowFrameworkPlugin extends Plugin implements ActionPlugin, SystemI
 
     @Override
     public List<ExecutorBuilder<?>> getExecutorBuilders(Settings settings) {
+        int maxSizeFromAllocatedProcessors = OpenSearchExecutors.allocatedProcessors(settings) - 1;
         return List.of(
             new ScalingExecutorBuilder(
                 WORKFLOW_THREAD_POOL,
                 1,
-                Math.max(4, OpenSearchExecutors.allocatedProcessors(settings) - 1),
+                Math.max(WORKFLOW_THREAD_POOL_SIZE.get(settings), maxSizeFromAllocatedProcessors),
                 TimeValue.timeValueMinutes(1),
                 FLOW_FRAMEWORK_THREAD_POOL_PREFIX + WORKFLOW_THREAD_POOL
             ),
             new ScalingExecutorBuilder(
                 PROVISION_WORKFLOW_THREAD_POOL,
                 1,
-                Math.max(8, OpenSearchExecutors.allocatedProcessors(settings) - 1),
+                Math.max(PROVISION_THREAD_POOL_SIZE.get(settings), maxSizeFromAllocatedProcessors),
                 TimeValue.timeValueMinutes(5),
                 FLOW_FRAMEWORK_THREAD_POOL_PREFIX + PROVISION_WORKFLOW_THREAD_POOL
             ),
             new ScalingExecutorBuilder(
                 DEPROVISION_WORKFLOW_THREAD_POOL,
                 1,
-                Math.max(4, OpenSearchExecutors.allocatedProcessors(settings) - 1),
+                Math.max(DEPROVISION_THREAD_POOL_SIZE.get(settings), maxSizeFromAllocatedProcessors),
                 TimeValue.timeValueMinutes(1),
                 FLOW_FRAMEWORK_THREAD_POOL_PREFIX + DEPROVISION_WORKFLOW_THREAD_POOL
             )
