@@ -35,6 +35,18 @@ buildscript {
         bwcFlowFrameworkPath = bwcFilePath + "flowframework/"
 
         isSameMajorVersion = opensearch_version.split("\\.")[0] == bwcVersionShort.split("\\.")[0]
+
+        // Version constants for dependencies
+        awsEncryptionSdkVersion = "3.0.1"
+        awsCryptoMaterialProvidersVersion = "1.10.1"
+        dafnyRuntimeVersion = "4.10.0"
+        smithyDafnyVersion = "0.1.1"
+        gsonVersion = "2.13.1"
+        junitJupiterVersion = "5.12.2"
+        jakartaJsonBindVersion = "3.0.1"
+        jakartaJsonVersion = "2.0.1"
+        yassonVersion = "3.0.4"
+        parssonVersion = "1.1.7"
         swaggerVersion = "2.1.28"
         swaggerCoreVersion = "2.2.32"
     }
@@ -181,16 +193,16 @@ dependencies {
     }
     implementation("org.apache.commons:commons-lang3:${versions.commonslang}")
     implementation("org.opensearch:common-utils:${common_utils_version}")
-    implementation("com.amazonaws:aws-encryption-sdk-java:3.0.1")
-    implementation("software.amazon.cryptography:aws-cryptographic-material-providers:1.10.1")
-    implementation("org.dafny:DafnyRuntime:4.10.0")
-    implementation("software.amazon.smithy.dafny:conversion:0.1.1")
+    implementation("com.amazonaws:aws-encryption-sdk-java:${awsEncryptionSdkVersion}")
+    implementation("software.amazon.cryptography:aws-cryptographic-material-providers:${awsCryptoMaterialProvidersVersion}")
+    implementation("org.dafny:DafnyRuntime:${dafnyRuntimeVersion}")
+    implementation("software.amazon.smithy.dafny:conversion:${smithyDafnyVersion}")
     implementation("org.bouncycastle:bc-fips:${versions.bouncycastle_jce}")
     api("org.apache.httpcomponents.core5:httpcore5:${versions.httpcore5}")
-    implementation("jakarta.json.bind:jakarta.json.bind-api:3.0.1")
-    implementation("org.glassfish:jakarta.json:2.0.1")
-    implementation("org.eclipse:yasson:3.0.4")
-    implementation("com.google.code.gson:gson:2.13.1")
+    implementation("jakarta.json.bind:jakarta.json.bind-api:${jakartaJsonBindVersion}")
+    implementation("org.glassfish:jakarta.json:${jakartaJsonVersion}")
+    implementation("org.eclipse:yasson:${yassonVersion}")
+    implementation("com.google.code.gson:gson:${gsonVersion}")
 
     // Swagger-Parser dependencies for API consistency tests
     implementation("io.swagger.core.v3:swagger-models:${swaggerCoreVersion}")
@@ -200,11 +212,12 @@ dependencies {
     implementation("io.swagger.parser.v3:swagger-parser-v3:${swaggerVersion}")
 
     // Multi-tenant SDK Client
-    implementation("org.opensearch:opensearch-remote-metadata-sdk:${opensearch_build}") {
-        exclude group: "org.apache.httpcomponents.client5", module: "httpclient5"
+    api("org.opensearch:opensearch-remote-metadata-sdk:${opensearch_build}")
+    implementation("org.opensearch:opensearch-remote-metadata-sdk-ddb-client:${opensearch_build}") {
+        exclude group: "jakarta.json", module: "jakarta.json-api"
     }
 
-    testImplementation("org.junit.jupiter:junit-jupiter:5.12.2")
+    testImplementation("org.junit.jupiter:junit-jupiter:${junitJupiterVersion}")
     testImplementation("com.fasterxml.jackson.core:jackson-annotations:${versions.jackson}")
     testImplementation("com.fasterxml.jackson.core:jackson-databind:${versions.jackson_databind}")
     testImplementation("com.fasterxml.jackson.datatype:jackson-datatype-jsr310:${versions.jackson_databind}")
@@ -218,12 +231,31 @@ dependencies {
 
     configurations.all {
         resolutionStrategy {
-            force("com.google.guava:guava:33.4.8-jre") // CVE for 31.1, keep to force transitive dependencies
+            force("com.google.guava:guava:${versions.guava}")
+
+            // Jackson dependencies
+            force("com.fasterxml.jackson.core:jackson-core:${versions.jackson}")
+            force("com.fasterxml.jackson.core:jackson-databind:${versions.jackson_databind}")
+            force("com.fasterxml.jackson.core:jackson-annotations:${versions.jackson}")
+            force("com.fasterxml.jackson.datatype:jackson-datatype-jsr310:${versions.jackson_databind}")
+
+            // OpenSearch client dependencies
+            force("org.opensearch.client:opensearch-rest-client:${opensearch_version}")
+
+            // Jakarta and Eclipse dependencies
+            force("jakarta.json.bind:jakarta.json.bind-api:${jakartaJsonBindVersion}")
+            force("org.eclipse:yasson:${yassonVersion}")
+            force("org.eclipse.parsson:parsson:${parssonVersion}")
+            force("org.glassfish:jakarta.json:${jakartaJsonVersion}")
+
+            // Apache and Commons dependencies
+            force("org.apache.httpcomponents.client5:httpclient5:${httpclient5Version}")
+            force("org.apache.httpcomponents:httpcore:${httpcoreVersion}")
+            force("commons-codec:commons-codec:${commonsCodecVersion}")
+            force("commons-logging:commons-logging:${commonsLoggingVersion}")
         }
     }
 }
-
-
 
 def opensearch_tmp_dir = rootProject.file('build/private/opensearch_tmp').absoluteFile
 opensearch_tmp_dir.mkdirs()
