@@ -212,9 +212,13 @@ dependencies {
     implementation("io.swagger.parser.v3:swagger-parser-v3:${swaggerVersion}")
 
     // Multi-tenant SDK Client
-    api("org.opensearch:opensearch-remote-metadata-sdk:${opensearch_build}")
-    implementation("org.opensearch:opensearch-remote-metadata-sdk-ddb-client:${opensearch_build}") {
-        exclude group: "jakarta.json", module: "jakarta.json-api"
+    if (System.getenv('REMOTE_METADATA_SDK_IMPL') == 'ddb-client') {
+        api("org.opensearch:opensearch-remote-metadata-sdk:${opensearch_build}")
+        implementation("org.opensearch:opensearch-remote-metadata-sdk-ddb-client:${opensearch_build}") {
+            exclude group: "jakarta.json", module: "jakarta.json-api"
+        }
+    } else {
+        implementation("org.opensearch:opensearch-remote-metadata-sdk:${opensearch_build}")
     }
 
     testImplementation("org.junit.jupiter:junit-jupiter:${junitJupiterVersion}")
