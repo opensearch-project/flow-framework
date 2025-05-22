@@ -33,8 +33,14 @@ public class FlowFrameworkSettings {
     protected volatile TimeValue requestTimeout;
     /** Whether multitenancy is enabled */
     private final Boolean isMultiTenancyEnabled;
+    /** Size of the threadpool used for retryable tasks in workflows */
+    private volatile Integer workflowThreadPoolSize;
+    /** Size of the threadpool for provisioning */
+    private volatile Integer provisionThreadPoolSize;
     /** Max simultaneous provision requests */
     private volatile Integer maxActiveProvisionsPerTenant;
+    /** Size of the threadpool for deprovisioning */
+    private volatile Integer deprovisionThreadPoolSize;
     /** Max simultaneous deprovision requests */
     private volatile Integer maxActiveDeprovisionsPerTenant;
 
@@ -133,14 +139,41 @@ public class FlowFrameworkSettings {
         Setting.Property.NodeScope
     );
 
+    /** This setting sets max retryable tasks during workflow execution that polls results */
+    public static final Setting<Integer> WORKFLOW_THREAD_POOL_SIZE = Setting.intSetting(
+        "plugins.flow_framework.workflow_thread_pool_size",
+        4,
+        1,
+        400,
+        Setting.Property.NodeScope
+    );
+
+    /** This setting sets the max size of the provision thread pool */
+    public static final Setting<Integer> PROVISION_THREAD_POOL_SIZE = Setting.intSetting(
+        "plugins.flow_framework.provision_thread_pool_size",
+        8,
+        1,
+        800,
+        Setting.Property.NodeScope
+    );
+
     /** This setting sets max workflows that can be simultaneously provisioned, or reprovisioned by the same tenant */
     public static final Setting<Integer> MAX_ACTIVE_PROVISIONS_PER_TENANT = Setting.intSetting(
         "plugins.flow_framework.max_active_provisions_per_tenant",
         2,
         1,
-        4,
+        40,
         Setting.Property.NodeScope,
         Setting.Property.Dynamic
+    );
+
+    /** This setting sets the max size of the deprovision thread pool */
+    public static final Setting<Integer> DEPROVISION_THREAD_POOL_SIZE = Setting.intSetting(
+        "plugins.flow_framework.deprovision_thread_pool_size",
+        4,
+        1,
+        400,
+        Setting.Property.NodeScope
     );
 
     /** This setting sets max workflows that can be simultaneously deprovisioned by the same tenant */
@@ -148,7 +181,7 @@ public class FlowFrameworkSettings {
         "plugins.flow_framework.max_active_deprovisions_per_tenant",
         1,
         1,
-        2,
+        40,
         Setting.Property.NodeScope,
         Setting.Property.Dynamic
     );
@@ -195,7 +228,10 @@ public class FlowFrameworkSettings {
         this.maxWorkflows = MAX_WORKFLOWS.get(settings);
         this.requestTimeout = WORKFLOW_REQUEST_TIMEOUT.get(settings);
         this.isMultiTenancyEnabled = FLOW_FRAMEWORK_MULTI_TENANCY_ENABLED.get(settings);
+        this.workflowThreadPoolSize = WORKFLOW_THREAD_POOL_SIZE.get(settings);
+        this.provisionThreadPoolSize = PROVISION_THREAD_POOL_SIZE.get(settings);
         this.maxActiveProvisionsPerTenant = MAX_ACTIVE_PROVISIONS_PER_TENANT.get(settings);
+        this.deprovisionThreadPoolSize = DEPROVISION_THREAD_POOL_SIZE.get(settings);
         this.maxActiveDeprovisionsPerTenant = MAX_ACTIVE_DEPROVISIONS_PER_TENANT.get(settings);
         clusterService.getClusterSettings().addSettingsUpdateConsumer(FLOW_FRAMEWORK_ENABLED, it -> isFlowFrameworkEnabled = it);
         clusterService.getClusterSettings().addSettingsUpdateConsumer(TASK_REQUEST_RETRY_DURATION, it -> retryDuration = it);
@@ -257,11 +293,35 @@ public class FlowFrameworkSettings {
     }
 
     /**
+     * Getter for workflow thread pool max size
+     * @return workflow thread pool max
+     */
+    public Integer getWorkflowThreadPoolSize() {
+        return workflowThreadPoolSize;
+    }
+
+    /**
+     * Getter for provision thread pool max size
+     * @return provision thread pool max
+     */
+    public Integer getProvisionThreadPoolSize() {
+        return provisionThreadPoolSize;
+    }
+
+    /**
      * Getter for max active provisions per tenant
      * @return max active provisions
      */
     public Integer getMaxActiveProvisionsPerTenant() {
         return maxActiveProvisionsPerTenant;
+    }
+
+    /**
+     * Getter for deprovision thread pool max size
+     * @return deprovision thread pool max
+     */
+    public Integer getDeprovisionThreadPoolSize() {
+        return deprovisionThreadPoolSize;
     }
 
     /**
