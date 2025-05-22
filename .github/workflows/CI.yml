@@ -107,6 +107,9 @@ jobs:
         java: [21]
     name: Tenant Aware Integ Test JDK${{ matrix.java }}, ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
+    env:
+      # doesn't actually use this client but validates the build
+      REMOTE_METADATA_SDK_IMPL: ddb-client
     steps:
       - uses: actions/checkout@v4
       - name: Set up JDK ${{ matrix.java }}
