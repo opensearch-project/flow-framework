@@ -13,5 +13,6 @@ Inspired from [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 - Conditionally include ddb-client dependency only if env variable set ([#1141](https://github.com/opensearch-project/flow-framework/issues/1141))
 
 ### Documentation
+- Feat: add data summary with log pattern agent template ([#1137](https://github.com/opensearch-project/flow-framework/pull/1137))
 ### Maintenance
 ### Refactoring
