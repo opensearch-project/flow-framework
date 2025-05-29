@@ -11,6 +11,7 @@ package org.opensearch.flowframework.workflow;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.opensearch.ExceptionsHelper;
+import org.opensearch.OpenSearchParseException;
 import org.opensearch.action.support.PlainActionFuture;
 import org.opensearch.common.Nullable;
 import org.opensearch.common.xcontent.XContentHelper;
@@ -164,17 +165,18 @@ public class RegisterAgentStep implements WorkflowStep {
             if (llmField != null) {
                 try {
                     // Convert llm field string to map
-                    Map<String, Object> llmFieldMap = getLLMFieldMap(llmField);
+                    Map<String, Object> llmFieldMap = getParseFieldMap(llmField);
                     llmModelId = (String) llmFieldMap.get(MODEL_ID);
                     Object llmParams = llmFieldMap.get(PARAMETERS_FIELD);
 
                     if (llmParams != null) {
                         llmParameters.putAll(getStringToStringMap(llmParams, PARAMETERS_FIELD));
                     }
-                } catch (Exception ex) {
-                    String errorMessage = "Invalid register agent llm field format";
+                } catch (IllegalArgumentException ex) {
+                    String errorMessage = "Failed to parse llm field: " + ex.getMessage();
                     logger.error(errorMessage, ex);
-                    registerAgentModelFuture.onFailure(new WorkflowStepException(errorMessage, RestStatus.BAD_REQUEST));
+                    registerAgentModelFuture.onFailure(new WorkflowStepException(ex.getMessage(), RestStatus.BAD_REQUEST));
+                    return registerAgentModelFuture;
                 }
             }
 
@@ -305,7 +307,7 @@ public class RegisterAgentStep implements WorkflowStep {
         return builder.build();
     }
 
-    private Map<String, Object> getLLMFieldMap(String llmFieldMapString) {
+    private Map<String, Object> getParseFieldMap(String llmFieldMapString) throws OpenSearchParseException {
         BytesReference llmFieldBytes = new BytesArray(llmFieldMapString.getBytes(StandardCharsets.UTF_8));
         return XContentHelper.convertToMap(llmFieldBytes, false, MediaTypeRegistry.JSON).v2();
     }

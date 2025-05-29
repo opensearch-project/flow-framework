@@ -51,6 +51,9 @@ public class RegisterAgentTests extends OpenSearchTestCase {
     MachineLearningNodeClient machineLearningNodeClient;
 
     private FlowFrameworkIndicesHandler flowFrameworkIndicesHandler;
+    private MLToolSpec tools;
+    private LLMSpec llmSpec;
+    private Map<?, ?> mlMemorySpec;
 
     @Override
     public void setUp() throws Exception {
@@ -58,7 +61,7 @@ public class RegisterAgentTests extends OpenSearchTestCase {
         this.flowFrameworkIndicesHandler = mock(FlowFrameworkIndicesHandler.class);
         MockitoAnnotations.openMocks(this);
 
-        MLToolSpec tools = MLToolSpec.builder()
+        this.tools = MLToolSpec.builder()
             .type("tool1")
             .name("CatIndexTool")
             .description("desc")
@@ -66,9 +69,9 @@ public class RegisterAgentTests extends OpenSearchTestCase {
             .includeOutputInAgentResponse(false)
             .build();
 
-        LLMSpec llmSpec = new LLMSpec("xyz", Collections.emptyMap());
+        this.llmSpec = new LLMSpec("xyz", Collections.emptyMap());
 
-        Map<?, ?> mlMemorySpec = Map.ofEntries(
+        this.mlMemorySpec = Map.ofEntries(
             Map.entry(MLMemorySpec.MEMORY_TYPE_FIELD, "type"),
             Map.entry(MLMemorySpec.SESSION_ID_FIELD, "abc"),
             Map.entry(MLMemorySpec.WINDOW_SIZE_FIELD, 2)
@@ -179,6 +182,45 @@ public class RegisterAgentTests extends OpenSearchTestCase {
         );
 
         assertTrue(isMatch);
+    }
+
+    public void testLLMFieldParseFailure() throws Exception {
+        String agentId = AGENT_ID;
+        RegisterAgentStep registerAgentStep = new RegisterAgentStep(machineLearningNodeClient, flowFrameworkIndicesHandler);
+
+        // Create llm parameters with wrong format
+        Map<String, Object> invalidLLMFieldMap = Map.ofEntries(Map.entry("model_id", "xyz"), Map.entry("parameters", "invalidString"));
+        WorkflowData invalidWorkflowData = new WorkflowData(
+            Map.ofEntries(
+                Map.entry("name", "test"),
+                Map.entry("description", "description"),
+                Map.entry("type", MLAgentType.FLOW.name()),
+                Map.entry("llm", ParseUtils.parseArbitraryStringToObjectMapToString(invalidLLMFieldMap)),
+                Map.entry("tools", tools),
+                Map.entry("tools_order", new String[] { "abc", "xyz" }),
+                Map.entry("parameters", Collections.emptyMap()),
+                Map.entry("memory", mlMemorySpec),
+                Map.entry("created_time", 1689793598499L),
+                Map.entry("last_updated_time", 1689793598499L),
+                Map.entry("app_type", "app")
+            ),
+            "test-id",
+            "test-node-id"
+        );
+
+        PlainActionFuture<WorkflowData> future = registerAgentStep.execute(
+            invalidWorkflowData.getNodeId(),
+            invalidWorkflowData,
+            Collections.emptyMap(),
+            Collections.emptyMap(),
+            Collections.emptyMap(),
+            null
+        );
+
+        assertTrue(future.isDone());
+        ExecutionException ex = assertThrows(ExecutionException.class, () -> future.get().getContent());
+        assertTrue(ex.getCause() instanceof FlowFrameworkException);
+        assertEquals("[parameters] must be a key-value map.", ex.getCause().getMessage());
     }
 
 }

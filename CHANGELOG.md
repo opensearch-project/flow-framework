@@ -9,6 +9,8 @@ Inspired from [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 - Make thread pool sizes configurable ([#1139](https://github.com/opensearch-project/flow-framework/issues/1139))
 
 ### Bug Fixes
+- Fixing llm field processing in RegisterAgentStep ([#1151](https://github.com/opensearch-project/flow-framework/pull/1151))
+
 ### Infrastructure
 - Conditionally include ddb-client dependency only if env variable set ([#1141](https://github.com/opensearch-project/flow-framework/issues/1141))
 
