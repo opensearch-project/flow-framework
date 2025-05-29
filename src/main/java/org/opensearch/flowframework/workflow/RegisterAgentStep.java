@@ -163,10 +163,8 @@ public class RegisterAgentStep implements WorkflowStep {
             Map<String, String> llmParameters = new HashMap<>();
             if (llmField != null) {
                 try {
-                    // Convert model interface string to map
-                    BytesReference llmFieldBytes = new BytesArray(llmField.getBytes(StandardCharsets.UTF_8));
-                    Map<String, Object> llmFieldMap = XContentHelper.convertToMap(llmFieldBytes, false, MediaTypeRegistry.JSON).v2();
-
+                    // Convert llm field string to map
+                    Map<String, Object> llmFieldMap = getLLMFieldMap(llmField);
                     llmModelId = (String) llmFieldMap.get(MODEL_ID);
                     Object llmParams = llmFieldMap.get(PARAMETERS_FIELD);
 
@@ -174,7 +172,7 @@ public class RegisterAgentStep implements WorkflowStep {
                         llmParameters.putAll(getStringToStringMap(llmParams, PARAMETERS_FIELD));
                     }
                 } catch (Exception ex) {
-                    String errorMessage = "Invalid llm field format";
+                    String errorMessage = "Invalid register agent llm field format";
                     logger.error(errorMessage, ex);
                     registerAgentModelFuture.onFailure(new WorkflowStepException(errorMessage, RestStatus.BAD_REQUEST));
                 }
@@ -305,5 +303,10 @@ public class RegisterAgentStep implements WorkflowStep {
         }
 
         return builder.build();
+    }
+
+    private Map<String, Object> getLLMFieldMap(String llmFieldMapString) {
+        BytesReference llmFieldBytes = new BytesArray(llmFieldMapString.getBytes(StandardCharsets.UTF_8));
+        return XContentHelper.convertToMap(llmFieldBytes, false, MediaTypeRegistry.JSON).v2();
     }
 }
