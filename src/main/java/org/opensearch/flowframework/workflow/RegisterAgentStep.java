@@ -174,7 +174,7 @@ public class RegisterAgentStep implements WorkflowStep {
                         llmParameters.putAll(getStringToStringMap(llmParams, PARAMETERS_FIELD));
                     }
                 } catch (Exception ex) {
-                    String errorMessage = "Failed to create llm configuration";
+                    String errorMessage = "Invalid llm field format";
                     logger.error(errorMessage, ex);
                     registerAgentModelFuture.onFailure(new WorkflowStepException(errorMessage, RestStatus.BAD_REQUEST));
                 }

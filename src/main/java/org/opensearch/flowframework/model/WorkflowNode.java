@@ -30,6 +30,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Objects;
+import java.util.Set;
 
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.opensearch.core.xcontent.XContentParserUtils.ensureExpectedToken;
@@ -64,6 +65,8 @@ public class WorkflowNode implements ToXContentObject {
     public static final String NODE_TIMEOUT_FIELD = "node_timeout";
     /** The default timeout value if the template doesn't override it */
     public static final TimeValue NODE_TIMEOUT_DEFAULT_VALUE = new TimeValue(10, SECONDS);
+    /** Map fields */
+    private static final Set<String> MAP_FIELDS = Set.of(CONFIGURATIONS, INTERFACE_FIELD, LLM);
 
     private final String id; // unique id
     private final String type; // maps to a WorkflowStep
@@ -167,27 +170,23 @@ public class WorkflowNode implements ToXContentObject {
                                 if (GUARDRAILS_FIELD.equals(inputFieldName)) {
                                     userInputs.put(inputFieldName, Guardrails.parse(parser));
                                     break;
-                                } else if (CONFIGURATIONS.equals(inputFieldName)
-                                    || INTERFACE_FIELD.equals(inputFieldName)
-                                    || LLM.equals(inputFieldName)) {
-                                        Map<String, Object> configurationsMap = parser.map();
-                                        try {
-                                            String configurationsString = ParseUtils.parseArbitraryStringToObjectMapToString(
-                                                configurationsMap
-                                            );
-                                            userInputs.put(inputFieldName, configurationsString);
-                                        } catch (Exception ex) {
-                                            String errorMessage = ParameterizedMessageFactory.INSTANCE.newMessage(
-                                                "Failed to parse {} map",
-                                                inputFieldName
-                                            ).getFormattedMessage();
-                                            logger.error(errorMessage, ex);
-                                            throw new FlowFrameworkException(errorMessage, RestStatus.BAD_REQUEST);
-                                        }
-                                        break;
-                                    } else {
-                                        userInputs.put(inputFieldName, parseStringToStringMap(parser));
+                                } else if (MAP_FIELDS.contains(inputFieldName)) {
+                                    Map<String, Object> configurationsMap = parser.map();
+                                    try {
+                                        String configurationsString = ParseUtils.parseArbitraryStringToObjectMapToString(configurationsMap);
+                                        userInputs.put(inputFieldName, configurationsString);
+                                    } catch (Exception ex) {
+                                        String errorMessage = ParameterizedMessageFactory.INSTANCE.newMessage(
+                                            "Failed to parse {} map",
+                                            inputFieldName
+                                        ).getFormattedMessage();
+                                        logger.error(errorMessage, ex);
+                                        throw new FlowFrameworkException(errorMessage, RestStatus.BAD_REQUEST);
                                     }
+                                    break;
+                                } else {
+                                    userInputs.put(inputFieldName, parseStringToStringMap(parser));
+                                }
                                 break;
                             case START_ARRAY:
                                 if (PROCESSORS_FIELD.equals(inputFieldName)) {

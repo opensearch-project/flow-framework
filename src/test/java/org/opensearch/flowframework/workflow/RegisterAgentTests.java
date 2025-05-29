@@ -14,6 +14,7 @@ import org.opensearch.core.rest.RestStatus;
 import org.opensearch.flowframework.exception.FlowFrameworkException;
 import org.opensearch.flowframework.indices.FlowFrameworkIndicesHandler;
 import org.opensearch.flowframework.util.ApiSpecFetcher;
+import org.opensearch.flowframework.util.ParseUtils;
 import org.opensearch.ml.client.MachineLearningNodeClient;
 import org.opensearch.ml.common.MLAgentType;
 import org.opensearch.ml.common.agent.LLMSpec;
@@ -73,13 +74,14 @@ public class RegisterAgentTests extends OpenSearchTestCase {
             Map.entry(MLMemorySpec.WINDOW_SIZE_FIELD, 2)
         );
 
+        Map<String, Object> llmFieldMap = Map.ofEntries(Map.entry("model_id", "xyz"), Map.entry("parameters", Collections.emptyMap()));
+
         inputData = new WorkflowData(
             Map.ofEntries(
                 Map.entry("name", "test"),
                 Map.entry("description", "description"),
                 Map.entry("type", MLAgentType.FLOW.name()),
-                Map.entry("llm.model_id", "xyz"),
-                Map.entry("llm.parameters", Collections.emptyMap()),
+                Map.entry("llm", ParseUtils.parseArbitraryStringToObjectMapToString(llmFieldMap)),
                 Map.entry("tools", tools),
                 Map.entry("tools_order", new String[] { "abc", "xyz" }),
                 Map.entry("parameters", Collections.emptyMap()),
