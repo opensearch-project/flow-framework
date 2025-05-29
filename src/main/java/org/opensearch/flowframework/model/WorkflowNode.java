@@ -36,6 +36,7 @@ import static org.opensearch.core.xcontent.XContentParserUtils.ensureExpectedTok
 import static org.opensearch.flowframework.common.CommonValue.CONFIGURATIONS;
 import static org.opensearch.flowframework.common.CommonValue.GUARDRAILS_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.INTERFACE_FIELD;
+import static org.opensearch.flowframework.common.CommonValue.LLM;
 import static org.opensearch.flowframework.common.CommonValue.TOOLS_ORDER_FIELD;
 import static org.opensearch.flowframework.util.ParseUtils.buildStringToObjectMap;
 import static org.opensearch.flowframework.util.ParseUtils.buildStringToStringMap;
@@ -166,23 +167,27 @@ public class WorkflowNode implements ToXContentObject {
                                 if (GUARDRAILS_FIELD.equals(inputFieldName)) {
                                     userInputs.put(inputFieldName, Guardrails.parse(parser));
                                     break;
-                                } else if (CONFIGURATIONS.equals(inputFieldName) || INTERFACE_FIELD.equals(inputFieldName)) {
-                                    Map<String, Object> configurationsMap = parser.map();
-                                    try {
-                                        String configurationsString = ParseUtils.parseArbitraryStringToObjectMapToString(configurationsMap);
-                                        userInputs.put(inputFieldName, configurationsString);
-                                    } catch (Exception ex) {
-                                        String errorMessage = ParameterizedMessageFactory.INSTANCE.newMessage(
-                                            "Failed to parse {} map",
-                                            inputFieldName
-                                        ).getFormattedMessage();
-                                        logger.error(errorMessage, ex);
-                                        throw new FlowFrameworkException(errorMessage, RestStatus.BAD_REQUEST);
+                                } else if (CONFIGURATIONS.equals(inputFieldName)
+                                    || INTERFACE_FIELD.equals(inputFieldName)
+                                    || LLM.equals(inputFieldName)) {
+                                        Map<String, Object> configurationsMap = parser.map();
+                                        try {
+                                            String configurationsString = ParseUtils.parseArbitraryStringToObjectMapToString(
+                                                configurationsMap
+                                            );
+                                            userInputs.put(inputFieldName, configurationsString);
+                                        } catch (Exception ex) {
+                                            String errorMessage = ParameterizedMessageFactory.INSTANCE.newMessage(
+                                                "Failed to parse {} map",
+                                                inputFieldName
+                                            ).getFormattedMessage();
+                                            logger.error(errorMessage, ex);
+                                            throw new FlowFrameworkException(errorMessage, RestStatus.BAD_REQUEST);
+                                        }
+                                        break;
+                                    } else {
+                                        userInputs.put(inputFieldName, parseStringToStringMap(parser));
                                     }
-                                    break;
-                                } else {
-                                    userInputs.put(inputFieldName, parseStringToStringMap(parser));
-                                }
                                 break;
                             case START_ARRAY:
                                 if (PROCESSORS_FIELD.equals(inputFieldName)) {

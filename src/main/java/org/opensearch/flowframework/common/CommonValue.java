@@ -180,6 +180,8 @@ public class CommonValue {
     public static final String PIPELINE_ID = "pipeline_id";
     /** Pipeline Configurations */
     public static final String CONFIGURATIONS = "configurations";
+    /** The llm field */
+    public static final String LLM = "llm";
     /** Guardrails field */
     public static final String GUARDRAILS_FIELD = "guardrails";
     /** Delay field */
