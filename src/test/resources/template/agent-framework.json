@@ -104,10 +104,12 @@
             "parameters": {
               "hello": "world"
             },
-            "llm.model_id": "ldzS04kBxRPZ5cnWrqpd",
-            "llm.parameters": {
-              "max_iteration": "5",
-              "stop_when_no_tool_found": "true"
+            "llm" : {
+              "model_id": "ldzS04kBxRPZ5cnWrqpd",
+              "parameters": {
+                "max_iteration": "5",
+                "stop_when_no_tool_found": "true"
+              }
             },
             "memory": {
               "type": "conversation_index"
@@ -147,9 +149,11 @@
             "parameters": {
               "hello": "world"
             },
-            "llm.parameters": {
-              "max_iteration": "5",
-              "stop_when_no_tool_found": "true"
+            "llm" : {
+              "parameters": {
+                "max_iteration": "5",
+                "stop_when_no_tool_found": "true"
+              }
             },
             "memory": {
               "type": "conversation_index"
