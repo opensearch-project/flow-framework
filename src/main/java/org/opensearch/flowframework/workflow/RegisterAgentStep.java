@@ -55,7 +55,6 @@ import static org.opensearch.flowframework.common.CommonValue.PARAMETERS_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.TOOLS_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.TOOLS_ORDER_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.TYPE;
-import static org.opensearch.flowframework.common.WorkflowResources.MODEL_ID;
 import static org.opensearch.flowframework.exception.WorkflowStepException.getSafeException;
 import static org.opensearch.flowframework.util.ParseUtils.getStringToStringMap;
 
@@ -170,7 +169,7 @@ public class RegisterAgentStep implements WorkflowStep {
                     Object llmParams = llmFieldMap.get(PARAMETERS_FIELD);
 
                     if (llmParams != null) {
-                        llmParameters.putAll(getStringToStringMap(llmParams, PARAMETERS_FIELD));
+                        validateLLMParametersMap(llmParams);
                     }
                 } catch (IllegalArgumentException ex) {
                     String errorMessage = "Failed to parse llm field: " + ex.getMessage();
@@ -310,5 +309,18 @@ public class RegisterAgentStep implements WorkflowStep {
     private Map<String, Object> getParseFieldMap(String llmFieldMapString) throws OpenSearchParseException {
         BytesReference llmFieldBytes = new BytesArray(llmFieldMapString.getBytes(StandardCharsets.UTF_8));
         return XContentHelper.convertToMap(llmFieldBytes, false, MediaTypeRegistry.JSON).v2();
+    }
+
+    private void validateLLMParametersMap(Object llmParams) {
+        String errorMessage = "llm field [" + PARAMETERS_FIELD + "] must be a string to string map";
+        if (!(llmParams instanceof Map)) {
+            throw new IllegalArgumentException(errorMessage);
+        }
+        Map<String, Object> llmParamsMap = (Map<String, Object>) llmParams;
+        for (Map.Entry<String, Object> entry : llmParamsMap.entrySet()) {
+            if (!(entry.getValue() instanceof String)) {
+                throw new IllegalArgumentException(errorMessage);
+            }
+        }
     }
 }

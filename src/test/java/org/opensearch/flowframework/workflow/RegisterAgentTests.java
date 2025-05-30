@@ -8,6 +8,7 @@
  */
 package org.opensearch.flowframework.workflow;
 
+import org.opensearch.OpenSearchParseException;
 import org.opensearch.action.support.PlainActionFuture;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.core.rest.RestStatus;
@@ -184,7 +185,7 @@ public class RegisterAgentTests extends OpenSearchTestCase {
         assertTrue(isMatch);
     }
 
-    public void testLLMFieldParseFailure() throws Exception {
+    public void testLLMParametersFieldParseFailure() throws Exception {
         String agentId = AGENT_ID;
         RegisterAgentStep registerAgentStep = new RegisterAgentStep(machineLearningNodeClient, flowFrameworkIndicesHandler);
 
@@ -220,7 +221,46 @@ public class RegisterAgentTests extends OpenSearchTestCase {
         assertTrue(future.isDone());
         ExecutionException ex = assertThrows(ExecutionException.class, () -> future.get().getContent());
         assertTrue(ex.getCause() instanceof FlowFrameworkException);
-        assertEquals("[parameters] must be a key-value map.", ex.getCause().getMessage());
+        assertEquals("llm field [parameters] must be a string to string map", ex.getCause().getMessage());
+    }
+
+    public void testLLMParametersValidationFailure() throws Exception {
+        String agentId = AGENT_ID;
+        RegisterAgentStep registerAgentStep = new RegisterAgentStep(machineLearningNodeClient, flowFrameworkIndicesHandler);
+
+        // Create llm parameters with non-string value
+        Map<String, Object> invalidLLMFieldMap = Map.ofEntries(Map.entry("model_id", "xyz"), Map.entry("parameters", 123));
+        WorkflowData invalidWorkflowData = new WorkflowData(
+            Map.ofEntries(
+                Map.entry("name", "test"),
+                Map.entry("description", "description"),
+                Map.entry("type", MLAgentType.FLOW.name()),
+                Map.entry("llm", ParseUtils.parseArbitraryStringToObjectMapToString(invalidLLMFieldMap)),
+                Map.entry("tools", tools),
+                Map.entry("tools_order", new String[] { "abc", "xyz" }),
+                Map.entry("parameters", Collections.emptyMap()),
+                Map.entry("memory", mlMemorySpec),
+                Map.entry("created_time", 1689793598499L),
+                Map.entry("last_updated_time", 1689793598499L),
+                Map.entry("app_type", "app")
+            ),
+            "test-id",
+            "test-node-id"
+        );
+
+        PlainActionFuture<WorkflowData> future = registerAgentStep.execute(
+            invalidWorkflowData.getNodeId(),
+            invalidWorkflowData,
+            Collections.emptyMap(),
+            Collections.emptyMap(),
+            Collections.emptyMap(),
+            null
+        );
+
+        assertTrue(future.isDone());
+        ExecutionException ex = assertThrows(ExecutionException.class, () -> future.get().getContent());
+        assertTrue(ex.getCause() instanceof FlowFrameworkException);
+        assertEquals("llm field [parameters] must be a string to string map", ex.getCause().getMessage());
     }
 
 }
