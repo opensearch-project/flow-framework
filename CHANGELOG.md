@@ -10,6 +10,7 @@ Inspired from [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ### Bug Fixes
 - Fixing llm field processing in RegisterAgentStep ([#1151](https://github.com/opensearch-project/flow-framework/pull/1151))
+- Include exception type in WorkflowState error field even if no cause ([#1154](https://github.com/opensearch-project/flow-framework/pull/1154))
 - Pass llm spec params to builder ([#1155](https://github.com/opensearch-project/flow-framework/pull/1155))
 
 ### Infrastructure
