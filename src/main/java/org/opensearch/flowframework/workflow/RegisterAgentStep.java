@@ -170,6 +170,7 @@ public class RegisterAgentStep implements WorkflowStep {
 
                     if (llmParams != null) {
                         validateLLMParametersMap(llmParams);
+                        llmParameters.putAll((Map<String, String>) llmParams);
                     }
                 } catch (IllegalArgumentException ex) {
                     String errorMessage = "Failed to parse llm field: " + ex.getMessage();
