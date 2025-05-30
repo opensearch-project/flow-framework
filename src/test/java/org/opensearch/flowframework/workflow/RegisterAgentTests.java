@@ -8,7 +8,6 @@
  */
 package org.opensearch.flowframework.workflow;
 
-import org.opensearch.OpenSearchParseException;
 import org.opensearch.action.support.PlainActionFuture;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.core.rest.RestStatus;
