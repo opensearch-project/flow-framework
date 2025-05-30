@@ -11,9 +11,15 @@ package org.opensearch.flowframework.workflow;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.opensearch.ExceptionsHelper;
+import org.opensearch.OpenSearchParseException;
 import org.opensearch.action.support.PlainActionFuture;
 import org.opensearch.common.Nullable;
+import org.opensearch.common.xcontent.XContentHelper;
 import org.opensearch.core.action.ActionListener;
+import org.opensearch.core.common.bytes.BytesArray;
+import org.opensearch.core.common.bytes.BytesReference;
+import org.opensearch.core.rest.RestStatus;
+import org.opensearch.core.xcontent.MediaTypeRegistry;
 import org.opensearch.flowframework.exception.FlowFrameworkException;
 import org.opensearch.flowframework.exception.WorkflowStepException;
 import org.opensearch.flowframework.indices.FlowFrameworkIndicesHandler;
@@ -26,10 +32,12 @@ import org.opensearch.ml.common.agent.MLMemorySpec;
 import org.opensearch.ml.common.agent.MLToolSpec;
 import org.opensearch.ml.common.transport.agent.MLRegisterAgentResponse;
 
+import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -40,13 +48,13 @@ import static org.opensearch.flowframework.common.CommonValue.APP_TYPE_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.CREATED_TIME;
 import static org.opensearch.flowframework.common.CommonValue.DESCRIPTION_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.LAST_UPDATED_TIME_FIELD;
+import static org.opensearch.flowframework.common.CommonValue.LLM;
 import static org.opensearch.flowframework.common.CommonValue.MEMORY_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.NAME_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.PARAMETERS_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.TOOLS_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.TOOLS_ORDER_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.TYPE;
-import static org.opensearch.flowframework.common.WorkflowResources.MODEL_ID;
 import static org.opensearch.flowframework.exception.WorkflowStepException.getSafeException;
 import static org.opensearch.flowframework.util.ParseUtils.getStringToStringMap;
 
@@ -64,9 +72,7 @@ public class RegisterAgentStep implements WorkflowStep {
     public static final String NAME = "register_agent";
 
     /** The model ID for the LLM */
-    public static final String LLM_MODEL_ID = "llm.model_id";
-    /** The parameters for the LLM */
-    public static final String LLM_PARAMETERS = "llm.parameters";
+    public static final String MODEL_ID = "model_id";
 
     /**
      * Instantiate this class
@@ -118,8 +124,7 @@ public class RegisterAgentStep implements WorkflowStep {
         Set<String> requiredKeys = Set.of(NAME_FIELD, TYPE);
         Set<String> optionalKeys = Set.of(
             DESCRIPTION_FIELD,
-            LLM_MODEL_ID,
-            LLM_PARAMETERS,
+            LLM,
             TOOLS_FIELD,
             TOOLS_ORDER_FIELD,
             PARAMETERS_FIELD,
@@ -142,11 +147,7 @@ public class RegisterAgentStep implements WorkflowStep {
             String type = (String) inputs.get(TYPE);
             String name = (String) inputs.get(NAME_FIELD);
             String description = (String) inputs.get(DESCRIPTION_FIELD);
-            String llmModelId = (String) inputs.get(LLM_MODEL_ID);
-            Object llmParams = inputs.get(LLM_PARAMETERS);
-            Map<String, String> llmParameters = llmParams == null
-                ? Collections.emptyMap()
-                : getStringToStringMap(llmParams, LLM_PARAMETERS);
+            String llmField = (String) inputs.get(LLM);
             String[] toolsOrder = (String[]) inputs.get(TOOLS_ORDER_FIELD);
             List<MLToolSpec> toolsList = getTools(toolsOrder, previousNodeInputs, outputs);
             Object parameters = inputs.get(PARAMETERS_FIELD);
@@ -157,6 +158,26 @@ public class RegisterAgentStep implements WorkflowStep {
             Instant createdTime = Instant.now();
             Instant lastUpdateTime = createdTime;
             String appType = (String) inputs.get(APP_TYPE_FIELD);
+
+            String llmModelId = null;
+            Map<String, String> llmParameters = new HashMap<>();
+            if (llmField != null) {
+                try {
+                    // Convert llm field string to map
+                    Map<String, Object> llmFieldMap = getParseFieldMap(llmField);
+                    llmModelId = (String) llmFieldMap.get(MODEL_ID);
+                    Object llmParams = llmFieldMap.get(PARAMETERS_FIELD);
+
+                    if (llmParams != null) {
+                        validateLLMParametersMap(llmParams);
+                    }
+                } catch (IllegalArgumentException ex) {
+                    String errorMessage = "Failed to parse llm field: " + ex.getMessage();
+                    logger.error(errorMessage, ex);
+                    registerAgentModelFuture.onFailure(new WorkflowStepException(ex.getMessage(), RestStatus.BAD_REQUEST));
+                    return registerAgentModelFuture;
+                }
+            }
 
             // Case when modelId is present in previous node inputs
             if (llmModelId == null) {
@@ -234,7 +255,7 @@ public class RegisterAgentStep implements WorkflowStep {
             WorkflowData previousNodeOutput = outputs.get(previousNode.get());
             if (previousNodeOutput != null) {
                 // Use either llm.model_id (if present) or model_id (backup)
-                Object modelId = previousNodeOutput.getContent().getOrDefault(LLM_MODEL_ID, previousNodeOutput.getContent().get(MODEL_ID));
+                Object modelId = previousNodeOutput.getContent().getOrDefault(MODEL_ID, previousNodeOutput.getContent().get(MODEL_ID));
                 if (modelId != null) {
                     return modelId.toString();
                 }
@@ -283,5 +304,23 @@ public class RegisterAgentStep implements WorkflowStep {
         }
 
         return builder.build();
+    }
+
+    private Map<String, Object> getParseFieldMap(String llmFieldMapString) throws OpenSearchParseException {
+        BytesReference llmFieldBytes = new BytesArray(llmFieldMapString.getBytes(StandardCharsets.UTF_8));
+        return XContentHelper.convertToMap(llmFieldBytes, false, MediaTypeRegistry.JSON).v2();
+    }
+
+    private void validateLLMParametersMap(Object llmParams) {
+        String errorMessage = "llm field [" + PARAMETERS_FIELD + "] must be a string to string map";
+        if (!(llmParams instanceof Map)) {
+            throw new IllegalArgumentException(errorMessage);
+        }
+        Map<String, Object> llmParamsMap = (Map<String, Object>) llmParams;
+        for (Map.Entry<String, Object> entry : llmParamsMap.entrySet()) {
+            if (!(entry.getValue() instanceof String)) {
+                throw new IllegalArgumentException(errorMessage);
+            }
+        }
     }
 }

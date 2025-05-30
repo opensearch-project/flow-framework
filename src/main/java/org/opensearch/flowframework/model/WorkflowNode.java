@@ -30,12 +30,14 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Objects;
+import java.util.Set;
 
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.opensearch.core.xcontent.XContentParserUtils.ensureExpectedToken;
 import static org.opensearch.flowframework.common.CommonValue.CONFIGURATIONS;
 import static org.opensearch.flowframework.common.CommonValue.GUARDRAILS_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.INTERFACE_FIELD;
+import static org.opensearch.flowframework.common.CommonValue.LLM;
 import static org.opensearch.flowframework.common.CommonValue.TOOLS_ORDER_FIELD;
 import static org.opensearch.flowframework.util.ParseUtils.buildStringToObjectMap;
 import static org.opensearch.flowframework.util.ParseUtils.buildStringToStringMap;
@@ -63,6 +65,8 @@ public class WorkflowNode implements ToXContentObject {
     public static final String NODE_TIMEOUT_FIELD = "node_timeout";
     /** The default timeout value if the template doesn't override it */
     public static final TimeValue NODE_TIMEOUT_DEFAULT_VALUE = new TimeValue(10, SECONDS);
+    /** Map fields */
+    private static final Set<String> MAP_FIELDS = Set.of(CONFIGURATIONS, INTERFACE_FIELD, LLM);
 
     private final String id; // unique id
     private final String type; // maps to a WorkflowStep
@@ -166,7 +170,7 @@ public class WorkflowNode implements ToXContentObject {
                                 if (GUARDRAILS_FIELD.equals(inputFieldName)) {
                                     userInputs.put(inputFieldName, Guardrails.parse(parser));
                                     break;
-                                } else if (CONFIGURATIONS.equals(inputFieldName) || INTERFACE_FIELD.equals(inputFieldName)) {
+                                } else if (MAP_FIELDS.contains(inputFieldName)) {
                                     Map<String, Object> configurationsMap = parser.map();
                                     try {
                                         String configurationsString = ParseUtils.parseArbitraryStringToObjectMapToString(configurationsMap);
