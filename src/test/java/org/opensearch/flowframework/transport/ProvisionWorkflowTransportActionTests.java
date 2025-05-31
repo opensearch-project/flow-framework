@@ -25,11 +25,13 @@ import org.opensearch.common.xcontent.XContentFactory;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.core.common.bytes.BytesReference;
 import org.opensearch.core.index.shard.ShardId;
+import org.opensearch.core.rest.RestStatus;
 import org.opensearch.core.xcontent.NamedXContentRegistry;
 import org.opensearch.core.xcontent.XContentBuilder;
 import org.opensearch.flowframework.TestHelpers;
 import org.opensearch.flowframework.common.FlowFrameworkSettings;
 import org.opensearch.flowframework.exception.FlowFrameworkException;
+import org.opensearch.flowframework.exception.WorkflowStepException;
 import org.opensearch.flowframework.indices.FlowFrameworkIndicesHandler;
 import org.opensearch.flowframework.model.ProvisioningProgress;
 import org.opensearch.flowframework.model.Template;
@@ -303,7 +305,7 @@ public class ProvisionWorkflowTransportActionTests extends OpenSearchTestCase {
             return null;
         }).when(flowFrameworkIndicesHandler).updateTemplateInGlobalContext(any(), any(Template.class), any(), anyBoolean());
 
-        // Create a failed future for the workflow execution
+        // Create a failed future for the workflow execution with Runtime Exception
         PlainActionFuture<WorkflowData> failedFuture = PlainActionFuture.newFuture();
         failedFuture.onFailure(new RuntimeException("Simulated failure during workflow execution"));
         ProcessNode failedProcessNode = mock(ProcessNode.class);
@@ -314,6 +316,20 @@ public class ProvisionWorkflowTransportActionTests extends OpenSearchTestCase {
 
         ArgumentCaptor<FlowFrameworkException> responseCaptor = ArgumentCaptor.forClass(FlowFrameworkException.class);
         verify(listener, times(1)).onFailure(responseCaptor.capture());
-        assertTrue(responseCaptor.getValue().getMessage().startsWith("Simulated failure during workflow execution"));
+        assertTrue(responseCaptor.getValue().getMessage().startsWith("RuntimeException"));
+        assertTrue(responseCaptor.getValue().getMessage().endsWith("restStatus: INTERNAL_SERVER_ERROR"));
+
+        // Create a failed future for the workflow execution with FlowFrameworkException
+        failedFuture = PlainActionFuture.newFuture();
+        failedFuture.onFailure(new WorkflowStepException("Simulated failure during workflow execution", RestStatus.BAD_REQUEST));
+        when(failedProcessNode.execute()).thenReturn(failedFuture);
+
+        provisionWorkflowTransportAction.doExecute(mock(Task.class), workflowRequest, listener);
+
+        responseCaptor = ArgumentCaptor.forClass(FlowFrameworkException.class);
+        verify(listener, times(2)).onFailure(responseCaptor.capture());
+        assertTrue(responseCaptor.getValue().getMessage().startsWith("WorkflowStepException"));
+        assertTrue(responseCaptor.getValue().getMessage().contains("Simulated failure during workflow execution"));
+        assertTrue(responseCaptor.getValue().getMessage().endsWith("restStatus: BAD_REQUEST"));
     }
 }
