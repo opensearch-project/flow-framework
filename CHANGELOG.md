@@ -10,6 +10,7 @@ Inspired from [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ### Bug Fixes
 - Fixing llm field processing in RegisterAgentStep ([#1151](https://github.com/opensearch-project/flow-framework/pull/1151))
+- Pass llm spec params to builder ([#1155](https://github.com/opensearch-project/flow-framework/pull/1155))
 
 ### Infrastructure
 - Conditionally include ddb-client dependency only if env variable set ([#1141](https://github.com/opensearch-project/flow-framework/issues/1141))

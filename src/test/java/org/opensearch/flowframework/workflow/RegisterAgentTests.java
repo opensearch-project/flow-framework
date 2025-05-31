@@ -53,6 +53,7 @@ public class RegisterAgentTests extends OpenSearchTestCase {
     private FlowFrameworkIndicesHandler flowFrameworkIndicesHandler;
     private MLToolSpec tools;
     private LLMSpec llmSpec;
+    private Map<String, String> llmParams;
     private Map<?, ?> mlMemorySpec;
 
     @Override
@@ -77,7 +78,9 @@ public class RegisterAgentTests extends OpenSearchTestCase {
             Map.entry(MLMemorySpec.WINDOW_SIZE_FIELD, 2)
         );
 
-        Map<String, Object> llmFieldMap = Map.ofEntries(Map.entry("model_id", "xyz"), Map.entry("parameters", Collections.emptyMap()));
+        this.llmParams = Map.ofEntries(Map.entry("a", "a"), Map.entry("b", "b"), Map.entry("c", "c"));
+
+        Map<String, Object> llmFieldMap = Map.ofEntries(Map.entry("model_id", "xyz"), Map.entry("parameters", llmParams));
 
         inputData = new WorkflowData(
             Map.ofEntries(
@@ -105,6 +108,9 @@ public class RegisterAgentTests extends OpenSearchTestCase {
         @SuppressWarnings("unchecked")
         ArgumentCaptor<ActionListener<MLRegisterAgentResponse>> actionListenerCaptor = ArgumentCaptor.forClass(ActionListener.class);
 
+        @SuppressWarnings("unchecked")
+        ArgumentCaptor<MLAgent> mlAgentArgumentCaptor = ArgumentCaptor.forClass(MLAgent.class);
+
         doAnswer(invocation -> {
             ActionListener<MLRegisterAgentResponse> actionListener = invocation.getArgument(1);
             MLRegisterAgentResponse output = new MLRegisterAgentResponse(agentId);
@@ -128,7 +134,8 @@ public class RegisterAgentTests extends OpenSearchTestCase {
             null
         );
 
-        verify(machineLearningNodeClient).registerAgent(any(MLAgent.class), actionListenerCaptor.capture());
+        verify(machineLearningNodeClient).registerAgent(mlAgentArgumentCaptor.capture(), actionListenerCaptor.capture());
+        assertEquals(llmParams, mlAgentArgumentCaptor.getValue().getLlm().getParameters());
 
         assertTrue(future.isDone());
         assertEquals(agentId, future.get().getContent().get(AGENT_ID));
