@@ -7,6 +7,7 @@ on:
 
 jobs:
   API-consistency-test:
+    if: github.repository == 'opensearch-project/flow-framework'
     runs-on: ubuntu-latest
     strategy:
       matrix:
