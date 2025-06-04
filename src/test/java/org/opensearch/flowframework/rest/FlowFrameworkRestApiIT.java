@@ -339,6 +339,48 @@ public class FlowFrameworkRestApiIT extends FlowFrameworkRestTestCase {
         assertBusy(() -> { getAndAssertWorkflowStatusNotFound(client(), workflowId); }, 30, TimeUnit.SECONDS);
     }
 
+    public void testCreateAndProvisionPlanExecuteReflectAgent() throws Exception {
+        Template template = TestHelpers.createTemplateFromFile("plan-execute-reflect-agent.json");
+
+        // Hit Create Workflow API to create agent-framework template, with template validation check and provision parameter
+        Response response = createWorkflowWithProvision(client(), template);
+        assertEquals(RestStatus.ACCEPTED, TestHelpers.restStatus(response));
+        Map<String, Object> responseMap = entityAsMap(response);
+        String workflowId = (String) responseMap.get(WORKFLOW_ID);
+        // wait and ensure state is completed/done
+        assertBusy(
+            () -> { getAndAssertWorkflowStatus(client(), workflowId, State.COMPLETED, ProvisioningProgress.DONE); },
+            120,
+            TimeUnit.SECONDS
+        );
+        // Force a refresh so that search results are up to date
+        refreshAllIndices();
+
+        // Hit Search State API with the workflow id created above
+        String query = "{\"query\":{\"ids\":{\"values\":[\"" + workflowId + "\"]}}}";
+        SearchResponse searchResponse = searchWorkflowState(client(), query);
+        assertEquals(1, searchResponse.getHits().getTotalHits().value());
+        String searchHitSource = searchResponse.getHits().getAt(0).getSourceAsString();
+        WorkflowState searchHitWorkflowState = WorkflowState.parse(searchHitSource);
+
+        // Assert based on the agent template
+        List<ResourceCreated> resourcesCreated = searchHitWorkflowState.resourcesCreated();
+        Set<String> expectedStepNames = new HashSet<>();
+        expectedStepNames.add("plan_execute_and_reflect_agent");
+        Set<String> stepNames = resourcesCreated.stream().map(ResourceCreated::workflowStepId).collect(Collectors.toSet());
+
+        assertEquals(1, resourcesCreated.size());
+        assertEquals(stepNames, expectedStepNames);
+        assertNotNull(resourcesCreated.get(0).resourceId());
+
+        // Delete the workflow without deleting the resources
+        Response deleteResponse = deleteWorkflow(client(), workflowId, "?clear_status=true");
+        assertEquals(RestStatus.OK, TestHelpers.restStatus(deleteResponse));
+
+        // Verify state doc is deleted
+        assertBusy(() -> { getAndAssertWorkflowStatusNotFound(client(), workflowId); }, 30, TimeUnit.SECONDS);
+    }
+
     public void testCreateAndProvisionConnectorToolAgentFrameworkWorkflow() throws Exception {
         // Create a Workflow that has a credential 12345
         Template template = TestHelpers.createTemplateFromFile("createconnector-createconnectortool-createflowagent.json");

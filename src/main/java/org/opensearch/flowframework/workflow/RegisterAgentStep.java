@@ -25,6 +25,7 @@ import org.opensearch.flowframework.exception.WorkflowStepException;
 import org.opensearch.flowframework.indices.FlowFrameworkIndicesHandler;
 import org.opensearch.flowframework.util.ParseUtils;
 import org.opensearch.ml.client.MachineLearningNodeClient;
+import org.opensearch.ml.common.MLAgentType;
 import org.opensearch.ml.common.agent.LLMSpec;
 import org.opensearch.ml.common.agent.MLAgent;
 import org.opensearch.ml.common.agent.MLAgent.MLAgentBuilder;
@@ -148,8 +149,6 @@ public class RegisterAgentStep implements WorkflowStep {
             String name = (String) inputs.get(NAME_FIELD);
             String description = (String) inputs.get(DESCRIPTION_FIELD);
             String llmField = (String) inputs.get(LLM);
-            String[] toolsOrder = (String[]) inputs.get(TOOLS_ORDER_FIELD);
-            List<MLToolSpec> toolsList = getTools(toolsOrder, previousNodeInputs, outputs);
             Object parameters = inputs.get(PARAMETERS_FIELD);
             Map<String, String> parametersMap = parameters == null
                 ? Collections.emptyMap()
@@ -160,9 +159,19 @@ public class RegisterAgentStep implements WorkflowStep {
             String appType = (String) inputs.get(APP_TYPE_FIELD);
 
             String llmModelId = null;
+            List<MLToolSpec> toolsList = new ArrayList<>();
             Map<String, String> llmParameters = new HashMap<>();
-            if (llmField != null) {
-                try {
+            try {
+                if (type.toUpperCase().equals(MLAgentType.PLAN_EXECUTE_AND_REFLECT.name())) {
+                    // Support for Plan-execute-reflect agent tools
+                    Object tools = currentNodeInputs.getContent().get(TOOLS_FIELD);
+                    toolsList.addAll(getPlanExecuteReflectTools(tools));
+                } else {
+                    // Support for Flow, Conversational, Conversational Flow agent tools
+                    String[] toolsOrder = (String[]) inputs.get(TOOLS_ORDER_FIELD);
+                    toolsList.addAll(getTools(toolsOrder, previousNodeInputs, outputs));
+                }
+                if (llmField != null) {
                     // Convert llm field string to map
                     Map<String, Object> llmFieldMap = getParseFieldMap(llmField);
                     llmModelId = (String) llmFieldMap.get(MODEL_ID);
@@ -172,12 +181,13 @@ public class RegisterAgentStep implements WorkflowStep {
                         validateLLMParametersMap(llmParams);
                         llmParameters.putAll((Map<String, String>) llmParams);
                     }
-                } catch (IllegalArgumentException ex) {
-                    String errorMessage = "Failed to parse llm field: " + ex.getMessage();
-                    logger.error(errorMessage, ex);
-                    registerAgentModelFuture.onFailure(new WorkflowStepException(ex.getMessage(), RestStatus.BAD_REQUEST));
-                    return registerAgentModelFuture;
                 }
+
+            } catch (IllegalArgumentException ex) {
+                String errorMessage = "Failed to parse field: " + ex.getMessage();
+                logger.error(errorMessage, ex);
+                registerAgentModelFuture.onFailure(new WorkflowStepException(ex.getMessage(), RestStatus.BAD_REQUEST));
+                return registerAgentModelFuture;
             }
 
             // Case when modelId is present in previous node inputs
@@ -241,6 +251,27 @@ public class RegisterAgentStep implements WorkflowStep {
                 mlToolSpecList.add(mlToolSpec);
             }
         });
+        return mlToolSpecList;
+    }
+
+    private List<MLToolSpec> getPlanExecuteReflectTools(Object array) {
+        if (!(array instanceof Map[])) {
+            throw new IllegalArgumentException("[" + TOOLS_FIELD + "] must be an array of key-value maps.");
+        }
+
+        List<MLToolSpec> mlToolSpecList = new ArrayList<>();
+        for (Map<?, ?> map : (Map<?, ?>[]) array) {
+            String toolType = (String) map.get(TYPE);
+            if (toolType == null) {
+                throw new IllegalArgumentException("[" + TYPE + "] is missing.");
+            }
+            MLToolSpec.MLToolSpecBuilder builder = MLToolSpec.builder();
+            builder.type(toolType);
+
+            logger.info("Tool added {}", toolType);
+            mlToolSpecList.add(builder.build());
+        }
+
         return mlToolSpecList;
     }
 

@@ -26,16 +26,20 @@ import org.opensearch.rest.RestRequest;
 import org.opensearch.test.OpenSearchTestCase;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutionException;
+import java.util.stream.Collectors;
 
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
 import static org.opensearch.flowframework.common.CommonValue.ML_COMMONS_API_SPEC_YAML_URI;
+import static org.opensearch.flowframework.common.CommonValue.TOOLS_FIELD;
 import static org.opensearch.flowframework.common.WorkflowResources.AGENT_ID;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -267,6 +271,109 @@ public class RegisterAgentTests extends OpenSearchTestCase {
         ExecutionException ex = assertThrows(ExecutionException.class, () -> future.get().getContent());
         assertTrue(ex.getCause() instanceof FlowFrameworkException);
         assertEquals("llm field [parameters] must be a string to string map", ex.getCause().getMessage());
+    }
+
+    public void testRegisterPlanExecuteReflectAgentFailure() throws Exception {
+        String agentId = AGENT_ID;
+        RegisterAgentStep registerAgentStep = new RegisterAgentStep(machineLearningNodeClient, flowFrameworkIndicesHandler);
+        List<Map<String, Object>> mapList = new ArrayList<>();
+        mapList.add(Map.of("name", "ListIndexTool"));
+
+        WorkflowData invalidWorkflowData = new WorkflowData(
+            Map.ofEntries(
+                Map.entry("name", "test"),
+                Map.entry("description", "description"),
+                Map.entry("type", MLAgentType.PLAN_EXECUTE_AND_REFLECT.name()),
+                Map.entry("tools", mapList.toArray(new Map[0])),
+                Map.entry("parameters", Collections.emptyMap()),
+                Map.entry("memory", mlMemorySpec),
+                Map.entry("created_time", 1689793598499L),
+                Map.entry("last_updated_time", 1689793598499L),
+                Map.entry("app_type", "app")
+            ),
+            "test-id",
+            "test-node-id"
+        );
+
+        PlainActionFuture<WorkflowData> future = registerAgentStep.execute(
+            invalidWorkflowData.getNodeId(),
+            invalidWorkflowData,
+            Collections.emptyMap(),
+            Collections.emptyMap(),
+            Collections.emptyMap(),
+            null
+        );
+
+        assertTrue(future.isDone());
+        ExecutionException ex = assertThrows(ExecutionException.class, () -> future.get().getContent());
+        assertTrue(ex.getCause() instanceof FlowFrameworkException);
+        assertEquals("[type] is missing.", ex.getCause().getMessage());
+    }
+
+    public void testRegisterPlanExecuteReflectAgent() throws Exception {
+        String agentId = AGENT_ID;
+        RegisterAgentStep registerAgentStep = new RegisterAgentStep(machineLearningNodeClient, flowFrameworkIndicesHandler);
+
+        List<Map<String, Object>> mapList = new ArrayList<>();
+        mapList.add(Map.of("type", "ListIndexTool"));
+        mapList.add(Map.of("type", "SearchIndexTool"));
+        mapList.add(Map.of("type", "IndexMappingTool"));
+
+        WorkflowData data = new WorkflowData(
+            Map.ofEntries(
+                Map.entry("name", "test"),
+                Map.entry("description", "description"),
+                Map.entry("type", MLAgentType.PLAN_EXECUTE_AND_REFLECT.name()),
+                Map.entry("tools", mapList.toArray(new Map[0])),
+                Map.entry("parameters", Collections.emptyMap()),
+                Map.entry("memory", mlMemorySpec),
+                Map.entry("created_time", 1689793598499L),
+                Map.entry("last_updated_time", 1689793598499L),
+                Map.entry("app_type", "app")
+            ),
+            "test-id",
+            "test-node-id"
+        );
+
+        @SuppressWarnings("unchecked")
+        ArgumentCaptor<MLAgent> mlAgentArgumentCaptor = ArgumentCaptor.forClass(MLAgent.class);
+
+        doAnswer(invocation -> {
+            ActionListener<MLRegisterAgentResponse> actionListener = invocation.getArgument(1);
+            MLRegisterAgentResponse output = new MLRegisterAgentResponse(agentId);
+            actionListener.onResponse(output);
+            return null;
+        }).when(machineLearningNodeClient).registerAgent(any(MLAgent.class), any());
+
+        doAnswer(invocation -> {
+            ActionListener<WorkflowData> updateResponseListener = invocation.getArgument(5);
+            updateResponseListener.onResponse(new WorkflowData(Map.of(AGENT_ID, agentId), "test-id", "test-node-id"));
+            return null;
+        }).when(flowFrameworkIndicesHandler)
+            .addResourceToStateIndex(any(WorkflowData.class), anyString(), anyString(), anyString(), nullable(String.class), any());
+
+        PlainActionFuture<WorkflowData> future = registerAgentStep.execute(
+            data.getNodeId(),
+            data,
+            Collections.emptyMap(),
+            Collections.emptyMap(),
+            Collections.emptyMap(),
+            null
+        );
+
+        verify(machineLearningNodeClient).registerAgent(mlAgentArgumentCaptor.capture(), any());
+
+        // compare list of tools
+        List<String> expectedToolTypes = mapList.stream().map(map -> (String) map.get(TOOLS_FIELD)).collect(Collectors.toList());
+        List<String> toolTypes = mlAgentArgumentCaptor.getValue()
+            .getTools()
+            .stream()
+            .map(tool -> tool.getType())
+            .collect(Collectors.toList());
+        assertTrue(new HashSet<>(expectedToolTypes).containsAll(toolTypes));
+
+        assertTrue(future.isDone());
+        assertEquals(agentId, future.get().getContent().get(AGENT_ID));
     }
 
 }

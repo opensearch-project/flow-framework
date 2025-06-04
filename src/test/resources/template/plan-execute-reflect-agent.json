@@ -1,0 +1,53 @@
+{
+    "name": "chatbot",
+    "use_case": "REGISTER_AGENT",
+    "description": "",
+    "version": {
+      "template": "1.0.0",
+      "compatibility": [
+        "3.0.0"
+      ]
+    },
+    "workflows": {
+      "provision": {
+        "nodes": [
+          {
+            "id": "plan_execute_and_reflect_agent",
+            "type": "register_agent",
+            "previous_node_inputs": {},
+            "user_inputs": {
+              "name": "default_agent",
+              "type": "plan_execute_and_reflect",
+              "description": "",
+              "llm": {
+                "model_id": "J7DfGJcBjIjt_6rk_MOd",
+                "parameters": {
+                  "test": "test"
+                }
+              },
+              "memory": {
+                "type": "conversation_index"
+              },
+              "parameters": {
+                "_llm_interface": "YOUR_LLM_INTERFACE"
+              },
+              "tools": [
+                {
+                  "type": "ListIndexTool"
+                },
+                {
+                  "type": "SearchIndexTool"
+                },
+                {
+                  "type": "IndexMappingTool"
+                }
+              ],
+              "app_type": "os_chat"
+            }
+          }
+        ],
+        "edges": [],
+        "user_params": {}
+      }
+    }
+  }
