@@ -162,7 +162,7 @@ public class RegisterAgentStep implements WorkflowStep {
             List<MLToolSpec> toolsList = new ArrayList<>();
             Map<String, String> llmParameters = new HashMap<>();
             try {
-                if (type.toUpperCase().equals(MLAgentType.PLAN_EXECUTE_AND_REFLECT.name())) {
+                if (type.toUpperCase(Locale.ROOT).equals(MLAgentType.PLAN_EXECUTE_AND_REFLECT.name())) {
                     // Support for Plan-execute-reflect agent tools
                     Object tools = currentNodeInputs.getContent().get(TOOLS_FIELD);
                     toolsList.addAll(getPlanExecuteReflectTools(tools));
