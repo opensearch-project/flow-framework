@@ -39,7 +39,6 @@ import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
 import static org.opensearch.flowframework.common.CommonValue.ML_COMMONS_API_SPEC_YAML_URI;
-import static org.opensearch.flowframework.common.CommonValue.TOOLS_FIELD;
 import static org.opensearch.flowframework.common.WorkflowResources.AGENT_ID;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -364,7 +363,7 @@ public class RegisterAgentTests extends OpenSearchTestCase {
         verify(machineLearningNodeClient).registerAgent(mlAgentArgumentCaptor.capture(), any());
 
         // compare list of tools
-        List<String> expectedToolTypes = mapList.stream().map(map -> (String) map.get(TOOLS_FIELD)).collect(Collectors.toList());
+        List<String> expectedToolTypes = mapList.stream().map(map -> (String) map.get("type")).collect(Collectors.toList());
         List<String> toolTypes = mlAgentArgumentCaptor.getValue()
             .getTools()
             .stream()
