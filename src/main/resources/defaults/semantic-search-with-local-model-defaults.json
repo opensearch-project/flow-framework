@@ -5,7 +5,7 @@
   "register_local_pretrained_model.description": "This is a sentence transformer model",
   "register_local_pretrained_model.model_format": "TORCH_SCRIPT",
   "register_local_pretrained_model.deploy": "true",
-  "register_local_pretrained_model.version": "1.0.1",
+  "register_local_pretrained_model.version": "1.0.2",
   "create_ingest_pipeline.pipeline_id": "nlp-ingest-pipeline",
   "create_ingest_pipeline.description": "A text embedding pipeline",
   "text_embedding.field_map.input": "passage_text",
