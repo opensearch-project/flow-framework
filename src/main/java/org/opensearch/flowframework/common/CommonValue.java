@@ -9,6 +9,7 @@
 package org.opensearch.flowframework.common;
 
 import org.opensearch.Version;
+import org.opensearch.common.xcontent.XContentContraints;
 
 /**
  * Representation of common values that are used across project
@@ -56,6 +57,12 @@ public class CommonValue {
     public static final String LAST_UPDATED_TIME_FIELD = "last_updated_time";
     /** The last provisioned time field */
     public static final String LAST_PROVISIONED_TIME_FIELD = "last_provisioned_time";
+    /** Maximum allowed JSON size in bytes (~50MB). */
+    public static final int MAX_JSON_SIZE = XContentContraints.DEFAULT_MAX_STRING_LEN; // 50000000
+    /** Maximum allowed name length for JSON keys(50000b). */
+    public static final int MAX_JSON_NAME_LENGTH = XContentContraints.DEFAULT_MAX_NAME_LEN; // 50000
+    /** Maximum allowed nesting depth for JSON structures. */
+    public static final int MAX_JSON_NESTING_DEPTH = XContentContraints.DEFAULT_MAX_DEPTH; // 1000
 
     /*
      * Constants associated with Rest or Transport actions
