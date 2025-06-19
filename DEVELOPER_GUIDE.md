@@ -99,7 +99,7 @@ snapshots/
                 └── maven-metadata.xml.sha512
 ```
 
-1. Change the url from ``"https://aws.oss.sonatype.org/content/repositories/snapshots"`` to your local path and comment out the credentials under publishing/repositories in build.gradle.
+1. Change the url from ``"https://central.sonatype.com/repository/maven-snapshots/"`` to your local path and comment out the credentials under publishing/repositories in build.gradle.
 2. Run ```./gradlew publishPluginZipPublicationToSnapshotsRepository```.
 
 ### Adding Workflow Steps
