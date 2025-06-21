@@ -46,7 +46,7 @@ buildscript {
         jakartaJsonVersion = "2.0.1"
         yassonVersion = "3.0.4"
         parssonVersion = "1.1.7"
-        swaggerVersion = "2.1.28"
+        swaggerVersion = "2.1.30"
         swaggerCoreVersion = "2.2.32"
     }
 
