@@ -100,6 +100,20 @@ allprojects {
     // Default to the apache license
     project.ext.licenseName = 'The Apache Software License, Version 2.0'
     project.ext.licenseUrl = 'http://www.apache.org/licenses/LICENSE-2.0.txt'
+
+    checkstyle {
+        toolVersion = "latest.release"
+    }
+
+    // Avoid jar hell and other CVEs
+    configurations.checkstyle {
+        exclude group: 'org.apache.httpcomponents.client5', module: 'httpclient5'
+        exclude group: 'org.apache.httpcomponents.core5', module: 'httpcore5'
+        exclude group: 'org.apache.httpcomponents', module: 'httpclient'
+        exclude group: 'org.apache.httpcomponents', module: 'httpcore'
+        exclude group: 'org.apache.commons', module: 'commons-lang3'
+        exclude group: 'org.codehaus.plexus', module: 'plexus-utils'
+    }
 }
 
 publishing {
