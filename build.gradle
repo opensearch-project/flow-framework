@@ -235,9 +235,11 @@ dependencies {
         implementation("org.opensearch:opensearch-remote-metadata-sdk:${opensearch_build}")
     }
 
+    // Jackson dependencies
+    implementation("com.fasterxml.jackson.core:jackson-annotations:${versions.jackson}")
+    implementation("com.fasterxml.jackson.core:jackson-databind:${versions.jackson_databind}")
+
     testImplementation("org.junit.jupiter:junit-jupiter:${junitJupiterVersion}")
-    testImplementation("com.fasterxml.jackson.core:jackson-annotations:${versions.jackson}")
-    testImplementation("com.fasterxml.jackson.core:jackson-databind:${versions.jackson_databind}")
     testImplementation("com.fasterxml.jackson.datatype:jackson-datatype-jsr310:${versions.jackson_databind}")
 
     // ZipArchive dependencies used for integration tests
