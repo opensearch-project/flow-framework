@@ -144,7 +144,7 @@ public class ApiSpecFetcherTests extends OpenSearchTestCase {
         clearCaches();
 
         String testUri = ML_COMMONS_API_SPEC_YAML_URI;
-        
+
         // First call should fetch and cache
         OpenAPI firstResult = ApiSpecFetcher.fetchApiSpec(testUri);
         assertNotNull("First fetch should return valid spec", firstResult);
@@ -152,7 +152,7 @@ public class ApiSpecFetcherTests extends OpenSearchTestCase {
         // Second call should use cache
         OpenAPI secondResult = ApiSpecFetcher.fetchApiSpec(testUri);
         assertNotNull("Second fetch should return valid spec", secondResult);
-        
+
         // Both results should be the same object reference (from cache)
         assertSame("Second call should return cached result", firstResult, secondResult);
     }
