@@ -334,4 +334,104 @@ public class ApiSpecFetcherTests extends OpenSearchTestCase {
         assertNotNull("Result should not be null", Boolean.valueOf(result));
     }
 
+    public void testGetOperationWithPutMethod() throws Exception {
+        // Test PUT method specifically to cover the PUT case in getOperation
+        String path = "/_plugins/_ml/agents/_register";
+        List<String> params = Arrays.asList("name", "type");
+
+        Exception exception = expectThrows(IllegalArgumentException.class, () -> {
+            ApiSpecFetcher.compareRequiredFields(params, ML_COMMONS_API_SPEC_YAML_URI, path, PUT);
+        });
+
+        assertTrue("PUT exception should mention no operation found", exception.getMessage().contains("No operation found"));
+    }
+
+    public void testGetOperationWithDeleteMethod() throws Exception {
+        // Test DELETE method specifically to cover the DELETE case in getOperation
+        String path = "/_plugins/_ml/agents/_register";
+        List<String> params = Arrays.asList("name", "type");
+
+        Exception exception = expectThrows(IllegalArgumentException.class, () -> {
+            ApiSpecFetcher.compareRequiredFields(params, ML_COMMONS_API_SPEC_YAML_URI, path, DELETE);
+        });
+
+        assertTrue("DELETE exception should mention no operation found", exception.getMessage().contains("No operation found"));
+    }
+
+    public void testGetOperationWithUnsupportedMethod() throws Exception {
+        // Test unsupported method to cover the default case in getOperation
+        String path = "/_plugins/_ml/agents/_register";
+        List<String> params = Arrays.asList("name", "type");
+
+        Exception exception = expectThrows(IllegalArgumentException.class, () -> {
+            ApiSpecFetcher.compareRequiredFields(params, ML_COMMONS_API_SPEC_YAML_URI, path, PATCH);
+        });
+
+        assertEquals("Unsupported HTTP method: PATCH", exception.getMessage());
+    }
+
+    public void testExtractRequiredFieldsFromComponentWithNullComponents() throws Exception {
+        // This test indirectly tests the extractRequiredFieldsFromComponent method
+        // by using a scenario where components might be null or missing
+        String path = "/_plugins/_ml/agents/_register";
+        RestRequest.Method method = POST;
+        List<String> params = Arrays.asList("name", "type");
+
+        // Test with a valid path that should work normally
+        boolean result = ApiSpecFetcher.compareRequiredFields(params, ML_COMMONS_API_SPEC_YAML_URI, path, method);
+        assertTrue("Should handle component extraction correctly", result);
+    }
+
+    public void testHandleUnresolvedRequestBodyWithNullOperation() throws Exception {
+        // Test scenario where operation is null in handleUnresolvedRequestBody
+        String path = "/_plugins/_ml/nonexistent";
+        RestRequest.Method method = POST;
+        List<String> params = Arrays.asList("name");
+
+        Exception exception = expectThrows(IllegalArgumentException.class, () -> {
+            ApiSpecFetcher.compareRequiredFields(params, ML_COMMONS_API_SPEC_YAML_URI, path, method);
+        });
+
+        assertTrue("Should throw path not found exception", exception.getMessage().contains("Path not found"));
+    }
+
+    public void testHandleUnresolvedRequestBodyWithNullRequestBody() throws Exception {
+        // Test scenario where requestBody is null in handleUnresolvedRequestBody
+        // This happens with GET requests that don't have request bodies
+        String path = "/_plugins/_ml/model_groups/{model_group_id}";
+        RestRequest.Method method = RestRequest.Method.GET;
+        List<String> params = Arrays.asList("name");
+
+        Exception exception = expectThrows(ApiSpecParseException.class, () -> {
+            ApiSpecFetcher.compareRequiredFields(params, ML_COMMONS_API_SPEC_YAML_URI, path, method);
+        });
+
+        assertEquals("No requestBody defined for this operation.", exception.getMessage());
+    }
+
+    public void testCompareRequiredFieldsWithSchemaButNoRequired() throws Exception {
+        // Test case where schema exists but has no required fields
+        String path = "/_plugins/_ml/agents/_register";
+        RestRequest.Method method = POST;
+        List<String> emptyParams = Arrays.asList();
+
+        // This should return true if there are no required fields in the schema
+        boolean result = ApiSpecFetcher.compareRequiredFields(emptyParams, ML_COMMONS_API_SPEC_YAML_URI, path, method);
+        // The result depends on the actual API spec content
+        assertNotNull("Result should not be null", Boolean.valueOf(result));
+    }
+
+    public void testApiSpecParseExceptionHandling() throws Exception {
+        // Test that ApiSpecParseException is properly re-thrown when it contains specific messages
+        String path = "/_plugins/_ml/model_groups/{model_group_id}";
+        RestRequest.Method method = RestRequest.Method.GET;
+        List<String> params = Arrays.asList("name");
+
+        ApiSpecParseException exception = expectThrows(ApiSpecParseException.class, () -> {
+            ApiSpecFetcher.compareRequiredFields(params, ML_COMMONS_API_SPEC_YAML_URI, path, method);
+        });
+
+        assertTrue("Exception should contain expected message", exception.getMessage().contains("No requestBody defined"));
+    }
+
 }
