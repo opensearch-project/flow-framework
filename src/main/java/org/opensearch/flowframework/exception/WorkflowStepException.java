@@ -9,7 +9,6 @@
 package org.opensearch.flowframework.exception;
 
 import org.opensearch.OpenSearchException;
-import org.opensearch.OpenSearchParseException;
 import org.opensearch.OpenSearchStatusException;
 import org.opensearch.core.rest.RestStatus;
 import org.opensearch.core.xcontent.ToXContentObject;
@@ -74,12 +73,16 @@ public class WorkflowStepException extends FlowFrameworkException implements ToX
      * @return exception if safe
      */
     public static Exception getSafeException(Exception ex) {
-        if (ex instanceof IllegalArgumentException
-            || ex instanceof OpenSearchStatusException
-            || ex instanceof OpenSearchParseException
-            || (ex instanceof OpenSearchException && ex.getCause() instanceof OpenSearchParseException)) {
+        if (ex instanceof IllegalArgumentException || ex instanceof OpenSearchStatusException || isBadRequest(ex)) {
             return ex;
         }
+        if (isBadRequest(ex.getCause())) {
+            return (Exception) ex.getCause();
+        }
         return null;
+    }
+
+    private static boolean isBadRequest(Throwable throwable) {
+        return throwable instanceof OpenSearchException && ((OpenSearchException) throwable).status() == RestStatus.BAD_REQUEST;
     }
 }
