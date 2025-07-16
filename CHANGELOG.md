@@ -7,8 +7,6 @@ Inspired from [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 ### Features
 ### Enhancements
 ### Bug Fixes
-- Better handling of Workflow Steps with Bad Request status ([#1190](https://github.com/opensearch-project/flow-framework/pull/1190))
-
 ### Infrastructure
 ### Documentation
 ### Maintenance
