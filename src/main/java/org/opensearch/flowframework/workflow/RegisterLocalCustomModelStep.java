@@ -20,7 +20,7 @@ import static org.opensearch.flowframework.common.CommonValue.ALL_CONFIG;
 import static org.opensearch.flowframework.common.CommonValue.DEPLOY_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.DESCRIPTION_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.FUNCTION_NAME;
-import static org.opensearch.flowframework.common.CommonValue.INTERFACE_FIELD;import static org.opensearch.flowframework.common.CommonValue.MODEL_CONFIG;
+import static org.opensearch.flowframework.common.CommonValue.INTERFACE_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.MODEL_CONTENT_HASH_VALUE;
 import static org.opensearch.flowframework.common.CommonValue.MODEL_FORMAT;
 import static org.opensearch.flowframework.common.CommonValue.NAME_FIELD;
