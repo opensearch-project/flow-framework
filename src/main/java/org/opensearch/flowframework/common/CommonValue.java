@@ -151,6 +151,10 @@ public class CommonValue {
     public static final String URL = "url";
     /** Model config field */
     public static final String MODEL_CONFIG = "model_config";
+    /** Additional config field */
+    public static final String ADDITIONAL_CONFIG = "additional_config";
+    /** Space type field */
+    public static final String SPACE_TYPE = "space_type";
     /** Model type field */
     public static final String MODEL_TYPE = "model_type";
     /** Embedding dimension field */

@@ -19,13 +19,11 @@ import java.util.Set;
 import static org.opensearch.flowframework.common.CommonValue.ALL_CONFIG;
 import static org.opensearch.flowframework.common.CommonValue.DEPLOY_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.DESCRIPTION_FIELD;
-import static org.opensearch.flowframework.common.CommonValue.EMBEDDING_DIMENSION;
-import static org.opensearch.flowframework.common.CommonValue.FRAMEWORK_TYPE;
 import static org.opensearch.flowframework.common.CommonValue.FUNCTION_NAME;
 import static org.opensearch.flowframework.common.CommonValue.INTERFACE_FIELD;
+import static org.opensearch.flowframework.common.CommonValue.MODEL_CONFIG;
 import static org.opensearch.flowframework.common.CommonValue.MODEL_CONTENT_HASH_VALUE;
 import static org.opensearch.flowframework.common.CommonValue.MODEL_FORMAT;
-import static org.opensearch.flowframework.common.CommonValue.MODEL_TYPE;
 import static org.opensearch.flowframework.common.CommonValue.NAME_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.URL;
 import static org.opensearch.flowframework.common.CommonValue.VERSION_FIELD;
@@ -57,17 +55,7 @@ public class RegisterLocalCustomModelStep extends AbstractRegisterLocalModelStep
 
     @Override
     protected Set<String> getRequiredKeys() {
-        return Set.of(
-            NAME_FIELD,
-            VERSION_FIELD,
-            MODEL_FORMAT,
-            FUNCTION_NAME,
-            MODEL_CONTENT_HASH_VALUE,
-            URL,
-            MODEL_TYPE,
-            EMBEDDING_DIMENSION,
-            FRAMEWORK_TYPE
-        );
+        return Set.of(NAME_FIELD, VERSION_FIELD, MODEL_FORMAT, FUNCTION_NAME, MODEL_CONTENT_HASH_VALUE, URL, MODEL_CONFIG);
     }
 
     @Override

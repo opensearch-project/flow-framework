@@ -59,10 +59,15 @@
             "model_content_size_in_bytes": 567691,
             "model_content_hash_value": "b3487da9c58ac90541b720f3b367084f271d280c7f3bdc3e6d9c9a269fb31950",
             "created_time": 1696913667239,
-            "model_type": "sparse",
-            "embedding_dimension": "1",
-            "framework_type": "sentence_transformers",
-            "url": "https://artifacts.opensearch.org/models/ml-models/amazon/neural-sparse/opensearch-neural-sparse-tokenizer-v1/1.0.0/torch_script/opensearch-neural-sparse-tokenizer-v1-1.0.0.zip"
+            "url": "https://artifacts.opensearch.org/models/ml-models/amazon/neural-sparse/opensearch-neural-sparse-tokenizer-v1/1.0.0/torch_script/opensearch-neural-sparse-tokenizer-v1-1.0.0.zip",
+            "model_config": {
+              "model_type": "sparse",
+              "embedding_dimension": "1",
+              "framework_type": "sentence_transformers",
+              "additional_config": {
+                "space_type": "l2"
+              }
+            }
           }
         },
         {
