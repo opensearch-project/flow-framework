@@ -8,7 +8,7 @@ import java.nio.file.Paths
 
 buildscript {
     ext {
-        opensearch_version = System.getProperty("opensearch.version", "3.1.0-SNAPSHOT")
+        opensearch_version = System.getProperty("opensearch.version", "3.2.0-SNAPSHOT")
         buildVersionQualifier = System.getProperty("build.version_qualifier", "")
         isSnapshot = "true" == System.getProperty("build.snapshot", "true")
         version_tokens = opensearch_version.tokenize('-')
@@ -44,6 +44,7 @@ buildscript {
         junitJupiterVersion = "5.13.3"
         jakartaJsonBindVersion = "3.0.1"
         jakartaJsonVersion = "2.0.1"
+        commonsTextVersion = "1.10.0"
         yassonVersion = "3.0.4"
         parssonVersion = "1.1.7"
         swaggerVersion = "2.1.30"
@@ -124,6 +125,7 @@ allprojects {
         exclude group: 'org.apache.httpcomponents.core5', module: 'httpcore5'
         exclude group: 'org.apache.httpcomponents', module: 'httpcore'
         exclude group: 'org.apache.commons', module: 'commons-lang3'
+        exclude group: 'org.apache.commons', module: 'commons-text'
         exclude group: 'org.codehaus.plexus', module: 'plexus-utils'
     }
 }
@@ -195,13 +197,14 @@ configurations {
 dependencies {
     implementation("org.opensearch:opensearch:${opensearch_version}")
     api("org.opensearch:opensearch-ml-client:${opensearch_build}")
-    // json and jsonpath are required by MLClient but must be provided by calling plugins
+    // json, jsonpath, and commons-text are required by MLClient but must be provided by calling plugins
     implementation('org.json:json:20231013')
     implementation('com.jayway.jsonpath:json-path:2.9.0') {
         // conflicts with OpenSearch versions
         exclude group: 'org.slf4j', module: 'slf4j-api'
         exclude group: 'net.minidev', module: 'json-smart'
     }
+    implementation("org.apache.commons:commons-text:${commonsTextVersion}")
     api("org.opensearch.client:opensearch-rest-client:${opensearch_version}") {
         exclude group: "org.apache.httpcomponents.client5", module: "httpclient5"
     }

@@ -40,6 +40,8 @@ import static org.opensearch.flowframework.common.CommonValue.ADDITIONAL_CONFIG;
 import static org.opensearch.flowframework.common.CommonValue.ALL_CONFIG;
 import static org.opensearch.flowframework.common.CommonValue.DEPLOY_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.DESCRIPTION_FIELD;
+import static org.opensearch.flowframework.common.CommonValue.EMBEDDING_DIMENSION;
+import static org.opensearch.flowframework.common.CommonValue.FRAMEWORK_TYPE;
 import static org.opensearch.flowframework.common.CommonValue.FUNCTION_NAME;
 import static org.opensearch.flowframework.common.CommonValue.INTERFACE_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.MODEL_CONFIG;
@@ -111,10 +113,14 @@ public abstract class AbstractRegisterLocalModelStep extends AbstractRetryableWo
             String functionName = (String) inputs.get(FUNCTION_NAME);
             String modelContentHashValue = (String) inputs.get(MODEL_CONTENT_HASH_VALUE);
             String url = (String) inputs.get(URL);
+            String modelType = (String) inputs.get(MODEL_TYPE);
+            String embeddingDimension = (String) inputs.get(EMBEDDING_DIMENSION);
+            String frameworkType = (String) inputs.get(FRAMEWORK_TYPE);
 
             // Extract optional fields
             String description = (String) inputs.get(DESCRIPTION_FIELD);
             String modelGroupId = (String) inputs.get(MODEL_GROUP_ID);
+            String allConfig = (String) inputs.get(ALL_CONFIG);
             String modelInterface = (String) inputs.get(INTERFACE_FIELD);
             final Boolean deploy = ParseUtils.parseIfExists(inputs, DEPLOY_FIELD, Boolean.class);
 
@@ -149,7 +155,6 @@ public abstract class AbstractRegisterLocalModelStep extends AbstractRetryableWo
 
                 mlInputBuilder.modelConfig(baseModelConfig);
             }
-
             if (description != null) {
                 mlInputBuilder.description(description);
             }
