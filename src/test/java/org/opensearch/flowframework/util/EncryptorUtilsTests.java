@@ -8,11 +8,13 @@
  */
 package org.opensearch.flowframework.util;
 
+import org.opensearch.OpenSearchStatusException;
 import org.opensearch.Version;
 import org.opensearch.action.get.GetRequest;
 import org.opensearch.action.get.GetResponse;
 import org.opensearch.action.index.IndexRequest;
 import org.opensearch.action.index.IndexResponse;
+import org.opensearch.action.support.PlainActionFuture;
 import org.opensearch.cluster.ClusterState;
 import org.opensearch.cluster.metadata.Metadata;
 import org.opensearch.cluster.service.ClusterService;
@@ -28,6 +30,7 @@ import org.opensearch.flowframework.model.Config;
 import org.opensearch.flowframework.model.Template;
 import org.opensearch.flowframework.model.Workflow;
 import org.opensearch.flowframework.model.WorkflowNode;
+import org.opensearch.remote.metadata.client.PutDataObjectRequest;
 import org.opensearch.remote.metadata.client.SdkClient;
 import org.opensearch.remote.metadata.client.impl.SdkClientFactory;
 import org.opensearch.test.OpenSearchTestCase;
@@ -51,6 +54,9 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 public class EncryptorUtilsTests extends OpenSearchTestCase {
@@ -196,6 +202,47 @@ public class EncryptorUtilsTests extends OpenSearchTestCase {
         // This will generate a new master key 32 bytes -> base64 encoded
         assertNotEquals(masterKey, encryptorUtils.getMasterKey(null));
         assertEquals(masterKey.length(), encryptorUtils.getMasterKey(null).length());
+    }
+
+    public void testInitializeMasterKeyConflict() throws IOException, InterruptedException {
+        String existingKey = encryptorUtils.generateMasterKey();
+
+        // reinitialize with blank master key and spied sdkClient
+        SdkClient sdkClientSpy = spy(sdkClient);
+        encryptorUtils = new EncryptorUtils(clusterService, client, sdkClientSpy, xContentRegistry);
+        assertNull(encryptorUtils.getMasterKey(null));
+
+        // Have the spied sdkClient return a failed future with CONFLICT
+        doAnswer(
+            invocation -> CompletableFuture.failedFuture(new OpenSearchStatusException("Concurrent write detected", RestStatus.CONFLICT))
+        ).when(sdkClientSpy).putDataObjectAsync(any(PutDataObjectRequest.class));
+
+        doAnswer(invocation -> {
+            // First call returns not found
+            ActionListener<GetResponse> getRequestActionListener = invocation.getArgument(1);
+            GetResponse notFoundResponse = TestHelpers.createGetResponse(null, MASTER_KEY, CONFIG_INDEX);
+            getRequestActionListener.onResponse(notFoundResponse);
+            return null;
+        }).doAnswer(invocation -> {
+            // Second call (after conflict) returns the existing key
+            ActionListener<GetResponse> getRequestActionListener = invocation.getArgument(1);
+            GetResponse getMasterKeyResponse = TestHelpers.createGetResponse(
+                new Config(existingKey, Instant.now()),
+                MASTER_KEY,
+                CONFIG_INDEX
+            );
+            getRequestActionListener.onResponse(getMasterKeyResponse);
+            return null;
+        }).when(client).get(any(GetRequest.class), any());
+
+        PlainActionFuture<Boolean> future = new PlainActionFuture<>();
+        encryptorUtils.initializeMasterKey(null, future);
+
+        assertTrue(future.actionGet());
+        assertEquals(existingKey, encryptorUtils.getMasterKey(null));
+
+        verify(client, times(2)).get(any(GetRequest.class), any()); // First get and retry after conflict
+        verify(sdkClientSpy).putDataObjectAsync(any(PutDataObjectRequest.class)); // Failed put attempt
     }
 
     public void testInitializeMasterKeyFailure() throws IOException {

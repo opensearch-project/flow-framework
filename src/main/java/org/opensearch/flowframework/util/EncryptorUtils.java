@@ -11,6 +11,7 @@ package org.opensearch.flowframework.util;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.opensearch.ExceptionsHelper;
+import org.opensearch.OpenSearchStatusException;
 import org.opensearch.action.get.GetResponse;
 import org.opensearch.cluster.service.ClusterService;
 import org.opensearch.common.Nullable;
@@ -320,6 +321,7 @@ public class EncryptorUtils {
             .index(CONFIG_INDEX)
             .id(masterKeyId)
             .tenantId(tenantId)
+            .overwriteIfExists(false)
             .dataObject(config)
             .build();
         try (ThreadContext.StoredContext context = client.threadPool().getThreadContext().stashContext()) {
@@ -332,8 +334,23 @@ public class EncryptorUtils {
                     listener.onResponse(true);
                 } else {
                     Exception exception = SdkClientUtils.unwrapAndConvertToException(throwable);
-                    logger.error("Failed to index new master key in config for tenant id {}", tenantId, exception);
-                    listener.onFailure(exception);
+                    // In a race condition another thread may have already set the key
+                    // In this case we ignore config.masterKey(), and fetch and cache existing key
+                    if (exception instanceof OpenSearchStatusException
+                        && ((OpenSearchStatusException) exception).status() == RestStatus.CONFLICT) {
+                        logger.debug("Concurrent master key creation detected, retrying to get existing key");
+                        cacheMasterKeyFromConfigIndex(tenantId).handle((v, ex) -> {
+                            if (ex == null) {
+                                listener.onResponse(true);
+                            } else {
+                                listener.onFailure(SdkClientUtils.unwrapAndConvertToException(ex));
+                            }
+                            return null;
+                        });
+                    } else {
+                        logger.error("Failed to index new master key in config for tenant id {}", tenantId, exception);
+                        listener.onFailure(exception);
+                    }
                 }
             });
         }
