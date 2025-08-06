@@ -11,3 +11,4 @@ Compatible with OpenSearch and OpenSearch Dashboards version 3.2.0
 * Better handling of Workflow Steps with Bad Request status ([#1190](https://github.com/opensearch-project/flow-framework/pull/1190))
 * Update RegisterLocalCustomModelStep ([#1194](https://github.com/opensearch-project/flow-framework/pull/1194))
 * Avoid race condition setting encryption key ([#1200](https://github.com/opensearch-project/flow-framework/pull/1200))
+* Fixing connector name in default use case ([#1205](https://github.com/opensearch-project/flow-framework/pull/1205))
