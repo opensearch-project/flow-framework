@@ -16,7 +16,7 @@
           "id": "create_connector",
           "type": "create_connector",
           "user_inputs": {
-            "name": "${{create_connector}}",
+            "name": "${{create_connector.name}}",
             "description": "${{create_connector.description}}",
             "version": "1",
             "protocol": "${{create_connector.protocol}}",
