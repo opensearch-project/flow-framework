@@ -8,6 +8,7 @@ Inspired from [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 ### Enhancements
 ### Bug Fixes
 - Avoid race condition setting encryption key ([#1200](https://github.com/opensearch-project/flow-framework/pull/1200))
+- Fixing connector name in default use case ([#1205](https://github.com/opensearch-project/flow-framework/pull/1205))
 
 ### Infrastructure
 ### Documentation
