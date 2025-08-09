@@ -123,7 +123,8 @@ public class FlowFrameworkIndicesHandlerTests extends OpenSearchTestCase {
             sdkClient,
             clusterService,
             encryptorUtils,
-            xContentRegistry()
+            xContentRegistry(),
+            false
         );
         adminClient = mock(AdminClient.class);
         indicesAdminClient = mock(IndicesAdminClient.class);
@@ -167,6 +168,19 @@ public class FlowFrameworkIndicesHandlerTests extends OpenSearchTestCase {
         verify(mockMetaData, times(1)).hasIndex(indexExistsCaptor.capture());
 
         assertEquals(GLOBAL_CONTEXT_INDEX, indexExistsCaptor.getValue());
+    }
+
+    public void testDoesIndexExistMultitenant() {
+        assertTrue(FlowFrameworkIndicesHandler.doesIndexExistMultitenant(null, null, true));
+        FlowFrameworkIndicesHandler flowFrameworkIndicesHandlerMultitenant = new FlowFrameworkIndicesHandler(
+            client,
+            sdkClient,
+            clusterService,
+            encryptorUtils,
+            xContentRegistry(),
+            true
+        );
+        assertTrue(flowFrameworkIndicesHandlerMultitenant.doesIndexExist(GLOBAL_CONTEXT_INDEX));
     }
 
     public void testFailedUpdateTemplateInGlobalContext() throws IOException {
