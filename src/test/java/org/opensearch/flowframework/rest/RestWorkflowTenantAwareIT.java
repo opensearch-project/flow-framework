@@ -29,6 +29,10 @@ public class RestWorkflowTenantAwareIT extends FlowFrameworkTenantAwareRestTestC
 
     public void testWorkflowCRUD() throws Exception {
         boolean multiTenancyEnabled = isMultiTenancyEnabled();
+        // Code assumes indices exist with multitenancy
+        if (multiTenancyEnabled) {
+            createFlowFrameworkIndices();
+        }
 
         /*
          * Create
