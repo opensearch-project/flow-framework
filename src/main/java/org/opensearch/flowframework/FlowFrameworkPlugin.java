@@ -137,12 +137,13 @@ public class FlowFrameworkPlugin extends Plugin implements ActionPlugin, SystemI
         Settings settings = environment.settings();
         flowFrameworkSettings = new FlowFrameworkSettings(clusterService, settings);
         MachineLearningNodeClient mlClient = new MachineLearningNodeClient(client);
+        boolean multiTenancyEnabled = FLOW_FRAMEWORK_MULTI_TENANCY_ENABLED.get(settings);
         SdkClient sdkClient = SdkClientFactory.createSdkClient(
             client,
             xContentRegistry,
             // Here we assume remote metadata client is only used with tenant awareness.
             // This may change in the future allowing more options for this map
-            FLOW_FRAMEWORK_MULTI_TENANCY_ENABLED.get(settings)
+            multiTenancyEnabled
                 ? Map.ofEntries(
                     Map.entry(REMOTE_METADATA_TYPE_KEY, REMOTE_METADATA_TYPE.get(settings)),
                     Map.entry(REMOTE_METADATA_ENDPOINT_KEY, REMOTE_METADATA_ENDPOINT.get(settings)),
@@ -155,13 +156,14 @@ public class FlowFrameworkPlugin extends Plugin implements ActionPlugin, SystemI
             // TODO: Find a better thread pool or make one
             client.threadPool().executor(ThreadPool.Names.GENERIC)
         );
-        EncryptorUtils encryptorUtils = new EncryptorUtils(clusterService, client, sdkClient, xContentRegistry);
+        EncryptorUtils encryptorUtils = new EncryptorUtils(clusterService, client, sdkClient, xContentRegistry, multiTenancyEnabled);
         FlowFrameworkIndicesHandler flowFrameworkIndicesHandler = new FlowFrameworkIndicesHandler(
             client,
             sdkClient,
             clusterService,
             encryptorUtils,
-            xContentRegistry
+            xContentRegistry,
+            multiTenancyEnabled
         );
         WorkflowStepFactory workflowStepFactory = new WorkflowStepFactory(
             threadPool,

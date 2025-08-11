@@ -86,6 +86,7 @@ public class FlowFrameworkIndicesHandler {
     private static final Map<String, AtomicBoolean> indexMappingUpdated = new HashMap<>();
     private static final Map<String, Object> indexSettings = Map.of("index.auto_expand_replicas", "0-1");
     private final NamedXContentRegistry xContentRegistry;
+    private final boolean multiTenancyEnabled;
     // Retries in case of simultaneous updates
     private static final int RETRIES = 5;
 
@@ -96,13 +97,15 @@ public class FlowFrameworkIndicesHandler {
      * @param clusterService ClusterService
      * @param encryptorUtils encryption utility
      * @param xContentRegistry contentRegister to parse any response
+     * @param multiTenancyEnabled whether multitenancy is enabled
      */
     public FlowFrameworkIndicesHandler(
         Client client,
         SdkClient sdkClient,
         ClusterService clusterService,
         EncryptorUtils encryptorUtils,
-        NamedXContentRegistry xContentRegistry
+        NamedXContentRegistry xContentRegistry,
+        boolean multiTenancyEnabled
     ) {
         this.client = client;
         this.sdkClient = sdkClient;
@@ -112,6 +115,7 @@ public class FlowFrameworkIndicesHandler {
             indexMappingUpdated.put(mlIndex.getIndexName(), new AtomicBoolean(false));
         }
         this.xContentRegistry = xContentRegistry;
+        this.multiTenancyEnabled = multiTenancyEnabled;
     }
 
     static {
@@ -177,7 +181,18 @@ public class FlowFrameworkIndicesHandler {
      * @return boolean indicating the existence of an index
      */
     public boolean doesIndexExist(String indexName) {
-        return clusterService.state().metadata().hasIndex(indexName);
+        return doesIndexExistMultitenant(clusterService, indexName, multiTenancyEnabled);
+    }
+
+    /**
+     * Checks if the given index exists, returning true if multitenancy is enabled
+     * @param cs the Cluster Service
+     * @param index the index to test
+     * @param multiTenancy whether multitenancy is enabled
+     * @return boolean indicating the existence of an index. Returns true if multitenancy is enabled.
+     */
+    public static boolean doesIndexExistMultitenant(ClusterService cs, String index, boolean multiTenancy) {
+        return multiTenancy || cs.state().metadata().hasIndex(index);
     }
 
     /**
@@ -191,7 +206,7 @@ public class FlowFrameworkIndicesHandler {
 
         try (ThreadContext.StoredContext threadContext = client.threadPool().getThreadContext().stashContext()) {
             ActionListener<Boolean> internalListener = ActionListener.runBefore(listener, threadContext::restore);
-            if (!clusterService.state().metadata().hasIndex(indexName)) {
+            if (!FlowFrameworkIndicesHandler.doesIndexExistMultitenant(clusterService, indexName, multiTenancyEnabled)) {
                 @SuppressWarnings("deprecation")
                 ActionListener<CreateIndexResponse> actionListener = ActionListener.wrap(r -> {
                     if (r.isAcknowledged()) {

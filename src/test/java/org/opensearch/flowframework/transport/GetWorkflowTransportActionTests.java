@@ -75,7 +75,7 @@ public class GetWorkflowTransportActionTests extends OpenSearchTestCase {
         this.xContentRegistry = mock(NamedXContentRegistry.class);
         this.flowFrameworkSettings = mock(FlowFrameworkSettings.class);
         this.sdkClient = SdkClientFactory.createSdkClient(client, xContentRegistry, Collections.emptyMap());
-        this.encryptorUtils = new EncryptorUtils(mock(ClusterService.class), client, sdkClient, xContentRegistry);
+        this.encryptorUtils = new EncryptorUtils(mock(ClusterService.class), client, sdkClient, xContentRegistry, false);
         ClusterService clusterService = mock(ClusterService.class);
         ClusterSettings clusterSettings = new ClusterSettings(
             Settings.EMPTY,
@@ -83,7 +83,7 @@ public class GetWorkflowTransportActionTests extends OpenSearchTestCase {
         );
         when(clusterService.getClusterSettings()).thenReturn(clusterSettings);
         this.flowFrameworkIndicesHandler = spy(
-            new FlowFrameworkIndicesHandler(client, sdkClient, clusterService, encryptorUtils, xContentRegistry)
+            new FlowFrameworkIndicesHandler(client, sdkClient, clusterService, encryptorUtils, xContentRegistry, false)
         );
 
         this.getTemplateTransportAction = new GetWorkflowTransportAction(

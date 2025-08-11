@@ -19,13 +19,16 @@ import org.opensearch.core.rest.RestStatus;
 import org.opensearch.core.xcontent.DeprecationHandler;
 import org.opensearch.core.xcontent.NamedXContentRegistry;
 import org.opensearch.core.xcontent.XContentParser;
+import org.opensearch.flowframework.util.ParseUtils;
 import org.opensearch.rest.RestRequest;
 import org.opensearch.test.rest.FakeRestRequest;
 
 import java.io.IOException;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
@@ -33,7 +36,10 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.Collections.emptyMap;
 import static java.util.Collections.singletonList;
 import static org.opensearch.common.xcontent.XContentType.JSON;
+import static org.opensearch.flowframework.common.CommonValue.CONFIG_INDEX;
+import static org.opensearch.flowframework.common.CommonValue.GLOBAL_CONTEXT_INDEX;
 import static org.opensearch.flowframework.common.CommonValue.TENANT_ID_HEADER;
+import static org.opensearch.flowframework.common.CommonValue.WORKFLOW_STATE_INDEX;
 import static org.opensearch.flowframework.common.FlowFrameworkSettings.FLOW_FRAMEWORK_MULTI_TENANCY_ENABLED;
 
 public abstract class FlowFrameworkTenantAwareRestTestCase extends FlowFrameworkRestTestCase {
@@ -207,5 +213,28 @@ public abstract class FlowFrameworkTenantAwareRestTestCase extends FlowFramework
             SearchResponse searchResponse = searchResponseFromResponse(response);
             assertEquals(hits, searchResponse.getHits().getTotalHits().value);
         }, 20, TimeUnit.SECONDS);
+    }
+
+    protected static void createFlowFrameworkIndices() throws IOException {
+        Map<String, String> indexMappings = Map.ofEntries(
+            Map.entry(CONFIG_INDEX, "/mappings/config.json"),
+            Map.entry(GLOBAL_CONTEXT_INDEX, "/mappings/global-context.json"),
+            Map.entry(WORKFLOW_STATE_INDEX, "/mappings/workflow-state.json")
+        );
+        for (Entry<String, String> entry : indexMappings.entrySet()) {
+            String index = entry.getKey();
+            String mappings = "{\"mappings\":" + ParseUtils.resourceToString(entry.getValue()) + "}";
+
+            try {
+                assertOK(TestHelpers.makeRequest(client(), PUT, "/" + index, Collections.emptyMap(), mappings, null));
+            } catch (ResponseException ex) {
+                assertTrue(ex.getMessage().contains("resource_already_exists_exception"));
+                assertEquals(RestStatus.BAD_REQUEST.getStatus(), ex.getResponse().getStatusLine().getStatusCode());
+                // Index already exists from a previous test, delete to clear contents
+                assertOK(TestHelpers.makeRequest(client(), DELETE, "/" + index, Collections.emptyMap(), "", null));
+                // Then recreate
+                assertOK(TestHelpers.makeRequest(client(), PUT, "/" + index, Collections.emptyMap(), mappings, null));
+            }
+        }
     }
 }
