@@ -34,6 +34,7 @@ import org.opensearch.core.xcontent.NamedXContentRegistry;
 import org.opensearch.core.xcontent.XContentBuilder;
 import org.opensearch.core.xcontent.XContentParser;
 import org.opensearch.flowframework.exception.FlowFrameworkException;
+import org.opensearch.flowframework.indices.FlowFrameworkIndicesHandler;
 import org.opensearch.flowframework.model.Template;
 import org.opensearch.flowframework.model.WorkflowState;
 import org.opensearch.flowframework.workflow.WorkflowData;
@@ -418,7 +419,7 @@ public class ParseUtils {
         NamedXContentRegistry xContentRegistry
     ) {
         String index = statePresent ? WORKFLOW_STATE_INDEX : GLOBAL_CONTEXT_INDEX;
-        if (clusterService.state().metadata().hasIndex(index)) {
+        if (FlowFrameworkIndicesHandler.doesIndexExistMultitenant(clusterService, index, isMultitenancyEnabled)) {
             try (ThreadContext.StoredContext context = client.threadPool().getThreadContext().stashContext()) {
                 GetDataObjectRequest request = GetDataObjectRequest.builder().index(index).id(workflowId).tenantId(tenantId).build();
                 sdkClient.getDataObjectAsync(request).whenComplete((r, throwable) -> {
