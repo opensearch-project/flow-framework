@@ -22,6 +22,7 @@ import org.opensearch.core.rest.RestStatus;
 import org.opensearch.core.xcontent.NamedXContentRegistry;
 import org.opensearch.core.xcontent.XContentParser;
 import org.opensearch.flowframework.exception.FlowFrameworkException;
+import org.opensearch.flowframework.indices.FlowFrameworkIndicesHandler;
 import org.opensearch.flowframework.model.Config;
 import org.opensearch.flowframework.model.Template;
 import org.opensearch.flowframework.model.Workflow;
@@ -84,6 +85,7 @@ public class EncryptorUtils {
     private final SdkClient sdkClient;
     private final Map<String, String> tenantMasterKeys;
     private final NamedXContentRegistry xContentRegistry;
+    private static boolean multiTenancyEnabled;
 
     /**
      * Instantiates a new EncryptorUtils object
@@ -91,13 +93,21 @@ public class EncryptorUtils {
      * @param client the node client
      * @param sdkClient the Multitenant Client
      * @param xContentRegistry the OpenSearch XContent Registry
+     * @param multiTenancyEnabled whether multitenancy is enabled
      */
-    public EncryptorUtils(ClusterService clusterService, Client client, SdkClient sdkClient, NamedXContentRegistry xContentRegistry) {
+    public EncryptorUtils(
+        ClusterService clusterService,
+        Client client,
+        SdkClient sdkClient,
+        NamedXContentRegistry xContentRegistry,
+        boolean multiTenancyEnabled
+    ) {
         this.tenantMasterKeys = new ConcurrentHashMap<>();
         this.clusterService = clusterService;
         this.client = client;
         this.sdkClient = sdkClient;
         this.xContentRegistry = xContentRegistry;
+        this.multiTenancyEnabled = multiTenancyEnabled;
     }
 
     /**
@@ -367,7 +377,7 @@ public class EncryptorUtils {
             return CompletableFuture.completedFuture(null);
         }
         // Key not in map
-        if (!clusterService.state().metadata().hasIndex(CONFIG_INDEX)) {
+        if (!FlowFrameworkIndicesHandler.doesIndexExistMultitenant(clusterService, CONFIG_INDEX, multiTenancyEnabled)) {
             return CompletableFuture.failedFuture(
                 new FlowFrameworkException("Config Index has not been initialized", RestStatus.INTERNAL_SERVER_ERROR)
             );

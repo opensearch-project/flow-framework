@@ -52,6 +52,10 @@ public class RestWorkflowProvisionTenantAwareIT extends FlowFrameworkTenantAware
 
     public void testWorkflowProvisionThrottle() throws Exception {
         boolean multiTenancyEnabled = isMultiTenancyEnabled();
+        // Code assumes indices exist with multitenancy
+        if (multiTenancyEnabled) {
+            createFlowFrameworkIndices();
+        }
 
         /*
          * Setup

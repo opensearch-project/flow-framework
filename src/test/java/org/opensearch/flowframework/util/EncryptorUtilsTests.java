@@ -78,7 +78,7 @@ public class EncryptorUtilsTests extends OpenSearchTestCase {
         client = mock(Client.class);
         this.xContentRegistry = mock(NamedXContentRegistry.class);
         this.sdkClient = SdkClientFactory.createSdkClient(client, xContentRegistry, Collections.emptyMap());
-        this.encryptorUtils = new EncryptorUtils(clusterService, client, sdkClient, xContentRegistry);
+        this.encryptorUtils = new EncryptorUtils(clusterService, client, sdkClient, xContentRegistry, false);
         this.testMasterKey = encryptorUtils.generateMasterKey();
         this.testCredentialKey = "credential_key";
         this.testCredentialValue = "12345";
@@ -156,7 +156,7 @@ public class EncryptorUtilsTests extends OpenSearchTestCase {
 
         // Index exists case
         // reinitialize with blank master key
-        encryptorUtils = new EncryptorUtils(clusterService, client, sdkClient, xContentRegistry);
+        encryptorUtils = new EncryptorUtils(clusterService, client, sdkClient, xContentRegistry, false);
         assertNull(encryptorUtils.getMasterKey(null));
 
         doAnswer(invocation -> {
@@ -177,7 +177,7 @@ public class EncryptorUtilsTests extends OpenSearchTestCase {
 
         // Test ifAbsent version
         // reinitialize with blank master key
-        encryptorUtils = new EncryptorUtils(clusterService, client, sdkClient, xContentRegistry);
+        encryptorUtils = new EncryptorUtils(clusterService, client, sdkClient, xContentRegistry, false);
         assertNull(encryptorUtils.getMasterKey(null));
 
         encryptorUtils.initializeMasterKeyIfAbsent(null);
@@ -209,7 +209,7 @@ public class EncryptorUtilsTests extends OpenSearchTestCase {
 
         // reinitialize with blank master key and spied sdkClient
         SdkClient sdkClientSpy = spy(sdkClient);
-        encryptorUtils = new EncryptorUtils(clusterService, client, sdkClientSpy, xContentRegistry);
+        encryptorUtils = new EncryptorUtils(clusterService, client, sdkClientSpy, xContentRegistry, false);
         assertNull(encryptorUtils.getMasterKey(null));
 
         // Have the spied sdkClient return a failed future with CONFLICT
@@ -247,7 +247,7 @@ public class EncryptorUtilsTests extends OpenSearchTestCase {
 
     public void testInitializeMasterKeyFailure() throws IOException {
         // reinitialize with blank master key
-        encryptorUtils = new EncryptorUtils(clusterService, client, sdkClient, xContentRegistry);
+        encryptorUtils = new EncryptorUtils(clusterService, client, sdkClient, xContentRegistry, false);
 
         doAnswer(invocation -> {
             GetResponse getResponse = TestHelpers.createGetResponse(null, MASTER_KEY, CONFIG_INDEX);
