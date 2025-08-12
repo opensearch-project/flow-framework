@@ -103,7 +103,7 @@ public class ProvisionWorkflowTransportActionTests extends OpenSearchTestCase {
         );
         when(clusterService.getClusterSettings()).thenReturn(clusterSettings);
         this.flowFrameworkIndicesHandler = spy(
-            new FlowFrameworkIndicesHandler(client, sdkClient, clusterService, encryptorUtils, xContentRegistry())
+            new FlowFrameworkIndicesHandler(client, sdkClient, clusterService, encryptorUtils, xContentRegistry(), false)
         );
 
         this.provisionWorkflowTransportAction = new ProvisionWorkflowTransportAction(

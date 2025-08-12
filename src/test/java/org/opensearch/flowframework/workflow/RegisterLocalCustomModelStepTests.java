@@ -116,10 +116,20 @@ public class RegisterLocalCustomModelStepTests extends OpenSearchTestCase {
                 Map.entry("model_format", "TORCH_SCRIPT"),
                 Map.entry(MODEL_GROUP_ID, "abcdefg"),
                 Map.entry("model_content_hash_value", "aiwoeifjoaijeofiwe"),
-                Map.entry("model_type", "bert"),
-                Map.entry("embedding_dimension", "384"),
-                Map.entry("framework_type", "sentence_transformers"),
-                Map.entry("url", "something.com")
+                Map.entry("url", "something.com"),
+                Map.entry(
+                    "model_config",
+                    Map.of(
+                        "model_type",
+                        "bert",
+                        "embedding_dimension",
+                        "384",
+                        "framework_type",
+                        "sentence_transformers",
+                        "additional_config",
+                        Map.of("space_type", "l2")
+                    )
+                )
             ),
             "test-id",
             "test-node-id"
@@ -187,10 +197,20 @@ public class RegisterLocalCustomModelStepTests extends OpenSearchTestCase {
                 Map.entry("model_format", "TORCH_SCRIPT"),
                 Map.entry(MODEL_GROUP_ID, "abcdefg"),
                 Map.entry("model_content_hash_value", "aiwoeifjoaijeofiwe"),
-                Map.entry("model_type", "bert"),
-                Map.entry("embedding_dimension", "384"),
-                Map.entry("framework_type", "sentence_transformers"),
                 Map.entry("url", "something.com"),
+                Map.entry(
+                    "model_config",
+                    Map.of(
+                        "model_type",
+                        "bert",
+                        "embedding_dimension",
+                        "384",
+                        "framework_type",
+                        "sentence_transformers",
+                        "additional_config",
+                        Map.of("space_type", "l2")
+                    )
+                ),
                 Map.entry(DEPLOY_FIELD, "false")
             ),
             "test-id",
@@ -260,10 +280,20 @@ public class RegisterLocalCustomModelStepTests extends OpenSearchTestCase {
                 Map.entry("model_format", "TORCH_SCRIPT"),
                 Map.entry(MODEL_GROUP_ID, "abcdefg"),
                 Map.entry("model_content_hash_value", "aiwoeifjoaijeofiwe"),
-                Map.entry("model_type", "bert"),
-                Map.entry("embedding_dimension", "384"),
-                Map.entry("framework_type", "sentence_transformers"),
                 Map.entry("url", "something.com"),
+                Map.entry(
+                    "model_config",
+                    Map.of(
+                        "model_type",
+                        "bert",
+                        "embedding_dimension",
+                        "384",
+                        "framework_type",
+                        "sentence_transformers",
+                        "additional_config",
+                        Map.of("space_type", "l2")
+                    )
+                ),
                 Map.entry(DEPLOY_FIELD, "true")
             ),
             "test-id",
@@ -364,13 +394,11 @@ public class RegisterLocalCustomModelStepTests extends OpenSearchTestCase {
         for (String s : new String[] {
             "model_format",
             "name",
-            "model_type",
-            "embedding_dimension",
-            "framework_type",
             "version",
             "url",
             "model_content_hash_value",
-            "function_name" }) {
+            "function_name",
+            "model_config" }) {
             assertTrue(ex.getCause().getMessage().contains(s));
         }
         assertTrue(ex.getCause().getMessage().endsWith("] in workflow [test-id] node [test-node-id]"));
@@ -386,10 +414,20 @@ public class RegisterLocalCustomModelStepTests extends OpenSearchTestCase {
                 Map.entry("model_format", "TORCH_SCRIPT"),
                 Map.entry(MODEL_GROUP_ID, "abcdefg"),
                 Map.entry("model_content_hash_value", "aiwoeifjoaijeofiwe"),
-                Map.entry("model_type", "bert"),
-                Map.entry("embedding_dimension", "384"),
-                Map.entry("framework_type", "sentence_transformers"),
                 Map.entry("url", "something.com"),
+                Map.entry(
+                    "model_config",
+                    Map.of(
+                        "model_type",
+                        "bert",
+                        "embedding_dimension",
+                        "384",
+                        "framework_type",
+                        "sentence_transformers",
+                        "additional_config",
+                        Map.of("space_type", "l2")
+                    )
+                ),
                 Map.entry(DEPLOY_FIELD, "no")
             ),
             "test-id",

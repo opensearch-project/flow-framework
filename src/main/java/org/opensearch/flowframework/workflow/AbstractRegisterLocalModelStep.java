@@ -26,10 +26,8 @@ import org.opensearch.flowframework.indices.FlowFrameworkIndicesHandler;
 import org.opensearch.flowframework.util.ParseUtils;
 import org.opensearch.ml.client.MachineLearningNodeClient;
 import org.opensearch.ml.common.FunctionName;
-import org.opensearch.ml.common.model.BaseModelConfig.FrameworkType;
+import org.opensearch.ml.common.model.BaseModelConfig;
 import org.opensearch.ml.common.model.MLModelFormat;
-import org.opensearch.ml.common.model.TextEmbeddingModelConfig;
-import org.opensearch.ml.common.model.TextEmbeddingModelConfig.TextEmbeddingModelConfigBuilder;
 import org.opensearch.ml.common.transport.register.MLRegisterModelInput;
 import org.opensearch.ml.common.transport.register.MLRegisterModelInput.MLRegisterModelInputBuilder;
 import org.opensearch.threadpool.ThreadPool;
@@ -37,8 +35,8 @@ import org.opensearch.threadpool.ThreadPool;
 import java.nio.charset.StandardCharsets;
 import java.util.Map;
 import java.util.Set;
-import java.util.stream.Stream;
 
+import static org.opensearch.flowframework.common.CommonValue.ADDITIONAL_CONFIG;
 import static org.opensearch.flowframework.common.CommonValue.ALL_CONFIG;
 import static org.opensearch.flowframework.common.CommonValue.DEPLOY_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.DESCRIPTION_FIELD;
@@ -46,6 +44,7 @@ import static org.opensearch.flowframework.common.CommonValue.EMBEDDING_DIMENSIO
 import static org.opensearch.flowframework.common.CommonValue.FRAMEWORK_TYPE;
 import static org.opensearch.flowframework.common.CommonValue.FUNCTION_NAME;
 import static org.opensearch.flowframework.common.CommonValue.INTERFACE_FIELD;
+import static org.opensearch.flowframework.common.CommonValue.MODEL_CONFIG;
 import static org.opensearch.flowframework.common.CommonValue.MODEL_CONTENT_HASH_VALUE;
 import static org.opensearch.flowframework.common.CommonValue.MODEL_FORMAT;
 import static org.opensearch.flowframework.common.CommonValue.MODEL_TYPE;
@@ -140,15 +139,21 @@ public abstract class AbstractRegisterLocalModelStep extends AbstractRetryableWo
             if (url != null) {
                 mlInputBuilder.url(url);
             }
-            if (Stream.of(modelType, embeddingDimension, frameworkType).allMatch(x -> x != null)) {
-                TextEmbeddingModelConfigBuilder mlConfigBuilder = TextEmbeddingModelConfig.builder()
-                    .modelType(modelType)
-                    .embeddingDimension(Integer.valueOf(embeddingDimension))
-                    .frameworkType(FrameworkType.from(frameworkType));
-                if (allConfig != null) {
-                    mlConfigBuilder.allConfig(allConfig);
-                }
-                mlInputBuilder.modelConfig(mlConfigBuilder.build());
+
+            // Handle model_config if present
+            Map<String, Object> modelConfig = (Map<String, Object>) inputs.get(MODEL_CONFIG);
+            if (modelConfig != null) {
+                Map<String, Object> additionalConfig = modelConfig.containsKey(ADDITIONAL_CONFIG)
+                    ? (Map<String, Object>) modelConfig.get(ADDITIONAL_CONFIG)
+                    : null;
+
+                BaseModelConfig baseModelConfig = BaseModelConfig.baseModelConfigBuilder()
+                    .modelType((String) modelConfig.get(MODEL_TYPE))
+                    .additionalConfig(additionalConfig)
+                    .allConfig((String) modelConfig.get(ALL_CONFIG))
+                    .build();
+
+                mlInputBuilder.modelConfig(baseModelConfig);
             }
             if (description != null) {
                 mlInputBuilder.description(description);
