@@ -54,6 +54,7 @@ public class RestWorkflowProvisionTenantAwareIT extends FlowFrameworkTenantAware
         boolean multiTenancyEnabled = isMultiTenancyEnabled();
         // Code assumes indices exist with multitenancy
         if (multiTenancyEnabled) {
+            createMLCommonsIndices();
             createFlowFrameworkIndices();
         }
 

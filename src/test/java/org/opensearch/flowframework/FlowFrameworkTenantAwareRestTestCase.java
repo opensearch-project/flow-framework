@@ -20,6 +20,7 @@ import org.opensearch.core.xcontent.DeprecationHandler;
 import org.opensearch.core.xcontent.NamedXContentRegistry;
 import org.opensearch.core.xcontent.XContentParser;
 import org.opensearch.flowframework.util.ParseUtils;
+import org.opensearch.ml.common.MLIndex;
 import org.opensearch.rest.RestRequest;
 import org.opensearch.test.rest.FakeRestRequest;
 
@@ -239,6 +240,23 @@ public abstract class FlowFrameworkTenantAwareRestTestCase extends FlowFramework
                 assertOK(TestHelpers.makeRequest(client(), DELETE, "/" + index, Collections.emptyMap(), "", null));
                 // Then recreate
                 assertOK(TestHelpers.makeRequest(client(), PUT, "/" + index, Collections.emptyMap(), mappings, null));
+            }
+        }
+    }
+
+    protected static void createMLCommonsIndices() throws Exception {
+        // Create each ML index. For tests we can just use default settings.
+        for (MLIndex mlIndex : MLIndex.values()) {
+            String requestPath = "/" + mlIndex.getIndexName();
+            String requestBody = "{\"mappings\":" + mlIndex.getMapping() + "}";
+            try {
+                TestHelpers.makeRequest(client(), "PUT", requestPath, null, requestBody, null);
+            } catch (ResponseException e) {
+                if (e.getMessage().contains("resource_already_exists_exception")) {
+                    // Index already exists, continue to the next one
+                    continue;
+                }
+                throw e;
             }
         }
     }

@@ -204,6 +204,13 @@ dependencies {
         exclude group: 'org.slf4j', module: 'slf4j-api'
         exclude group: 'net.minidev', module: 'json-smart'
     }
+    // needed to use MLIndex class mappings at (test) runtime but must be provided by calling plugins
+    compileOnly('com.networknt:json-schema-validator:1.4.0') {
+        exclude group: 'com.fasterxml.jackson.core', module: 'jackson-databind'
+        exclude group: 'com.fasterxml.jackson.dataformat', module: 'jackson-dataformat-yaml'
+        exclude group: 'org.yml', module: 'snakeyaml'
+        exclude group: 'org.slf4j', module: 'slf4j-api'
+    }
     implementation("org.apache.commons:commons-text:${commonsTextVersion}")
     api("org.opensearch.client:opensearch-rest-client:${opensearch_version}") {
         exclude group: "org.apache.httpcomponents.client5", module: "httpclient5"
