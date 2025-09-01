@@ -38,7 +38,7 @@ buildscript {
         // Version constants for dependencies
         awsEncryptionSdkVersion = "3.0.2"
         awsCryptoMaterialProvidersVersion = "1.11.0"
-        dafnyRuntimeVersion = "4.10.0"
+        dafnyRuntimeVersion = "4.11.0"
         smithyDafnyVersion = "0.1.1"
         gsonVersion = "2.13.1"
         junitJupiterVersion = "5.13.3"
