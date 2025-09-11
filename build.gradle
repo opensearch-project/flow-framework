@@ -40,7 +40,7 @@ buildscript {
         awsCryptoMaterialProvidersVersion = "1.11.0"
         dafnyRuntimeVersion = "4.11.0"
         smithyDafnyVersion = "0.1.1"
-        gsonVersion = "2.13.1"
+        gsonVersion = "2.13.2"
         junitJupiterVersion = "5.13.3"
         jakartaJsonBindVersion = "3.0.1"
         jakartaJsonVersion = "2.0.1"
