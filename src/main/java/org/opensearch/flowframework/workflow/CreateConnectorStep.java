@@ -23,10 +23,8 @@ import org.opensearch.ml.common.connector.ConnectorAction;
 import org.opensearch.ml.common.connector.ConnectorAction.ActionType;
 import org.opensearch.ml.common.transport.connector.MLCreateConnectorInput;
 import org.opensearch.ml.common.transport.connector.MLCreateConnectorResponse;
+import org.opensearch.secure_sm.AccessController;
 
-import java.security.AccessController;
-import java.security.PrivilegedActionException;
-import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -142,9 +140,9 @@ public class CreateConnectorStep implements WorkflowStep {
             } catch (IllegalArgumentException iae) {
                 logger.error("IllegalArgumentException in connector configuration", iae);
                 throw new FlowFrameworkException("IllegalArgumentException in connector configuration", RestStatus.BAD_REQUEST);
-            } catch (PrivilegedActionException pae) {
-                logger.error("PrivilegedActionException in connector configuration", pae);
-                throw new FlowFrameworkException("PrivilegedActionException in connector configuration", RestStatus.UNAUTHORIZED);
+            } catch (Exception e) {
+                logger.error("Exception in connector configuration", e);
+                throw new FlowFrameworkException("Exception in connector configuration", RestStatus.UNAUTHORIZED);
             }
 
             MLCreateConnectorInput mlInput = MLCreateConnectorInput.builder()
@@ -170,10 +168,10 @@ public class CreateConnectorStep implements WorkflowStep {
         return NAME;
     }
 
-    private static Map<String, String> getParameterMap(Object parameterMap) throws PrivilegedActionException {
+    private static Map<String, String> getParameterMap(Object parameterMap) throws Exception {
         Map<String, String> parameters = new HashMap<>();
         for (Entry<String, String> entry : getStringToStringMap(parameterMap, PARAMETERS_FIELD).entrySet()) {
-            AccessController.doPrivileged((PrivilegedExceptionAction<Void>) () -> {
+            AccessController.doPrivilegedChecked(() -> {
                 parameters.put(entry.getKey(), entry.getValue());
                 return null;
             });
