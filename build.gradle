@@ -44,7 +44,7 @@ buildscript {
         junitJupiterVersion = "5.13.4"
         jakartaJsonBindVersion = "3.0.1"
         jakartaJsonVersion = "2.0.1"
-        commonsTextVersion = "1.10.0"
+        commonsTextVersion = "1.14.0"
         yassonVersion = "3.0.4"
         parssonVersion = "1.1.7"
         swaggerVersion = "2.1.30"
