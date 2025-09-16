@@ -47,7 +47,7 @@ buildscript {
         commonsTextVersion = "1.10.0"
         yassonVersion = "3.0.4"
         parssonVersion = "1.1.7"
-        swaggerVersion = "2.1.30"
+        swaggerVersion = "2.1.34"
         swaggerCoreVersion = "2.2.34"
     }
 
