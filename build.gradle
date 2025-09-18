@@ -41,10 +41,11 @@ buildscript {
 
     repositories {
         mavenLocal()
-        maven { url "https://aws.oss.sonatype.org/content/repositories/snapshots" }
+        maven { url = "https://central.sonatype.com/repository/maven-snapshots/" }
+        maven { url = "https://aws.oss.sonatype.org/content/repositories/snapshots" }
         mavenCentral()
-        maven { url "https://plugins.gradle.org/m2/" }
-        maven { url 'https://jitpack.io' }
+        maven { url = "https://plugins.gradle.org/m2/" }
+        maven { url = 'https://jitpack.io' }
     }
 
     dependencies {
@@ -148,10 +149,10 @@ publishing {
         }
         maven {
             name = "Snapshots"
-            url = "https://aws.oss.sonatype.org/content/repositories/snapshots"
+            url = "https://central.sonatype.com/repository/maven-snapshots/"
             credentials {
-                username "$System.env.SONATYPE_USERNAME"
-                password "$System.env.SONATYPE_PASSWORD"
+                username = System.getenv("SONATYPE_USERNAME")
+                password = System.getenv("SONATYPE_USERNAME")
             }
         }
     }
