@@ -122,7 +122,12 @@ public class ParseUtilsTests extends OpenSearchTestCase {
     public void testAddUserRoleFilterWithNullUserBackendRole() {
         SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder();
         ParseUtils.addUserBackendRolesFilter(
-            new User(randomAlphaOfLength(5), null, ImmutableList.of(randomAlphaOfLength(5)), ImmutableList.of(randomAlphaOfLength(5))),
+            new User(
+                randomAlphaOfLength(5),
+                null,
+                ImmutableList.of(randomAlphaOfLength(5)),
+                ImmutableList.of(String.join("=", randomAlphaOfLength(5), randomAlphaOfLength(5)))
+            ),
             searchSourceBuilder
         );
         assertEquals(
@@ -140,7 +145,7 @@ public class ParseUtilsTests extends OpenSearchTestCase {
                 randomAlphaOfLength(5),
                 ImmutableList.of(),
                 ImmutableList.of(randomAlphaOfLength(5)),
-                ImmutableList.of(randomAlphaOfLength(5))
+                ImmutableList.of(String.join("=", randomAlphaOfLength(5), randomAlphaOfLength(5)))
             ),
             searchSourceBuilder
         );
@@ -161,7 +166,7 @@ public class ParseUtilsTests extends OpenSearchTestCase {
                 randomAlphaOfLength(5),
                 ImmutableList.of(backendRole1, backendRole2),
                 ImmutableList.of(randomAlphaOfLength(5)),
-                ImmutableList.of(randomAlphaOfLength(5))
+                ImmutableList.of(String.join("=", randomAlphaOfLength(5), randomAlphaOfLength(5)))
             ),
             searchSourceBuilder
         );
@@ -420,7 +425,7 @@ public class ParseUtilsTests extends OpenSearchTestCase {
             randomAlphaOfLength(5),
             ImmutableList.of(),
             ImmutableList.of("all_access"),
-            ImmutableList.of(randomAlphaOfLength(5))
+            ImmutableList.of(String.join("=", randomAlphaOfLength(5), randomAlphaOfLength(5)))
         );
         assertTrue(isAdmin(user1));
     }
@@ -431,7 +436,7 @@ public class ParseUtilsTests extends OpenSearchTestCase {
             randomAlphaOfLength(5),
             ImmutableList.of(backendRole1),
             ImmutableList.of(randomAlphaOfLength(5)),
-            ImmutableList.of(randomAlphaOfLength(5))
+            ImmutableList.of(String.join("=", randomAlphaOfLength(5), randomAlphaOfLength(5)))
         );
         assertFalse(isAdmin(user1));
     }
