@@ -57,27 +57,27 @@ workflows:
             prompt: |
               You're an expert at creating vega-lite visualization. No matter what the user asks, you should reply with a valid vega-lite specification in json.
               Your task is to generate Vega-Lite specification in json based on the given sample data, the schema of the data, the PPL query to get the data and the user's input.
-              Let's start from dimension and metric/date. Now I have a question, I already transfer it to PPL and query my Opensearch cluster.
-              Then I get data. For the PPL, it will do aggregation like "stats AVG(field_1) as avg, COUNT(field_2) by field_3, field_4, field_5".
+              Let's start from dimension and metric/date. Now I have a question, I already transfer it to PPL and query my Opensearch cluster. 
+              Then I get data. For the PPL, it will do aggregation like "stats AVG(field_1) as avg, COUNT(field_2) by field_3, field_4, field_5". 
               In this aggregation, the metric is [avg, COUNT(field_2)] , and then we judge the type of field_3,4,5. If only field_5 is type related to date, the dimension is [field_3, field_4], and date is [field_5]
               For example, stats SUM(bytes) by span(timestamp, 1w), machine.os, response, then SUM(bytes) is metric and span(timestamp, 1w) is date, while machine.os, response are dimensions.
-              Notice: Some fields like 'span()....' will be the date, but not metric and dimension.
+              Notice: Some fields like 'span()....' will be the date, but not metric and dimension. 
               And one field will only count once in dimension count. You should always pick field name from schema
               To summarize,
               A dimension is a categorical variable that is used to group, segment, or categorize data. It is typically a qualitative attribute that provides context for metrics and is used to slice and dice data to see how different categories perform in relation to each other.
               The dimension is not date related fields. The dimension and date are very closed. The only difference is date is related to datetime, while dimension is not.
               A metric is a quantitative measure used to quantify or calculate some aspect of the data. Metrics are numerical and typically represent aggregated values like sums, averages, counts, or other statistical calculations.
-
+              
               If a ppl doesn't have aggregation using 'stats', then each field in output is dimension.
               Otherwise, if a ppl use aggregation using 'stats' but doesn't group by using 'by', then each field in output is metric.
-
+              
               Then for each given PPL, you could give the metric and dimension and date. One field will in only one of the metric, dimension or date.
-
+              
               Then according to the metric number and dimension number of PPL result, you should first format the entrance code by metric_number, dimension_number, and date_number. For example, if metric_number = 1, dimension_number = 2, date_number=1, then the entrance code is  121.
               I define several use case categories here according to the entrance code.
               For each category, I will define the entrance condition (number of metric and dimension)
               I will also give some defined attribute of generated vega-lite. Please refer to it to generate vega-lite.
-
+              
               Type 1:
               Entrance code: <1, 1, 0>
               Defined Attributes:
@@ -96,7 +96,7 @@ workflows:
                       }
                     },
                   }
-
+              
               Type 2:
               Entrance code: <1, 2, 0>
               Defined Attributes:
@@ -117,8 +117,8 @@ workflows:
                       }
                     }
                   }
-
-
+              
+              
               Type 3
               Entrance code: <3, 1, 0>
               Defined Attributes:
@@ -143,7 +143,7 @@ workflows:
                       }
                   }
               }
-
+              
               Type 4
               Entrance code: <2, 1, 0>
               Defined Attributes:
@@ -164,7 +164,7 @@ workflows:
                       }
                   }
               }
-
+              
               Type 5:
               Entrance code: <2, 1, 1>
               Defined Attributes:
@@ -175,6 +175,7 @@ workflows:
                         "encoding": {
                           "x": {
                             "field": "<date 1>",
+                            "timeUnit": <smallest unit of the date according to query, for e.g. span(timestamp, 1d) ,then it should be day>,
                             "type": "temporal"
                           },
                           "y": {
@@ -198,6 +199,7 @@ workflows:
                         "encoding": {
                           "x": {
                             "field": "<date 1>",
+                            "timeUnit": <smallest unit of the date according to query, for e.g. span(timestamp, 1d) ,then it should be day>,
                             "type": "temporal"
                           },
                           "y": {
@@ -221,7 +223,7 @@ workflows:
                       }
                     }
                   }
-
+              
               Type 6:
               Entrance code: <2, 0, 1>
               Defined Attributes:
@@ -234,6 +236,7 @@ workflows:
                         "encoding": {
                           "x": {
                             "field": "<date 1>",
+                            "timeUnit": <smallest unit of the date according to query, for e.g. span(timestamp, 1d) ,then it should be day>,
                             "type": "temporal"
                           },
                           "y": {
@@ -272,7 +275,7 @@ workflows:
                       }
                     }
                   }
-
+                  
               Type 7:
               Entrance code: <1, 0, 1>
               Defined Attributes:
@@ -283,6 +286,7 @@ workflows:
                     "encoding": {
                       "x": {
                         "field": "<date 1>",
+                        "timeUnit": <smallest unit of the date according to query, for e.g. span(timestamp, 1d) ,then it should be day>,
                         "type": "temporal",
                         "axis": {
                           "title": "<date name>"
@@ -297,7 +301,7 @@ workflows:
                       }
                     }
                   }
-
+              
               Type 8:
               Entrance code: <1, 1, 1>
               Defined Attributes:
@@ -308,6 +312,7 @@ workflows:
                     "encoding": {
                       "x": {
                         "field": "<date 1>",
+                        "timeUnit": <smallest unit of the date according to query, for e.g. span(timestamp, 1d) ,then it should be day>,
                         "type": "temporal",
                         "axis": {
                           "title": "<date name>"
@@ -329,7 +334,7 @@ workflows:
                       }
                     }
                   }
-
+              
               Type 9:
               Entrance code: <1, 2, 1>
               Defined Attributes:
@@ -341,6 +346,7 @@ workflows:
                       "x": {
                         "field": "<date 1>",
                         "type": "temporal",
+                        "timeUnit": <smallest unit of the date according to query, for e.g. span(timestamp, 1d) ,then it should be day>,
                         "axis": {
                           "title": "<date name>"
                         }
@@ -366,48 +372,66 @@ workflows:
                       }
                     }
                   }
-
+              
               Type 10:
+              Entrance code: <1, 0, 0>
+              Defined Attributes:
+                    {
+                    "title": "<title>",
+                    "description": "<description>",
+                    "mark": "text",
+                    "encoding": {
+                      "text": {
+                        "field": "<metric name>",
+                        "type": "quantitative",
+                        "axis": {
+                          "title": "<metric name>"
+                        }
+                      }
+                    },
+                  }
+              
+              Type 11:
               Entrance code: all other code
               All others type.
               Use a table to show the result
-
-
+              
+              
               Besides, here are some requirements:
               1. Do not contain the key called 'data' in vega-lite specification.
               2. If mark.type = point and shape.field is a field of the data, the definition of the shape should be inside the root "encoding" object, NOT in the "mark" object, for example, {"encoding": {"shape": {"field": "field_name"}}}
               3. Please also generate title and description
-
+              
               The sample data in json format:
               ${parameters.sampleData}
-
+              
               This is the schema of the data:
               ${parameters.dataSchema}
-
+              
               The user used this PPL query to get the data: ${parameters.ppl}
-
+              
               The user's question is: ${parameters.input_question}
-
-              Notice: Some fields like 'span()....' will be the date, but not metric and dimension.
+              
+              Notice: Some fields like 'span()....' will be the date, but not metric and dimension. 
               And one field will only count once in dimension count.  You should always pick field name from schema.
-               And when you code is <2, 1, 0>, it belongs type 4.
-                And when you code is <1, 2, 0>, it belongs type 9.
-
-
+              And when you code is <2, 1, 0>, it belongs type 4.
+              And when you code is <1, 2, 0>, it belongs type 9.
+              
+              
               Now please reply a valid vega-lite specification in json based on above instructions.
-              Please return the number of dimension, metric and date. Then choose the type.
+              Please return the number of dimension, metric and date. Then choose the type. 
               Please also return the type.
               Finally return the vega-lite specification according to the type.
-              Please make sure all the key in the schema matches the word I given.
+              Please make sure all the key in the schema matches the word I given. 
               Your answer format should be:
-              Number of metrics:[list the metric name here, Don't use duplicate name]  <number of metrics {a}>
-              Number of dimensions:[list the dimension name here]  <number of dimension {b}>
-              Number of dates:[list the date name here]  <number of dates {c}>
+              Number of metrics:[list the metric name here, Don't use duplicate name]  <number of metrics {a}>  
+              Number of dimensions:[list the dimension name here]  <number of dimension {b}> 
+              Number of dates:[list the date name here]  <number of dates {c}> 
               Then format the entrance code by: <Number of metrics, Number of dimensions, Number of dates>
               Type and its entrance code: <type number>: <its entrance code>
               Then apply the vega-lite requirements of the type.
               <vega-lite> {here is the vega-lite json} </vega-lite>
-
+              
               And don't use 'transformer' in your vega-lite and wrap your vega-lite json in <vega-lite> </vega-lite> tags
           name: Text2Vega
           type: MLModelTool
