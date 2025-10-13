@@ -5,6 +5,8 @@ Inspired from [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ## [Unreleased 3.3](https://github.com/opensearch-project/flow-framework/compare/3.2...HEAD)
 ### Features
+- Onboards flow-framework plugin to resource-sharing and access control framework ([#1251](https://github.com/opensearch-project/flow-framework/pull/1251))
+
 ### Enhancements
 ### Bug Fixes
 - Pre-create ML Commons indices for Tenant Aware tests ([#1217](https://github.com/opensearch-project/flow-framework/pull/1217))
