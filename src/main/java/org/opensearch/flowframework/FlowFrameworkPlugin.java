@@ -47,6 +47,7 @@ import org.opensearch.flowframework.transport.GetWorkflowStateTransportAction;
 import org.opensearch.flowframework.transport.GetWorkflowStepAction;
 import org.opensearch.flowframework.transport.GetWorkflowStepTransportAction;
 import org.opensearch.flowframework.transport.GetWorkflowTransportAction;
+import org.opensearch.flowframework.transport.PluginClient;
 import org.opensearch.flowframework.transport.ProvisionWorkflowAction;
 import org.opensearch.flowframework.transport.ProvisionWorkflowTransportAction;
 import org.opensearch.flowframework.transport.ReprovisionWorkflowAction;
@@ -120,6 +121,8 @@ public class FlowFrameworkPlugin extends Plugin implements ActionPlugin, SystemI
 
     private FlowFrameworkSettings flowFrameworkSettings;
 
+    private PluginClient pluginClient;
+
     /**
      * Instantiate this plugin.
      */
@@ -143,8 +146,11 @@ public class FlowFrameworkPlugin extends Plugin implements ActionPlugin, SystemI
         flowFrameworkSettings = new FlowFrameworkSettings(clusterService, settings);
         MachineLearningNodeClient mlClient = new MachineLearningNodeClient(client);
         boolean multiTenancyEnabled = FLOW_FRAMEWORK_MULTI_TENANCY_ENABLED.get(settings);
+
+        this.pluginClient = new PluginClient(client);
+
         SdkClient sdkClient = SdkClientFactory.createSdkClient(
-            client,
+            pluginClient,
             xContentRegistry,
             // Here we assume remote metadata client is only used with tenant awareness.
             // This may change in the future allowing more options for this map
