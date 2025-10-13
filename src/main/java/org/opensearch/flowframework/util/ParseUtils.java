@@ -252,6 +252,11 @@ public class ParseUtils {
         return User.parse(userStr);
     }
 
+    /**
+     * Checks whether resource authz framework should be used.
+     * @param resourceType the type to check for resource authz
+     * @return true if resource-authz should be used, false otherwise
+     */
     public static boolean shouldUseResourceAuthz(String resourceType) {
         var client = ResourceSharingClientAccessor.getInstance().getResourceSharingClient();
         return client != null && client.isFeatureEnabledForType(resourceType);
