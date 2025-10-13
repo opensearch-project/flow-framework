@@ -264,4 +264,10 @@ public class CommonValue {
      */
     /** Version 2.19.0 */
     public static final Version VERSION_2_19_0 = Version.fromString("2.19.0");
+
+    /*
+     * Constants associated with resource-sharing
+     */
+    public static final String WORKFLOW_STATE_RESOURCE_TYPE = "workflow_state";
+    public static final String WORKFLOW_RESOURCE_TYPE = "workflow";
 }

@@ -32,6 +32,7 @@ import org.opensearch.core.rest.RestStatus;
 import org.opensearch.core.xcontent.NamedXContentRegistry;
 import org.opensearch.core.xcontent.XContentBuilder;
 import org.opensearch.core.xcontent.XContentParser;
+import org.opensearch.flowframework.common.CommonValue;
 import org.opensearch.flowframework.exception.FlowFrameworkException;
 import org.opensearch.flowframework.indices.FlowFrameworkIndicesHandler;
 import org.opensearch.flowframework.model.Template;
@@ -249,6 +250,26 @@ public class ParseUtils {
         String userStr = client.threadPool().getThreadContext().getTransient(ConfigConstants.OPENSEARCH_SECURITY_USER_INFO_THREAD_CONTEXT);
         logger.debug("Filtering result by {}", userStr);
         return User.parse(userStr);
+    }
+
+    public static boolean shouldUseResourceAuthz(String resourceType) {
+        var client = ResourceSharingClientAccessor.getInstance().getResourceSharingClient();
+        return client != null && client.isFeatureEnabledForType(resourceType);
+    }
+
+    /**
+     * Verifies whether the user has permission to access the resource.
+     * @param resourceType the type of resource to be authorized
+     * @param onSuccess consumer function to execute if resource sharing feature is enabled
+     * @param fallbackOn501 consumer function to execute if resource sharing feature is disabled.
+     */
+    public static void verifyResourceAccessAndProcessRequest(String resourceType, Runnable onSuccess, Runnable fallbackOn501) {
+        // Resource access will be auto-evaluated
+        if (shouldUseResourceAuthz(resourceType)) {
+            onSuccess.run();
+        } else {
+            fallbackOn501.run();
+        }
     }
 
     /**
@@ -505,7 +526,10 @@ public class ParseUtils {
                         return;
                     }
                 }
-                if (!filterByEnabled || checkUserPermissions(requestUser, resourceUser, workflowId) || isAdmin(requestUser)) {
+                if (shouldUseResourceAuthz(CommonValue.WORKFLOW_RESOURCE_TYPE)
+                    || !filterByEnabled
+                    || checkUserPermissions(requestUser, resourceUser, workflowId)
+                    || isAdmin(requestUser)) {
                     function.run();
                 } else {
                     logger.debug("User: " + requestUser.getName() + " does not have permissions to access workflow: " + workflowId);

@@ -25,6 +25,7 @@ import org.opensearch.core.action.ActionListener;
 import org.opensearch.core.common.Strings;
 import org.opensearch.core.rest.RestStatus;
 import org.opensearch.core.xcontent.NamedXContentRegistry;
+import org.opensearch.flowframework.common.CommonValue;
 import org.opensearch.flowframework.common.FlowFrameworkSettings;
 import org.opensearch.flowframework.exception.FlowFrameworkException;
 import org.opensearch.flowframework.indices.FlowFrameworkIndicesHandler;
@@ -64,6 +65,7 @@ import static org.opensearch.flowframework.common.WorkflowResources.getDeprovisi
 import static org.opensearch.flowframework.common.WorkflowResources.getResourceByWorkflowStep;
 import static org.opensearch.flowframework.util.ParseUtils.getUserContext;
 import static org.opensearch.flowframework.util.ParseUtils.resolveUserAndExecute;
+import static org.opensearch.flowframework.util.ParseUtils.verifyResourceAccessAndProcessRequest;
 
 /**
  * Transport Action to deprovision a workflow from a stored use case template
@@ -142,21 +144,24 @@ public class DeprovisionWorkflowTransportAction extends HandledTransportAction<W
 
         // Stash thread context to interact with system index
         try (ThreadContext.StoredContext context = client.threadPool().getThreadContext().stashContext()) {
-            resolveUserAndExecute(
-                user,
-                workflowId,
-                tenantId,
-                filterByEnabled,
-                true,
-                flowFrameworkSettings.isMultiTenancyEnabled(),
-                listener,
+            verifyResourceAccessAndProcessRequest(
+                CommonValue.WORKFLOW_RESOURCE_TYPE,
                 () -> executeDeprovisionRequest(request, tenantId, listener, context, user),
-                client,
-                sdkClient,
-                clusterService,
-                xContentRegistry
+                () -> resolveUserAndExecute(
+                    user,
+                    workflowId,
+                    tenantId,
+                    filterByEnabled,
+                    true,
+                    flowFrameworkSettings.isMultiTenancyEnabled(),
+                    listener,
+                    () -> executeDeprovisionRequest(request, tenantId, listener, context, user),
+                    client,
+                    sdkClient,
+                    clusterService,
+                    xContentRegistry
+                )
             );
-
         } catch (Exception e) {
             String errorMessage = "Failed to retrieve template from global context.";
             logger.error(errorMessage, e);

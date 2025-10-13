@@ -95,6 +95,7 @@ opensearchplugin {
     classname = "${projectPath}.${pathToPlugin}.${pluginClassName}"
     licenseFile = rootProject.file('LICENSE')
     noticeFile = rootProject.file('NOTICE')
+    extendedPlugins = ['opensearch-security;optional=true']
 }
 
 dependencyLicenses.enabled = false
@@ -193,6 +194,9 @@ configurations {
 }
 
 dependencies {
+    // For resource access control
+    compileOnly group: 'org.opensearch', name:'opensearch-security-spi', version:"${opensearch_build}"
+
     implementation("org.opensearch:opensearch:${opensearch_version}")
     api("org.opensearch:opensearch-ml-client:${opensearch_build}")
     // json, jsonpath, and commons-text are required by MLClient but must be provided by calling plugins

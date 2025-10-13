@@ -25,6 +25,7 @@ import org.opensearch.commons.authuser.User;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.core.rest.RestStatus;
 import org.opensearch.core.xcontent.NamedXContentRegistry;
+import org.opensearch.flowframework.common.CommonValue;
 import org.opensearch.flowframework.common.FlowFrameworkSettings;
 import org.opensearch.flowframework.exception.FlowFrameworkException;
 import org.opensearch.flowframework.indices.FlowFrameworkIndicesHandler;
@@ -63,6 +64,7 @@ import static org.opensearch.flowframework.common.FlowFrameworkSettings.FILTER_B
 import static org.opensearch.flowframework.util.ParseUtils.checkFilterByBackendRoles;
 import static org.opensearch.flowframework.util.ParseUtils.getUserContext;
 import static org.opensearch.flowframework.util.ParseUtils.getWorkflow;
+import static org.opensearch.flowframework.util.ParseUtils.verifyResourceAccessAndProcessRequest;
 
 /**
  * Transport Action to index or update a use case template within the Global Context
@@ -131,13 +133,17 @@ public class CreateWorkflowTransportAction extends HandledTransportAction<Workfl
         User user = getUserContext(client);
         String workflowId = request.getWorkflowId();
         try {
-            resolveUserAndExecute(
-                user,
-                workflowId,
-                tenantId,
-                flowFrameworkSettings.isMultiTenancyEnabled(),
-                listener,
-                () -> createExecute(request, user, tenantId, listener)
+            verifyResourceAccessAndProcessRequest(
+                CommonValue.WORKFLOW_RESOURCE_TYPE,
+                () -> createExecute(request, user, tenantId, listener),
+                () -> resolveUserAndExecute(
+                    user,
+                    workflowId,
+                    tenantId,
+                    flowFrameworkSettings.isMultiTenancyEnabled(),
+                    listener,
+                    () -> createExecute(request, user, tenantId, listener)
+                )
             );
         } catch (Exception e) {
             logger.error("Failed to create workflow", e);

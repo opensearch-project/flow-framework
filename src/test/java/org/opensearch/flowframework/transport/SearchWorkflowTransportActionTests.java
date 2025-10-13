@@ -14,6 +14,7 @@ import org.opensearch.action.support.ActionFilters;
 import org.opensearch.common.settings.Settings;
 import org.opensearch.common.util.concurrent.ThreadContext;
 import org.opensearch.core.action.ActionListener;
+import org.opensearch.flowframework.common.CommonValue;
 import org.opensearch.flowframework.transport.handler.SearchHandler;
 import org.opensearch.search.builder.SearchSourceBuilder;
 import org.opensearch.tasks.Task;
@@ -71,10 +72,11 @@ public class SearchWorkflowTransportActionTests extends OpenSearchTestCase {
             SearchRequest request = invocation.getArgument(0);
             ActionListener<SearchResponse> responseListener = invocation.getArgument(1);
             ThreadContext.StoredContext storedContext = mock(ThreadContext.StoredContext.class);
-            searchHandler.validateRole(request, null, null, responseListener, storedContext);
+            searchHandler.validateRole(request, null, null, null, responseListener, storedContext);
             responseListener.onResponse(mock(SearchResponse.class));
             return null;
-        }).when(searchHandler).search(any(SearchRequest.class), nullable(String.class), any(ActionListener.class));
+        }).when(searchHandler)
+            .search(any(SearchRequest.class), nullable(String.class), CommonValue.WORKFLOW_RESOURCE_TYPE, any(ActionListener.class));
 
         doAnswer(invocation -> {
             ActionListener<SearchResponse> responseListener = invocation.getArgument(1);
@@ -83,7 +85,12 @@ public class SearchWorkflowTransportActionTests extends OpenSearchTestCase {
         }).when(client).search(any(SearchRequest.class), any(ActionListener.class));
 
         searchWorkflowTransportAction.doExecute(mock(Task.class), searchRequest, listener);
-        verify(searchHandler).search(any(SearchRequest.class), nullable(String.class), any(ActionListener.class));
+        verify(searchHandler).search(
+            any(SearchRequest.class),
+            nullable(String.class),
+            CommonValue.WORKFLOW_RESOURCE_TYPE,
+            any(ActionListener.class)
+        );
     }
 
 }
