@@ -256,6 +256,8 @@ dependencies {
     testImplementation("org.junit.jupiter:junit-jupiter:${junitJupiterVersion}")
     testImplementation("com.fasterxml.jackson.datatype:jackson-datatype-jsr310:${versions.jackson_databind}")
 
+    testImplementation 'org.awaitility:awaitility:4.3.0'
+
     // ZipArchive dependencies used for integration tests
     zipArchive("org.opensearch.plugin:opensearch-job-scheduler:${opensearch_build}")
     zipArchive("org.opensearch.plugin:opensearch-ml-plugin:${opensearch_build}")
@@ -357,6 +359,8 @@ integTest {
     systemProperty('https', is_https)
     systemProperty('user', user)
     systemProperty('password', password)
+
+    systemProperty "resource_sharing.enabled", System.getProperty("resource_sharing.enabled")
 
     // Only tenant aware test if set
     if (System.getProperty("tests.rest.tenantaware") == "true") {
@@ -517,6 +521,10 @@ testClusters.integTest {
                 '".plugins-flow-framework-state"' +
                 ']'
         )
+        if (System.getProperty("resource_sharing.enabled") == "true") {
+            setting("plugins.security.experimental.resource_sharing.enabled", "true")
+            setting("plugins.security.experimental.resource_sharing.protected_types", "[\"workflow\", \"workflow_state\"]")
+        }
         setSecure(true)
     }
 
@@ -549,7 +557,13 @@ testClusters.integTest {
     if (System.getProperty("opensearch.debug") != null) {
         def debugPort = 5005
         nodes.forEach { node ->
-            node.jvmArgs("-agentlib:jdwp=transport=dt_socket,server=n,suspend=y,address=*:${debugPort}")
+            // server=n,suspend=y -> node tries to connect to a debugger and hence test runs fails with
+            //            Exec output and error:
+            //            | Output for ./bin/opensearch-plugin:ERROR: transport error 202: connect failed: Connection refused
+            //            | ERROR: JDWP Transport dt_socket failed to initialize, TRANSPORT_INIT(510)
+            //                    | JDWP exit error AGENT_ERROR_TRANSPORT_INIT(197): No transports initialized [src/jdk.jdwp.agent/share/native/libjdwp/debugInit.c:700].
+            // So instead, we listen to a debugger by saying server=y and suspend=n
+            node.jvmArgs("-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:${debugPort}")
             debugPort += 1
         }
     }

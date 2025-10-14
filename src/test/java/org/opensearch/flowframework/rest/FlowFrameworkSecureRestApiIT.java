@@ -28,7 +28,6 @@ import org.junit.After;
 import org.junit.Before;
 
 import java.io.IOException;
-import java.security.SecureRandom;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -127,45 +126,6 @@ public class FlowFrameworkSecureRestApiIT extends FlowFrameworkRestTestCase {
         deleteUser(elkUser);
         deleteUser(fishUser);
         deleteUser(lionUser);
-    }
-
-    /**
-     * Create an unguessable password. Simple password are weak due to https://tinyurl.com/383em9zk
-     * @return a random password.
-     */
-    public static String generatePassword(String username) {
-        String upperCase = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
-        String lowerCase = "abcdefghijklmnopqrstuvwxyz";
-        String digits = "0123456789";
-        String special = "_";
-        String characters = upperCase + lowerCase + digits + special;
-
-        SecureRandom rng = new SecureRandom();
-
-        // Ensure password includes at least one character from each set
-        char[] password = new char[15];
-        password[0] = upperCase.charAt(rng.nextInt(upperCase.length()));
-        password[1] = lowerCase.charAt(rng.nextInt(lowerCase.length()));
-        password[2] = digits.charAt(rng.nextInt(digits.length()));
-        password[3] = special.charAt(rng.nextInt(special.length()));
-
-        for (int i = 4; i < 15; i++) {
-            char nextChar;
-            do {
-                nextChar = characters.charAt(rng.nextInt(characters.length()));
-            } while (username.indexOf(nextChar) > -1);
-            password[i] = nextChar;
-        }
-
-        // Shuffle the array to ensure the first 4 characters are not always in the same position
-        for (int i = password.length - 1; i > 0; i--) {
-            int index = rng.nextInt(i + 1);
-            char temp = password[index];
-            password[index] = password[i];
-            password[i] = temp;
-        }
-
-        return new String(password);
     }
 
     public void testCreateWorkflowWithReadAccess() throws Exception {
