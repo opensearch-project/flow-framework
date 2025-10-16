@@ -17,6 +17,7 @@ import org.opensearch.common.util.concurrent.ThreadContext;
 import org.opensearch.commons.ConfigConstants;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.core.xcontent.NamedXContentRegistry;
+import org.opensearch.flowframework.common.CommonValue;
 import org.opensearch.flowframework.common.FlowFrameworkSettings;
 import org.opensearch.remote.metadata.client.SdkClient;
 import org.opensearch.remote.metadata.client.impl.SdkClientFactory;
@@ -75,7 +76,7 @@ public class SearchHandlerTests extends OpenSearchTestCase {
 
     public void testSearchException() {
         doThrow(new RuntimeException("test")).when(client).search(any(), any());
-        searchHandler.search(request, null, listener);
+        searchHandler.search(request, null, CommonValue.WORKFLOW_RESOURCE_TYPE, listener);
 
         verify(listener, times(1)).onFailure(any());
     }
@@ -86,7 +87,7 @@ public class SearchHandlerTests extends OpenSearchTestCase {
 
         searchHandler = new SearchHandler(settings, clusterService, client, sdkClient, FlowFrameworkSettings.FILTER_BY_BACKEND_ROLES);
 
-        searchHandler.search(request, null, listener);
+        searchHandler.search(request, null, CommonValue.WORKFLOW_RESOURCE_TYPE, listener);
 
         verify(listener, times(1)).onFailure(any());
     }
@@ -97,7 +98,7 @@ public class SearchHandlerTests extends OpenSearchTestCase {
 
         searchHandler = new SearchHandler(settings, clusterService, client, sdkClient, FlowFrameworkSettings.FILTER_BY_BACKEND_ROLES);
 
-        searchHandler.search(matchAllRequest(), null, listener);
+        searchHandler.search(matchAllRequest(), null, CommonValue.WORKFLOW_RESOURCE_TYPE, listener);
 
         verify(client, times(1)).search(any(), any());
     }

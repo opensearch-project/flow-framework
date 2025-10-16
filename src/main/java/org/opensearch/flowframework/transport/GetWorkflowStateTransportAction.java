@@ -21,6 +21,7 @@ import org.opensearch.common.util.concurrent.ThreadContext;
 import org.opensearch.commons.authuser.User;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.core.xcontent.NamedXContentRegistry;
+import org.opensearch.flowframework.common.CommonValue;
 import org.opensearch.flowframework.common.FlowFrameworkSettings;
 import org.opensearch.flowframework.exception.FlowFrameworkException;
 import org.opensearch.flowframework.indices.FlowFrameworkIndicesHandler;
@@ -33,6 +34,7 @@ import org.opensearch.transport.client.Client;
 
 import static org.opensearch.flowframework.common.FlowFrameworkSettings.FILTER_BY_BACKEND_ROLES;
 import static org.opensearch.flowframework.util.ParseUtils.resolveUserAndExecute;
+import static org.opensearch.flowframework.util.ParseUtils.verifyResourceAccessAndProcessRequest;
 
 //TODO: Currently we only get the workflow status but we should change to be able to get the
 // full template as well
@@ -98,21 +100,24 @@ public class GetWorkflowStateTransportAction extends HandledTransportAction<GetW
 
         try (ThreadContext.StoredContext context = client.threadPool().getThreadContext().stashContext()) {
 
-            resolveUserAndExecute(
-                user,
-                workflowId,
-                tenantId,
-                filterByEnabled,
-                true,
-                flowFrameworkSettings.isMultiTenancyEnabled(),
-                listener,
+            verifyResourceAccessAndProcessRequest(
+                CommonValue.WORKFLOW_STATE_RESOURCE_TYPE,
                 () -> executeGetWorkflowStateRequest(request, tenantId, listener, context),
-                client,
-                sdkClient,
-                clusterService,
-                xContentRegistry
+                () -> resolveUserAndExecute(
+                    user,
+                    workflowId,
+                    tenantId,
+                    filterByEnabled,
+                    true,
+                    flowFrameworkSettings.isMultiTenancyEnabled(),
+                    listener,
+                    () -> executeGetWorkflowStateRequest(request, tenantId, listener, context),
+                    client,
+                    sdkClient,
+                    clusterService,
+                    xContentRegistry
+                )
             );
-
         } catch (Exception e) {
             String errorMessage = ParameterizedMessageFactory.INSTANCE.newMessage("Failed to get workflow: {}", workflowId)
                 .getFormattedMessage();
