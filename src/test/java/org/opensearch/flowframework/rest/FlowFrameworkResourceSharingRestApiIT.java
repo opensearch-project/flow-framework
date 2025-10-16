@@ -22,8 +22,10 @@ import org.junit.After;
 import org.junit.Before;
 
 import java.io.IOException;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import static org.opensearch.flowframework.common.CommonValue.WORKFLOW_ID;
 import static org.opensearch.flowframework.common.CommonValue.WORKFLOW_RESOURCE_TYPE;
@@ -180,35 +182,29 @@ public class FlowFrameworkResourceSharingRestApiIT extends FlowFrameworkRestTest
         assertEquals(200, grantFullToElk.getStatusLine().getStatusCode());
         waitForWorkflowSharingVisibility(workflowId, elkClient);
 
-        var recsBR = new java.util.HashMap<org.opensearch.security.spi.resources.sharing.Recipient, java.util.Set<String>>();
-        recsBR.put(org.opensearch.security.spi.resources.sharing.Recipient.BACKEND_ROLES, java.util.Set.of("aes"));
-        var recipientsBR = new org.opensearch.security.spi.resources.sharing.Recipients(recsBR);
-
+        var recs = new HashMap<Recipient, Set<String>>();
+        recs.put(Recipient.BACKEND_ROLES, Set.of("aes"));
         PatchSharingInfoPayloadBuilder patch = new PatchSharingInfoPayloadBuilder().configId(workflowId).configType(WORKFLOW_RESOURCE_TYPE);
-        patch.share(recipientsBR, WORKFLOW_READ_ONLY_AG);
+        patch.share(recs, WORKFLOW_READ_ONLY_AG);
 
         Response elkAddsAes = patchSharingInfo(elkClient, Map.of(), patch.build());
         assertEquals(200, elkAddsAes.getStatusLine().getStatusCode());
 
         // Revoke user-level cat; cat still sees via backend role "aes"
-        var recsUser = new java.util.HashMap<org.opensearch.security.spi.resources.sharing.Recipient, java.util.Set<String>>();
-        recsUser.put(org.opensearch.security.spi.resources.sharing.Recipient.USERS, java.util.Set.of(catUser));
-        var recipientsUser = new org.opensearch.security.spi.resources.sharing.Recipients(recsUser);
-
+        recs = new HashMap<>();
+        recs.put(Recipient.USERS, Set.of(catUser));
         patch = new PatchSharingInfoPayloadBuilder().configId(workflowId).configType(WORKFLOW_RESOURCE_TYPE);
-        patch.revoke(recipientsUser, WORKFLOW_READ_ONLY_AG);
+        patch.revoke(recs, WORKFLOW_READ_ONLY_AG);
 
         Response elkRevokesUserCat = patchSharingInfo(elkClient, Map.of(), patch.build());
         assertEquals(200, elkRevokesUserCat.getStatusLine().getStatusCode());
         waitForWorkflowSharingVisibility(workflowId, catClient); // still visible via backend role
 
         // Now revoke backend role "aes" → cat loses access
-        var recsRevokeBR = new java.util.HashMap<org.opensearch.security.spi.resources.sharing.Recipient, java.util.Set<String>>();
-        recsRevokeBR.put(org.opensearch.security.spi.resources.sharing.Recipient.BACKEND_ROLES, java.util.Set.of("aes"));
-        var recipientsRevokeBR = new org.opensearch.security.spi.resources.sharing.Recipients(recsRevokeBR);
-
+        recs = new HashMap<>();
+        recs.put(Recipient.BACKEND_ROLES, Set.of("aes"));
         patch = new PatchSharingInfoPayloadBuilder().configId(workflowId).configType(WORKFLOW_RESOURCE_TYPE);
-        patch.revoke(recipientsRevokeBR, WORKFLOW_READ_ONLY_AG);
+        patch.revoke(recs, WORKFLOW_READ_ONLY_AG);
 
         Response elkRevokesAes = patchSharingInfo(elkClient, Map.of(), patch.build());
         assertEquals(200, elkRevokesAes.getStatusLine().getStatusCode());
@@ -252,12 +248,10 @@ public class FlowFrameworkResourceSharingRestApiIT extends FlowFrameworkRestTest
         assertEquals(RestStatus.CREATED, TestHelpers.restStatus(elkUpdate));
 
         // Revoke elk FULL_ACCESS → elk loses update ability
-        var revokeUsers = new java.util.HashMap<org.opensearch.security.spi.resources.sharing.Recipient, java.util.Set<String>>();
-        revokeUsers.put(org.opensearch.security.spi.resources.sharing.Recipient.USERS, java.util.Set.of(elkUser));
-        var recipientsUsers = new org.opensearch.security.spi.resources.sharing.Recipients(revokeUsers);
-
+        var recs = new HashMap<Recipient, Set<String>>();
+        recs.put(Recipient.USERS, Set.of(elkUser));
         PatchSharingInfoPayloadBuilder patch = new PatchSharingInfoPayloadBuilder().configId(workflowId).configType(WORKFLOW_RESOURCE_TYPE);
-        patch.revoke(recipientsUsers, WORKFLOW_FULL_ACCESS_AG);
+        patch.revoke(recs, WORKFLOW_FULL_ACCESS_AG);
 
         Response revoked = patchSharingInfo(aliceClient, Map.of(), patch.build());
         assertEquals(200, revoked.getStatusLine().getStatusCode());
@@ -307,12 +301,10 @@ public class FlowFrameworkResourceSharingRestApiIT extends FlowFrameworkRestTest
         assertEquals(RestStatus.OK, TestHelpers.restStatus(deprov));
 
         // Revoke elk FULL_ACCESS → elk loses ability
-        var revokeUsers = new java.util.HashMap<org.opensearch.security.spi.resources.sharing.Recipient, java.util.Set<String>>();
-        revokeUsers.put(org.opensearch.security.spi.resources.sharing.Recipient.USERS, java.util.Set.of(elkUser));
-        var recipientsUsers = new org.opensearch.security.spi.resources.sharing.Recipients(revokeUsers);
-
+        var recs = new HashMap<Recipient, Set<String>>();
+        recs.put(Recipient.USERS, Set.of(elkUser));
         PatchSharingInfoPayloadBuilder patch = new PatchSharingInfoPayloadBuilder().configId(workflowId).configType(WORKFLOW_RESOURCE_TYPE);
-        patch.revoke(recipientsUsers, WORKFLOW_FULL_ACCESS_AG);
+        patch.revoke(recs, WORKFLOW_FULL_ACCESS_AG);
 
         Response revoked = patchSharingInfo(aliceClient, Map.of(), patch.build());
         assertEquals(200, revoked.getStatusLine().getStatusCode());
@@ -396,13 +388,11 @@ public class FlowFrameworkResourceSharingRestApiIT extends FlowFrameworkRestTest
         assertEquals(RestStatus.OK, TestHelpers.restStatus(elkStatus));
 
         // Revoke cat (READ_ONLY on state) → cat loses status visibility
-        var revokeUsers = new java.util.HashMap<org.opensearch.security.spi.resources.sharing.Recipient, java.util.Set<String>>();
-        revokeUsers.put(org.opensearch.security.spi.resources.sharing.Recipient.USERS, java.util.Set.of(catUser));
-        var recipientsUsers = new org.opensearch.security.spi.resources.sharing.Recipients(revokeUsers);
-
+        var recs = new HashMap<Recipient, Set<String>>();
+        recs.put(Recipient.USERS, Set.of(catUser));
         PatchSharingInfoPayloadBuilder patch = new PatchSharingInfoPayloadBuilder().configId(workflowId)
             .configType(WORKFLOW_STATE_RESOURCE_TYPE);
-        patch.revoke(recipientsUsers, WORKFLOW_STATE_READ_ONLY_AG);
+        patch.revoke(recs, WORKFLOW_STATE_READ_ONLY_AG);
 
         Response revoked = patchSharingInfo(aliceClient, Map.of(), patch.build());
         assertEquals(200, revoked.getStatusLine().getStatusCode());
