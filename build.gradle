@@ -195,7 +195,7 @@ configurations {
 
 dependencies {
     // For resource access control
-    compileOnly group: 'org.opensearch', name:'opensearch-security-spi', version:"3.4.0-SNAPSHOT"
+    compileOnly group: 'org.opensearch', name:'opensearch-security-spi', version:"${opensearch_build}"
 
     implementation("org.opensearch:opensearch:${opensearch_version}")
     api("org.opensearch:opensearch-ml-client:${opensearch_build}")

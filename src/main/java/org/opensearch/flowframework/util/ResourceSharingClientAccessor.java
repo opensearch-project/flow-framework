@@ -10,11 +10,13 @@ package org.opensearch.flowframework.util;
 
 import org.opensearch.security.spi.resources.client.ResourceSharingClient;
 
+import java.util.concurrent.atomic.AtomicReference;
+
 /**
  * Accessor for resource sharing client
  */
 public class ResourceSharingClientAccessor {
-    private ResourceSharingClient CLIENT;
+    private final AtomicReference<ResourceSharingClient> client = new AtomicReference<>();
 
     private static ResourceSharingClientAccessor resourceSharingClientAccessor;
 
@@ -32,13 +34,13 @@ public class ResourceSharingClientAccessor {
      * Set the resource sharing client
      */
     public void setResourceSharingClient(ResourceSharingClient client) {
-        resourceSharingClientAccessor.CLIENT = client;
+        resourceSharingClientAccessor.client.set(client);
     }
 
     /**
      * Get the resource sharing client
      */
     public ResourceSharingClient getResourceSharingClient() {
-        return resourceSharingClientAccessor.CLIENT;
+        return resourceSharingClientAccessor.client.get();
     }
 }

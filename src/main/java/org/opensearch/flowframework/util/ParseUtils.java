@@ -266,14 +266,14 @@ public class ParseUtils {
      * Verifies whether the user has permission to access the resource.
      * @param resourceType the type of resource to be authorized
      * @param onSuccess consumer function to execute if resource sharing feature is enabled
-     * @param fallbackOn501 consumer function to execute if resource sharing feature is disabled.
+     * @param fallBackIfDisabled consumer function to execute if resource sharing feature is disabled.
      */
-    public static void verifyResourceAccessAndProcessRequest(String resourceType, Runnable onSuccess, Runnable fallbackOn501) {
+    public static void verifyResourceAccessAndProcessRequest(String resourceType, Runnable onSuccess, Runnable fallBackIfDisabled) {
         // Resource access will be auto-evaluated
         if (shouldUseResourceAuthz(resourceType)) {
             onSuccess.run();
         } else {
-            fallbackOn501.run();
+            fallBackIfDisabled.run();
         }
     }
 

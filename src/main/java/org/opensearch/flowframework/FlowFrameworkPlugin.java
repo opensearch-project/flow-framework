@@ -47,7 +47,6 @@ import org.opensearch.flowframework.transport.GetWorkflowStateTransportAction;
 import org.opensearch.flowframework.transport.GetWorkflowStepAction;
 import org.opensearch.flowframework.transport.GetWorkflowStepTransportAction;
 import org.opensearch.flowframework.transport.GetWorkflowTransportAction;
-import org.opensearch.flowframework.transport.PluginClient;
 import org.opensearch.flowframework.transport.ProvisionWorkflowAction;
 import org.opensearch.flowframework.transport.ProvisionWorkflowTransportAction;
 import org.opensearch.flowframework.transport.ReprovisionWorkflowAction;
@@ -58,11 +57,14 @@ import org.opensearch.flowframework.transport.SearchWorkflowStateTransportAction
 import org.opensearch.flowframework.transport.SearchWorkflowTransportAction;
 import org.opensearch.flowframework.transport.handler.SearchHandler;
 import org.opensearch.flowframework.util.EncryptorUtils;
+import org.opensearch.flowframework.util.PluginClient;
 import org.opensearch.flowframework.workflow.WorkflowProcessSorter;
 import org.opensearch.flowframework.workflow.WorkflowStepFactory;
+import org.opensearch.identity.PluginSubject;
 import org.opensearch.indices.SystemIndexDescriptor;
 import org.opensearch.ml.client.MachineLearningNodeClient;
 import org.opensearch.plugins.ActionPlugin;
+import org.opensearch.plugins.IdentityAwarePlugin;
 import org.opensearch.plugins.Plugin;
 import org.opensearch.plugins.SystemIndexPlugin;
 import org.opensearch.remote.metadata.client.SdkClient;
@@ -117,7 +119,7 @@ import static org.opensearch.remote.metadata.common.CommonValue.TENANT_ID_FIELD_
 /**
  * An OpenSearch plugin that enables builders to innovate AI apps on OpenSearch.
  */
-public class FlowFrameworkPlugin extends Plugin implements ActionPlugin, SystemIndexPlugin {
+public class FlowFrameworkPlugin extends Plugin implements ActionPlugin, SystemIndexPlugin, IdentityAwarePlugin {
 
     private FlowFrameworkSettings flowFrameworkSettings;
 
@@ -300,6 +302,13 @@ public class FlowFrameworkPlugin extends Plugin implements ActionPlugin, SystemI
             new SystemIndexDescriptor(GLOBAL_CONTEXT_INDEX, "Flow Framework Global Context index"),
             new SystemIndexDescriptor(WORKFLOW_STATE_INDEX, "Flow Framework Workflow State index")
         );
+    }
+
+    @Override
+    public void assignSubject(PluginSubject pluginSubject) {
+        if (this.pluginClient != null) {
+            this.pluginClient.setSubject(pluginSubject);
+        }
     }
 
 }

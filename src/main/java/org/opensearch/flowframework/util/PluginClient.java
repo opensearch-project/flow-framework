@@ -6,7 +6,7 @@
  * this file be licensed under the Apache-2.0 license or a
  * compatible open source license.
  */
-package org.opensearch.flowframework.transport;
+package org.opensearch.flowframework.util;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -28,13 +28,8 @@ public class PluginClient extends FilterClient {
 
     private Subject subject;
 
-    public PluginClient(Client delegate) {
-        super(delegate);
-    }
-
-    public PluginClient(Client delegate, Subject subject) {
-        super(delegate);
-        this.subject = subject;
+    public PluginClient(Client client) {
+        super(client);
     }
 
     public void setSubject(Subject subject) {
