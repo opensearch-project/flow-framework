@@ -48,6 +48,7 @@ buildscript {
         parssonVersion = "1.1.7"
         swaggerVersion = "2.1.35"
         swaggerCoreVersion = "2.2.40"
+        awaitilityVersion= "4.3.0"
     }
 
     repositories {
@@ -256,7 +257,7 @@ dependencies {
     testImplementation("org.junit.jupiter:junit-jupiter:${junitJupiterVersion}")
     testImplementation("com.fasterxml.jackson.datatype:jackson-datatype-jsr310:${versions.jackson_databind}")
 
-    testImplementation 'org.awaitility:awaitility:4.3.0'
+    testImplementation "org.awaitility:awaitility:${awaitlityVersion}"
 
     // ZipArchive dependencies used for integration tests
     zipArchive("org.opensearch.plugin:opensearch-job-scheduler:${opensearch_build}")
