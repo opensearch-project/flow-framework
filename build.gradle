@@ -239,6 +239,7 @@ dependencies {
         api("org.opensearch:opensearch-remote-metadata-sdk:${opensearch_build}")
         implementation("org.opensearch:opensearch-remote-metadata-sdk-ddb-client:${opensearch_build}") {
             exclude group: "jakarta.json", module: "jakarta.json-api"
+            exclude group: "io.netty"
         }
     } else {
         implementation("org.opensearch:opensearch-remote-metadata-sdk:${opensearch_build}")
