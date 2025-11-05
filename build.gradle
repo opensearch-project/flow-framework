@@ -27,8 +27,7 @@ buildscript {
         common_utils_version = System.getProperty("common_utils.version", opensearch_build)
         bwcVersionShort = "2.12.0"
         bwcVersion = bwcVersionShort + ".0"
-        bwcOpenSearchFFDownload = 'https://ci.opensearch.org/ci/dbc/distribution-build-opensearch/' + bwcVersionShort + '/latest/linux/x64/tar/builds/' +
-                'opensearch/plugins/opensearch-flow-framework-' + bwcVersion + '.zip'
+        bwcOpenSearchFFDownload = 'https://repo1.maven.org/maven2/org/opensearch/plugin/opensearch-flow-framework/' + bwcVersion + '/opensearch-flow-framework-' + bwcVersion + '.zip'
         baseName = "ffBwcCluster"
         bwcFilePath = "src/test/resources/org/opensearch/flowframework/bwc/"
         bwcFlowFrameworkPath = bwcFilePath + "flowframework/"
@@ -240,6 +239,7 @@ dependencies {
         implementation("org.opensearch:opensearch-remote-metadata-sdk-ddb-client:${opensearch_build}") {
             exclude group: "jakarta.json", module: "jakarta.json-api"
             exclude group: "io.netty"
+            exclude group: "org.bouncycastle"
         }
     } else {
         implementation("org.opensearch:opensearch-remote-metadata-sdk:${opensearch_build}")
@@ -272,6 +272,7 @@ dependencies {
                 force("com.fasterxml.jackson.core:jackson-core:${versions.jackson}")
                 force("com.fasterxml.jackson.core:jackson-databind:${versions.jackson_databind}")
                 force("com.fasterxml.jackson.core:jackson-annotations:${versions.jackson}")
+                force("com.fasterxml.jackson.dataformat:jackson-dataformat-cbor:${versions.jackson}")
                 force("com.fasterxml.jackson.datatype:jackson-datatype-jsr310:${versions.jackson_databind}")
 
                 // OpenSearch client dependencies
@@ -288,6 +289,12 @@ dependencies {
                 force("org.apache.httpcomponents:httpcore:${versions.httpcore}")
                 force("commons-codec:commons-codec:${versions.commonscodec}")
                 force("commons-logging:commons-logging:${versions.commonslogging}")
+
+                // Remote Metadata SDK dependencies
+                force("software.amazon.awssdk:bom:${versions.aws}")
+                force("software.amazon.awssdk:kms:${versions.aws}")
+                force("software.amazon.awssdk:dynamodb:${versions.aws}")
+                force("org.dafny:DafnyRuntime:${dafnyRuntimeVersion}")
             }
         }
     }
