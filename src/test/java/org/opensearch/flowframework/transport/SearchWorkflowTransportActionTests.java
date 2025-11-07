@@ -24,6 +24,7 @@ import org.opensearch.transport.TransportService;
 import org.opensearch.transport.client.Client;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.nullable;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
@@ -70,13 +71,13 @@ public class SearchWorkflowTransportActionTests extends OpenSearchTestCase {
 
         doAnswer(invocation -> {
             SearchRequest request = invocation.getArgument(0);
-            ActionListener<SearchResponse> responseListener = invocation.getArgument(1);
+            ActionListener<SearchResponse> responseListener = invocation.getArgument(3);
             ThreadContext.StoredContext storedContext = mock(ThreadContext.StoredContext.class);
             searchHandler.validateRole(request, null, null, null, responseListener, storedContext);
             responseListener.onResponse(mock(SearchResponse.class));
             return null;
         }).when(searchHandler)
-            .search(any(SearchRequest.class), nullable(String.class), CommonValue.WORKFLOW_RESOURCE_TYPE, any(ActionListener.class));
+            .search(any(SearchRequest.class), nullable(String.class), eq(CommonValue.WORKFLOW_RESOURCE_TYPE), any(ActionListener.class));
 
         doAnswer(invocation -> {
             ActionListener<SearchResponse> responseListener = invocation.getArgument(1);
@@ -88,7 +89,7 @@ public class SearchWorkflowTransportActionTests extends OpenSearchTestCase {
         verify(searchHandler).search(
             any(SearchRequest.class),
             nullable(String.class),
-            CommonValue.WORKFLOW_RESOURCE_TYPE,
+            eq(CommonValue.WORKFLOW_RESOURCE_TYPE),
             any(ActionListener.class)
         );
     }
