@@ -90,6 +90,7 @@ public class SearchHandler {
      * @param request SearchRequest
      * @param tenantId the tenant id
      * @param user User
+     * @param resourceType the resource type
      * @param listener ActionListener
      * @param context ThreadContext
      */

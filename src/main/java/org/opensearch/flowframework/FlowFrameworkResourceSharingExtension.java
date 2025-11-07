@@ -19,6 +19,9 @@ import java.util.Set;
 import static org.opensearch.flowframework.common.CommonValue.GLOBAL_CONTEXT_INDEX;
 import static org.opensearch.flowframework.common.CommonValue.WORKFLOW_STATE_INDEX;
 
+/**
+ * Implementation for sharing resources that require access control.
+ */
 public class FlowFrameworkResourceSharingExtension implements ResourceSharingExtension {
     @Override
     public Set<ResourceProvider> getResourceProviders() {

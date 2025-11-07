@@ -28,6 +28,10 @@ public class PluginClient extends FilterClient {
 
     private Subject subject;
 
+    /**
+     * Constructor for PluginClient
+     * @param client the underlying client to wrap
+     */
     public PluginClient(Client client) {
         super(client);
     }

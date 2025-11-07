@@ -22,6 +22,10 @@ public class ResourceSharingClientAccessor {
 
     private ResourceSharingClientAccessor() {}
 
+    /**
+     * Get the singleton instance of ResourceSharingClientAccessor
+     * @return the singleton instance
+     */
     public static ResourceSharingClientAccessor getInstance() {
         if (resourceSharingClientAccessor == null) {
             resourceSharingClientAccessor = new ResourceSharingClientAccessor();
@@ -32,6 +36,7 @@ public class ResourceSharingClientAccessor {
 
     /**
      * Set the resource sharing client
+     * @param client the resource sharing client to set
      */
     public void setResourceSharingClient(ResourceSharingClient client) {
         resourceSharingClientAccessor.client.set(client);
@@ -39,6 +44,7 @@ public class ResourceSharingClientAccessor {
 
     /**
      * Get the resource sharing client
+     * @return the resource sharing client
      */
     public ResourceSharingClient getResourceSharingClient() {
         return resourceSharingClientAccessor.client.get();
