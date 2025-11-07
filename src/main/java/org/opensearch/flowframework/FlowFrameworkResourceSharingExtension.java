@@ -22,10 +22,27 @@ import static org.opensearch.flowframework.common.CommonValue.WORKFLOW_STATE_IND
 public class FlowFrameworkResourceSharingExtension implements ResourceSharingExtension {
     @Override
     public Set<ResourceProvider> getResourceProviders() {
-        return Set.of(
-            new ResourceProvider(CommonValue.WORKFLOW_RESOURCE_TYPE, GLOBAL_CONTEXT_INDEX),
-            new ResourceProvider(CommonValue.WORKFLOW_STATE_RESOURCE_TYPE, WORKFLOW_STATE_INDEX)
-        );
+        return Set.of(new ResourceProvider() {
+            @Override
+            public String resourceType() {
+                return CommonValue.WORKFLOW_RESOURCE_TYPE;
+            }
+
+            @Override
+            public String resourceIndexName() {
+                return GLOBAL_CONTEXT_INDEX;
+            }
+        }, new ResourceProvider() {
+            @Override
+            public String resourceType() {
+                return CommonValue.WORKFLOW_STATE_RESOURCE_TYPE;
+            }
+
+            @Override
+            public String resourceIndexName() {
+                return WORKFLOW_STATE_INDEX;
+            }
+        });
     }
 
     @Override
