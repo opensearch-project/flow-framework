@@ -10,6 +10,7 @@ package org.opensearch.flowframework.util;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.opensearch.ExceptionsHelper;
 import org.opensearch.action.ActionRequest;
 import org.opensearch.action.ActionType;
 import org.opensearch.common.util.concurrent.ThreadContext;
@@ -54,6 +55,8 @@ public class PluginClient extends FilterClient {
                 logger.info("Running transport action with subject: {}", subject.getPrincipal().getName());
                 super.doExecute(action, request, ActionListener.runBefore(listener, ctx::restore));
             });
+        } catch (Exception e) {
+            throw ExceptionsHelper.convertToRuntime(e);
         }
     }
 }
