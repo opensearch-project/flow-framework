@@ -58,12 +58,19 @@ public class FlowFrameworkResourceSharingRestApiIT extends FlowFrameworkRestTest
     private static final String WORKFLOW_STATE_READ_ONLY_AG = "workflow_state_read_only";
     private static final String WORKFLOW_STATE_FULL_ACCESS_AG = "workflow_state_full_access";
 
+    // If the suite is launched without the flag, just skip these tests cleanly.
+    private boolean skipTests = !isResourceSharingFeatureEnabled();
+
     @Before
     public void setupSecureTests() throws IOException {
-        if (!isHttps()) throw new IllegalArgumentException("Secure Tests are running but HTTPS is not set");
+        if (skipTests) {
+            logger.info("Skipping FlowFrameworkResourceSharingRestApiIT tests - resource sharing not enabled");
+            return;
+        }
 
-        // If the suite is launched without the flag, just skip these tests cleanly.
-        assumeTrue("RS tests only run when resource_sharing.enabled=true", isResourceSharingFeatureEnabled());
+        if (!isHttps()) {
+            fail("Secure Tests are running but HTTPS is not set");
+        }
 
         createIndexRole(indexAllAccessRole, "*");
         String alicePassword = generatePassword(aliceUser);
@@ -116,6 +123,9 @@ public class FlowFrameworkResourceSharingRestApiIT extends FlowFrameworkRestTest
 
     @After
     public void tearDownSecureTests() throws IOException {
+        if (skipTests) {
+            return;
+        }
         aliceClient.close();
         bobClient.close();
         catClient.close();
@@ -133,6 +143,10 @@ public class FlowFrameworkResourceSharingRestApiIT extends FlowFrameworkRestTest
     }
 
     public void testWorkflowVisibilityAndSearch_withResourceSharingEnabled() throws Exception {
+        if (skipTests) {
+            logger.info("Skipping test - resource sharing not enabled");
+            return;
+        }
         Template template = TestHelpers.createTemplateFromFile("register-deploylocalsparseencodingmodel.json");
         Response created = createWorkflow(aliceClient, template);
         assertEquals(RestStatus.CREATED, TestHelpers.restStatus(created));
@@ -212,6 +226,9 @@ public class FlowFrameworkResourceSharingRestApiIT extends FlowFrameworkRestTest
     }
 
     public void testWorkflowUpdate_withResourceSharingEnabled() throws Exception {
+        if (skipTests) {
+            return;
+        }
         Template template = TestHelpers.createTemplateFromFile("register-deploylocalsparseencodingmodel.json");
         Response created = createWorkflow(aliceClient, template);
         assertEquals(RestStatus.CREATED, TestHelpers.restStatus(created));
@@ -262,6 +279,9 @@ public class FlowFrameworkResourceSharingRestApiIT extends FlowFrameworkRestTest
     }
 
     public void testProvisionDeprovision_withResourceSharingEnabled() throws Exception {
+        if (skipTests) {
+            return;
+        }
         Template template = TestHelpers.createTemplateFromFile("register-deploylocalsparseencodingmodel.json");
         Response created = createWorkflow(aliceClient, template);
         assertEquals(RestStatus.CREATED, TestHelpers.restStatus(created));
@@ -315,6 +335,9 @@ public class FlowFrameworkResourceSharingRestApiIT extends FlowFrameworkRestTest
     }
 
     public void testDeleteWorkflow_withResourceSharingEnabled() throws Exception {
+        if (skipTests) {
+            return;
+        }
         Template template = TestHelpers.createTemplateFromFile("register-deploylocalsparseencodingmodel.json");
         Response created = createWorkflow(aliceClient, template);
         assertEquals(RestStatus.CREATED, TestHelpers.restStatus(created));
@@ -340,6 +363,9 @@ public class FlowFrameworkResourceSharingRestApiIT extends FlowFrameworkRestTest
     }
 
     public void testWorkflowStateVisibilityAndSearch_withResourceSharingEnabled() throws Exception {
+        if (skipTests) {
+            return;
+        }
         // Create a workflow (state doc gets created/managed by FF)
         Template template = TestHelpers.createTemplateFromFile("register-deploylocalsparseencodingmodel.json");
         Response created = createWorkflow(aliceClient, template);
