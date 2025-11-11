@@ -289,6 +289,11 @@ public class WorkflowState implements ToXContentObject, Writeable {
             return this;
         }
 
+        /**
+         * Builder method for adding all shared principals
+         * @param allSharedPrincipals the entities this workflow state is shared with
+         * @return the Builder object
+         */
         public Builder allSharedPrincipals(List<String> allSharedPrincipals) {
             this.allSharedPrincipals = allSharedPrincipals;
             return this;
@@ -540,6 +545,7 @@ public class WorkflowState implements ToXContentObject, Writeable {
             .userOutputs(userOutputs)
             .resourcesCreated(resourcesCreated)
             .tenantId(tenantId)
+            .allSharedPrincipals(allSharedPrincipals)
             .build();
     }
 
@@ -639,6 +645,10 @@ public class WorkflowState implements ToXContentObject, Writeable {
         return tenantId;
     }
 
+    /**
+     * The entities this state is shared with
+     * @return the entities
+     */
     public List<String> getAllSharedPrincipals() {
         return allSharedPrincipals;
     }

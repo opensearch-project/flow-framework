@@ -95,6 +95,7 @@ public class Template implements ToXContentObject {
      * @param lastUpdatedTime Last Updated time as an Instant
      * @param lastProvisionedTime Last Provisioned time as an Instant
      * @param tenantId The tenant id
+     * @param allSharedPrincipals The entities this template this shared with
      */
     public Template(
         String name,
@@ -751,6 +752,10 @@ public class Template implements ToXContentObject {
         this.tenantId = tenantId;
     }
 
+    /**
+     * Sets the entities this resource is shared with
+     * @return the set shared principals
+     */
     public List<String> allSharedPrincipals() {
         return allSharedPrincipals;
     }
