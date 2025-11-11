@@ -303,6 +303,7 @@ public class CreateWorkflowTransportAction extends HandledTransportAction<Workfl
                                             globalContextResponse.getId(),
                                             tenantId,
                                             user,
+                                            templateWithUser.allSharedPrincipals(),
                                             ActionListener.wrap(stateResponse -> {
                                                 logger.info("Creating state workflow doc: {}", globalContextResponse.getId());
                                                 if (request.isProvision()) {

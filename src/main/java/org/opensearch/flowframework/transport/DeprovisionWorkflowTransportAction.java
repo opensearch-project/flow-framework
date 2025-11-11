@@ -191,6 +191,7 @@ public class DeprovisionWorkflowTransportAction extends HandledTransportAction<W
                         workflowId,
                         tenantId,
                         response.getWorkflowState().resourcesCreated(),
+                        response.getWorkflowState().getAllSharedPrincipals(),
                         deleteAllowedResources,
                         listener,
                         user
@@ -210,6 +211,7 @@ public class DeprovisionWorkflowTransportAction extends HandledTransportAction<W
         String workflowId,
         String tenantId,
         List<ResourceCreated> resourcesCreated,
+        List<String> allSharedPrincipals,
         Set<String> deleteAllowedResources,
         ActionListener<WorkflowResponse> listener,
         User user
@@ -328,13 +330,14 @@ public class DeprovisionWorkflowTransportAction extends HandledTransportAction<W
             logger.info("Resources requiring allow_delete: {}.", deleteNotAllowed);
         }
         // This is a redundant best-effort backup to the incremental deletion done earlier
-        updateWorkflowState(workflowId, tenantId, remainingResources, deleteNotAllowed, listener, user);
+        updateWorkflowState(workflowId, tenantId, remainingResources, allSharedPrincipals, deleteNotAllowed, listener, user);
     }
 
     private void updateWorkflowState(
         String workflowId,
         String tenantId,
         List<ResourceCreated> remainingResources,
+        List<String> allSharedPrincipals,
         List<ResourceCreated> deleteNotAllowed,
         ActionListener<WorkflowResponse> listener,
         User user
@@ -347,9 +350,17 @@ public class DeprovisionWorkflowTransportAction extends HandledTransportAction<W
                         workflowId,
                         tenantId,
                         user,
+                        allSharedPrincipals,
                         ActionListener.wrap(indexResponse -> {
                             logger.info("Reset workflow {} state to NOT_STARTED", workflowId);
-                        }, exception -> { logger.error("Failed to reset to initial workflow state for {}", workflowId, exception); })
+                            // return workflow ID
+                            listener.onResponse(new WorkflowResponse(workflowId));
+                        }, exception -> {
+                            logger.error("Failed to reset to initial workflow state for {}", workflowId, exception);
+                            listener.onFailure(
+                                new FlowFrameworkException("Failed to reset workflow state", ExceptionsHelper.status(exception))
+                            );
+                        })
                     );
                 } else {
                     flowFrameworkIndicesHandler.deleteFlowFrameworkSystemIndexDoc(
@@ -357,11 +368,16 @@ public class DeprovisionWorkflowTransportAction extends HandledTransportAction<W
                         tenantId,
                         ActionListener.wrap(deleteResponse -> {
                             logger.info("Deleted workflow {} state", workflowId);
-                        }, exception -> { logger.error("Failed to delete workflow state for {}", workflowId, exception); })
+                            // return workflow ID
+                            listener.onResponse(new WorkflowResponse(workflowId));
+                        }, exception -> {
+                            logger.error("Failed to delete workflow state for {}", workflowId, exception);
+                            listener.onFailure(
+                                new FlowFrameworkException("Failed to reset workflow state", ExceptionsHelper.status(exception))
+                            );
+                        })
                     );
                 }
-                // return workflow ID
-                listener.onResponse(new WorkflowResponse(workflowId));
             }, listener);
         } else {
             // Remaining resources only includes ones we tried to delete
