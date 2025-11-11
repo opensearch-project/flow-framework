@@ -33,6 +33,7 @@ import java.util.Map.Entry;
 import java.util.Set;
 
 import static org.opensearch.core.xcontent.XContentParserUtils.ensureExpectedToken;
+import static org.opensearch.flowframework.common.CommonValue.ALL_SHARED_PRINCIPALS_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.CREATED_TIME;
 import static org.opensearch.flowframework.common.CommonValue.DESCRIPTION_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.LAST_PROVISIONED_TIME_FIELD;
@@ -77,6 +78,7 @@ public class Template implements ToXContentObject {
     private final Instant lastUpdatedTime;
     private final Instant lastProvisionedTime;
     private String tenantId;
+    private final List<String> allSharedPrincipals; // stores sharing info
 
     /**
      * Instantiate the object representing a use case template
@@ -106,7 +108,8 @@ public class Template implements ToXContentObject {
         Instant createdTime,
         Instant lastUpdatedTime,
         Instant lastProvisionedTime,
-        String tenantId
+        String tenantId,
+        List<String> allSharedPrincipals
     ) {
         this.name = name;
         this.description = description;
@@ -120,6 +123,7 @@ public class Template implements ToXContentObject {
         this.lastUpdatedTime = lastUpdatedTime;
         this.lastProvisionedTime = lastProvisionedTime;
         this.tenantId = tenantId;
+        this.allSharedPrincipals = allSharedPrincipals;
     }
 
     /**
@@ -138,6 +142,7 @@ public class Template implements ToXContentObject {
         private Instant lastUpdatedTime = null;
         private Instant lastProvisionedTime = null;
         private String tenantId = null;
+        private List<String> allSharedPrincipals = Collections.emptyList();
 
         /**
          * Empty Constructor for the Builder object
@@ -167,6 +172,7 @@ public class Template implements ToXContentObject {
             this.lastUpdatedTime = t.lastUpdatedTime();
             this.lastProvisionedTime = t.lastProvisionedTime();
             this.tenantId = t.getTenantId();
+            this.allSharedPrincipals = t.allSharedPrincipals();
         }
 
         /**
@@ -290,6 +296,16 @@ public class Template implements ToXContentObject {
         }
 
         /**
+         * Builder method for adding allSharedPrincipals
+         * @param allSharedPrincipals entities this workflow is shared with
+         * @return the Builder object
+         */
+        public Builder allSharedPrincipals(List<String> allSharedPrincipals) {
+            this.allSharedPrincipals = allSharedPrincipals;
+            return this;
+        }
+
+        /**
          * Allows building a template
          * @return Template Object containing all needed fields
          */
@@ -306,7 +322,8 @@ public class Template implements ToXContentObject {
                 this.createdTime,
                 this.lastUpdatedTime,
                 this.lastProvisionedTime,
-                this.tenantId
+                this.tenantId,
+                this.allSharedPrincipals
             );
         }
     }
@@ -380,6 +397,14 @@ public class Template implements ToXContentObject {
             xContentBuilder.field(TENANT_ID_FIELD, tenantId);
         }
 
+        if (allSharedPrincipals != null && !allSharedPrincipals.isEmpty()) {
+            xContentBuilder.startArray(ALL_SHARED_PRINCIPALS_FIELD);
+            for (String p : this.allSharedPrincipals) {
+                xContentBuilder.value(p);
+            }
+            xContentBuilder.endArray();
+        }
+
         return xContentBuilder.endObject();
     }
 
@@ -408,6 +433,10 @@ public class Template implements ToXContentObject {
         }
         if (templateWithNewFields.getUiMetadata() != null) {
             builder.uiMetadata(templateWithNewFields.getUiMetadata());
+        }
+        if (templateWithNewFields.allSharedPrincipals() != null && !templateWithNewFields.allSharedPrincipals().isEmpty()) {
+            existingTemplate.allSharedPrincipals().addAll(templateWithNewFields.allSharedPrincipals());
+            builder.allSharedPrincipals(existingTemplate.allSharedPrincipals());
         }
         return builder.build();
     }
@@ -444,6 +473,7 @@ public class Template implements ToXContentObject {
         Instant lastUpdatedTime = null;
         Instant lastProvisionedTime = null;
         String tenantId = null;
+        List<String> allSharedPrincipals = new ArrayList<>();
 
         ensureExpectedToken(XContentParser.Token.START_OBJECT, parser.currentToken(), parser);
         while (parser.nextToken() != XContentParser.Token.END_OBJECT) {
@@ -513,6 +543,12 @@ public class Template implements ToXContentObject {
                     break;
                 case TENANT_ID_FIELD:
                     tenantId = parser.text();
+                    break;
+                case ALL_SHARED_PRINCIPALS_FIELD:
+                    ensureExpectedToken(XContentParser.Token.START_ARRAY, parser.currentToken(), parser);
+                    while (parser.nextToken() != XContentParser.Token.END_ARRAY) {
+                        allSharedPrincipals.add(parser.text());
+                    }
                     break;
                 default:
                     throw new FlowFrameworkException(
@@ -713,6 +749,10 @@ public class Template implements ToXContentObject {
      */
     public void setTenantId(String tenantId) {
         this.tenantId = tenantId;
+    }
+
+    public List<String> allSharedPrincipals() {
+        return allSharedPrincipals;
     }
 
     @Override

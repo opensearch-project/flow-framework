@@ -60,7 +60,8 @@ public class WorkflowRequestResponseTests extends OpenSearchTestCase {
             null,
             null,
             null,
-            null
+            null,
+            Collections.emptyList()
         );
     }
 
@@ -223,7 +224,8 @@ public class WorkflowRequestResponseTests extends OpenSearchTestCase {
             TestHelpers.randomUser(),
             Collections.emptyMap(),
             Collections.emptyList(),
-            null
+            null,
+            Collections.emptyList()
         );
 
         WorkflowResponse response = new WorkflowResponse("123", workFlowState);

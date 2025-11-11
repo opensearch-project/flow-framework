@@ -61,7 +61,8 @@ public class TemplateTests extends OpenSearchTestCase {
             now,
             now,
             null,
-            null
+            null,
+            Collections.emptyList()
         );
 
         assertEquals("test", template.name());
@@ -123,7 +124,8 @@ public class TemplateTests extends OpenSearchTestCase {
             now,
             now,
             null,
-            null
+            null,
+            Collections.emptyList()
         );
         Template updated = Template.builder().name("name two").description("description two").useCase("use case two").build();
         Template merged = Template.updateExistingTemplate(original, updated);

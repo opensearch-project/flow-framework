@@ -174,7 +174,8 @@ public class CreateWorkflowTransportActionTests extends OpenSearchTestCase {
             null,
             null,
             null,
-            null
+            null,
+            Collections.emptyList()
         );
     }
 
@@ -240,7 +241,8 @@ public class CreateWorkflowTransportActionTests extends OpenSearchTestCase {
             null,
             null,
             null,
-            null
+            null,
+            Collections.emptyList()
         );
 
         @SuppressWarnings("unchecked")
@@ -664,7 +666,8 @@ public class CreateWorkflowTransportActionTests extends OpenSearchTestCase {
             TestHelpers.randomUser(),
             Collections.emptyMap(),
             Collections.emptyList(),
-            null
+            null,
+            Collections.emptyList()
         );
 
         // Mock the reprovision response with both workflow ID and state
@@ -1003,7 +1006,8 @@ public class CreateWorkflowTransportActionTests extends OpenSearchTestCase {
                     TestHelpers.randomUser(),
                     Collections.emptyMap(),
                     Collections.emptyList(),
-                    null
+                    null,
+                    Collections.emptyList()
                 )
             );
             responseListener.onResponse(response);
@@ -1079,7 +1083,8 @@ public class CreateWorkflowTransportActionTests extends OpenSearchTestCase {
                     TestHelpers.randomUser(),
                     Collections.emptyMap(),
                     Collections.emptyList(),
-                    null
+                    null,
+                    Collections.emptyList()
                 )
             );
             responseListener.onResponse(response);
@@ -1203,7 +1208,8 @@ public class CreateWorkflowTransportActionTests extends OpenSearchTestCase {
             null,
             null,
             null,
-            null
+            null,
+            Collections.emptyList()
         );
 
         return validTemplate;

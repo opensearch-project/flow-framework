@@ -177,7 +177,8 @@ public class WorkflowProcessSorterTests extends OpenSearchTestCase {
             now,
             now,
             null,
-            null
+            null,
+            Collections.emptyList()
         );
 
         pipelineResource = new ResourceCreated(CreateSearchPipelineStep.NAME, "workflow_step_1", PIPELINE_ID, pipelineId);
@@ -667,7 +668,8 @@ public class WorkflowProcessSorterTests extends OpenSearchTestCase {
             now,
             now,
             null,
-            null
+            null,
+            Collections.emptyList()
         );
 
         FlowFrameworkException ex = expectThrows(
@@ -739,7 +741,8 @@ public class WorkflowProcessSorterTests extends OpenSearchTestCase {
             now,
             now,
             null,
-            null
+            null,
+            Collections.emptyList()
         );
 
         List<ProcessNode> reprovisionSequence = workflowProcessSorter.createReprovisionSequence(
@@ -805,7 +808,8 @@ public class WorkflowProcessSorterTests extends OpenSearchTestCase {
             now,
             now,
             null,
-            null
+            null,
+            Collections.emptyList()
         );
 
         List<ProcessNode> reprovisionSequence = workflowProcessSorter.createReprovisionSequence(

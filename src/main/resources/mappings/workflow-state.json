@@ -87,6 +87,9 @@
     },
     "tenant_id": {
       "type": "keyword"
+    },
+    "all_shared_principals": {
+      "type": "keyword"
     }
   }
 }

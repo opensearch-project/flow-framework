@@ -106,7 +106,8 @@ public class EncryptorUtilsTests extends OpenSearchTestCase {
             null,
             null,
             null,
-            null
+            null,
+            Collections.emptyList()
         );
 
         ClusterState clusterState = mock(ClusterState.class);

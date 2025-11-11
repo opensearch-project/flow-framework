@@ -33,6 +33,7 @@ import java.util.List;
 import java.util.Map;
 
 import static org.opensearch.core.xcontent.XContentParserUtils.ensureExpectedToken;
+import static org.opensearch.flowframework.common.CommonValue.ALL_SHARED_PRINCIPALS_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.ERROR_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.PROVISIONING_PROGRESS_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.PROVISION_END_TIME_FIELD;
@@ -61,6 +62,7 @@ public class WorkflowState implements ToXContentObject, Writeable {
     private Map<String, Object> userOutputs;
     private List<ResourceCreated> resourcesCreated;
     private String tenantId;
+    private List<String> allSharedPrincipals;
 
     /**
      * Instantiate the object representing the workflow state
@@ -75,6 +77,7 @@ public class WorkflowState implements ToXContentObject, Writeable {
      * @param userOutputs A map of essential API responses for backend to use and lookup.
      * @param resourcesCreated A list of all the resources created.
      * @param tenantId The tenant id
+     * @param allSharedPrincipals the entities this workflow is shared with
      */
     public WorkflowState(
         String workflowId,
@@ -86,7 +89,8 @@ public class WorkflowState implements ToXContentObject, Writeable {
         User user,
         Map<String, Object> userOutputs,
         List<ResourceCreated> resourcesCreated,
-        String tenantId
+        String tenantId,
+        List<String> allSharedPrincipals
     ) {
         this.workflowId = workflowId;
         this.error = error;
@@ -98,6 +102,7 @@ public class WorkflowState implements ToXContentObject, Writeable {
         this.userOutputs = Map.copyOf(userOutputs);
         this.resourcesCreated = List.copyOf(resourcesCreated);
         this.tenantId = tenantId;
+        this.allSharedPrincipals = allSharedPrincipals;
     }
 
     private WorkflowState() {}
@@ -125,6 +130,7 @@ public class WorkflowState implements ToXContentObject, Writeable {
         if (input.getVersion().onOrAfter(CommonValue.VERSION_2_19_0)) {
             this.tenantId = input.readOptionalString();
         }
+
     }
 
     /**
@@ -158,6 +164,7 @@ public class WorkflowState implements ToXContentObject, Writeable {
         private Map<String, Object> userOutputs = null;
         private List<ResourceCreated> resourcesCreated = null;
         private String tenantId = null;
+        private List<String> allSharedPrincipals = null;
 
         /**
          * Empty Constructor for the Builder object
@@ -179,6 +186,7 @@ public class WorkflowState implements ToXContentObject, Writeable {
             this.userOutputs = existingState.userOutputs();
             this.resourcesCreated = existingState.resourcesCreated();
             this.tenantId = existingState.getTenantId();
+            this.allSharedPrincipals = existingState.getAllSharedPrincipals();
         }
 
         /**
@@ -281,6 +289,11 @@ public class WorkflowState implements ToXContentObject, Writeable {
             return this;
         }
 
+        public Builder allSharedPrincipals(List<String> allSharedPrincipals) {
+            this.allSharedPrincipals = allSharedPrincipals;
+            return this;
+        }
+
         /**
          * Allows building a workflowState
          * @return WorkflowState workflowState Object containing all needed fields
@@ -297,6 +310,7 @@ public class WorkflowState implements ToXContentObject, Writeable {
             workflowState.userOutputs = this.userOutputs;
             workflowState.resourcesCreated = this.resourcesCreated;
             workflowState.tenantId = this.tenantId;
+            workflowState.allSharedPrincipals = this.allSharedPrincipals;
             return workflowState;
         }
     }
@@ -339,6 +353,10 @@ public class WorkflowState implements ToXContentObject, Writeable {
         if (stateWithNewFields.getTenantId() != null) {
             builder.tenantId(stateWithNewFields.getTenantId());
         }
+        if (stateWithNewFields.getAllSharedPrincipals() != null && !stateWithNewFields.getAllSharedPrincipals().isEmpty()) {
+            existingState.getAllSharedPrincipals().addAll(stateWithNewFields.getAllSharedPrincipals());
+            builder.allSharedPrincipals(existingState.getAllSharedPrincipals());
+        }
         return builder.build();
     }
 
@@ -374,6 +392,14 @@ public class WorkflowState implements ToXContentObject, Writeable {
         }
         if (tenantId != null) {
             xContentBuilder.field(TENANT_ID_FIELD, tenantId);
+        }
+
+        if (allSharedPrincipals != null && !allSharedPrincipals.isEmpty()) {
+            xContentBuilder.startArray(ALL_SHARED_PRINCIPALS_FIELD);
+            for (String allSharedPrincipal : allSharedPrincipals) {
+                xContentBuilder.value(allSharedPrincipal);
+            }
+            xContentBuilder.endArray();
         }
         return xContentBuilder.endObject();
     }
@@ -428,6 +454,7 @@ public class WorkflowState implements ToXContentObject, Writeable {
         Map<String, Object> userOutputs = new HashMap<>();
         List<ResourceCreated> resourcesCreated = new ArrayList<>();
         String tenantId = null;
+        List<String> allSharedPrincipals = new ArrayList<>();
 
         ensureExpectedToken(XContentParser.Token.START_OBJECT, parser.currentToken(), parser);
         while (parser.nextToken() != XContentParser.Token.END_OBJECT) {
@@ -489,6 +516,12 @@ public class WorkflowState implements ToXContentObject, Writeable {
                     break;
                 case TENANT_ID_FIELD:
                     tenantId = parser.text();
+                    break;
+                case ALL_SHARED_PRINCIPALS_FIELD:
+                    ensureExpectedToken(XContentParser.Token.START_ARRAY, parser.currentToken(), parser);
+                    while (parser.nextToken() != XContentParser.Token.END_ARRAY) {
+                        allSharedPrincipals.add(parser.text());
+                    }
                     break;
                 default:
                     throw new FlowFrameworkException(
@@ -604,6 +637,10 @@ public class WorkflowState implements ToXContentObject, Writeable {
      */
     public String getTenantId() {
         return tenantId;
+    }
+
+    public List<String> getAllSharedPrincipals() {
+        return allSharedPrincipals;
     }
 
     @Override

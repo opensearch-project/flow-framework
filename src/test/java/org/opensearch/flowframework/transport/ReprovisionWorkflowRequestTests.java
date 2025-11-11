@@ -55,7 +55,8 @@ public class ReprovisionWorkflowRequestTests extends OpenSearchTestCase {
             null,
             null,
             null,
-            null
+            null,
+            Collections.emptyList()
         );
 
         this.updatedTemplate = new Template(
@@ -70,7 +71,8 @@ public class ReprovisionWorkflowRequestTests extends OpenSearchTestCase {
             null,
             null,
             null,
-            null
+            null,
+            Collections.emptyList()
         );
     }
 

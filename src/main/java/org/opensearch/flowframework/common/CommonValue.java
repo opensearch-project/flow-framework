@@ -51,6 +51,8 @@ public class CommonValue {
     public static final String CREATE_TIME = "create_time";
     /** The template field name for the user who created the workflow **/
     public static final String USER_FIELD = "user";
+    /** The template field name for the entities whom this workflow is shared with **/
+    public static final String ALL_SHARED_PRINCIPALS_FIELD = "all_shared_principals";
     /** The created time field */
     public static final String CREATED_TIME = "created_time";
     /** The last updated time field */

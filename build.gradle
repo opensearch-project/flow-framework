@@ -391,6 +391,7 @@ integTest {
     if (System.getProperty("https") == null || System.getProperty("https") == "false") {
         filter {
             excludeTestsMatching "org.opensearch.flowframework.rest.FlowFrameworkSecureRestApiIT"
+            excludeTestsMatching "org.opensearch.flowframework.rest.FlowFrameworkResourceSharingRestApiIT"
         }
     }
 
@@ -398,6 +399,7 @@ integTest {
     if (System.getProperty("https") != null && System.getProperty("https") == "true") {
         filter {
             includeTestsMatching "org.opensearch.flowframework.rest.FlowFrameworkSecureRestApiIT"
+            includeTestsMatching "org.opensearch.flowframework.rest.FlowFrameworkResourceSharingRestApiIT"
             excludeTestsMatching "org.opensearch.flowframework.rest.FlowFrameworkRestApiIT"
             excludeTestsMatching "org.opensearch.flowframework.rest.*TenantAwareIT"
         }
@@ -592,6 +594,8 @@ task integTestRemote(type: RestIntegTestTask) {
     systemProperty 'cluster.number_of_nodes', "${_numNodes}"
     systemProperty 'tests.security.manager', 'false'
 
+    systemProperty "resource_sharing.enabled", System.getProperty("resource_sharing.enabled")
+
     // Run tests with remote cluster only if rest case is defined
     if (System.getProperty("tests.rest.cluster") != null) {
         filter {
@@ -603,6 +607,7 @@ task integTestRemote(type: RestIntegTestTask) {
     if (System.getProperty("https") == null || System.getProperty("https") == "false") {
         filter {
             excludeTestsMatching "org.opensearch.flowframework.rest.FlowFrameworkSecureRestApiIT"
+            excludeTestsMatching "org.opensearch.flowframework.rest.FlowFrameworkResourceSharingRestApiIT"
         }
     }
 
@@ -611,6 +616,7 @@ task integTestRemote(type: RestIntegTestTask) {
         filter {
             includeTestsMatching "org.opensearch.flowframework.rest.FlowFrameworkSecureRestApiIT"
             excludeTestsMatching "org.opensearch.flowframework.rest.FlowFrameworkRestApiIT"
+            includeTestsMatching "org.opensearch.flowframework.rest.FlowFrameworkResourceSharingRestApiIT"
         }
     }
 }

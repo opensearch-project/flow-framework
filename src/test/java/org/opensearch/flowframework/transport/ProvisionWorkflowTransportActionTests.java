@@ -142,7 +142,8 @@ public class ProvisionWorkflowTransportActionTests extends OpenSearchTestCase {
             null,
             null,
             null,
-            null
+            null,
+            Collections.emptyList()
         );
 
         ThreadPool clientThreadPool = mock(ThreadPool.class);

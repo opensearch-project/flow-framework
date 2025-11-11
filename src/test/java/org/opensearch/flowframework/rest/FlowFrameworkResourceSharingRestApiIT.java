@@ -59,7 +59,7 @@ public class FlowFrameworkResourceSharingRestApiIT extends FlowFrameworkRestTest
     private static final String WORKFLOW_STATE_FULL_ACCESS_AG = "workflow_state_full_access";
 
     // If the suite is launched without the flag, just skip these tests cleanly.
-    private boolean skipTests = !isResourceSharingFeatureEnabled();
+    private final boolean skipTests = !isResourceSharingFeatureEnabled();
 
     @Before
     public void setupSecureTests() throws IOException {

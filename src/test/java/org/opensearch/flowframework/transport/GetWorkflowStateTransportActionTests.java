@@ -156,7 +156,8 @@ public class GetWorkflowStateTransportActionTests extends OpenSearchTestCase {
             TestHelpers.randomUser(),
             Collections.emptyMap(),
             Collections.emptyList(),
-            null
+            null,
+            Collections.emptyList()
         );
 
         GetWorkflowStateResponse response = new GetWorkflowStateResponse(workFlowState, false);

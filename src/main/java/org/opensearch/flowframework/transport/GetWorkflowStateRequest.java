@@ -10,6 +10,7 @@ package org.opensearch.flowframework.transport;
 
 import org.opensearch.action.ActionRequest;
 import org.opensearch.action.ActionRequestValidationException;
+import org.opensearch.action.DocRequest;
 import org.opensearch.common.Nullable;
 import org.opensearch.core.common.io.stream.StreamInput;
 import org.opensearch.core.common.io.stream.StreamOutput;
@@ -20,7 +21,7 @@ import java.io.IOException;
 /**
  * Transport Request to get a workflow status
  */
-public class GetWorkflowStateRequest extends ActionRequest {
+public class GetWorkflowStateRequest extends ActionRequest implements DocRequest {
 
     /**
      * The documentId of the workflow entry within the Global Context index
@@ -99,5 +100,15 @@ public class GetWorkflowStateRequest extends ActionRequest {
     @Override
     public ActionRequestValidationException validate() {
         return null;
+    }
+
+    @Override
+    public String index() {
+        return CommonValue.WORKFLOW_STATE_INDEX;
+    }
+
+    @Override
+    public String id() {
+        return workflowId;
     }
 }
