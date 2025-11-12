@@ -410,6 +410,7 @@ public class FlowFrameworkIndicesHandler {
      * @param workflowId the workflowId, corresponds to document ID
      * @param tenantId the tenant id
      * @param user passes the user that created the workflow
+     * @param allSharedPrincipals the entities this workflow is shared with
      * @param listener action listener
      */
     public void putInitialStateToWorkflowState(

@@ -23,6 +23,7 @@ import org.junit.Before;
 
 import java.io.IOException;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -31,6 +32,9 @@ import static org.opensearch.flowframework.common.CommonValue.WORKFLOW_ID;
 import static org.opensearch.flowframework.common.CommonValue.WORKFLOW_RESOURCE_TYPE;
 import static org.opensearch.flowframework.common.CommonValue.WORKFLOW_STATE_RESOURCE_TYPE;
 
+/**
+ * Tests flow-framework resources: workflow and workflow_state with resource sharing enabled
+ */
 public class FlowFrameworkResourceSharingRestApiIT extends FlowFrameworkRestTestCase {
 
     String aliceUser = "alice";
@@ -60,6 +64,8 @@ public class FlowFrameworkResourceSharingRestApiIT extends FlowFrameworkRestTest
 
     // If the suite is launched without the flag, just skip these tests cleanly.
     private final boolean skipTests = !isResourceSharingFeatureEnabled();
+
+    private final Set<String> workflowIdsToCleanup = new HashSet<>();
 
     @Before
     public void setupSecureTests() throws IOException {
@@ -126,6 +132,24 @@ public class FlowFrameworkResourceSharingRestApiIT extends FlowFrameworkRestTest
         if (skipTests) {
             return;
         }
+
+        // Clean up any workflows created by this test class
+        for (String workflowId : workflowIdsToCleanup) {
+            try {
+                // Owner (alice) can always delete the workflow
+                deleteWorkflow(aliceClient, workflowId);
+            } catch (ResponseException e) {
+                // Ignore 404 / already-deleted cases
+                if (e.getResponse().getStatusLine().getStatusCode() != RestStatus.NOT_FOUND.getStatus()) {
+                    logger.warn("Non-404 error while cleaning up workflow {}", workflowId, e);
+                }
+            } catch (Exception e) {
+                logger.warn("Failed to clean up workflow {}", workflowId, e);
+            }
+        }
+        workflowIdsToCleanup.clear();
+
+        // Now close clients and delete users/roles
         aliceClient.close();
         bobClient.close();
         catClient.close();
@@ -142,15 +166,21 @@ public class FlowFrameworkResourceSharingRestApiIT extends FlowFrameworkRestTest
         deleteUser(lionUser);
     }
 
-    public void testWorkflowVisibilityAndSearch_withResourceSharingEnabled() throws Exception {
+    private String createWorkflowAndTrack(RestClient restClient, Template template) throws Exception {
+        Response created = createWorkflow(restClient, template);
+        assertEquals(RestStatus.CREATED, TestHelpers.restStatus(created));
+        String workflowId = (String) entityAsMap(created).get(WORKFLOW_ID);
+        workflowIdsToCleanup.add(workflowId);
+        return workflowId;
+    }
+
+    public void testWorkflowVisibilityAndSearch() throws Exception {
         if (skipTests) {
             logger.info("Skipping test - resource sharing not enabled");
             return;
         }
         Template template = TestHelpers.createTemplateFromFile("register-deploylocalsparseencodingmodel.json");
-        Response created = createWorkflow(aliceClient, template);
-        assertEquals(RestStatus.CREATED, TestHelpers.restStatus(created));
-        String workflowId = (String) entityAsMap(created).get(WORKFLOW_ID);
+        String workflowId = createWorkflowAndTrack(aliceClient, template);
 
         // Unshared → cat/admin cannot GET
         ResponseException ex = expectThrows(ResponseException.class, () -> getWorkflow(catClient, workflowId));
@@ -225,14 +255,12 @@ public class FlowFrameworkResourceSharingRestApiIT extends FlowFrameworkRestTest
         waitForWorkflowRevokeNonVisibility(workflowId, catClient);
     }
 
-    public void testWorkflowUpdate_withResourceSharingEnabled() throws Exception {
+    public void testWorkflowUpdate() throws Exception {
         if (skipTests) {
             return;
         }
         Template template = TestHelpers.createTemplateFromFile("register-deploylocalsparseencodingmodel.json");
-        Response created = createWorkflow(aliceClient, template);
-        assertEquals(RestStatus.CREATED, TestHelpers.restStatus(created));
-        String workflowId = (String) entityAsMap(created).get(WORKFLOW_ID);
+        String workflowId = createWorkflowAndTrack(aliceClient, template);
 
         // Unshared → admin/fish/cat cannot update
         ResponseException ex = expectThrows(ResponseException.class, () -> updateWorkflow(client(), workflowId, template));
@@ -278,14 +306,12 @@ public class FlowFrameworkResourceSharingRestApiIT extends FlowFrameworkRestTest
         assertEquals(RestStatus.FORBIDDEN.getStatus(), elkDenied.getResponse().getStatusLine().getStatusCode());
     }
 
-    public void testProvisionDeprovision_withResourceSharingEnabled() throws Exception {
+    public void testProvisionDeprovision() throws Exception {
         if (skipTests) {
             return;
         }
         Template template = TestHelpers.createTemplateFromFile("register-deploylocalsparseencodingmodel.json");
-        Response created = createWorkflow(aliceClient, template);
-        assertEquals(RestStatus.CREATED, TestHelpers.restStatus(created));
-        String workflowId = (String) entityAsMap(created).get(WORKFLOW_ID);
+        String workflowId = createWorkflowAndTrack(aliceClient, template);
 
         // Unshared → cat cannot provision/deprovision
         ResponseException ex = expectThrows(ResponseException.class, () -> provisionWorkflow(catClient, workflowId));
@@ -334,14 +360,12 @@ public class FlowFrameworkResourceSharingRestApiIT extends FlowFrameworkRestTest
         assertEquals(RestStatus.FORBIDDEN.getStatus(), elkDenied.getResponse().getStatusLine().getStatusCode());
     }
 
-    public void testDeleteWorkflow_withResourceSharingEnabled() throws Exception {
+    public void testDeleteWorkflow() throws Exception {
         if (skipTests) {
             return;
         }
         Template template = TestHelpers.createTemplateFromFile("register-deploylocalsparseencodingmodel.json");
-        Response created = createWorkflow(aliceClient, template);
-        assertEquals(RestStatus.CREATED, TestHelpers.restStatus(created));
-        String workflowId = (String) entityAsMap(created).get(WORKFLOW_ID);
+        String workflowId = createWorkflowAndTrack(aliceClient, template);
 
         // Unshared → cat/admin cannot delete
         ResponseException ex = expectThrows(ResponseException.class, () -> deleteWorkflow(catClient, workflowId));
@@ -362,15 +386,13 @@ public class FlowFrameworkResourceSharingRestApiIT extends FlowFrameworkRestTest
         assertEquals(RestStatus.OK, TestHelpers.restStatus(del));
     }
 
-    public void testWorkflowStateVisibilityAndSearch_withResourceSharingEnabled() throws Exception {
+    public void testWorkflowStateVisibilityAndSearch() throws Exception {
         if (skipTests) {
             return;
         }
         // Create a workflow (state doc gets created/managed by FF)
         Template template = TestHelpers.createTemplateFromFile("register-deploylocalsparseencodingmodel.json");
-        Response created = createWorkflow(aliceClient, template);
-        assertEquals(RestStatus.CREATED, TestHelpers.restStatus(created));
-        String workflowId = (String) entityAsMap(created).get(WORKFLOW_ID);
+        String workflowId = createWorkflowAndTrack(aliceClient, template);
 
         // Unshared state → cat/admin cannot read status or find it
         ResponseException ex = expectThrows(ResponseException.class, () -> getWorkflowStatus(catClient, workflowId, false));
