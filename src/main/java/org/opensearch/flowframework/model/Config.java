@@ -106,6 +106,7 @@ public class Config implements ToXContentObject {
     }
 
     /**
+     * Gets the master key used for encryption.
      * @return the masterKey
      */
     public String masterKey() {
@@ -113,6 +114,7 @@ public class Config implements ToXContentObject {
     }
 
     /**
+     * Gets the creation time of the config.
      * @return the createTime
      */
     public Instant createTime() {
@@ -120,6 +122,7 @@ public class Config implements ToXContentObject {
     }
 
     /**
+     * Gets the tenant ID associated with the config.
      * @return the tenantId
      */
     public Object tenantId() {
