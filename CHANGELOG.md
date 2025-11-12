@@ -8,6 +8,7 @@ Inspired from [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 ### Enhancements
 ### Bug Fixes
 - Pre-create ML Commons indices for Tenant Aware tests ([#1217](https://github.com/opensearch-project/flow-framework/pull/1217))
+- Incorrect field map output dimensions in default values for semantic search with local model use case template ([#1270](https://github.com/opensearch-project/flow-framework/pull/1270))
 
 ### Infrastructure
 ### Documentation
