@@ -134,4 +134,9 @@ public class ReprovisionWorkflowRequest extends ActionRequest implements DocRequ
     public String id() {
         return workflowId;
     }
+
+    @Override
+    public String type() {
+        return CommonValue.WORKFLOW_RESOURCE_TYPE;
+    }
 }

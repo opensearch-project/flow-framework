@@ -294,4 +294,9 @@ public class WorkflowRequest extends ActionRequest implements DocRequest {
     public String id() {
         return workflowId;
     }
+
+    @Override
+    public String type() {
+        return CommonValue.WORKFLOW_RESOURCE_TYPE;
+    }
 }

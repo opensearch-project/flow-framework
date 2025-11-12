@@ -111,4 +111,9 @@ public class GetWorkflowStateRequest extends ActionRequest implements DocRequest
     public String id() {
         return workflowId;
     }
+
+    @Override
+    public String type() {
+        return CommonValue.WORKFLOW_STATE_RESOURCE_TYPE;
+    }
 }
