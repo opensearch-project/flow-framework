@@ -376,7 +376,7 @@ public class CreateWorkflowTransportActionTests extends OpenSearchTestCase {
 
         // Bypass putInitialStateToWorkflowState and force on response
         doAnswer(invocation -> {
-            ActionListener<IndexResponse> responseListener = invocation.getArgument(3);
+            ActionListener<IndexResponse> responseListener = invocation.getArgument(4);
             responseListener.onResponse(new IndexResponse(new ShardId(WORKFLOW_STATE_INDEX, "", 1), "1", 1L, 1L, 1L, true));
             return null;
         }).when(flowFrameworkIndicesHandler).putInitialStateToWorkflowState(any(), any(), any(), any(), any());
@@ -450,7 +450,7 @@ public class CreateWorkflowTransportActionTests extends OpenSearchTestCase {
 
         // Bypass putInitialStateToWorkflowState and force on response
         doAnswer(invocation -> {
-            ActionListener<IndexResponse> responseListener = invocation.getArgument(3);
+            ActionListener<IndexResponse> responseListener = invocation.getArgument(4);
             responseListener.onResponse(new IndexResponse(new ShardId(WORKFLOW_STATE_INDEX, "", 1), "1", 1L, 1L, 1L, true));
             return null;
         }).when(flowFrameworkIndicesHandler).putInitialStateToWorkflowState(any(), any(), any(), any(), any());
@@ -925,7 +925,7 @@ public class CreateWorkflowTransportActionTests extends OpenSearchTestCase {
 
         // Bypass putInitialStateToWorkflowState and force on response
         doAnswer(invocation -> {
-            ActionListener<IndexResponse> responseListener = invocation.getArgument(3);
+            ActionListener<IndexResponse> responseListener = invocation.getArgument(4);
             responseListener.onResponse(new IndexResponse(new ShardId(WORKFLOW_STATE_INDEX, "", 1), "1", 1L, 1L, 1L, true));
             return null;
         }).when(flowFrameworkIndicesHandler).putInitialStateToWorkflowState(any(), any(), any(), any(), any());
@@ -986,7 +986,7 @@ public class CreateWorkflowTransportActionTests extends OpenSearchTestCase {
 
         // Bypass putInitialStateToWorkflowState and force on response
         doAnswer(invocation -> {
-            ActionListener<IndexResponse> responseListener = invocation.getArgument(3);
+            ActionListener<IndexResponse> responseListener = invocation.getArgument(4);
             responseListener.onResponse(new IndexResponse(new ShardId(WORKFLOW_STATE_INDEX, "", 1), "1", 1L, 1L, 1L, true));
             return null;
         }).when(flowFrameworkIndicesHandler).putInitialStateToWorkflowState(any(), any(), any(), any(), any());
@@ -1063,7 +1063,7 @@ public class CreateWorkflowTransportActionTests extends OpenSearchTestCase {
 
         // Bypass putInitialStateToWorkflowState and force on response
         doAnswer(invocation -> {
-            ActionListener<IndexResponse> responseListener = invocation.getArgument(3);
+            ActionListener<IndexResponse> responseListener = invocation.getArgument(4);
             responseListener.onResponse(new IndexResponse(new ShardId(WORKFLOW_STATE_INDEX, "", 1), "1", 1L, 1L, 1L, true));
             return null;
         }).when(flowFrameworkIndicesHandler).putInitialStateToWorkflowState(any(), any(), any(), any(), any());
@@ -1140,7 +1140,7 @@ public class CreateWorkflowTransportActionTests extends OpenSearchTestCase {
 
         // Bypass putInitialStateToWorkflowState and force on response
         doAnswer(invocation -> {
-            ActionListener<IndexResponse> responseListener = invocation.getArgument(3);
+            ActionListener<IndexResponse> responseListener = invocation.getArgument(4);
             responseListener.onResponse(new IndexResponse(new ShardId(WORKFLOW_STATE_INDEX, "", 1), "1", 1L, 1L, 1L, true));
             return null;
         }).when(flowFrameworkIndicesHandler).putInitialStateToWorkflowState(any(), any(), any(), any(), any());
