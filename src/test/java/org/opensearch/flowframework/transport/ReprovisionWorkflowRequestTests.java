@@ -14,6 +14,7 @@ import org.opensearch.common.unit.TimeValue;
 import org.opensearch.core.common.bytes.BytesReference;
 import org.opensearch.core.common.io.stream.BytesStreamInput;
 import org.opensearch.flowframework.TestHelpers;
+import org.opensearch.flowframework.common.CommonValue;
 import org.opensearch.flowframework.model.Template;
 import org.opensearch.flowframework.model.Workflow;
 import org.opensearch.flowframework.model.WorkflowEdge;
@@ -89,4 +90,13 @@ public class ReprovisionWorkflowRequestTests extends OpenSearchTestCase {
         assertEquals(request.getUpdatedTemplate().toJson(), requestFromStreamInput.getUpdatedTemplate().toJson());
     }
 
+    public void testIndexIdAndTypeAndTimeout() {
+        TimeValue timeout = TimeValue.timeValueSeconds(10);
+        ReprovisionWorkflowRequest request = new ReprovisionWorkflowRequest("123", originalTemplate, updatedTemplate, timeout);
+
+        assertEquals(CommonValue.GLOBAL_CONTEXT_INDEX, request.index());
+        assertEquals("123", request.id());
+        assertEquals(CommonValue.WORKFLOW_RESOURCE_TYPE, request.type());
+        assertEquals(timeout, request.getWaitForCompletionTimeout());
+    }
 }

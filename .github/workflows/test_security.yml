@@ -20,7 +20,7 @@ jobs:
     strategy:
       matrix:
         java: [21, 25]
-        resource_sharing_flag: [ "", "-Dresource_sharing.enabled=true" ]
+        resource_sharing_flag: [ false, true ]
 
     name: Run Security Integration Tests on Linux
     runs-on: ubuntu-latest
@@ -49,5 +49,5 @@ jobs:
           su `id -un 1000` -c "whoami && java -version && ./gradlew integTest \
             -Dsecurity.enabled=true \
             -Dhttps=true \
-            ${{ matrix.resource_sharing_flag }} \
+            -Dresource_sharing.enabled=${{ matrix.resource_sharing_flag }} \
             --tests '*IT'"

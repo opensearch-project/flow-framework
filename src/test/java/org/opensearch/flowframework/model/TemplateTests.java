@@ -20,6 +20,7 @@ import org.opensearch.test.OpenSearchTestCase;
 import java.io.IOException;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -204,5 +205,39 @@ public class TemplateTests extends OpenSearchTestCase {
     public void testCreateEmptyTemplateWithTenantId_NullTenantId() {
         Template t = Template.createEmptyTemplateWithTenantId(null);
         assertNull(t);
+    }
+
+    public void testUpdateExistingTemplateAllSharedPrincipals() {
+        // Time travel to guarantee update increments
+        Instant now = Instant.now().minusMillis(100);
+
+        Template original = new Template(
+            "name one",
+            "description one",
+            "use case one",
+            Version.fromString("1.1.1"),
+            List.of(Version.fromString("1.1.1"), Version.fromString("1.1.1")),
+            Collections.emptyMap(),
+            Map.of("uiMetadata", "one"),
+            null,
+            now,
+            now,
+            null,
+            null,
+            new ArrayList<>(List.of("user:one"))
+        );
+
+        Template updated = Template.builder().allSharedPrincipals(List.of("user:two")).build();
+
+        Template merged = Template.updateExistingTemplate(original, updated);
+
+        // Ensure both principals are present in the merged template
+        List<String> mergedPrincipals = merged.allSharedPrincipals();
+        assertEquals(2, mergedPrincipals.size());
+        assertTrue(mergedPrincipals.contains("user:one"));
+        assertTrue(mergedPrincipals.contains("user:two"));
+
+        // Ensure lastUpdatedTime was bumped
+        assertTrue(merged.lastUpdatedTime().isAfter(now));
     }
 }

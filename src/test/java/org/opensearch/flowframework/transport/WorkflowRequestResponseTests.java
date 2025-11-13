@@ -10,6 +10,7 @@ package org.opensearch.flowframework.transport;
 
 import org.opensearch.Version;
 import org.opensearch.common.io.stream.BytesStreamOutput;
+import org.opensearch.common.unit.TimeValue;
 import org.opensearch.common.xcontent.XContentType;
 import org.opensearch.core.common.bytes.BytesReference;
 import org.opensearch.core.common.io.stream.BytesStreamInput;
@@ -17,6 +18,7 @@ import org.opensearch.core.xcontent.MediaTypeRegistry;
 import org.opensearch.core.xcontent.ToXContent;
 import org.opensearch.core.xcontent.XContentBuilder;
 import org.opensearch.flowframework.TestHelpers;
+import org.opensearch.flowframework.common.CommonValue;
 import org.opensearch.flowframework.model.Template;
 import org.opensearch.flowframework.model.Workflow;
 import org.opensearch.flowframework.model.WorkflowEdge;
@@ -246,6 +248,47 @@ public class WorkflowRequestResponseTests extends OpenSearchTestCase {
         assertNotNull(builder);
         assertTrue(builder.toString().contains("\"workflow_id\":\"123\""));
         assertTrue(builder.toString().contains("\"state\":\"PROVISIONING\""));
+    }
+
+    public void testWorkflowRequestIndexIdTypeAndTimeout() throws IOException {
+        TimeValue timeout = TimeValue.timeValueSeconds(15);
+
+        WorkflowRequest request = new WorkflowRequest("123", template, Map.of("foo", "bar"), timeout);
+
+        // Basic assertions
+        assertEquals("123", request.getWorkflowId());
+        assertEquals(template, request.getTemplate());
+        assertNull(request.validate());
+        assertTrue(request.isProvision());
+        assertFalse(request.isUpdateFields());
+        assertFalse(request.isReprovision());
+        assertEquals("bar", request.getParams().get("foo"));
+        assertEquals(timeout, request.getWaitForCompletionTimeout());
+
+        // index/id/type metadata
+        assertEquals(CommonValue.GLOBAL_CONTEXT_INDEX, request.index());
+        assertEquals("123", request.id());
+        assertEquals(CommonValue.WORKFLOW_RESOURCE_TYPE, request.type());
+
+        // Round-trip through StreamInput/StreamOutput
+        BytesStreamOutput out = new BytesStreamOutput();
+        request.writeTo(out);
+        BytesStreamInput in = new BytesStreamInput(BytesReference.toBytes(out.bytes()));
+
+        WorkflowRequest requestFromStream = new WorkflowRequest(in);
+
+        // Ensure metadata & timeout survive serialization
+        assertEquals(request.getWorkflowId(), requestFromStream.getWorkflowId());
+        assertEquals(request.getTemplate().toString(), requestFromStream.getTemplate().toString());
+        assertTrue(requestFromStream.isProvision());
+        assertFalse(requestFromStream.isUpdateFields());
+        assertFalse(requestFromStream.isReprovision());
+        assertEquals("bar", requestFromStream.getParams().get("foo"));
+        assertEquals(timeout, requestFromStream.getWaitForCompletionTimeout());
+        assertEquals(CommonValue.GLOBAL_CONTEXT_INDEX, requestFromStream.index());
+        assertEquals("123", requestFromStream.id());
+        assertEquals(CommonValue.WORKFLOW_RESOURCE_TYPE, requestFromStream.type());
+
     }
 
 }

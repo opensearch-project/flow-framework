@@ -582,6 +582,7 @@ public class Template implements ToXContentObject {
             .lastUpdatedTime(lastUpdatedTime)
             .lastProvisionedTime(lastProvisionedTime)
             .tenantId(tenantId)
+            .allSharedPrincipals(allSharedPrincipals)
             .build();
         return template;
     }

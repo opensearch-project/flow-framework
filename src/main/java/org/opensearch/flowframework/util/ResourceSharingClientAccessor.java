@@ -18,7 +18,7 @@ import java.util.concurrent.atomic.AtomicReference;
 public class ResourceSharingClientAccessor {
     private final AtomicReference<ResourceSharingClient> client = new AtomicReference<>();
 
-    private static ResourceSharingClientAccessor resourceSharingClientAccessor;
+    private static final ResourceSharingClientAccessor INSTANCE = new ResourceSharingClientAccessor();
 
     private ResourceSharingClientAccessor() {}
 
@@ -27,11 +27,7 @@ public class ResourceSharingClientAccessor {
      * @return the singleton instance
      */
     public static ResourceSharingClientAccessor getInstance() {
-        if (resourceSharingClientAccessor == null) {
-            resourceSharingClientAccessor = new ResourceSharingClientAccessor();
-        }
-
-        return resourceSharingClientAccessor;
+        return INSTANCE;
     }
 
     /**
@@ -39,7 +35,7 @@ public class ResourceSharingClientAccessor {
      * @param client the resource sharing client to set
      */
     public void setResourceSharingClient(ResourceSharingClient client) {
-        resourceSharingClientAccessor.client.set(client);
+        this.client.set(client);
     }
 
     /**
@@ -47,6 +43,6 @@ public class ResourceSharingClientAccessor {
      * @return the resource sharing client
      */
     public ResourceSharingClient getResourceSharingClient() {
-        return resourceSharingClientAccessor.client.get();
+        return this.client.get();
     }
 }

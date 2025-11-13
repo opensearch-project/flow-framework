@@ -50,7 +50,7 @@ public class PluginClient extends FilterClient {
         if (subject == null) {
             throw new IllegalStateException("PluginClient is not initialized.");
         }
-        try (ThreadContext.StoredContext ctx = threadPool().getThreadContext().newStoredContext(false)) {
+        try (ThreadContext.StoredContext ctx = threadPool().getThreadContext().stashContext()) {
             subject.runAs(() -> {
                 logger.info("Running transport action with subject: {}", subject.getPrincipal().getName());
                 super.doExecute(action, request, ActionListener.runBefore(listener, ctx::restore));
