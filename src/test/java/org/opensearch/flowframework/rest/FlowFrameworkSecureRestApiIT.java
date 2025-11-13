@@ -431,17 +431,20 @@ public class FlowFrameworkSecureRestApiIT extends FlowFrameworkRestTestCase {
         response = deleteWorkflow(aliceClient, workflowId);
         assertEquals(RestStatus.OK, TestHelpers.restStatus(response));
 
-        // Invoke status API with failure
-        ResponseException exception = expectThrows(ResponseException.class, () -> getWorkflowStatus(aliceClient, workflowId, false));
-        if (isResourceSharingFeatureEnabled()) {
-            // sample log message: No sharing info found for 'pmaAdZoBL3PmSyJoha0C'. Action
-            // cluster:admin/opensearch/flow_framework/workflow_state/get is not allowed.
-            // since record is deleted corresponding sharing record will also be deleted and thus we show 403 for non-existent sharing
-            // records,
-            assertEquals(RestStatus.FORBIDDEN.getStatus(), exception.getResponse().getStatusLine().getStatusCode());
-        } else {
-            assertEquals(RestStatus.NOT_FOUND.getStatus(), exception.getResponse().getStatusLine().getStatusCode());
-        }
+        // Wait for state doc to be deleted asynchronously
+        assertBusy(() -> {
+            // Invoke status API with failure
+            ResponseException exception = expectThrows(ResponseException.class, () -> getWorkflowStatus(aliceClient, workflowId, false));
+            if (isResourceSharingFeatureEnabled()) {
+                // sample log message: No sharing info found for 'pmaAdZoBL3PmSyJoha0C'. Action
+                // cluster:admin/opensearch/flow_framework/workflow_state/get is not allowed.
+                // since record is deleted corresponding sharing record will also be deleted and thus we show 403 for non-existent sharing
+                // records,
+                assertEquals(RestStatus.FORBIDDEN.getStatus(), exception.getResponse().getStatusLine().getStatusCode());
+            } else {
+                assertEquals(RestStatus.NOT_FOUND.getStatus(), exception.getResponse().getStatusLine().getStatusCode());
+            }
+        }, 30, TimeUnit.SECONDS);
     }
 
     public void testUpdateWorkflowEnabledForAdmin() throws Exception {
