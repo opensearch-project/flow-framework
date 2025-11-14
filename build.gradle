@@ -818,6 +818,10 @@ task bwcTestSuite(type: StandaloneRestIntegTestTask) {
 // test retry configuration
 allprojects {
     apply plugin: "org.gradle.test-retry"
+    tasks.withType(Test).configureEach {
+        // Enable native access for JNA and allow Unsafe access to suppress warnings
+        jvmArgs += ['--enable-native-access=ALL-UNNAMED', '--sun-misc-unsafe-memory-access=allow']
+    }
     tasks.withType(RestIntegTestTask).configureEach {
         retry {
             if (System.getenv().containsKey("CI")) {
@@ -826,11 +830,15 @@ allprojects {
                 failOnPassedAfterRetry = false
             }
         }
+        // Enable native access for JNA and allow Unsafe access to suppress warnings
+        jvmArgs += ['--enable-native-access=ALL-UNNAMED', '--sun-misc-unsafe-memory-access=allow']
     }
     // Needed for Gradle 9.0
     tasks.withType(StandaloneRestIntegTestTask).configureEach {
         testClassesDirs = sourceSets.test.output.classesDirs
         classpath = sourceSets.test.runtimeClasspath
+        // Enable native access for JNA and allow Unsafe access to suppress warnings
+        jvmArgs += ['--enable-native-access=ALL-UNNAMED', '--sun-misc-unsafe-memory-access=allow']
     }
 }
 
