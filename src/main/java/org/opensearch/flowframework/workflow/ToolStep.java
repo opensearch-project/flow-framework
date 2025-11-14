@@ -91,6 +91,7 @@ public class ToolStep implements WorkflowStep {
                 outputs,
                 toolParameterKeys
             );
+            @SuppressWarnings("unchecked")
             Map<String, String> attributes = (Map<String, String>) inputs.get(ATTRIBUTES_FIELD);
             @SuppressWarnings("unchecked")
             Map<String, String> config = (Map<String, String>) inputs.getOrDefault(CONFIG_FIELD, Collections.emptyMap());

@@ -63,6 +63,7 @@ import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
 import org.mockito.ArgumentCaptor;
+import org.mockito.ArgumentMatchers;
 
 import static org.opensearch.action.DocWriteResponse.Result.UPDATED;
 import static org.opensearch.flowframework.common.CommonValue.GLOBAL_CONTEXT_INDEX;
@@ -1012,7 +1013,12 @@ public class CreateWorkflowTransportActionTests extends OpenSearchTestCase {
             );
             responseListener.onResponse(response);
             return null;
-        }).when(client).execute(eq(ProvisionWorkflowAction.INSTANCE), any(WorkflowRequest.class), any(ActionListener.class));
+        }).when(client)
+            .execute(
+                eq(ProvisionWorkflowAction.INSTANCE),
+                any(WorkflowRequest.class),
+                ArgumentMatchers.<ActionListener<WorkflowResponse>>any()
+            );
 
         ArgumentCaptor<WorkflowResponse> workflowResponseCaptor = ArgumentCaptor.forClass(WorkflowResponse.class);
 
@@ -1089,7 +1095,12 @@ public class CreateWorkflowTransportActionTests extends OpenSearchTestCase {
             );
             responseListener.onResponse(response);
             return null;
-        }).when(client).execute(eq(ProvisionWorkflowAction.INSTANCE), any(WorkflowRequest.class), any(ActionListener.class));
+        }).when(client)
+            .execute(
+                eq(ProvisionWorkflowAction.INSTANCE),
+                any(WorkflowRequest.class),
+                ArgumentMatchers.<ActionListener<WorkflowResponse>>any()
+            );
 
         ArgumentCaptor<WorkflowResponse> workflowResponseCaptor = ArgumentCaptor.forClass(WorkflowResponse.class);
 

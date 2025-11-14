@@ -141,8 +141,10 @@ public abstract class AbstractRegisterLocalModelStep extends AbstractRetryableWo
             }
 
             // Handle model_config if present
+            @SuppressWarnings("unchecked")
             Map<String, Object> modelConfig = (Map<String, Object>) inputs.get(MODEL_CONFIG);
             if (modelConfig != null) {
+                @SuppressWarnings("unchecked")
                 Map<String, Object> additionalConfig = modelConfig.containsKey(ADDITIONAL_CONFIG)
                     ? (Map<String, Object>) modelConfig.get(ADDITIONAL_CONFIG)
                     : null;
