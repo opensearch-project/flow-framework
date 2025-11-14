@@ -23,6 +23,10 @@ import static org.opensearch.flowframework.common.CommonValue.WORKFLOW_STATE_IND
  * Implementation for sharing resources that require access control.
  */
 public class FlowFrameworkResourceSharingExtension implements ResourceSharingExtension {
+
+    /** Instantiate this class */
+    public FlowFrameworkResourceSharingExtension() {}
+
     @Override
     public Set<ResourceProvider> getResourceProviders() {
         return Set.of(new ResourceProvider() {
