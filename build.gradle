@@ -819,8 +819,12 @@ task bwcTestSuite(type: StandaloneRestIntegTestTask) {
 allprojects {
     apply plugin: "org.gradle.test-retry"
     tasks.withType(Test).configureEach {
-        // Enable native access for JNA and allow Unsafe access to suppress warnings
-        jvmArgs += ['--enable-native-access=ALL-UNNAMED', '--sun-misc-unsafe-memory-access=allow']
+        // Enable native access for JNA
+        jvmArgs += ['--enable-native-access=ALL-UNNAMED']
+        // Allow Unsafe access to suppress warnings (JDK 25+ only)
+        if (JavaVersion.current() >= JavaVersion.VERSION_25) {
+            jvmArgs += ['--sun-misc-unsafe-memory-access=allow']
+        }
     }
     tasks.withType(RestIntegTestTask).configureEach {
         retry {
@@ -830,15 +834,23 @@ allprojects {
                 failOnPassedAfterRetry = false
             }
         }
-        // Enable native access for JNA and allow Unsafe access to suppress warnings
-        jvmArgs += ['--enable-native-access=ALL-UNNAMED', '--sun-misc-unsafe-memory-access=allow']
+        // Enable native access for JNA
+        jvmArgs += ['--enable-native-access=ALL-UNNAMED']
+        // Allow Unsafe access to suppress warnings (JDK 25+ only)
+        if (JavaVersion.current() >= JavaVersion.VERSION_25) {
+            jvmArgs += ['--sun-misc-unsafe-memory-access=allow']
+        }
     }
     // Needed for Gradle 9.0
     tasks.withType(StandaloneRestIntegTestTask).configureEach {
         testClassesDirs = sourceSets.test.output.classesDirs
         classpath = sourceSets.test.runtimeClasspath
-        // Enable native access for JNA and allow Unsafe access to suppress warnings
-        jvmArgs += ['--enable-native-access=ALL-UNNAMED', '--sun-misc-unsafe-memory-access=allow']
+        // Enable native access for JNA
+        jvmArgs += ['--enable-native-access=ALL-UNNAMED']
+        // Allow Unsafe access to suppress warnings (JDK 25+ only)
+        if (JavaVersion.current() >= JavaVersion.VERSION_25) {
+            jvmArgs += ['--sun-misc-unsafe-memory-access=allow']
+        }
     }
 }
 
