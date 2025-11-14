@@ -854,7 +854,9 @@ public class ParseUtils {
             String key = prefix.isEmpty() ? entry.getKey() : prefix + "." + entry.getKey();
             Object value = entry.getValue();
             if (value instanceof Map) {
-                flattenSettings(key, (Map<String, Object>) value, flattenedSettings);
+                @SuppressWarnings("unchecked")
+                Map<String, Object> mapValue = (Map<String, Object>) value;
+                flattenSettings(key, mapValue, flattenedSettings);
             } else {
                 flattenedSettings.put(key, value.toString());
             }

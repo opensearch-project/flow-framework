@@ -48,7 +48,9 @@ public class WorkflowTimeoutUtilityTests extends OpenSearchTestCase {
         mockThreadPool = mock(ThreadPool.class);
         mockScheduledCancellable = mock(Scheduler.ScheduledCancellable.class);
         isResponseSent = new AtomicBoolean(false);
-        mockListener = mock(ActionListener.class);
+        @SuppressWarnings("unchecked")
+        ActionListener<WorkflowResponse> listener = mock(ActionListener.class);
+        mockListener = listener;
 
         when(mockThreadPool.schedule(any(Runnable.class), any(TimeValue.class), anyString())).thenReturn(mockScheduledCancellable);
     }
@@ -124,6 +126,7 @@ public class WorkflowTimeoutUtilityTests extends OpenSearchTestCase {
         verify(mockListener, times(1)).onFailure(exception);
     }
 
+    @SuppressWarnings("unchecked")
     public void testFetchWorkflowStateAfterTimeout() {
         String workflowId = "testWorkflowId";
         ActionListener<WorkflowResponse> mockListener = mock(ActionListener.class);

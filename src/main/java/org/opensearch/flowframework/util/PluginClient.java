@@ -37,6 +37,10 @@ public class PluginClient extends FilterClient {
         super(client);
     }
 
+    /**
+     * Set the subject to use for executing transport actions.
+     * @param subject the subject to use
+     */
     public void setSubject(Subject subject) {
         this.subject = subject;
     }

@@ -37,7 +37,6 @@ public class RestWorkflowStateTenantAwareIT extends FlowFrameworkTenantAwareRest
     private static final String AGENTS_PATH = "/_plugins/_ml/agents/";
     private static final String CONNECTORS_PATH = "/_plugins/_ml/connectors/";
     private static final String MODELS_PATH = "/_plugins/_ml/models/";
-    private static final String MODEL_GROUPS_PATH = "/_plugins/_ml/model_groups/";
 
     public void testWorkflowStateCRUD() throws Exception {
         boolean multiTenancyEnabled = isMultiTenancyEnabled();
@@ -174,6 +173,7 @@ public class RestWorkflowStateTenantAwareIT extends FlowFrameworkTenantAwareRest
         response = makeRequest(tenantRequest, GET, WORKFLOW_PATH + workflowId + STATUS_ALL);
         assertOK(response);
         Map<String, Object> statemap = responseToMap(response);
+        @SuppressWarnings("unchecked")
         List<Map<String, Object>> resourcesCreated = (List<Map<String, Object>>) statemap.get("resources_created");
         String connectorId = resourcesCreated.get(0).get("resource_id").toString();
         assertNotNull(connectorId);
@@ -483,7 +483,9 @@ public class RestWorkflowStateTenantAwareIT extends FlowFrameworkTenantAwareRest
         assertOK(response);
         map = responseToMap(response);
         assertEquals("COMPLETED", map.get("state"));
-        resourcesCreated = (List<Map<String, Object>>) map.get("resources_created");
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> newResourcesCreated = (List<Map<String, Object>>) map.get("resources_created");
+        resourcesCreated = newResourcesCreated;
 
         String otherConnectorId = resourcesCreated.get(0).get("resource_id").toString();
         assertNotNull(otherConnectorId);

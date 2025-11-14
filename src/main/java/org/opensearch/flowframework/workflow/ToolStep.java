@@ -59,6 +59,9 @@ public class ToolStep implements WorkflowStep {
     /** Provided output keys */
     public static final Set<String> PROVIDED_OUTPUTS = Set.of(TOOLS_FIELD);
 
+    /** Instantiate this class */
+    public ToolStep() {}
+
     @Override
     public PlainActionFuture<WorkflowData> execute(
         String currentNodeId,
@@ -91,6 +94,7 @@ public class ToolStep implements WorkflowStep {
                 outputs,
                 toolParameterKeys
             );
+            @SuppressWarnings("unchecked")
             Map<String, String> attributes = (Map<String, String>) inputs.get(ATTRIBUTES_FIELD);
             @SuppressWarnings("unchecked")
             Map<String, String> config = (Map<String, String>) inputs.getOrDefault(CONFIG_FIELD, Collections.emptyMap());
