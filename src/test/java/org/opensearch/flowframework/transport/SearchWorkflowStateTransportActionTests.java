@@ -23,6 +23,8 @@ import org.opensearch.threadpool.ThreadPool;
 import org.opensearch.transport.TransportService;
 import org.opensearch.transport.client.Client;
 
+import org.mockito.ArgumentMatchers;
+
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.nullable;
@@ -77,21 +79,21 @@ public class SearchWorkflowStateTransportActionTests extends OpenSearchTestCase 
                 any(SearchRequest.class),
                 nullable(String.class),
                 eq(CommonValue.WORKFLOW_STATE_RESOURCE_TYPE),
-                any(ActionListener.class)
+                ArgumentMatchers.<ActionListener<SearchResponse>>any()
             );
 
         doAnswer(invocation -> {
             ActionListener<SearchResponse> responseListener = invocation.getArgument(1);
             responseListener.onResponse(mock(SearchResponse.class));
             return null;
-        }).when(client).search(any(SearchRequest.class), any(ActionListener.class));
+        }).when(client).search(any(SearchRequest.class), ArgumentMatchers.<ActionListener<SearchResponse>>any());
 
         searchWorkflowStateTransportAction.doExecute(mock(Task.class), searchRequest, listener);
         verify(searchHandler).search(
             any(SearchRequest.class),
             nullable(String.class),
             eq(CommonValue.WORKFLOW_STATE_RESOURCE_TYPE),
-            any(ActionListener.class)
+            ArgumentMatchers.<ActionListener<SearchResponse>>any()
         );
     }
 
