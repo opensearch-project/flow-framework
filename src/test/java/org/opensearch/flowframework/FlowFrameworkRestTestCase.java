@@ -22,7 +22,6 @@ import org.apache.hc.core5.http.HttpHeaders;
 import org.apache.hc.core5.http.HttpHost;
 import org.apache.hc.core5.http.message.BasicHeader;
 import org.apache.hc.core5.http.nio.ssl.TlsStrategy;
-import org.apache.hc.core5.reactor.ssl.TlsDetails;
 import org.apache.hc.core5.ssl.SSLContextBuilder;
 import org.apache.hc.core5.util.Timeout;
 import org.opensearch.OpenSearchStatusException;
@@ -215,8 +214,6 @@ public abstract class FlowFrameworkRestTestCase extends OpenSearchRestTestCase {
                 final TlsStrategy tlsStrategy = ClientTlsStrategyBuilder.create()
                     .setHostnameVerifier(NoopHostnameVerifier.INSTANCE)
                     .setSslContext(SSLContextBuilder.create().loadTrustMaterial(null, (chains, authType) -> true).build())
-                    // See https://issues.apache.org/jira/browse/HTTPCLIENT-2219
-                    .setTlsDetailsFactory(sslEngine -> new TlsDetails(sslEngine.getSession(), sslEngine.getApplicationProtocol()))
                     .build();
                 final PoolingAsyncClientConnectionManager connectionManager = PoolingAsyncClientConnectionManagerBuilder.create()
                     .setTlsStrategy(tlsStrategy)
@@ -475,6 +472,7 @@ public abstract class FlowFrameworkRestTestCase extends OpenSearchRestTestCase {
             ImmutableList.of(new BasicHeader(HttpHeaders.USER_AGENT, "admin"))
         );
         Map<String, Object> responseMap = entityAsMap(resp);
+        @SuppressWarnings("unchecked")
         ArrayList<String> roles = (ArrayList<String>) responseMap.get("roles");
         assertTrue(roles.contains("all_access"));
     }
