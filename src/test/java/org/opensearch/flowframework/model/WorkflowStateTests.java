@@ -16,6 +16,7 @@ import org.opensearch.test.OpenSearchTestCase;
 
 import java.io.IOException;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -162,5 +163,28 @@ public class WorkflowStateTests extends OpenSearchTestCase {
         assertEquals(2, wfs.resourcesCreated().size());
         rc = wfs.resourcesCreated().get(1);
         assertEquals("id two", rc.resourceId());
+    }
+
+    public void testUpdateExistingWorkflowStateAllSharedPrincipals() {
+        // original state with one principal, use a mutable list
+        WorkflowState original = WorkflowState.builder()
+            .workflowId("wf-1")
+            .allSharedPrincipals(new ArrayList<>(List.of("user:one")))
+            .build();
+
+        assertNotNull(original.getAllSharedPrincipals());
+        assertEquals(1, original.getAllSharedPrincipals().size());
+        assertTrue(original.getAllSharedPrincipals().contains("user:one"));
+
+        // update state with another principal
+        WorkflowState update = WorkflowState.builder().allSharedPrincipals(List.of("user:two")).build();
+
+        WorkflowState merged = WorkflowState.updateExistingWorkflowState(original, update);
+
+        // verify merged principals contain both
+        assertNotNull(merged.getAllSharedPrincipals());
+        assertEquals(2, merged.getAllSharedPrincipals().size());
+        assertTrue(merged.getAllSharedPrincipals().contains("user:one"));
+        assertTrue(merged.getAllSharedPrincipals().contains("user:two"));
     }
 }

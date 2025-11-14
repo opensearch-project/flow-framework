@@ -88,7 +88,8 @@ public class WorkflowTimeoutUtilityTests extends OpenSearchTestCase {
                 TestHelpers.randomUser(),
                 Collections.emptyMap(),
                 Collections.emptyList(),
-                null
+                null,
+                Collections.emptyList()
             )
         );
         Scheduler.ScheduledCancellable scheduledCancellable = mock(Scheduler.ScheduledCancellable.class);

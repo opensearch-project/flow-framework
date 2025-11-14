@@ -30,6 +30,7 @@ import java.util.Arrays;
 
 import static org.opensearch.core.rest.RestStatus.INTERNAL_SERVER_ERROR;
 import static org.opensearch.flowframework.util.ParseUtils.isAdmin;
+import static org.opensearch.flowframework.util.ParseUtils.shouldUseResourceAuthz;
 import static org.opensearch.flowframework.util.RestHandlerUtils.getSourceContext;
 
 /**
@@ -64,18 +65,20 @@ public class SearchHandler {
 
     /**
      * Search workflows in global context
-     * @param request SearchRequest
-     * @param tenantId the tenant ID
+     *
+     * @param request        SearchRequest
+     * @param tenantId       the tenant ID
+     * @param resourceType
      * @param actionListener ActionListener
      */
-    public void search(SearchRequest request, String tenantId, ActionListener<SearchResponse> actionListener) {
+    public void search(SearchRequest request, String tenantId, String resourceType, ActionListener<SearchResponse> actionListener) {
         // AccessController should take care of letting the user with right permission to view the workflow
         User user = ParseUtils.getUserContext(client);
         try (ThreadContext.StoredContext context = client.threadPool().getThreadContext().stashContext()) {
             logger.info("Searching workflows in global context");
             SearchSourceBuilder searchSourceBuilder = request.source();
             searchSourceBuilder.fetchSource(getSourceContext(user, searchSourceBuilder));
-            validateRole(request, tenantId, user, actionListener, context);
+            validateRole(request, tenantId, user, resourceType, actionListener, context);
         } catch (Exception e) {
             logger.error("Failed to search workflows in global context", e);
             actionListener.onFailure(e);
@@ -87,6 +90,7 @@ public class SearchHandler {
      * @param request SearchRequest
      * @param tenantId the tenant id
      * @param user User
+     * @param resourceType the resource type
      * @param listener ActionListener
      * @param context ThreadContext
      */
@@ -94,10 +98,15 @@ public class SearchHandler {
         SearchRequest request,
         String tenantId,
         User user,
+        String resourceType,
         ActionListener<SearchResponse> listener,
         ThreadContext.StoredContext context
     ) {
-        if (user == null || !filterByBackendRole || isAdmin(user)) {
+        if (shouldUseResourceAuthz(resourceType)) {
+            // When resource-sharing feature is enabled,
+            // Search is handled DLS style in security plugin
+            doSearch(request, tenantId, ActionListener.runBefore(listener, context::restore));
+        } else if (user == null || !filterByBackendRole || isAdmin(user)) {
             // Case 1: user == null when 1. Security is disabled. 2. When user is super-admin
             // Case 2: If Security is enabled and filter is disabled, proceed with search as
             // user is already authenticated to hit this API.

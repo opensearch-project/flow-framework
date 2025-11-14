@@ -24,6 +24,7 @@ import org.opensearch.commons.authuser.User;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.core.rest.RestStatus;
 import org.opensearch.core.xcontent.NamedXContentRegistry;
+import org.opensearch.flowframework.common.CommonValue;
 import org.opensearch.flowframework.common.FlowFrameworkSettings;
 import org.opensearch.flowframework.exception.FlowFrameworkException;
 import org.opensearch.flowframework.indices.FlowFrameworkIndicesHandler;
@@ -67,6 +68,7 @@ import static org.opensearch.flowframework.common.CommonValue.STATE_FIELD;
 import static org.opensearch.flowframework.common.FlowFrameworkSettings.FILTER_BY_BACKEND_ROLES;
 import static org.opensearch.flowframework.util.ParseUtils.getUserContext;
 import static org.opensearch.flowframework.util.ParseUtils.resolveUserAndExecute;
+import static org.opensearch.flowframework.util.ParseUtils.verifyResourceAccessAndProcessRequest;
 
 /**
  * Transport Action to reprovision a provisioned template
@@ -150,19 +152,23 @@ public class ReprovisionWorkflowTransportAction extends HandledTransportAction<R
         User user = getUserContext(client);
 
         try (ThreadContext.StoredContext context = client.threadPool().getThreadContext().stashContext()) {
-            resolveUserAndExecute(
-                user,
-                workflowId,
-                tenantId,
-                filterByEnabled,
-                false,
-                flowFrameworkSettings.isMultiTenancyEnabled(),
-                listener,
+            verifyResourceAccessAndProcessRequest(
+                CommonValue.WORKFLOW_RESOURCE_TYPE,
                 () -> executeReprovisionRequest(request, tenantId, listener, context),
-                client,
-                sdkClient,
-                clusterService,
-                xContentRegistry
+                () -> resolveUserAndExecute(
+                    user,
+                    workflowId,
+                    tenantId,
+                    filterByEnabled,
+                    false,
+                    flowFrameworkSettings.isMultiTenancyEnabled(),
+                    listener,
+                    () -> executeReprovisionRequest(request, tenantId, listener, context),
+                    client,
+                    sdkClient,
+                    clusterService,
+                    xContentRegistry
+                )
             );
         } catch (Exception e) {
             String errorMessage = ParameterizedMessageFactory.INSTANCE.newMessage(

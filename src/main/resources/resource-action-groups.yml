@@ -1,0 +1,35 @@
+# For resource-access-management
+resource_types:
+  workflow:
+    workflow_read_only:
+      allowed_actions:
+        - "cluster:admin/opensearch/flow_framework/workflow/get"
+        - "cluster:admin/opensearch/flow_framework/workflow/search"
+
+    workflow_read_write:
+      allowed_actions:
+        - "cluster:admin/opensearch/flow_framework/workflow/*"
+        - "cluster:monitor/*"
+
+    workflow_full_access:
+      allowed_actions:
+        - "cluster:admin/opensearch/flow_framework/workflow/*"
+        - "cluster:monitor/*"
+        - "cluster:admin/security/resource/share"
+
+  workflow_state:
+    workflow_state_read_only:
+      allowed_actions:
+        - "cluster:admin/opensearch/flow_framework/workflow_state/get"
+        - "cluster:admin/opensearch/flow_framework/workflow_state/search"
+
+    workflow_state_read_write:
+      allowed_actions:
+        - "cluster:admin/opensearch/flow_framework/workflow_state/*"
+        - "cluster:monitor/*"
+
+    workflow_state_full_access:
+      allowed_actions:
+        - "cluster:admin/opensearch/flow_framework/workflow_state/*"
+        - "cluster:monitor/*"
+        - "cluster:admin/security/resource/share"

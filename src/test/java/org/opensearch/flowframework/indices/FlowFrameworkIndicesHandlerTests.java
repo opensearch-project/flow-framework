@@ -152,7 +152,8 @@ public class FlowFrameworkIndicesHandlerTests extends OpenSearchTestCase {
             null,
             null,
             null,
-            null
+            null,
+            Collections.emptyList()
         );
     }
 
@@ -330,7 +331,8 @@ public class FlowFrameworkIndicesHandlerTests extends OpenSearchTestCase {
             TestHelpers.randomUser(),
             Collections.emptyMap(),
             Collections.emptyList(),
-            null
+            null,
+            Collections.emptyList()
         );
         doAnswer(invocation -> {
             ActionListener<GetResponse> responseListener = invocation.getArgument(1);
@@ -360,7 +362,8 @@ public class FlowFrameworkIndicesHandlerTests extends OpenSearchTestCase {
             TestHelpers.randomUser(),
             Collections.emptyMap(),
             Collections.emptyList(),
-            null
+            null,
+            Collections.emptyList()
         );
         doAnswer(invocation -> {
             ActionListener<GetResponse> responseListener = invocation.getArgument(1);
@@ -390,7 +393,8 @@ public class FlowFrameworkIndicesHandlerTests extends OpenSearchTestCase {
             TestHelpers.randomUser(),
             Collections.emptyMap(),
             List.of(new ResourceCreated("w", "x", "y", "z")),
-            null
+            null,
+            Collections.emptyList()
         );
         doAnswer(invocation -> {
             ActionListener<GetResponse> responseListener = invocation.getArgument(1);

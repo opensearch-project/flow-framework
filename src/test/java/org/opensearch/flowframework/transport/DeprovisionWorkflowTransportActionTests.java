@@ -170,6 +170,13 @@ public class DeprovisionWorkflowTransportActionTests extends OpenSearchTestCase 
             return null;
         }).when(flowFrameworkIndicesHandler).doesTemplateExist(anyString(), any(), any(), any());
 
+        // putInitialStateToWorkflowState must invoke its ActionListener.onResponse
+        doAnswer(inv -> {
+            ActionListener<?> l = inv.getArgument(4);
+            l.onResponse(null);
+            return null;
+        }).when(flowFrameworkIndicesHandler).putInitialStateToWorkflowState(anyString(), any(), any(), any(), any());
+
         PlainActionFuture<WorkflowData> future = PlainActionFuture.newFuture();
         future.onResponse(WorkflowData.EMPTY);
         when(this.deleteConnectorStep.execute(anyString(), any(WorkflowData.class), anyMap(), anyMap(), anyMap(), nullable(String.class)))
@@ -291,6 +298,21 @@ public class DeprovisionWorkflowTransportActionTests extends OpenSearchTestCase 
             "These resources require the allow_delete parameter to deprovision: [index_name test-index].",
             exceptionCaptor.getValue().getMessage()
         );
+
+        // doesTemplateExist -> false for this test
+        doAnswer(inv -> {
+            java.util.function.Consumer<Boolean> cb = inv.getArgument(2);
+            cb.accept(Boolean.FALSE);
+            return null;
+        }).when(flowFrameworkIndicesHandler).doesTemplateExist(anyString(), any(), any(), any());
+
+        // deleteFlowFrameworkSystemIndexDoc must call onResponse
+        doAnswer(inv -> {
+            ActionListener<?> l = inv.getArgument(2);
+            l.onResponse(null);
+            return null;
+        }).when(flowFrameworkIndicesHandler).deleteFlowFrameworkSystemIndexDoc(anyString(), any(), any());
+
         verify(flowFrameworkIndicesHandler, times(0)).deleteResourceFromStateIndex(
             anyString(),
             nullable(String.class),

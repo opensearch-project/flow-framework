@@ -17,6 +17,7 @@ import org.opensearch.action.support.ActionFilters;
 import org.opensearch.action.support.HandledTransportAction;
 import org.opensearch.common.inject.Inject;
 import org.opensearch.core.action.ActionListener;
+import org.opensearch.flowframework.common.CommonValue;
 import org.opensearch.flowframework.exception.FlowFrameworkException;
 import org.opensearch.flowframework.transport.handler.SearchHandler;
 import org.opensearch.tasks.Task;
@@ -52,7 +53,7 @@ public class SearchWorkflowStateTransportAction extends HandledTransportAction<S
                 tenantId = request.preference();
                 request.preference(null);
             }
-            searchHandler.search(request, tenantId, actionListener);
+            searchHandler.search(request, tenantId, CommonValue.WORKFLOW_STATE_RESOURCE_TYPE, actionListener);
         } catch (Exception e) {
             String errorMessage = "Failed to search workflow states in global context";
             logger.error(errorMessage, e);

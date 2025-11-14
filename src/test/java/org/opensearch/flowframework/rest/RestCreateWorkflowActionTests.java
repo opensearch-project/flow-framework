@@ -84,7 +84,8 @@ public class RestCreateWorkflowActionTests extends OpenSearchTestCase {
             null,
             null,
             null,
-            null
+            null,
+            Collections.emptyList()
         );
 
         this.validTemplate = template.toJson();

@@ -10,6 +10,7 @@ package org.opensearch.flowframework.transport;
 
 import org.opensearch.action.ActionRequest;
 import org.opensearch.action.ActionRequestValidationException;
+import org.opensearch.action.DocRequest;
 import org.opensearch.common.unit.TimeValue;
 import org.opensearch.core.common.io.stream.StreamInput;
 import org.opensearch.core.common.io.stream.StreamOutput;
@@ -21,7 +22,7 @@ import java.io.IOException;
 /**
  * Transport request to reprovision a workflow
  */
-public class ReprovisionWorkflowRequest extends ActionRequest {
+public class ReprovisionWorkflowRequest extends ActionRequest implements DocRequest {
 
     /**
      * The workflow Id
@@ -122,5 +123,20 @@ public class ReprovisionWorkflowRequest extends ActionRequest {
      */
     public TimeValue getWaitForCompletionTimeout() {
         return this.waitForCompletionTimeout;
+    }
+
+    @Override
+    public String index() {
+        return CommonValue.GLOBAL_CONTEXT_INDEX;
+    }
+
+    @Override
+    public String id() {
+        return workflowId;
+    }
+
+    @Override
+    public String type() {
+        return CommonValue.WORKFLOW_RESOURCE_TYPE;
     }
 }

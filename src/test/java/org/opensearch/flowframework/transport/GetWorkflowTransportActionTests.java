@@ -120,7 +120,8 @@ public class GetWorkflowTransportActionTests extends OpenSearchTestCase {
             null,
             null,
             null,
-            null
+            null,
+            Collections.emptyList()
         );
 
         ThreadPool clientThreadPool = mock(ThreadPool.class);

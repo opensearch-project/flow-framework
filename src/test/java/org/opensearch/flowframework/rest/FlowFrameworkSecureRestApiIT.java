@@ -28,7 +28,6 @@ import org.junit.After;
 import org.junit.Before;
 
 import java.io.IOException;
-import java.security.SecureRandom;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -129,45 +128,6 @@ public class FlowFrameworkSecureRestApiIT extends FlowFrameworkRestTestCase {
         deleteUser(lionUser);
     }
 
-    /**
-     * Create an unguessable password. Simple password are weak due to https://tinyurl.com/383em9zk
-     * @return a random password.
-     */
-    public static String generatePassword(String username) {
-        String upperCase = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
-        String lowerCase = "abcdefghijklmnopqrstuvwxyz";
-        String digits = "0123456789";
-        String special = "_";
-        String characters = upperCase + lowerCase + digits + special;
-
-        SecureRandom rng = new SecureRandom();
-
-        // Ensure password includes at least one character from each set
-        char[] password = new char[15];
-        password[0] = upperCase.charAt(rng.nextInt(upperCase.length()));
-        password[1] = lowerCase.charAt(rng.nextInt(lowerCase.length()));
-        password[2] = digits.charAt(rng.nextInt(digits.length()));
-        password[3] = special.charAt(rng.nextInt(special.length()));
-
-        for (int i = 4; i < 15; i++) {
-            char nextChar;
-            do {
-                nextChar = characters.charAt(rng.nextInt(characters.length()));
-            } while (username.indexOf(nextChar) > -1);
-            password[i] = nextChar;
-        }
-
-        // Shuffle the array to ensure the first 4 characters are not always in the same position
-        for (int i = password.length - 1; i > 0; i--) {
-            int index = rng.nextInt(i + 1);
-            char temp = password[index];
-            password[index] = password[i];
-            password[i] = temp;
-        }
-
-        return new String(password);
-    }
-
     public void testCreateWorkflowWithReadAccess() throws Exception {
         Template template = TestHelpers.createTemplateFromFile("register-deploylocalsparseencodingmodel.json");
         ResponseException exception = expectThrows(ResponseException.class, () -> createWorkflow(bobClient, template));
@@ -219,7 +179,12 @@ public class FlowFrameworkSecureRestApiIT extends FlowFrameworkRestTestCase {
     public void testGetWorkflowWithReadAccess() throws Exception {
         // No permissions to create, so we assert only that the response status isnt forbidden
         ResponseException exception = expectThrows(ResponseException.class, () -> getWorkflow(bobClient, "test"));
-        assertEquals(RestStatus.NOT_FOUND, TestHelpers.restStatus(exception.getResponse()));
+        if (isResourceSharingFeatureEnabled()) {
+            // 403 because resource is not shared
+            assertEquals(RestStatus.FORBIDDEN.getStatus(), exception.getResponse().getStatusLine().getStatusCode());
+        } else {
+            assertEquals(RestStatus.NOT_FOUND, TestHelpers.restStatus(exception.getResponse()));
+        }
     }
 
     public void testFilterByDisabled() throws Exception {
@@ -228,8 +193,15 @@ public class FlowFrameworkSecureRestApiIT extends FlowFrameworkRestTestCase {
         Response aliceWorkflow = createWorkflow(aliceClient, template);
         Map<String, Object> responseMap = entityAsMap(aliceWorkflow);
         String workflowId = (String) responseMap.get(WORKFLOW_ID);
-        Response response = getWorkflow(catClient, workflowId);
-        assertEquals(RestStatus.OK, TestHelpers.restStatus(response));
+
+        // when resources sharing is enabled, we throw 403
+        if (isResourceSharingFeatureEnabled()) {
+            ResponseException exception = expectThrows(ResponseException.class, () -> getWorkflow(catClient, workflowId));
+            assertEquals(exception.getResponse().getStatusLine().getStatusCode(), RestStatus.FORBIDDEN.getStatus());
+        } else {
+            Response response = getWorkflow(catClient, workflowId);
+            assertEquals(RestStatus.OK, TestHelpers.restStatus(response));
+        }
     }
 
     public void testSearchWorkflowWithReadAccess() throws Exception {
@@ -252,9 +224,15 @@ public class FlowFrameworkSecureRestApiIT extends FlowFrameworkRestTestCase {
 
         Map<String, Object> responseMap = entityAsMap(response);
         String workflowId = (String) responseMap.get(WORKFLOW_ID);
-        // No permissions to create or provision, so we assert only that the response status isnt forbidden
-        Response searchResponse = getWorkflowStatus(bobClient, workflowId, false);
-        assertEquals(RestStatus.OK, TestHelpers.restStatus(searchResponse));
+        if (isResourceSharingFeatureEnabled()) {
+            ResponseException exception = expectThrows(ResponseException.class, () -> getWorkflowStatus(bobClient, workflowId, false));
+            assertTrue(exception.getMessage().contains("Failed to get workflow status"));
+            assertEquals(exception.getResponse().getStatusLine().getStatusCode(), RestStatus.FORBIDDEN.getStatus());
+        } else {
+            // No permissions to create or provision, so we assert only that the response status isnt forbidden
+            Response searchResponse = getWorkflowStatus(bobClient, workflowId, false);
+            assertEquals(RestStatus.OK, TestHelpers.restStatus(searchResponse));
+        }
     }
 
     public void testSearchWorkflowStateWithReadAccess() throws Exception {
@@ -266,18 +244,26 @@ public class FlowFrameworkSecureRestApiIT extends FlowFrameworkRestTestCase {
         // No permissions to create, so we assert only that the response status isnt forbidden
         String termIdQuery = "{\"query\":{\"bool\":{\"filter\":[{\"term\":{\"ids\":\"test\"}}]}}}";
         SearchResponse searchResponse = searchWorkflowState(bobClient, termIdQuery);
+        // when resource sharing is enabled this would return an empty response
         assertEquals(RestStatus.OK, searchResponse.status());
     }
 
-    public void testCreateWorkflowWithNoBackendRole() throws IOException {
+    public void testCreateWorkflowWithNoBackendRole() throws Exception {
         enableFilterBy();
         // User Dog has FF full access, but has no backend role
         // When filter by is enabled, we block creating workflows
         Template template = TestHelpers.createTemplateFromFile("register-deploylocalsparseencodingmodel.json");
-        Exception exception = expectThrows(IOException.class, () -> { createWorkflow(dogClient, template); });
-        assertTrue(
-            exception.getMessage().contains("Filter by backend roles is enabled, but User dog does not have any backend roles configured")
-        );
+        if (isResourceSharingFeatureEnabled()) {
+            // If resource sharing is enabled, we allow creation of workflows regardless of the user's backend roles
+            Response dogWorkflow = createWorkflow(dogClient, template);
+            assertEquals(RestStatus.CREATED, TestHelpers.restStatus(dogWorkflow));
+        } else {
+            Exception exception = expectThrows(IOException.class, () -> { createWorkflow(dogClient, template); });
+            assertTrue(
+                exception.getMessage()
+                    .contains("Filter by backend roles is enabled, but User dog does not have any backend roles configured")
+            );
+        }
     }
 
     public void testDeprovisionWorkflowWithWriteAccess() throws Exception {
@@ -299,7 +285,12 @@ public class FlowFrameworkSecureRestApiIT extends FlowFrameworkRestTestCase {
         String workflowId = (String) responseMap.get(WORKFLOW_ID);
         // User Cat has FF full access, but is part of different backend role so Cat should not be able to access alice workflow
         ResponseException exception = expectThrows(ResponseException.class, () -> getWorkflow(catClient, workflowId));
-        assertTrue(exception.getMessage().contains("User does not have permissions to access workflow: " + workflowId));
+        if (isResourceSharingFeatureEnabled()) {
+            assertTrue(exception.getMessage().contains("Failed to get workflow."));
+            assertEquals(exception.getResponse().getStatusLine().getStatusCode(), RestStatus.FORBIDDEN.getStatus());
+        } else {
+            assertTrue(exception.getMessage().contains("User does not have permissions to access workflow: " + workflowId));
+        }
     }
 
     public void testGetWorkflowFilterbyEnabledForAdmin() throws Exception {
@@ -440,9 +431,20 @@ public class FlowFrameworkSecureRestApiIT extends FlowFrameworkRestTestCase {
         response = deleteWorkflow(aliceClient, workflowId);
         assertEquals(RestStatus.OK, TestHelpers.restStatus(response));
 
-        // Invoke status API with failure
-        ResponseException exception = expectThrows(ResponseException.class, () -> getWorkflowStatus(aliceClient, workflowId, false));
-        assertEquals(RestStatus.NOT_FOUND.getStatus(), exception.getResponse().getStatusLine().getStatusCode());
+        // Wait for state doc to be deleted asynchronously
+        assertBusy(() -> {
+            // Invoke status API with failure
+            ResponseException exception = expectThrows(ResponseException.class, () -> getWorkflowStatus(aliceClient, workflowId, false));
+            if (isResourceSharingFeatureEnabled()) {
+                // sample log message: No sharing info found for 'pmaAdZoBL3PmSyJoha0C'. Action
+                // cluster:admin/opensearch/flow_framework/workflow_state/get is not allowed.
+                // since record is deleted corresponding sharing record will also be deleted and thus we show 403 for non-existent sharing
+                // records,
+                assertEquals(RestStatus.FORBIDDEN.getStatus(), exception.getResponse().getStatusLine().getStatusCode());
+            } else {
+                assertEquals(RestStatus.NOT_FOUND.getStatus(), exception.getResponse().getStatusLine().getStatusCode());
+            }
+        }, 30, TimeUnit.SECONDS);
     }
 
     public void testUpdateWorkflowEnabledForAdmin() throws Exception {
@@ -510,11 +512,18 @@ public class FlowFrameworkSecureRestApiIT extends FlowFrameworkRestTestCase {
         String workflowId = (String) responseMap.get(WORKFLOW_ID);
 
         enableFilterBy();
-        // User Fish has FF full access, and has "odfe" backend role which is one of Alice's backend role, so
-        // Fish should be able to update workflows created by Alice. But the workflow's backend role should
-        // not be replaced as Fish's backend roles.
-        Response updateResponse = updateWorkflow(fishClient, workflowId, template);
-        assertEquals(RestStatus.CREATED, TestHelpers.restStatus(updateResponse));
+        if (isResourceSharingFeatureEnabled()) {
+            ResponseException exception = expectThrows(ResponseException.class, () -> updateWorkflow(fishClient, workflowId, template));
+            // we show 403 because fishClient doesn't have resource access
+            assertEquals(RestStatus.FORBIDDEN.getStatus(), exception.getResponse().getStatusLine().getStatusCode());
+            // it should be 200 after sharing but we test that in a resource-sharing test class
+        } else {
+            // User Fish has FF full access, and has "odfe" backend role which is one of Alice's backend role, so
+            // Fish should be able to update workflows created by Alice. But the workflow's backend role should
+            // not be replaced as Fish's backend roles.
+            Response updateResponse = updateWorkflow(fishClient, workflowId, template);
+            assertEquals(RestStatus.CREATED, TestHelpers.restStatus(updateResponse));
+        }
     }
 
     public void testUpdateWorkflowWithNoFFAccess() throws Exception {

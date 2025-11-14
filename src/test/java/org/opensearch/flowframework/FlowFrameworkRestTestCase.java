@@ -9,7 +9,6 @@
 package org.opensearch.flowframework;
 
 import com.google.gson.JsonArray;
-import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.hc.client5.http.auth.AuthScope;
 import org.apache.hc.client5.http.auth.UsernamePasswordCredentials;
 import org.apache.hc.client5.http.impl.auth.BasicCredentialsProvider;
@@ -26,6 +25,7 @@ import org.apache.hc.core5.http.nio.ssl.TlsStrategy;
 import org.apache.hc.core5.reactor.ssl.TlsDetails;
 import org.apache.hc.core5.ssl.SSLContextBuilder;
 import org.apache.hc.core5.util.Timeout;
+import org.opensearch.OpenSearchStatusException;
 import org.opensearch.action.ingest.GetPipelineResponse;
 import org.opensearch.action.search.SearchResponse;
 import org.opensearch.client.Request;
@@ -37,11 +37,13 @@ import org.opensearch.common.settings.Settings;
 import org.opensearch.common.unit.TimeValue;
 import org.opensearch.common.util.concurrent.ThreadContext;
 import org.opensearch.common.xcontent.LoggingDeprecationHandler;
+import org.opensearch.common.xcontent.XContentFactory;
 import org.opensearch.common.xcontent.json.JsonXContent;
 import org.opensearch.core.rest.RestStatus;
 import org.opensearch.core.xcontent.DeprecationHandler;
 import org.opensearch.core.xcontent.MediaType;
 import org.opensearch.core.xcontent.NamedXContentRegistry;
+import org.opensearch.core.xcontent.XContentBuilder;
 import org.opensearch.core.xcontent.XContentParser;
 import org.opensearch.flowframework.common.CommonValue;
 import org.opensearch.flowframework.model.ProvisioningProgress;
@@ -56,14 +58,21 @@ import org.junit.After;
 import org.junit.Before;
 
 import java.io.IOException;
+import java.security.SecureRandom;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
+
+import org.awaitility.Awaitility;
 
 import static org.opensearch.core.xcontent.XContentParserUtils.ensureExpectedToken;
 import static org.opensearch.flowframework.common.CommonValue.WORKFLOW_URI;
@@ -72,6 +81,8 @@ import static org.opensearch.flowframework.common.CommonValue.WORKFLOW_URI;
  * Base rest integration test class, supports security enabled/disabled cluster
  */
 public abstract class FlowFrameworkRestTestCase extends OpenSearchRestTestCase {
+
+    public static final String SHARE_WORKFLOW_URI = "/_plugins/_security/api/resource/share";
 
     @Before
     protected void setUpSettings() throws Exception {
@@ -296,11 +307,42 @@ public abstract class FlowFrameworkRestTestCase extends OpenSearchRestTestCase {
     }
 
     /**
-     * Create an unique password. Simple password are weak due to https://tinyurl.com/383em9zk
+     * Create an unguessable password. Simple password are weak due to https://tinyurl.com/383em9zk
      * @return a random password.
      */
     public static String generatePassword(String username) {
-        return RandomStringUtils.random(15, true, true);
+        String upperCase = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+        String lowerCase = "abcdefghijklmnopqrstuvwxyz";
+        String digits = "0123456789";
+        String special = "_";
+        String characters = upperCase + lowerCase + digits + special;
+
+        SecureRandom rng = new SecureRandom();
+
+        // Ensure password includes at least one character from each set
+        char[] password = new char[15];
+        password[0] = upperCase.charAt(rng.nextInt(upperCase.length()));
+        password[1] = lowerCase.charAt(rng.nextInt(lowerCase.length()));
+        password[2] = digits.charAt(rng.nextInt(digits.length()));
+        password[3] = special.charAt(rng.nextInt(special.length()));
+
+        for (int i = 4; i < 15; i++) {
+            char nextChar;
+            do {
+                nextChar = characters.charAt(rng.nextInt(characters.length()));
+            } while (username.indexOf(nextChar) > -1);
+            password[i] = nextChar;
+        }
+
+        // Shuffle the array to ensure the first 4 characters are not always in the same position
+        for (int i = password.length - 1; i > 0; i--) {
+            int index = rng.nextInt(i + 1);
+            char temp = password[index];
+            password[index] = password[i];
+            password[i] = temp;
+        }
+
+        return new String(password);
     }
 
     /**
@@ -485,7 +527,7 @@ public abstract class FlowFrameworkRestTestCase extends OpenSearchRestTestCase {
      * Helper method to invoke the Reprovision Workflow API
      * @param client the rest client
      * @param workflowId the document id
-     * @param templateFields the template to reprovision
+     * @param template the template to reprovision
      * @throws Exception if the request fails
      * @return a rest response
      */
@@ -984,5 +1026,212 @@ public abstract class FlowFrameworkRestTestCase extends OpenSearchRestTestCase {
             response.getEntity().getContent()
         ).list();
         return pluginsList.stream().map(o -> ((Map<String, Object>) o).get("component").toString()).collect(Collectors.toList());
+    }
+
+    protected boolean isResourceSharingFeatureEnabled() {
+        return Optional.ofNullable(System.getProperty("resource_sharing.enabled")).map("true"::equalsIgnoreCase).orElse(false);
+    }
+
+    public static Response shareConfig(RestClient client, Map<String, String> params, String payload) throws IOException {
+        return TestHelpers.makeRequest(client, "PUT", SHARE_WORKFLOW_URI, params, payload, null);
+    }
+
+    public static Response patchSharingInfo(RestClient client, Map<String, String> params, String payload) throws IOException {
+        return TestHelpers.makeRequest(client, "PATCH", SHARE_WORKFLOW_URI, params, payload, null);
+    }
+
+    public static String shareWithUserPayload(String resourceId, String resourceIndex, String accessLevel, String user) {
+        return String.format(Locale.ROOT, """
+            {
+              "resource_id": "%s",
+              "resource_type": "%s",
+              "share_with": {
+                "%s" : {
+                    "users": ["%s"]
+                }
+              }
+            }
+            """, resourceId, resourceIndex, accessLevel, user);
+    }
+
+    public enum Recipient {
+        USERS("users"),
+        ROLES("roles"),
+        BACKEND_ROLES("backend_roles");
+
+        private final String name;
+
+        Recipient(String name) {
+            this.name = name;
+        }
+
+        public String getName() {
+            return name;
+        }
+    }
+
+    public static class PatchSharingInfoPayloadBuilder {
+        private String configId;
+        private String configType;
+
+        // accessLevel -> recipientType -> principals
+        private final Map<String, Map<String, Set<String>>> share = new HashMap<>();
+        private final Map<String, Map<String, Set<String>>> revoke = new HashMap<>();
+
+        public PatchSharingInfoPayloadBuilder configId(String resourceId) {
+            this.configId = resourceId;
+            return this;
+        }
+
+        public PatchSharingInfoPayloadBuilder configType(String resourceType) {
+            this.configType = resourceType;
+            return this;
+        }
+
+        public void share(Map<Recipient, Set<String>> recipients, String accessLevel) {
+            mergeInto(share, accessLevel, recipients);
+        }
+
+        public void revoke(Map<Recipient, Set<String>> recipients, String accessLevel) {
+            mergeInto(revoke, accessLevel, recipients);
+        }
+
+        /* -------------------------------- Build -------------------------------- */
+
+        private String buildJsonString(Map<String, Map<String, Set<String>>> input) {
+            List<String> pieces = new ArrayList<>();
+            for (Map.Entry<String, Map<String, Set<String>>> e : input.entrySet()) {
+                try {
+                    String recipientsJson = toRecipientsJson(e.getValue());
+                    pieces.add(String.format(Locale.ROOT, "\"%s\" : %s", e.getKey(), recipientsJson));
+                } catch (IOException ex) {
+                    throw new RuntimeException(ex);
+                }
+            }
+            return String.join(",", pieces);
+        }
+
+        public String build() {
+            String allShares = buildJsonString(share);
+            String allRevokes = buildJsonString(revoke);
+            return String.format(Locale.ROOT, """
+                {
+                  "resource_id": "%s",
+                  "resource_type": "%s",
+                  "add": {
+                    %s
+                  },
+                  "revoke": {
+                    %s
+                  }
+                }
+                """, configId, configType, allShares, allRevokes);
+        }
+
+        /* ------------------------------ Internals ------------------------------ */
+
+        private static void mergeInto(
+            Map<String, Map<String, Set<String>>> target,
+            String accessLevel,
+            Map<Recipient, Set<String>> incoming
+        ) {
+            if (incoming == null || incoming.isEmpty()) return;
+            Map<String, Set<String>> existing = target.computeIfAbsent(accessLevel, k -> new HashMap<>());
+            for (Map.Entry<Recipient, Set<String>> e : incoming.entrySet()) {
+                if (e.getKey() == null) continue;
+                if (e.getValue() == null || e.getValue().isEmpty()) continue;
+                existing.computeIfAbsent(e.getKey().getName(), k -> new HashSet<>()).addAll(e.getValue());
+            }
+        }
+
+        private static String toRecipientsJson(Map<String, Set<String>> recipients) throws IOException {
+            if (recipients == null) {
+                recipients = Collections.emptyMap();
+            }
+
+            XContentBuilder builder = XContentFactory.jsonBuilder();
+            builder.startObject();
+
+            for (Recipient recipient : Recipient.values()) {
+                String key = recipient.getName();
+                if (recipients.containsKey(key)) {
+                    writeArray(builder, key, recipients.get(key));
+                }
+            }
+
+            builder.endObject();
+            return builder.toString();
+        }
+
+        private static void writeArray(XContentBuilder builder, String field, Set<String> values) throws IOException {
+            builder.startArray(field);
+            if (values != null) {
+                for (String v : values) {
+                    builder.value(v);
+                }
+            }
+            builder.endArray();
+        }
+    }
+
+    public static boolean isForbidden(Exception e) {
+        if (e instanceof OpenSearchStatusException) {
+            return ((OpenSearchStatusException) e).status() == RestStatus.FORBIDDEN;
+        }
+        if (e instanceof ResponseException) {
+            return ((ResponseException) e).getResponse().getStatusLine().getStatusCode() == 403;
+        }
+        return false;
+    }
+
+    private static final Duration RS_WAIT_TIMEOUT = Duration.ofSeconds(30);
+    private static final Duration RS_POLL_INTERVAL = Duration.ofMillis(200);
+
+    // Core waiter: visible when the callable returns 200 OK; 403 means "not yet", anything else fails fast.
+    private void waitUntilVisible(java.util.concurrent.Callable<Response> op) {
+        Awaitility.await().atMost(RS_WAIT_TIMEOUT).pollInterval(RS_POLL_INTERVAL).until(() -> {
+            try {
+                Response r = op.call();
+                return TestHelpers.restStatus(r) == RestStatus.OK;
+            } catch (Exception e) {
+                if (isForbidden(e)) {
+                    // eventual consistency: not visible yet
+                    return false;
+                }
+                // unexpected error: fail fast
+                throw e;
+            }
+        });
+    }
+
+    // Core waiter: non-visible when the callable throws 403; 200 means "still visible", anything else fails fast.
+    private void waitUntilForbidden(java.util.concurrent.Callable<Response> op) {
+        Awaitility.await().atMost(RS_WAIT_TIMEOUT).pollInterval(RS_POLL_INTERVAL).until(() -> {
+            try {
+                op.call(); // 200 => still visible
+                return false;
+            } catch (Exception e) {
+                if (isForbidden(e)) {
+                    return true; // forbidden now
+                }
+                throw e; // unexpected error: fail fast
+            }
+        });
+    }
+
+    protected void waitForWorkflowSharingVisibility(String workflowId, RestClient client) {
+        waitUntilVisible(() -> getWorkflow(client, workflowId));
+    }
+
+    protected void waitForWorkflowRevokeNonVisibility(String workflowId, RestClient client) {
+        waitUntilForbidden(() -> getWorkflow(client, workflowId));
+    }
+
+    protected void waitForWorkflowStateSharingVisibility(String workflowId, RestClient client) {
+        waitUntilVisible(() -> getWorkflowStatus(client, workflowId, false));
+    }
+
+    protected void waitForWorkflowStateRevokeNonVisibility(String workflowId, RestClient client) {
+        waitUntilForbidden(() -> getWorkflowStatus(client, workflowId, false));
     }
 }

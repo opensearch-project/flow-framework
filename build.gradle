@@ -48,6 +48,7 @@ buildscript {
         parssonVersion = "1.1.7"
         swaggerVersion = "2.1.35"
         swaggerCoreVersion = "2.2.40"
+        awaitilityVersion= "4.3.0"
     }
 
     repositories {
@@ -95,6 +96,7 @@ opensearchplugin {
     classname = "${projectPath}.${pathToPlugin}.${pluginClassName}"
     licenseFile = rootProject.file('LICENSE')
     noticeFile = rootProject.file('NOTICE')
+    extendedPlugins = ['opensearch-security;optional=true']
 }
 
 dependencyLicenses.enabled = false
@@ -193,6 +195,9 @@ configurations {
 }
 
 dependencies {
+    // For resource access control
+    compileOnly("org.opensearch:opensearch-security-spi:${opensearch_build}")
+
     implementation("org.opensearch:opensearch:${opensearch_version}")
     api("org.opensearch:opensearch-ml-client:${opensearch_build}")
     // json, jsonpath, and commons-text are required by MLClient but must be provided by calling plugins
@@ -251,6 +256,8 @@ dependencies {
 
     testImplementation("org.junit.jupiter:junit-jupiter:${junitJupiterVersion}")
     testImplementation("com.fasterxml.jackson.datatype:jackson-datatype-jsr310:${versions.jackson_databind}")
+
+    testImplementation("org.awaitility:awaitility:${awaitilityVersion}")
 
     // ZipArchive dependencies used for integration tests
     zipArchive("org.opensearch.plugin:opensearch-job-scheduler:${opensearch_build}")
@@ -354,6 +361,8 @@ integTest {
     systemProperty('user', user)
     systemProperty('password', password)
 
+    systemProperty "resource_sharing.enabled", System.getProperty("resource_sharing.enabled")
+
     // Only tenant aware test if set
     if (System.getProperty("tests.rest.tenantaware") == "true") {
         filter {
@@ -382,6 +391,7 @@ integTest {
     if (System.getProperty("https") == null || System.getProperty("https") == "false") {
         filter {
             excludeTestsMatching "org.opensearch.flowframework.rest.FlowFrameworkSecureRestApiIT"
+            excludeTestsMatching "org.opensearch.flowframework.rest.FlowFrameworkResourceSharingRestApiIT"
         }
     }
 
@@ -389,6 +399,7 @@ integTest {
     if (System.getProperty("https") != null && System.getProperty("https") == "true") {
         filter {
             includeTestsMatching "org.opensearch.flowframework.rest.FlowFrameworkSecureRestApiIT"
+            includeTestsMatching "org.opensearch.flowframework.rest.FlowFrameworkResourceSharingRestApiIT"
             excludeTestsMatching "org.opensearch.flowframework.rest.FlowFrameworkRestApiIT"
             excludeTestsMatching "org.opensearch.flowframework.rest.*TenantAwareIT"
         }
@@ -513,6 +524,10 @@ testClusters.integTest {
                 '".plugins-flow-framework-state"' +
                 ']'
         )
+        if (System.getProperty("resource_sharing.enabled") == "true") {
+            setting("plugins.security.experimental.resource_sharing.enabled", "true")
+            setting("plugins.security.experimental.resource_sharing.protected_types", "[\"workflow\", \"workflow_state\"]")
+        }
         setSecure(true)
     }
 
@@ -545,7 +560,13 @@ testClusters.integTest {
     if (System.getProperty("opensearch.debug") != null) {
         def debugPort = 5005
         nodes.forEach { node ->
-            node.jvmArgs("-agentlib:jdwp=transport=dt_socket,server=n,suspend=y,address=*:${debugPort}")
+            // server=n,suspend=y -> node tries to connect to a debugger and hence test runs fails with
+            //            Exec output and error:
+            //            | Output for ./bin/opensearch-plugin:ERROR: transport error 202: connect failed: Connection refused
+            //            | ERROR: JDWP Transport dt_socket failed to initialize, TRANSPORT_INIT(510)
+            //                    | JDWP exit error AGENT_ERROR_TRANSPORT_INIT(197): No transports initialized [src/jdk.jdwp.agent/share/native/libjdwp/debugInit.c:700].
+            // So instead, we listen to a debugger by saying server=y and suspend=n
+            node.jvmArgs("-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:${debugPort}")
             debugPort += 1
         }
     }
@@ -573,6 +594,8 @@ task integTestRemote(type: RestIntegTestTask) {
     systemProperty 'cluster.number_of_nodes', "${_numNodes}"
     systemProperty 'tests.security.manager', 'false'
 
+    systemProperty "resource_sharing.enabled", System.getProperty("resource_sharing.enabled")
+
     // Run tests with remote cluster only if rest case is defined
     if (System.getProperty("tests.rest.cluster") != null) {
         filter {
@@ -584,6 +607,7 @@ task integTestRemote(type: RestIntegTestTask) {
     if (System.getProperty("https") == null || System.getProperty("https") == "false") {
         filter {
             excludeTestsMatching "org.opensearch.flowframework.rest.FlowFrameworkSecureRestApiIT"
+            excludeTestsMatching "org.opensearch.flowframework.rest.FlowFrameworkResourceSharingRestApiIT"
         }
     }
 
@@ -592,6 +616,7 @@ task integTestRemote(type: RestIntegTestTask) {
         filter {
             includeTestsMatching "org.opensearch.flowframework.rest.FlowFrameworkSecureRestApiIT"
             excludeTestsMatching "org.opensearch.flowframework.rest.FlowFrameworkRestApiIT"
+            includeTestsMatching "org.opensearch.flowframework.rest.FlowFrameworkResourceSharingRestApiIT"
         }
     }
 }

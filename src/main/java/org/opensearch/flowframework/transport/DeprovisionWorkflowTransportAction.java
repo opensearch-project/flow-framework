@@ -25,6 +25,7 @@ import org.opensearch.core.action.ActionListener;
 import org.opensearch.core.common.Strings;
 import org.opensearch.core.rest.RestStatus;
 import org.opensearch.core.xcontent.NamedXContentRegistry;
+import org.opensearch.flowframework.common.CommonValue;
 import org.opensearch.flowframework.common.FlowFrameworkSettings;
 import org.opensearch.flowframework.exception.FlowFrameworkException;
 import org.opensearch.flowframework.indices.FlowFrameworkIndicesHandler;
@@ -64,6 +65,7 @@ import static org.opensearch.flowframework.common.WorkflowResources.getDeprovisi
 import static org.opensearch.flowframework.common.WorkflowResources.getResourceByWorkflowStep;
 import static org.opensearch.flowframework.util.ParseUtils.getUserContext;
 import static org.opensearch.flowframework.util.ParseUtils.resolveUserAndExecute;
+import static org.opensearch.flowframework.util.ParseUtils.verifyResourceAccessAndProcessRequest;
 
 /**
  * Transport Action to deprovision a workflow from a stored use case template
@@ -142,21 +144,24 @@ public class DeprovisionWorkflowTransportAction extends HandledTransportAction<W
 
         // Stash thread context to interact with system index
         try (ThreadContext.StoredContext context = client.threadPool().getThreadContext().stashContext()) {
-            resolveUserAndExecute(
-                user,
-                workflowId,
-                tenantId,
-                filterByEnabled,
-                true,
-                flowFrameworkSettings.isMultiTenancyEnabled(),
-                listener,
+            verifyResourceAccessAndProcessRequest(
+                CommonValue.WORKFLOW_RESOURCE_TYPE,
                 () -> executeDeprovisionRequest(request, tenantId, listener, context, user),
-                client,
-                sdkClient,
-                clusterService,
-                xContentRegistry
+                () -> resolveUserAndExecute(
+                    user,
+                    workflowId,
+                    tenantId,
+                    filterByEnabled,
+                    true,
+                    flowFrameworkSettings.isMultiTenancyEnabled(),
+                    listener,
+                    () -> executeDeprovisionRequest(request, tenantId, listener, context, user),
+                    client,
+                    sdkClient,
+                    clusterService,
+                    xContentRegistry
+                )
             );
-
         } catch (Exception e) {
             String errorMessage = "Failed to retrieve template from global context.";
             logger.error(errorMessage, e);
@@ -186,6 +191,7 @@ public class DeprovisionWorkflowTransportAction extends HandledTransportAction<W
                         workflowId,
                         tenantId,
                         response.getWorkflowState().resourcesCreated(),
+                        response.getWorkflowState().getAllSharedPrincipals(),
                         deleteAllowedResources,
                         listener,
                         user
@@ -205,6 +211,7 @@ public class DeprovisionWorkflowTransportAction extends HandledTransportAction<W
         String workflowId,
         String tenantId,
         List<ResourceCreated> resourcesCreated,
+        List<String> allSharedPrincipals,
         Set<String> deleteAllowedResources,
         ActionListener<WorkflowResponse> listener,
         User user
@@ -323,13 +330,14 @@ public class DeprovisionWorkflowTransportAction extends HandledTransportAction<W
             logger.info("Resources requiring allow_delete: {}.", deleteNotAllowed);
         }
         // This is a redundant best-effort backup to the incremental deletion done earlier
-        updateWorkflowState(workflowId, tenantId, remainingResources, deleteNotAllowed, listener, user);
+        updateWorkflowState(workflowId, tenantId, remainingResources, allSharedPrincipals, deleteNotAllowed, listener, user);
     }
 
     private void updateWorkflowState(
         String workflowId,
         String tenantId,
         List<ResourceCreated> remainingResources,
+        List<String> allSharedPrincipals,
         List<ResourceCreated> deleteNotAllowed,
         ActionListener<WorkflowResponse> listener,
         User user
@@ -342,9 +350,17 @@ public class DeprovisionWorkflowTransportAction extends HandledTransportAction<W
                         workflowId,
                         tenantId,
                         user,
+                        allSharedPrincipals,
                         ActionListener.wrap(indexResponse -> {
                             logger.info("Reset workflow {} state to NOT_STARTED", workflowId);
-                        }, exception -> { logger.error("Failed to reset to initial workflow state for {}", workflowId, exception); })
+                            // return workflow ID
+                            listener.onResponse(new WorkflowResponse(workflowId));
+                        }, exception -> {
+                            logger.error("Failed to reset to initial workflow state for {}", workflowId, exception);
+                            listener.onFailure(
+                                new FlowFrameworkException("Failed to reset workflow state", ExceptionsHelper.status(exception))
+                            );
+                        })
                     );
                 } else {
                     flowFrameworkIndicesHandler.deleteFlowFrameworkSystemIndexDoc(
@@ -352,11 +368,16 @@ public class DeprovisionWorkflowTransportAction extends HandledTransportAction<W
                         tenantId,
                         ActionListener.wrap(deleteResponse -> {
                             logger.info("Deleted workflow {} state", workflowId);
-                        }, exception -> { logger.error("Failed to delete workflow state for {}", workflowId, exception); })
+                            // return workflow ID
+                            listener.onResponse(new WorkflowResponse(workflowId));
+                        }, exception -> {
+                            logger.error("Failed to delete workflow state for {}", workflowId, exception);
+                            listener.onFailure(
+                                new FlowFrameworkException("Failed to reset workflow state", ExceptionsHelper.status(exception))
+                            );
+                        })
                     );
                 }
-                // return workflow ID
-                listener.onResponse(new WorkflowResponse(workflowId));
             }, listener);
         } else {
             // Remaining resources only includes ones we tried to delete

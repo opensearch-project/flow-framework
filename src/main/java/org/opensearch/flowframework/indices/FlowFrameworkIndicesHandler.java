@@ -410,9 +410,16 @@ public class FlowFrameworkIndicesHandler {
      * @param workflowId the workflowId, corresponds to document ID
      * @param tenantId the tenant id
      * @param user passes the user that created the workflow
+     * @param allSharedPrincipals the entities this workflow is shared with
      * @param listener action listener
      */
-    public void putInitialStateToWorkflowState(String workflowId, String tenantId, User user, ActionListener<IndexResponse> listener) {
+    public void putInitialStateToWorkflowState(
+        String workflowId,
+        String tenantId,
+        User user,
+        List<String> allSharedPrincipals,
+        ActionListener<IndexResponse> listener
+    ) {
         WorkflowState state = WorkflowState.builder()
             .workflowId(workflowId)
             .state(State.NOT_STARTED.name())
@@ -421,6 +428,7 @@ public class FlowFrameworkIndicesHandler {
             .resourcesCreated(Collections.emptyList())
             .userOutputs(Collections.emptyMap())
             .tenantId(tenantId)
+            .allSharedPrincipals(allSharedPrincipals)
             .build();
         initWorkflowStateIndexIfAbsent(ActionListener.wrap(indexCreated -> {
             if (!indexCreated) {

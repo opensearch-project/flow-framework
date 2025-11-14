@@ -10,6 +10,7 @@ package org.opensearch.flowframework.transport;
 
 import org.opensearch.action.ActionRequest;
 import org.opensearch.action.ActionRequestValidationException;
+import org.opensearch.action.DocRequest;
 import org.opensearch.common.Nullable;
 import org.opensearch.common.unit.TimeValue;
 import org.opensearch.core.common.io.stream.StreamInput;
@@ -28,7 +29,7 @@ import static org.opensearch.flowframework.common.CommonValue.WAIT_FOR_COMPLETIO
 /**
  * Transport Request to create, provision, and deprovision a workflow
  */
-public class WorkflowRequest extends ActionRequest {
+public class WorkflowRequest extends ActionRequest implements DocRequest {
 
     /**
      * The documentId of the workflow entry within the Global Context index
@@ -282,5 +283,20 @@ public class WorkflowRequest extends ActionRequest {
     @Override
     public ActionRequestValidationException validate() {
         return null;
+    }
+
+    @Override
+    public String index() {
+        return CommonValue.GLOBAL_CONTEXT_INDEX;
+    }
+
+    @Override
+    public String id() {
+        return workflowId;
+    }
+
+    @Override
+    public String type() {
+        return CommonValue.WORKFLOW_RESOURCE_TYPE;
     }
 }
