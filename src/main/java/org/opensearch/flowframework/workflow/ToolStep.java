@@ -59,6 +59,9 @@ public class ToolStep implements WorkflowStep {
     /** Provided output keys */
     public static final Set<String> PROVIDED_OUTPUTS = Set.of(TOOLS_FIELD);
 
+    /** Instantiate this class */
+    public ToolStep() {}
+
     @Override
     public PlainActionFuture<WorkflowData> execute(
         String currentNodeId,
