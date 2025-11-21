@@ -27,7 +27,7 @@ jobs:
           java-version: ${{ matrix.java }}
 
       - name: Checkout Flow Framework
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Assemble Flow Framework
         run: |
