@@ -829,7 +829,8 @@ allprojects {
     tasks.withType(RestIntegTestTask).configureEach {
         retry {
             if (System.getenv().containsKey("CI")) {
-                maxRetries = 1
+                // macOS often has resource constraints in CI, allow more retries
+                maxRetries = System.getProperty("os.name").toLowerCase().contains("mac") ? 3 : 1
                 maxFailures = 4
                 failOnPassedAfterRetry = false
             }

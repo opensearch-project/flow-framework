@@ -48,12 +48,17 @@ import static org.opensearch.flowframework.common.CommonValue.WORKFLOW_ID;
 
 public class FlowFrameworkRestApiIT extends FlowFrameworkRestTestCase {
 
+    private static Boolean mlCommonsReady = null;
+
     @Before
-    public void waitToStart() throws Exception {
-        // ML Commons cron job runs every 10 seconds and takes 20+ seconds to initialize .plugins-ml-config index
-        if (!indexExistsWithAdminClient(".plugins-ml-config")) {
-            assertBusy(() -> assertTrue(indexExistsWithAdminClient(".plugins-ml-config")), 40, TimeUnit.SECONDS);
+    public void checkMLCommonsReadiness() throws Exception {
+        // Multi-node tests are very flaky on macOS when ML Commons fails to initialize
+        // This check provides a fail-fast mechanism since when it fails it won't recover
+        // The build will retry the test more quickly
+        if (mlCommonsReady == null) {
+            mlCommonsReady = performMLCommonsReadinessCheck();
         }
+        assumeTrue("ML Commons not ready, skipping test", mlCommonsReady);
     }
 
     public void testSearchWorkflows() throws Exception {

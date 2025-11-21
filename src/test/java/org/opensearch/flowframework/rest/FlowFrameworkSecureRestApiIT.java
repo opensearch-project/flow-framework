@@ -31,6 +31,7 @@ import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
@@ -112,20 +113,23 @@ public class FlowFrameworkSecureRestApiIT extends FlowFrameworkRestTestCase {
 
     @After
     public void tearDownSecureTests() throws IOException {
-        aliceClient.close();
-        bobClient.close();
-        catClient.close();
-        dogClient.close();
-        elkClient.close();
-        fishClient.close();
-        lionClient.close();
-        deleteUser(aliceUser);
-        deleteUser(bobUser);
-        deleteUser(catUser);
-        deleteUser(dogUser);
-        deleteUser(elkUser);
-        deleteUser(fishUser);
-        deleteUser(lionUser);
+        List.of(aliceClient, bobClient, catClient, dogClient, elkClient, fishClient, lionClient)
+            .stream()
+            .filter(Objects::nonNull)
+            .forEach(client -> {
+                try {
+                    client.close();
+                } catch (IOException e) {
+                    logger.warn("Failed to close client: {}", e.getMessage());
+                }
+            });
+        List.of(aliceUser, bobUser, catUser, dogUser, elkUser, fishUser, lionUser).stream().filter(Objects::nonNull).forEach(user -> {
+            try {
+                deleteUser(user);
+            } catch (Exception e) {
+                logger.warn("Failed to delete user {}: {}", user, e.getMessage());
+            }
+        });
     }
 
     public void testCreateWorkflowWithReadAccess() throws Exception {
