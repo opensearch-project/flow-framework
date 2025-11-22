@@ -68,7 +68,7 @@ public class SearchHandler {
      *
      * @param request        SearchRequest
      * @param tenantId       the tenant ID
-     * @param resourceType
+     * @param resourceType   the resource type
      * @param actionListener ActionListener
      */
     public void search(SearchRequest request, String tenantId, String resourceType, ActionListener<SearchResponse> actionListener) {

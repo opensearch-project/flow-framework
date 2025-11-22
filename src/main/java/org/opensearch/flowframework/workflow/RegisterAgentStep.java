@@ -170,7 +170,9 @@ public class RegisterAgentStep implements WorkflowStep {
 
                     if (llmParams != null) {
                         validateLLMParametersMap(llmParams);
-                        llmParameters.putAll((Map<String, String>) llmParams);
+                        @SuppressWarnings("unchecked")
+                        Map<String, String> llmParamsMap = (Map<String, String>) llmParams;
+                        llmParameters.putAll(llmParamsMap);
                     }
                 } catch (IllegalArgumentException ex) {
                     String errorMessage = "Failed to parse llm field: " + ex.getMessage();
@@ -317,6 +319,7 @@ public class RegisterAgentStep implements WorkflowStep {
         if (!(llmParams instanceof Map)) {
             throw new IllegalArgumentException(errorMessage);
         }
+        @SuppressWarnings("unchecked")
         Map<String, Object> llmParamsMap = (Map<String, Object>) llmParams;
         for (Map.Entry<String, Object> entry : llmParamsMap.entrySet()) {
             if (!(entry.getValue() instanceof String)) {

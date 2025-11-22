@@ -22,7 +22,6 @@ import org.apache.hc.core5.http.HttpHeaders;
 import org.apache.hc.core5.http.HttpHost;
 import org.apache.hc.core5.http.message.BasicHeader;
 import org.apache.hc.core5.http.nio.ssl.TlsStrategy;
-import org.apache.hc.core5.reactor.ssl.TlsDetails;
 import org.apache.hc.core5.ssl.SSLContextBuilder;
 import org.apache.hc.core5.util.Timeout;
 import org.opensearch.OpenSearchStatusException;
@@ -82,11 +81,12 @@ import static org.opensearch.flowframework.common.CommonValue.WORKFLOW_URI;
  */
 public abstract class FlowFrameworkRestTestCase extends OpenSearchRestTestCase {
 
+    public static final String FF_CONFIG_INDEX = ".plugins-flow-framework-config";
+    public static final String ML_CONFIG_INDEX = ".plugins-ml-config";
     public static final String SHARE_WORKFLOW_URI = "/_plugins/_security/api/resource/share";
 
     @Before
     protected void setUpSettings() throws Exception {
-
         // Enable ML Commons to run on non-ml nodes
         Response response = TestHelpers.makeRequest(
             client(),
@@ -144,6 +144,38 @@ public abstract class FlowFrameworkRestTestCase extends OpenSearchRestTestCase {
 
     }
 
+    protected boolean performMLCommonsReadinessCheck() {
+        try {
+            logger.info("Checking ML Commons readiness (one-time check)");
+            // ML Cron doesn't start until cluster manager available
+            assertBusyWithFixedSleepTime(
+                () -> assertTrue(hasClusterManager()),
+                TimeValue.timeValueSeconds(60),
+                TimeValue.timeValueSeconds(10)
+            );
+            logger.info("Cluster has a cluster manager");
+            // ML Config index may take 20+ seconds to init via cron
+            assertBusyWithFixedSleepTime(
+                () -> assertTrue(indexExistsWithAdminClient(ML_CONFIG_INDEX)),
+                TimeValue.timeValueSeconds(40),
+                TimeValue.timeValueSeconds(10)
+            );
+            logger.info("ML Commons Config Index exists");
+            // After config exists need master key to exist
+            assertBusyWithFixedSleepTime(
+                () -> assertTrue(mlMasterKeyExists()),
+                TimeValue.timeValueSeconds(40),
+                TimeValue.timeValueSeconds(5)
+            );
+            logger.info("ML Commons Master Key exists");
+
+            return true;
+        } catch (Throwable e) {
+            logger.error("ML Commons readiness check failed: {}", e.getMessage());
+            return false;
+        }
+    }
+
     protected boolean isHttps() {
         return Optional.ofNullable(System.getProperty("https")).map("true"::equalsIgnoreCase).orElse(false);
     }
@@ -186,6 +218,21 @@ public abstract class FlowFrameworkRestTestCase extends OpenSearchRestTestCase {
         return RestStatus.OK.getStatus() == response.getStatusLine().getStatusCode();
     }
 
+    // Utility fn for checking if a cluster manager has been elected, a prerequisite for other APIs
+    public static boolean hasClusterManager() throws IOException {
+        Request request = new Request("GET", "/_cluster/state/master_node");
+        Response response = adminClient().performRequest(request);
+        Map<String, Object> responseMap = responseToMap(response);
+        return responseMap.containsKey("master_node") && responseMap.get("master_node") != null;
+    }
+
+    // Utility fn for checking if ML Commons master key exists.
+    public static boolean mlMasterKeyExists() throws IOException {
+        Request request = new Request("GET", "/.plugins-ml-config/_doc/master_key");
+        Response response = adminClient().performRequest(request);
+        return RestStatus.OK.getStatus() == response.getStatusLine().getStatusCode();
+    }
+
     @Override
     protected RestClient buildClient(Settings settings, HttpHost[] hosts) throws IOException {
         RestClientBuilder builder = RestClient.builder(hosts);
@@ -215,8 +262,6 @@ public abstract class FlowFrameworkRestTestCase extends OpenSearchRestTestCase {
                 final TlsStrategy tlsStrategy = ClientTlsStrategyBuilder.create()
                     .setHostnameVerifier(NoopHostnameVerifier.INSTANCE)
                     .setSslContext(SSLContextBuilder.create().loadTrustMaterial(null, (chains, authType) -> true).build())
-                    // See https://issues.apache.org/jira/browse/HTTPCLIENT-2219
-                    .setTlsDetailsFactory(sslEngine -> new TlsDetails(sslEngine.getSession(), sslEngine.getApplicationProtocol()))
                     .build();
                 final PoolingAsyncClientConnectionManager connectionManager = PoolingAsyncClientConnectionManagerBuilder.create()
                     .setTlsStrategy(tlsStrategy)
@@ -275,7 +320,7 @@ public abstract class FlowFrameworkRestTestCase extends OpenSearchRestTestCase {
                         continue;
                     }
                     // Do not reset ML/Flow Framework encryption index as this is needed to encrypt connector credentials
-                    if (!".plugins-ml-config".equals(indexName) && !".plugins-flow-framework-config".equals(indexName)) {
+                    if (!ML_CONFIG_INDEX.equals(indexName) && !FF_CONFIG_INDEX.equals(indexName)) {
                         adminClient().performRequest(new Request("DELETE", "/" + indexName));
                     }
                 }
@@ -475,6 +520,7 @@ public abstract class FlowFrameworkRestTestCase extends OpenSearchRestTestCase {
             ImmutableList.of(new BasicHeader(HttpHeaders.USER_AGENT, "admin"))
         );
         Map<String, Object> responseMap = entityAsMap(resp);
+        @SuppressWarnings("unchecked")
         ArrayList<String> roles = (ArrayList<String>) responseMap.get("roles");
         assertTrue(roles.contains("all_access"));
     }

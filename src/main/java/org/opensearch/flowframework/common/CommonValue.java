@@ -270,6 +270,8 @@ public class CommonValue {
     /*
      * Constants associated with resource-sharing
      */
+    /** The name for the workflow state resource type */
     public static final String WORKFLOW_STATE_RESOURCE_TYPE = "workflow_state";
+    /** The name for the workflow resource type */
     public static final String WORKFLOW_RESOURCE_TYPE = "workflow";
 }

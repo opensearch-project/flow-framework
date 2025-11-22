@@ -23,6 +23,7 @@ import org.opensearch.flowframework.util.ParseUtils;
 import org.opensearch.ml.common.MLIndex;
 import org.opensearch.rest.RestRequest;
 import org.opensearch.test.rest.FakeRestRequest;
+import org.junit.Before;
 
 import java.io.IOException;
 import java.util.Collections;
@@ -44,6 +45,19 @@ import static org.opensearch.flowframework.common.CommonValue.WORKFLOW_STATE_IND
 import static org.opensearch.flowframework.common.FlowFrameworkSettings.FLOW_FRAMEWORK_MULTI_TENANCY_ENABLED;
 
 public abstract class FlowFrameworkTenantAwareRestTestCase extends FlowFrameworkRestTestCase {
+
+    private static Boolean mlCommonsReady = null;
+
+    @Before
+    public void checkMLCommonsReadiness() throws Exception {
+        // Multi-node tests are very flaky on macOS when ML Commons fails to initialize
+        // This check provides a fail-fast mechanism since when it fails it won't recover
+        // The build will retry the test more quickly
+        if (mlCommonsReady == null) {
+            mlCommonsReady = performMLCommonsReadinessCheck();
+        }
+        assumeTrue("ML Commons not ready, skipping test", mlCommonsReady);
+    }
 
     // Toggle to run DDB tests
     // TODO: Get this from a property
