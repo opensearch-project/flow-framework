@@ -356,6 +356,9 @@ public abstract class FlowFrameworkRestTestCase extends OpenSearchRestTestCase {
      * @return a random password.
      */
     public static String generatePassword(String username) {
+
+        String lowerName = username.toLowerCase(Locale.ROOT);
+
         String upperCase = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
         String lowerCase = "abcdefghijklmnopqrstuvwxyz";
         String digits = "0123456789";
@@ -371,11 +374,12 @@ public abstract class FlowFrameworkRestTestCase extends OpenSearchRestTestCase {
         password[2] = digits.charAt(rng.nextInt(digits.length()));
         password[3] = special.charAt(rng.nextInt(special.length()));
 
+        // Reject characters that appear in username (case-insensitive)
         for (int i = 4; i < 15; i++) {
             char nextChar;
             do {
                 nextChar = characters.charAt(rng.nextInt(characters.length()));
-            } while (username.indexOf(nextChar) > -1);
+            } while (lowerName.indexOf(Character.toLowerCase(nextChar)) > -1);
             password[i] = nextChar;
         }
 
