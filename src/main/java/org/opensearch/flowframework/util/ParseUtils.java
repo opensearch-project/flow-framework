@@ -375,6 +375,9 @@ public class ParseUtils {
      * @throws Exception exception
      */
     private static boolean checkUserPermissions(User requestedUser, User resourceUser, String workflowId) throws Exception {
+        if (requestedUser == null || resourceUser == null) {
+            return false;
+        }
         if (resourceUser.getBackendRoles() == null || requestedUser.getBackendRoles() == null) {
             return false;
         }
@@ -533,8 +536,8 @@ public class ParseUtils {
                 }
                 if (shouldUseResourceAuthz(CommonValue.WORKFLOW_RESOURCE_TYPE)
                     || !filterByEnabled
-                    || checkUserPermissions(requestUser, resourceUser, workflowId)
-                    || isAdmin(requestUser)) {
+                    || isAdmin(requestUser)
+                    || checkUserPermissions(requestUser, resourceUser, workflowId)) {
                     function.run();
                 } else {
                     logger.debug("User: " + requestUser.getName() + " does not have permissions to access workflow: " + workflowId);
