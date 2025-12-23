@@ -208,7 +208,7 @@ dependencies {
         exclude group: 'net.minidev', module: 'json-smart'
     }
     // needed to use MLIndex class mappings at (test) runtime but must be provided by calling plugins
-    compileOnly('com.networknt:json-schema-validator:1.5.9') {
+    compileOnly('com.networknt:json-schema-validator:3.0.0') {
         exclude group: 'com.fasterxml.jackson.core', module: 'jackson-databind'
         exclude group: 'com.fasterxml.jackson.dataformat', module: 'jackson-dataformat-yaml'
         exclude group: 'org.yml', module: 'snakeyaml'
