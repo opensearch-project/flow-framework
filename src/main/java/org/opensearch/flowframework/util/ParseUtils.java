@@ -366,6 +366,16 @@ public class ParseUtils {
         }
     }
 
+    // helper method to check if varargs User... is null
+    private static boolean hasUsersAndRoles(User requestedUser, User resourceUser) {
+
+        return requestedUser != null
+            && resourceUser != null
+            && resourceUser.getBackendRoles() != null
+            && requestedUser.getBackendRoles() != null;
+
+    }
+
     /**
      * Check if requested user has backend role required to access the resource
      * @param requestedUser the user to execute the request
@@ -374,13 +384,11 @@ public class ParseUtils {
      * @return boolean if the requested user has backend role required to access the resource
      * @throws Exception exception
      */
+
     private static boolean checkUserPermissions(User requestedUser, User resourceUser, String workflowId) throws Exception {
-        if (requestedUser == null || resourceUser == null) {
-            return false;
-        }
-        if (resourceUser.getBackendRoles() == null || requestedUser.getBackendRoles() == null) {
-            return false;
-        }
+
+        if (!hasUsersAndRoles(requestedUser, resourceUser)) return false;
+
         // Check if requested user has backend role required to access the resource
         for (String backendRole : requestedUser.getBackendRoles()) {
             if (resourceUser.getBackendRoles().contains(backendRole)) {
@@ -396,6 +404,13 @@ public class ParseUtils {
             }
         }
         return false;
+    }
+
+    // method to expose checkUserPermissions for testing
+    static boolean exposeCheckUserPermissions(User requestedUser, User resourceUser, String workflowId) throws Exception {
+
+        return checkUserPermissions(requestedUser, resourceUser, workflowId);
+
     }
 
     /**

@@ -444,4 +444,17 @@ public class ParseUtilsTests extends OpenSearchTestCase {
     public void testIsAdminNull() {
         assertFalse(isAdmin(null));
     }
+
+    public void testCheckUserPermissionsWithNullUsers() throws Exception {
+
+        User mockrequestedUser = null;
+        User mockresourceUser = new User();
+        String mockWorkFlowId = "mockWorkFlowId";
+
+        boolean res = ParseUtils.exposeCheckUserPermissions(mockrequestedUser, mockresourceUser, mockWorkFlowId);
+
+        assertFalse(res);
+
+    }
+
 }
