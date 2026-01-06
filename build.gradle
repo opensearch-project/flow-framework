@@ -40,7 +40,7 @@ buildscript {
         dafnyRuntimeVersion = "4.11.0"
         smithyDafnyVersion = "0.1.1"
         gsonVersion = "2.13.2"
-        junitJupiterVersion = "5.14.1"
+        junitJupiterVersion = "5.14.2"
         jakartaJsonBindVersion = "3.0.1"
         jakartaJsonVersion = "2.0.1"
         commonsTextVersion = "1.15.0"
