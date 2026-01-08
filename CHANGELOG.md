@@ -7,6 +7,7 @@ Inspired from [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 ### Features
 ### Enhancements
 ### Bug Fixes
+- Fixed user permission validation to correctly handle null users and backend roles.
 ### Infrastructure
 ### Documentation
 ### Maintenance
