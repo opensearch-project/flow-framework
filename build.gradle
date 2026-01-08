@@ -225,7 +225,6 @@ dependencies {
     implementation("org.dafny:DafnyRuntime:${dafnyRuntimeVersion}")
     implementation("software.amazon.smithy.dafny:conversion:${smithyDafnyVersion}")
     implementation("org.bouncycastle:bc-fips:${versions.bouncycastle_jce}")
-    api("org.apache.httpcomponents.core5:httpcore5:${versions.httpcore5}")
     implementation("jakarta.json.bind:jakarta.json.bind-api:${jakartaJsonBindVersion}")
     implementation("org.glassfish:jakarta.json:${jakartaJsonVersion}")
     implementation("org.eclipse:yasson:${yassonVersion}")
@@ -272,6 +271,8 @@ dependencies {
             force("com.google.guava:guava:${versions.guava}")
             force("org.slf4j:slf4j-api:${versions.slf4j}")
             force("com.google.errorprone:error_prone_annotations:${versions.error_prone_annotations}")
+            force("org.apache.httpcomponents.core5:httpcore5:${versions.httpcore5}")
+            force("org.apache.httpcomponents.core5:httpcore5-h2:${versions.httpcore5}")
 
             if (System.getenv('REMOTE_METADATA_SDK_IMPL') == 'ddb-client') {
                 // OpenSearch Java client brings in different versions of the below dependencies.
