@@ -271,6 +271,7 @@ dependencies {
             // Some other plugin dependencies that don't use version catalog conflict here
             force("com.google.guava:guava:${versions.guava}")
             force("org.slf4j:slf4j-api:${versions.slf4j}")
+            force("com.google.errorprone:error_prone_annotations:${versions.error_prone_annotations}")
 
             if (System.getenv('REMOTE_METADATA_SDK_IMPL') == 'ddb-client') {
                 // OpenSearch Java client brings in different versions of the below dependencies.
