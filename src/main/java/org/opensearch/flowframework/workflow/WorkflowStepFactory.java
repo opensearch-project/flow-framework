@@ -23,12 +23,7 @@ import org.opensearch.ml.client.MachineLearningNodeClient;
 import org.opensearch.threadpool.ThreadPool;
 import org.opensearch.transport.client.Client;
 
-import java.util.Collection;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -151,8 +146,8 @@ public class WorkflowStepFactory {
         /** Create Connector Step */
         CREATE_CONNECTOR(
             CreateConnectorStep.NAME,
-            List.of(NAME_FIELD, DESCRIPTION_FIELD, VERSION_FIELD, PROTOCOL_FIELD, PARAMETERS_FIELD, CREDENTIAL_FIELD, ACTIONS_FIELD),
-            List.of(CONNECTOR_ID),
+            new ArrayList<>(CreateConnectorStep.REQUIRED_INPUTS),
+            new ArrayList<>(CreateConnectorStep.PROVIDED_OUTPUTS),
             List.of(OPENSEARCH_ML),
             TimeValue.timeValueSeconds(60)
         ),
