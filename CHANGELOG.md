@@ -7,6 +7,8 @@ Inspired from [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 ### Features
 ### Enhancements
 ### Bug Fixes
+- Fix substitution templates for OpenSearch 3.x compatibility by removing `_doc` mapping ([#1301](https://github.com/opensearch-project/flow-framework/pull/1301))
+
 ### Infrastructure
 ### Documentation
 ### Maintenance
