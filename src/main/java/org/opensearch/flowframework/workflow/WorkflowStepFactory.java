@@ -23,6 +23,7 @@ import org.opensearch.ml.client.MachineLearningNodeClient;
 import org.opensearch.threadpool.ThreadPool;
 import org.opensearch.transport.client.Client;
 
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
@@ -33,10 +34,7 @@ import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import static org.opensearch.flowframework.common.CommonValue.ACTIONS_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.CONFIGURATIONS;
-import static org.opensearch.flowframework.common.CommonValue.CREDENTIAL_FIELD;
-import static org.opensearch.flowframework.common.CommonValue.DESCRIPTION_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.DESTINATION_INDEX;
 import static org.opensearch.flowframework.common.CommonValue.EMBEDDING_DIMENSION;
 import static org.opensearch.flowframework.common.CommonValue.FRAMEWORK_TYPE;
@@ -47,9 +45,7 @@ import static org.opensearch.flowframework.common.CommonValue.MODEL_GROUP_STATUS
 import static org.opensearch.flowframework.common.CommonValue.MODEL_TYPE;
 import static org.opensearch.flowframework.common.CommonValue.NAME_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.OPENSEARCH_ML;
-import static org.opensearch.flowframework.common.CommonValue.PARAMETERS_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.PIPELINE_ID;
-import static org.opensearch.flowframework.common.CommonValue.PROTOCOL_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.REGISTER_MODEL_STATUS;
 import static org.opensearch.flowframework.common.CommonValue.SOURCE_INDEX;
 import static org.opensearch.flowframework.common.CommonValue.SUCCESS;
@@ -151,8 +147,8 @@ public class WorkflowStepFactory {
         /** Create Connector Step */
         CREATE_CONNECTOR(
             CreateConnectorStep.NAME,
-            List.of(NAME_FIELD, DESCRIPTION_FIELD, VERSION_FIELD, PROTOCOL_FIELD, PARAMETERS_FIELD, CREDENTIAL_FIELD, ACTIONS_FIELD),
-            List.of(CONNECTOR_ID),
+            new ArrayList<>(CreateConnectorStep.REQUIRED_INPUTS),
+            new ArrayList<>(CreateConnectorStep.PROVIDED_OUTPUTS),
             List.of(OPENSEARCH_ML),
             TimeValue.timeValueSeconds(60)
         ),

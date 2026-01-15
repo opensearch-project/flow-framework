@@ -41,6 +41,7 @@ import static org.opensearch.flowframework.common.CommonValue.NAME_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.PARAMETERS_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.PROTOCOL_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.VERSION_FIELD;
+import static org.opensearch.flowframework.common.WorkflowResources.CONNECTOR_ID;
 import static org.opensearch.flowframework.exception.WorkflowStepException.getSafeException;
 import static org.opensearch.flowframework.util.ParseUtils.getStringToStringMap;
 
@@ -56,6 +57,20 @@ public class CreateConnectorStep implements WorkflowStep {
 
     /** The name of this step, used as a key in the template and the {@link WorkflowStepFactory} */
     public static final String NAME = "create_connector";
+    /** Required input keys */
+    public static final Set<String> REQUIRED_INPUTS = Set.of(
+        NAME_FIELD,
+        DESCRIPTION_FIELD,
+        VERSION_FIELD,
+        PROTOCOL_FIELD,
+        PARAMETERS_FIELD,
+        CREDENTIAL_FIELD,
+        ACTIONS_FIELD
+    );
+    /** Optional input keys */
+    public static final Set<String> OPTIONAL_INPUTS = Collections.emptySet();
+    /** Provided output keys */
+    public static final Set<String> PROVIDED_OUTPUTS = Set.of(CONNECTOR_ID);
 
     /**
      * Instantiate this class
@@ -103,21 +118,10 @@ public class CreateConnectorStep implements WorkflowStep {
             }
         };
 
-        Set<String> requiredKeys = Set.of(
-            NAME_FIELD,
-            DESCRIPTION_FIELD,
-            VERSION_FIELD,
-            PROTOCOL_FIELD,
-            PARAMETERS_FIELD,
-            CREDENTIAL_FIELD,
-            ACTIONS_FIELD
-        );
-        Set<String> optionalKeys = Collections.emptySet();
-
         try {
             Map<String, Object> inputs = ParseUtils.getInputsFromPreviousSteps(
-                requiredKeys,
-                optionalKeys,
+                REQUIRED_INPUTS,
+                OPTIONAL_INPUTS,
                 currentNodeInputs,
                 outputs,
                 previousNodeInputs,

@@ -8,12 +8,11 @@
  */
 package org.opensearch.flowframework.model;
 
+import org.opensearch.flowframework.workflow.CreateConnectorStep;
 import org.opensearch.flowframework.workflow.WorkflowStepFactory;
 import org.opensearch.test.OpenSearchTestCase;
 
 import java.io.IOException;
-import java.util.HashMap;
-import java.util.Map;
 
 public class WorkflowStepValidatorTests extends OpenSearchTestCase {
 
@@ -24,17 +23,14 @@ public class WorkflowStepValidatorTests extends OpenSearchTestCase {
 
     public void testParseWorkflowStepValidator() throws IOException {
 
-        Map<String, WorkflowStepValidator> workflowStepValidators = new HashMap<>();
-        workflowStepValidators.put(
-            WorkflowStepFactory.WorkflowSteps.CREATE_CONNECTOR.getWorkflowStepName(),
-            WorkflowStepFactory.WorkflowSteps.CREATE_CONNECTOR.getWorkflowStepValidator()
-        );
+        var step = WorkflowStepFactory.WorkflowSteps.CREATE_CONNECTOR;
 
-        assertEquals(7, WorkflowStepFactory.WorkflowSteps.CREATE_CONNECTOR.inputs().size());
-        assertEquals(1, WorkflowStepFactory.WorkflowSteps.CREATE_CONNECTOR.outputs().size());
+        assertEquals(CreateConnectorStep.NAME, step.getWorkflowStepName());
 
-        assertEquals("name", WorkflowStepFactory.WorkflowSteps.CREATE_CONNECTOR.inputs().get(0));
-        assertEquals("connector_id", WorkflowStepFactory.WorkflowSteps.CREATE_CONNECTOR.outputs().get(0));
+        assertEquals(CreateConnectorStep.REQUIRED_INPUTS.size(), step.inputs().size());
+        assertTrue(step.inputs().containsAll(CreateConnectorStep.REQUIRED_INPUTS));
+        assertEquals(CreateConnectorStep.PROVIDED_OUTPUTS.size(), step.outputs().size());
+        assertTrue(step.outputs().containsAll(CreateConnectorStep.PROVIDED_OUTPUTS));
     }
 
 }
