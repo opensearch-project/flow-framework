@@ -57,20 +57,20 @@ public class CreateConnectorStep implements WorkflowStep {
 
     /** The name of this step, used as a key in the template and the {@link WorkflowStepFactory} */
     public static final String NAME = "create_connector";
-
-    public static final Set<String> REQUIRED_INPUTS =Set.of(
-            NAME_FIELD,
-            DESCRIPTION_FIELD,
-            VERSION_FIELD,
-            PROTOCOL_FIELD,
-            PARAMETERS_FIELD,
-            CREDENTIAL_FIELD,
-            ACTIONS_FIELD
+    /** Required input keys */
+    public static final Set<String> REQUIRED_INPUTS = Set.of(
+        NAME_FIELD,
+        DESCRIPTION_FIELD,
+        VERSION_FIELD,
+        PROTOCOL_FIELD,
+        PARAMETERS_FIELD,
+        CREDENTIAL_FIELD,
+        ACTIONS_FIELD
     );
-
+    /** Optional input keys */
     public static final Set<String> OPTIONAL_INPUTS = Collections.emptySet();
-
-    public static final Set<String> PROVIDED_OUTPUTS =Set.of(CONNECTOR_ID);
+    /** Provided output keys */
+    public static final Set<String> PROVIDED_OUTPUTS = Set.of(CONNECTOR_ID);
 
     /**
      * Instantiate this class
@@ -117,8 +117,6 @@ public class CreateConnectorStep implements WorkflowStep {
                 createConnectorFuture.onFailure(new WorkflowStepException(errorMessage, ExceptionsHelper.status(e)));
             }
         };
-
-
 
         try {
             Map<String, Object> inputs = ParseUtils.getInputsFromPreviousSteps(

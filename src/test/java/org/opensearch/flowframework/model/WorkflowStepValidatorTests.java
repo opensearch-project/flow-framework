@@ -13,8 +13,6 @@ import org.opensearch.flowframework.workflow.WorkflowStepFactory;
 import org.opensearch.test.OpenSearchTestCase;
 
 import java.io.IOException;
-import java.util.HashMap;
-import java.util.Map;
 
 public class WorkflowStepValidatorTests extends OpenSearchTestCase {
 
@@ -25,13 +23,13 @@ public class WorkflowStepValidatorTests extends OpenSearchTestCase {
 
     public void testParseWorkflowStepValidator() throws IOException {
 
-       var step = WorkflowStepFactory.WorkflowSteps.CREATE_CONNECTOR;
+        var step = WorkflowStepFactory.WorkflowSteps.CREATE_CONNECTOR;
 
-        assertEquals(CreateConnectorStep.NAME,step.getWorkflowStepName());
+        assertEquals(CreateConnectorStep.NAME, step.getWorkflowStepName());
 
-        assertEquals(CreateConnectorStep.REQUIRED_INPUTS.size(),step.inputs().size());
+        assertEquals(CreateConnectorStep.REQUIRED_INPUTS.size(), step.inputs().size());
         assertTrue(step.inputs().containsAll(CreateConnectorStep.REQUIRED_INPUTS));
-        assertEquals(CreateConnectorStep.PROVIDED_OUTPUTS.size(),step.outputs().size());
+        assertEquals(CreateConnectorStep.PROVIDED_OUTPUTS.size(), step.outputs().size());
         assertTrue(step.outputs().containsAll(CreateConnectorStep.PROVIDED_OUTPUTS));
     }
 
