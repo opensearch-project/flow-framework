@@ -49,23 +49,21 @@
                 "number_of_shards": "${{create_index.settings.number_of_shards}}"
               },
               "mappings": {
-                "_doc": {
-                  "properties": {
-                    "${{text_image_embedding.embedding}}": {
-                      "type": "knn_vector",
-                      "dimension": "${{text_image_embedding.field_map.output.dimension}}",
-                      "method": {
-                        "engine": "${{create_index.mappings.method.engine}}",
-                        "name": "${{create_index.mappings.method.name}}",
-                        "parameters": {}
-                      }
-                    },
-                    "${{text_image_embedding.field_map.text}}": {
-                      "type": "${{text_image_embedding.field_map.text.type}}"
-                    },
-                    "${{text_image_embedding.field_map.image}}": {
-                      "type": "${{text_image_embedding.field_map.image.type}}"
+                "properties": {
+                  "${{text_image_embedding.embedding}}": {
+                    "type": "knn_vector",
+                    "dimension": "${{text_image_embedding.field_map.output.dimension}}",
+                    "method": {
+                      "engine": "${{create_index.mappings.method.engine}}",
+                      "name": "${{create_index.mappings.method.name}}",
+                      "parameters": {}
                     }
+                  },
+                  "${{text_image_embedding.field_map.text}}": {
+                    "type": "${{text_image_embedding.field_map.text.type}}"
+                  },
+                  "${{text_image_embedding.field_map.image}}": {
+                    "type": "${{text_image_embedding.field_map.image.type}}"
                   }
                 }
               }
