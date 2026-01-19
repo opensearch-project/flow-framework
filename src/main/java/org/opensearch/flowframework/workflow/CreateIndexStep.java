@@ -49,6 +49,12 @@ public class CreateIndexStep implements WorkflowStep {
 
     /** The name of this step, used as a key in the template and the {@link WorkflowStepFactory} */
     public static final String NAME = "create_index";
+    /** Required input keys **/
+    public static final Set<String> REQUIRED_INPUTS = Set.of(INDEX_NAME, CONFIGURATIONS);
+    /** Optional input keys */
+    public static final Set<String> OPTIONAL_INPUTS = Collections.emptySet();
+    /** Provided output keys */
+    public static final Set<String> PROVIDED_OUTPUTS = Set.of(INDEX_NAME);
 
     /**
      * Instantiate this class
@@ -72,14 +78,10 @@ public class CreateIndexStep implements WorkflowStep {
     ) {
         PlainActionFuture<WorkflowData> createIndexFuture = PlainActionFuture.newFuture();
 
-        Set<String> requiredKeys = Set.of(INDEX_NAME, CONFIGURATIONS);
-
-        Set<String> optionalKeys = Collections.emptySet();
-
         try {
             Map<String, Object> inputs = ParseUtils.getInputsFromPreviousSteps(
-                requiredKeys,
-                optionalKeys,
+                REQUIRED_INPUTS,
+                OPTIONAL_INPUTS,
                 currentNodeInputs,
                 outputs,
                 previousNodeInputs,

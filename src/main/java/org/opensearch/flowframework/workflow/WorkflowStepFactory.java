@@ -130,7 +130,13 @@ public class WorkflowStepFactory {
         NOOP(NoOpStep.NAME, Collections.emptyList(), Collections.emptyList(), Collections.emptyList(), null),
 
         /** Create Index Step */
-        CREATE_INDEX(CreateIndexStep.NAME, List.of(INDEX_NAME, CONFIGURATIONS), List.of(INDEX_NAME), Collections.emptyList(), null),
+        CREATE_INDEX(
+            CreateIndexStep.NAME,
+            new ArrayList<>(CreateIndexStep.REQUIRED_INPUTS),
+            new ArrayList<>(CreateIndexStep.PROVIDED_OUTPUTS),
+            Collections.emptyList(),
+            null
+        ),
 
         /** Delete Index Step */
         DELETE_INDEX(
