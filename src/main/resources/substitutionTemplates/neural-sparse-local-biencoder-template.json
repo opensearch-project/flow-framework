@@ -59,14 +59,12 @@
                 "default_pipeline": "${{create_ingest_pipeline.pipeline_id}}"
               },
               "mappings": {
-                "_doc": {
-                  "properties": {
-                    "${{create_ingest_pipeline.text_embedding.field_map.output}}": {
-                      "type": "rank_features"
-                    },
-                    "${{create_ingest_pipeline.text_embedding.field_map.input}}": {
-                      "type": "text"
-                    }
+                "properties": {
+                  "${{create_ingest_pipeline.text_embedding.field_map.output}}": {
+                    "type": "rank_features"
+                  },
+                  "${{create_ingest_pipeline.text_embedding.field_map.input}}": {
+                    "type": "text"
                   }
                 }
               }
