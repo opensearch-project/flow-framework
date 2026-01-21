@@ -36,7 +36,7 @@ public class WorkflowStepValidatorTests extends OpenSearchTestCase {
 
         // check inputs
         assertEquals("Input size mismatch", expectedInputs.size(), stepEnum.inputs().size());
-        assertTrue("Enum inputs do not contain all expected outputs", stepEnum.inputs().containsAll(expectedInputs));
+        assertTrue("Enum inputs do not contain all expected inputs", stepEnum.inputs().containsAll(expectedInputs));
 
         // check outputs
 
