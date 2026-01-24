@@ -23,7 +23,6 @@ import org.opensearch.ml.client.MachineLearningNodeClient;
 import org.opensearch.threadpool.ThreadPool;
 import org.opensearch.transport.client.Client;
 
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
@@ -130,7 +129,13 @@ public class WorkflowStepFactory {
         NOOP(NoOpStep.NAME, Collections.emptyList(), Collections.emptyList(), Collections.emptyList(), null),
 
         /** Create Index Step */
-        CREATE_INDEX(CreateIndexStep.NAME, List.of(INDEX_NAME, CONFIGURATIONS), List.of(INDEX_NAME), Collections.emptyList(), null),
+        CREATE_INDEX(
+            CreateIndexStep.NAME,
+            CreateIndexStep.REQUIRED_INPUTS,
+            CreateIndexStep.PROVIDED_OUTPUTS,
+            Collections.emptyList(),
+            null
+        ),
 
         /** Delete Index Step */
         DELETE_INDEX(
@@ -147,8 +152,8 @@ public class WorkflowStepFactory {
         /** Create Connector Step */
         CREATE_CONNECTOR(
             CreateConnectorStep.NAME,
-            new ArrayList<>(CreateConnectorStep.REQUIRED_INPUTS),
-            new ArrayList<>(CreateConnectorStep.PROVIDED_OUTPUTS),
+            CreateConnectorStep.REQUIRED_INPUTS,
+            CreateConnectorStep.PROVIDED_OUTPUTS,
             List.of(OPENSEARCH_ML),
             TimeValue.timeValueSeconds(60)
         ),
