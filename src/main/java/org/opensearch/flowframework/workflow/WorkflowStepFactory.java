@@ -198,8 +198,8 @@ public class WorkflowStepFactory {
         /** Register Remote Model Step */
         REGISTER_REMOTE_MODEL(
             RegisterRemoteModelStep.NAME,
-            List.of(NAME_FIELD, CONNECTOR_ID),
-            List.of(MODEL_ID, REGISTER_MODEL_STATUS),
+            RegisterRemoteModelStep.REQUIRED_INPUTS,
+            RegisterRemoteModelStep.PROVIDED_OUTPUTS,
             List.of(OPENSEARCH_ML),
             null
         ),
@@ -214,7 +214,13 @@ public class WorkflowStepFactory {
         ),
 
         /** Deploy Model Step */
-        DEPLOY_MODEL(DeployModelStep.NAME, List.of(MODEL_ID), List.of(MODEL_ID), List.of(OPENSEARCH_ML), TimeValue.timeValueSeconds(15)),
+        DEPLOY_MODEL(
+            DeployModelStep.NAME,
+            DeployModelStep.REQUIRED_INPUTS,
+            DeployModelStep.PROVIDED_OUTPUTS,
+            List.of(OPENSEARCH_ML),
+            TimeValue.timeValueSeconds(15)
+        ),
 
         /** Undeploy Model Step */
         UNDEPLOY_MODEL(UndeployModelStep.NAME, List.of(MODEL_ID), List.of(SUCCESS), List.of(OPENSEARCH_ML), null),

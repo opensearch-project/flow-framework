@@ -41,6 +41,12 @@ public class DeployModelStep extends AbstractRetryableWorkflowStep {
 
     /** The name of this step, used as a key in the template and the {@link WorkflowStepFactory} */
     public static final String NAME = "deploy_model";
+    /** Required input keys **/
+    public static final Set<String> REQUIRED_INPUTS = Set.of(MODEL_ID);
+    /** Optional input keys */
+    public static final Set<String> OPTIONAL_INPUTS = Collections.emptySet();
+    /** Provided output keys */
+    public static final Set<String> PROVIDED_OUTPUTS = Set.of(MODEL_ID);
 
     /**
      * Instantiate this class
@@ -71,13 +77,10 @@ public class DeployModelStep extends AbstractRetryableWorkflowStep {
 
         PlainActionFuture<WorkflowData> deployModelFuture = PlainActionFuture.newFuture();
 
-        Set<String> requiredKeys = Set.of(MODEL_ID);
-        Set<String> optionalKeys = Collections.emptySet();
-
         try {
             Map<String, Object> inputs = ParseUtils.getInputsFromPreviousSteps(
-                requiredKeys,
-                optionalKeys,
+                REQUIRED_INPUTS,
+                OPTIONAL_INPUTS,
                 currentNodeInputs,
                 outputs,
                 previousNodeInputs,
