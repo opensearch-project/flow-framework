@@ -41,6 +41,7 @@ import static org.opensearch.flowframework.common.CommonValue.NAME_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.REGISTER_MODEL_STATUS;
 import static org.opensearch.flowframework.common.WorkflowResources.CONNECTOR_ID;
 import static org.opensearch.flowframework.common.WorkflowResources.MODEL_GROUP_ID;
+import static org.opensearch.flowframework.common.WorkflowResources.MODEL_ID;
 import static org.opensearch.flowframework.common.WorkflowResources.getResourceByWorkflowStep;
 import static org.opensearch.flowframework.exception.WorkflowStepException.getSafeException;
 
@@ -57,6 +58,18 @@ public class RegisterRemoteModelStep implements WorkflowStep {
 
     /** The name of this step, used as a key in the template and the {@link WorkflowStepFactory} */
     public static final String NAME = "register_remote_model";
+    /** Required input keys **/
+    public static final Set<String> REQUIRED_INPUTS = Set.of(NAME_FIELD, CONNECTOR_ID);
+    /** Optional input keys */
+    public static final Set<String> OPTIONAL_INPUTS = Set.of(
+        MODEL_GROUP_ID,
+        DESCRIPTION_FIELD,
+        DEPLOY_FIELD,
+        GUARDRAILS_FIELD,
+        INTERFACE_FIELD
+    );
+    /** Provided output keys */
+    public static final Set<String> PROVIDED_OUTPUTS = Set.of(MODEL_ID, REGISTER_MODEL_STATUS);
 
     /**
      * Instantiate this class
@@ -80,13 +93,10 @@ public class RegisterRemoteModelStep implements WorkflowStep {
 
         PlainActionFuture<WorkflowData> registerRemoteModelFuture = PlainActionFuture.newFuture();
 
-        Set<String> requiredKeys = Set.of(NAME_FIELD, CONNECTOR_ID);
-        Set<String> optionalKeys = Set.of(MODEL_GROUP_ID, DESCRIPTION_FIELD, DEPLOY_FIELD, GUARDRAILS_FIELD, INTERFACE_FIELD);
-
         try {
             Map<String, Object> inputs = ParseUtils.getInputsFromPreviousSteps(
-                requiredKeys,
-                optionalKeys,
+                REQUIRED_INPUTS,
+                OPTIONAL_INPUTS,
                 currentNodeInputs,
                 outputs,
                 previousNodeInputs,
