@@ -446,15 +446,18 @@ public class ParseUtilsTests extends OpenSearchTestCase {
     }
 
     public void testCheckUserPermissionsWithNullUsers() throws Exception {
+        String workflowId = "testWorkflowId";
+        User validUser = new User("user", ImmutableList.of("role"), ImmutableList.of(), ImmutableList.of());
+        User userWithNullRoles = new User("user", null, ImmutableList.of(), ImmutableList.of());
 
-        User mockrequestedUser = null;
-        User mockresourceUser = new User();
-        String mockWorkFlowId = "mockWorkFlowId";
-
-        boolean res = ParseUtils.exposeCheckUserPermissions(mockrequestedUser, mockresourceUser, mockWorkFlowId);
-
-        assertFalse(res);
-
+        // requestedUser is null
+        assertFalse(ParseUtils.checkUserPermissions(null, validUser, workflowId));
+        // resourceUser is null
+        assertFalse(ParseUtils.checkUserPermissions(validUser, null, workflowId));
+        // resourceUser.getBackendRoles() is null
+        assertFalse(ParseUtils.checkUserPermissions(validUser, userWithNullRoles, workflowId));
+        // requestedUser.getBackendRoles() is null
+        assertFalse(ParseUtils.checkUserPermissions(userWithNullRoles, validUser, workflowId));
     }
 
 }

@@ -55,11 +55,13 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.regex.Matcher;
@@ -366,14 +368,8 @@ public class ParseUtils {
         }
     }
 
-    // helper method to check if varargs User... is null
-    private static boolean hasUsersAndRoles(User requestedUser, User resourceUser) {
-
-        return requestedUser != null
-            && resourceUser != null
-            && resourceUser.getBackendRoles() != null
-            && requestedUser.getBackendRoles() != null;
-
+    private static boolean anyNullUserOrRoles(User... users) {
+        return Arrays.stream(users).anyMatch(u -> Objects.isNull(u) || Objects.isNull(u.getBackendRoles()));
     }
 
     /**
@@ -384,10 +380,9 @@ public class ParseUtils {
      * @return boolean if the requested user has backend role required to access the resource
      * @throws Exception exception
      */
+    static boolean checkUserPermissions(User requestedUser, User resourceUser, String workflowId) throws Exception {
 
-    private static boolean checkUserPermissions(User requestedUser, User resourceUser, String workflowId) throws Exception {
-
-        if (!hasUsersAndRoles(requestedUser, resourceUser)) return false;
+        if (anyNullUserOrRoles(requestedUser, resourceUser)) return false;
 
         // Check if requested user has backend role required to access the resource
         for (String backendRole : requestedUser.getBackendRoles()) {
@@ -404,13 +399,6 @@ public class ParseUtils {
             }
         }
         return false;
-    }
-
-    // method to expose checkUserPermissions for testing
-    static boolean exposeCheckUserPermissions(User requestedUser, User resourceUser, String workflowId) throws Exception {
-
-        return checkUserPermissions(requestedUser, resourceUser, workflowId);
-
     }
 
     /**
