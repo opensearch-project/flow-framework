@@ -55,11 +55,13 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.regex.Matcher;
@@ -366,6 +368,10 @@ public class ParseUtils {
         }
     }
 
+    private static boolean anyNullUserOrRoles(User... users) {
+        return Arrays.stream(users).anyMatch(u -> Objects.isNull(u) || Objects.isNull(u.getBackendRoles()));
+    }
+
     /**
      * Check if requested user has backend role required to access the resource
      * @param requestedUser the user to execute the request
@@ -374,10 +380,10 @@ public class ParseUtils {
      * @return boolean if the requested user has backend role required to access the resource
      * @throws Exception exception
      */
-    private static boolean checkUserPermissions(User requestedUser, User resourceUser, String workflowId) throws Exception {
-        if (resourceUser.getBackendRoles() == null || requestedUser.getBackendRoles() == null) {
-            return false;
-        }
+    static boolean checkUserPermissions(User requestedUser, User resourceUser, String workflowId) throws Exception {
+
+        if (anyNullUserOrRoles(requestedUser, resourceUser)) return false;
+
         // Check if requested user has backend role required to access the resource
         for (String backendRole : requestedUser.getBackendRoles()) {
             if (resourceUser.getBackendRoles().contains(backendRole)) {
@@ -533,8 +539,8 @@ public class ParseUtils {
                 }
                 if (shouldUseResourceAuthz(CommonValue.WORKFLOW_RESOURCE_TYPE)
                     || !filterByEnabled
-                    || checkUserPermissions(requestUser, resourceUser, workflowId)
-                    || isAdmin(requestUser)) {
+                    || isAdmin(requestUser)
+                    || checkUserPermissions(requestUser, resourceUser, workflowId)) {
                     function.run();
                 } else {
                     logger.debug("User: " + requestUser.getName() + " does not have permissions to access workflow: " + workflowId);

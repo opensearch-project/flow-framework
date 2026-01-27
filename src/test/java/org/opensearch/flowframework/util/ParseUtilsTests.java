@@ -444,4 +444,36 @@ public class ParseUtilsTests extends OpenSearchTestCase {
     public void testIsAdminNull() {
         assertFalse(isAdmin(null));
     }
+
+    public void testCheckUserPermissionsWithNullUsers() throws Exception {
+        String workflowId = "testWorkflowId";
+        User validUser = new User("user", ImmutableList.of("role"), ImmutableList.of(), ImmutableList.of());
+        User userWithNullRoles = new User("user", null, ImmutableList.of(), ImmutableList.of());
+
+        // requestedUser is null
+        assertFalse(ParseUtils.checkUserPermissions(null, validUser, workflowId));
+        // resourceUser is null
+        assertFalse(ParseUtils.checkUserPermissions(validUser, null, workflowId));
+        // resourceUser.getBackendRoles() is null
+        assertFalse(ParseUtils.checkUserPermissions(validUser, userWithNullRoles, workflowId));
+        // requestedUser.getBackendRoles() is null
+        assertFalse(ParseUtils.checkUserPermissions(userWithNullRoles, validUser, workflowId));
+    }
+
+    public void testCheckUserPermissionsWithMatchingRoles() throws Exception {
+        String workflowId = "testWorkflowId";
+        User requestedUser = new User("user1", ImmutableList.of("roleA", "roleB"), ImmutableList.of(), ImmutableList.of());
+        User resourceUser = new User("user2", ImmutableList.of("roleB", "roleC"), ImmutableList.of(), ImmutableList.of());
+
+        assertTrue(ParseUtils.checkUserPermissions(requestedUser, resourceUser, workflowId));
+    }
+
+    public void testCheckUserPermissionsWithNoMatchingRoles() throws Exception {
+        String workflowId = "testWorkflowId";
+        User requestedUser = new User("user1", ImmutableList.of("roleA"), ImmutableList.of(), ImmutableList.of());
+        User resourceUser = new User("user2", ImmutableList.of("roleB"), ImmutableList.of(), ImmutableList.of());
+
+        assertFalse(ParseUtils.checkUserPermissions(requestedUser, resourceUser, workflowId));
+    }
+
 }
