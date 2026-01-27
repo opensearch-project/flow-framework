@@ -39,7 +39,6 @@ import static org.opensearch.flowframework.common.CommonValue.FRAMEWORK_TYPE;
 import static org.opensearch.flowframework.common.CommonValue.FUNCTION_NAME;
 import static org.opensearch.flowframework.common.CommonValue.MODEL_CONTENT_HASH_VALUE;
 import static org.opensearch.flowframework.common.CommonValue.MODEL_FORMAT;
-import static org.opensearch.flowframework.common.CommonValue.MODEL_GROUP_STATUS;
 import static org.opensearch.flowframework.common.CommonValue.MODEL_TYPE;
 import static org.opensearch.flowframework.common.CommonValue.NAME_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.OPENSEARCH_ML;
@@ -52,7 +51,6 @@ import static org.opensearch.flowframework.common.CommonValue.VERSION_FIELD;
 import static org.opensearch.flowframework.common.WorkflowResources.AGENT_ID;
 import static org.opensearch.flowframework.common.WorkflowResources.CONNECTOR_ID;
 import static org.opensearch.flowframework.common.WorkflowResources.INDEX_NAME;
-import static org.opensearch.flowframework.common.WorkflowResources.MODEL_GROUP_ID;
 import static org.opensearch.flowframework.common.WorkflowResources.MODEL_ID;
 
 /**
@@ -205,8 +203,8 @@ public class WorkflowStepFactory {
         /** Register Model Group Step */
         REGISTER_MODEL_GROUP(
             RegisterModelGroupStep.NAME,
-            List.of(NAME_FIELD),
-            List.of(MODEL_GROUP_ID, MODEL_GROUP_STATUS),
+            RegisterModelGroupStep.REQUIRED_INPUTS,
+            RegisterModelGroupStep.PROVIDED_OUTPUTS,
             List.of(OPENSEARCH_ML),
             null
         ),

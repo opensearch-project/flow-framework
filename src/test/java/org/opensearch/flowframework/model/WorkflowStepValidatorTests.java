@@ -12,6 +12,7 @@ import org.opensearch.flowframework.workflow.CreateConnectorStep;
 import org.opensearch.flowframework.workflow.CreateIndexStep;
 import org.opensearch.flowframework.workflow.DeleteIndexStep;
 import org.opensearch.flowframework.workflow.DeployModelStep;
+import org.opensearch.flowframework.workflow.RegisterModelGroupStep;
 import org.opensearch.flowframework.workflow.RegisterRemoteModelStep;
 import org.opensearch.flowframework.workflow.ReindexStep;
 import org.opensearch.flowframework.workflow.WorkflowStepFactory;
@@ -98,6 +99,15 @@ public class WorkflowStepValidatorTests extends OpenSearchTestCase {
             ReindexStep.NAME,
             ReindexStep.REQUIRED_INPUTS,
             ReindexStep.PROVIDED_OUTPUTS
+        );
+    }
+
+    public void testRegisterModelGroupStepValidator() throws IOException {
+        assertStepValidatorMatches(
+            WorkflowStepFactory.WorkflowSteps.REGISTER_MODEL_GROUP,
+            RegisterModelGroupStep.NAME,
+            RegisterModelGroupStep.REQUIRED_INPUTS,
+            RegisterModelGroupStep.PROVIDED_OUTPUTS
         );
     }
 
