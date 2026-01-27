@@ -460,4 +460,20 @@ public class ParseUtilsTests extends OpenSearchTestCase {
         assertFalse(ParseUtils.checkUserPermissions(userWithNullRoles, validUser, workflowId));
     }
 
+    public void testCheckUserPermissionsWithMatchingRoles() throws Exception {
+        String workflowId = "testWorkflowId";
+        User requestedUser = new User("user1", ImmutableList.of("roleA", "roleB"), ImmutableList.of(), ImmutableList.of());
+        User resourceUser = new User("user2", ImmutableList.of("roleB", "roleC"), ImmutableList.of(), ImmutableList.of());
+
+        assertTrue(ParseUtils.checkUserPermissions(requestedUser, resourceUser, workflowId));
+    }
+
+    public void testCheckUserPermissionsWithNoMatchingRoles() throws Exception {
+        String workflowId = "testWorkflowId";
+        User requestedUser = new User("user1", ImmutableList.of("roleA"), ImmutableList.of(), ImmutableList.of());
+        User resourceUser = new User("user2", ImmutableList.of("roleB"), ImmutableList.of(), ImmutableList.of());
+
+        assertFalse(ParseUtils.checkUserPermissions(requestedUser, resourceUser, workflowId));
+    }
+
 }
