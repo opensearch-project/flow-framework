@@ -34,7 +34,6 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import static org.opensearch.flowframework.common.CommonValue.CONFIGURATIONS;
-import static org.opensearch.flowframework.common.CommonValue.DESTINATION_INDEX;
 import static org.opensearch.flowframework.common.CommonValue.EMBEDDING_DIMENSION;
 import static org.opensearch.flowframework.common.CommonValue.FRAMEWORK_TYPE;
 import static org.opensearch.flowframework.common.CommonValue.FUNCTION_NAME;
@@ -46,7 +45,6 @@ import static org.opensearch.flowframework.common.CommonValue.NAME_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.OPENSEARCH_ML;
 import static org.opensearch.flowframework.common.CommonValue.PIPELINE_ID;
 import static org.opensearch.flowframework.common.CommonValue.REGISTER_MODEL_STATUS;
-import static org.opensearch.flowframework.common.CommonValue.SOURCE_INDEX;
 import static org.opensearch.flowframework.common.CommonValue.SUCCESS;
 import static org.opensearch.flowframework.common.CommonValue.TYPE;
 import static org.opensearch.flowframework.common.CommonValue.URL;
@@ -147,7 +145,7 @@ public class WorkflowStepFactory {
         ),
 
         /** Create ReIndex Step */
-        REINDEX(ReindexStep.NAME, List.of(SOURCE_INDEX, DESTINATION_INDEX), List.of(ReindexStep.NAME), Collections.emptyList(), null),
+        REINDEX(ReindexStep.NAME, ReindexStep.REQUIRED_INPUTS, ReindexStep.PROVIDED_OUTPUTS, Collections.emptyList(), null),
 
         /** Create Connector Step */
         CREATE_CONNECTOR(
