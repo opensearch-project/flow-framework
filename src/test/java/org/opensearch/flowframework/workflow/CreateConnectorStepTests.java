@@ -71,7 +71,7 @@ public class CreateConnectorStepTests extends OpenSearchTestCase {
                 Map.entry(CommonValue.NAME_FIELD, "test"),
                 Map.entry(CommonValue.DESCRIPTION_FIELD, "description"),
                 Map.entry(CommonValue.VERSION_FIELD, "1"),
-                Map.entry(CommonValue.PROTOCOL_FIELD, "test"),
+                Map.entry(CommonValue.PROTOCOL_FIELD, "http"),
                 Map.entry(CommonValue.PARAMETERS_FIELD, params),
                 Map.entry(CommonValue.CREDENTIAL_FIELD, credentials),
                 Map.entry(CommonValue.ACTIONS_FIELD, actions)
