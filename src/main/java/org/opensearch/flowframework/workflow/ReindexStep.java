@@ -51,6 +51,12 @@ public class ReindexStep implements WorkflowStep {
     private static final String SLICES = "slices";
     /** The max_docs field for reindex */
     private static final String MAX_DOCS = "max_docs";
+    /** Required input keys **/
+    public static final Set<String> REQUIRED_INPUTS = Set.of(SOURCE_INDEX, DESTINATION_INDEX);
+    /** Optional input keys */
+    public static final Set<String> OPTIONAL_INPUTS = Set.of(REFRESH, REQUESTS_PER_SECOND, REQUIRE_ALIAS, SLICES, MAX_DOCS);
+    /** Provided output keys */
+    public static final Set<String> PROVIDED_OUTPUTS = Set.of(NAME);
 
     /**
      * Instantiate this class
@@ -74,14 +80,10 @@ public class ReindexStep implements WorkflowStep {
 
         PlainActionFuture<WorkflowData> reIndexFuture = PlainActionFuture.newFuture();
 
-        Set<String> requiredKeys = Set.of(SOURCE_INDEX, DESTINATION_INDEX);
-
-        Set<String> optionalKeys = Set.of(REFRESH, REQUESTS_PER_SECOND, REQUIRE_ALIAS, SLICES, MAX_DOCS);
-
         try {
             Map<String, Object> inputs = ParseUtils.getInputsFromPreviousSteps(
-                requiredKeys,
-                optionalKeys,
+                REQUIRED_INPUTS,
+                OPTIONAL_INPUTS,
                 currentNodeInputs,
                 outputs,
                 previousNodeInputs,

@@ -38,6 +38,7 @@ import static org.opensearch.flowframework.common.CommonValue.DESCRIPTION_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.MODEL_ACCESS_MODE;
 import static org.opensearch.flowframework.common.CommonValue.MODEL_GROUP_STATUS;
 import static org.opensearch.flowframework.common.CommonValue.NAME_FIELD;
+import static org.opensearch.flowframework.common.WorkflowResources.MODEL_GROUP_ID;
 import static org.opensearch.flowframework.exception.WorkflowStepException.getSafeException;
 
 /**
@@ -53,6 +54,17 @@ public class RegisterModelGroupStep implements WorkflowStep {
 
     /** The name of this step, used as a key in the template and the {@link WorkflowStepFactory} */
     public static final String NAME = "register_model_group";
+    /** Required input keys **/
+    public static final Set<String> REQUIRED_INPUTS = Set.of(NAME_FIELD);
+    /** Optional input keys */
+    public static final Set<String> OPTIONAL_INPUTS = Set.of(
+        DESCRIPTION_FIELD,
+        BACKEND_ROLES_FIELD,
+        MODEL_ACCESS_MODE,
+        ADD_ALL_BACKEND_ROLES
+    );
+    /** Provided output keys */
+    public static final Set<String> PROVIDED_OUTPUTS = Set.of(MODEL_GROUP_ID, MODEL_GROUP_STATUS);
 
     /**
      * Instantiate this class
@@ -103,13 +115,10 @@ public class RegisterModelGroupStep implements WorkflowStep {
             }
         };
 
-        Set<String> requiredKeys = Set.of(NAME_FIELD);
-        Set<String> optionalKeys = Set.of(DESCRIPTION_FIELD, BACKEND_ROLES_FIELD, MODEL_ACCESS_MODE, ADD_ALL_BACKEND_ROLES);
-
         try {
             Map<String, Object> inputs = ParseUtils.getInputsFromPreviousSteps(
-                requiredKeys,
-                optionalKeys,
+                REQUIRED_INPUTS,
+                OPTIONAL_INPUTS,
                 currentNodeInputs,
                 outputs,
                 previousNodeInputs,
