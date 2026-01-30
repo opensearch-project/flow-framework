@@ -14,6 +14,7 @@ import org.opensearch.flowframework.workflow.DeleteConnectorStep;
 import org.opensearch.flowframework.workflow.DeleteIndexStep;
 import org.opensearch.flowframework.workflow.DeleteModelStep;
 import org.opensearch.flowframework.workflow.DeployModelStep;
+import org.opensearch.flowframework.workflow.RegisterAgentStep;
 import org.opensearch.flowframework.workflow.RegisterModelGroupStep;
 import org.opensearch.flowframework.workflow.RegisterRemoteModelStep;
 import org.opensearch.flowframework.workflow.ReindexStep;
@@ -140,6 +141,15 @@ public class WorkflowStepValidatorTests extends OpenSearchTestCase {
             DeleteConnectorStep.PROVIDED_OUTPUTS
         );
 
+    }
+
+    public void testRegisterAgentStepValidator() throws IOException {
+        assertStepValidatorMatches(
+            WorkflowStepFactory.WorkflowSteps.REGISTER_AGENT,
+            RegisterAgentStep.NAME,
+            RegisterAgentStep.REQUIRED_INPUTS,
+            RegisterAgentStep.PROVIDED_OUTPUTS
+        );
     }
 
 }
