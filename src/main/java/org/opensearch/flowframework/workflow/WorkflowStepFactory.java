@@ -48,7 +48,6 @@ import static org.opensearch.flowframework.common.CommonValue.TYPE;
 import static org.opensearch.flowframework.common.CommonValue.URL;
 import static org.opensearch.flowframework.common.CommonValue.VERSION_FIELD;
 import static org.opensearch.flowframework.common.WorkflowResources.AGENT_ID;
-import static org.opensearch.flowframework.common.WorkflowResources.CONNECTOR_ID;
 import static org.opensearch.flowframework.common.WorkflowResources.INDEX_NAME;
 import static org.opensearch.flowframework.common.WorkflowResources.MODEL_ID;
 
@@ -230,7 +229,13 @@ public class WorkflowStepFactory {
         DELETE_MODEL(DeleteModelStep.NAME, DeleteModelStep.REQUIRED_INPUTS, DeleteModelStep.PROVIDED_OUTPUTS, List.of(OPENSEARCH_ML), null),
 
         /** Delete Connector Step */
-        DELETE_CONNECTOR(DeleteConnectorStep.NAME, List.of(CONNECTOR_ID), List.of(CONNECTOR_ID), List.of(OPENSEARCH_ML), null),
+        DELETE_CONNECTOR(
+            DeleteConnectorStep.NAME,
+            DeleteConnectorStep.REQUIRED_INPUTS,
+            DeleteConnectorStep.PROVIDED_OUTPUTS,
+            List.of(OPENSEARCH_ML),
+            null
+        ),
 
         /** Register Agent Step */
         REGISTER_AGENT(RegisterAgentStep.NAME, List.of(NAME_FIELD, TYPE), List.of(AGENT_ID), List.of(OPENSEARCH_ML), null),
