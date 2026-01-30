@@ -46,7 +46,6 @@ import static org.opensearch.flowframework.common.CommonValue.PIPELINE_ID;
 import static org.opensearch.flowframework.common.CommonValue.REGISTER_MODEL_STATUS;
 import static org.opensearch.flowframework.common.CommonValue.URL;
 import static org.opensearch.flowframework.common.CommonValue.VERSION_FIELD;
-import static org.opensearch.flowframework.common.WorkflowResources.AGENT_ID;
 import static org.opensearch.flowframework.common.WorkflowResources.INDEX_NAME;
 import static org.opensearch.flowframework.common.WorkflowResources.MODEL_ID;
 
@@ -246,7 +245,7 @@ public class WorkflowStepFactory {
         ),
 
         /** Delete Agent Step */
-        DELETE_AGENT(DeleteAgentStep.NAME, List.of(AGENT_ID), List.of(AGENT_ID), List.of(OPENSEARCH_ML), null),
+        DELETE_AGENT(DeleteAgentStep.NAME, DeleteAgentStep.REQUIRED_INPUTS, DeleteAgentStep.PROVIDED_OUTPUTS, List.of(OPENSEARCH_ML), null),
 
         /** Create Tool Step */
         CREATE_TOOL(ToolStep.NAME, ToolStep.REQUIRED_INPUTS, ToolStep.PROVIDED_OUTPUTS, List.of(OPENSEARCH_ML), null),
