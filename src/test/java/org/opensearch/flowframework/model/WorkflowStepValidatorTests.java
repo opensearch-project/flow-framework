@@ -11,6 +11,7 @@ package org.opensearch.flowframework.model;
 import org.opensearch.flowframework.workflow.CreateConnectorStep;
 import org.opensearch.flowframework.workflow.CreateIndexStep;
 import org.opensearch.flowframework.workflow.DeleteIndexStep;
+import org.opensearch.flowframework.workflow.DeleteModelStep;
 import org.opensearch.flowframework.workflow.DeployModelStep;
 import org.opensearch.flowframework.workflow.RegisterModelGroupStep;
 import org.opensearch.flowframework.workflow.RegisterRemoteModelStep;
@@ -111,12 +112,22 @@ public class WorkflowStepValidatorTests extends OpenSearchTestCase {
             RegisterModelGroupStep.PROVIDED_OUTPUTS
         );
     }
+
     public void testUndeployModelStepValidator() throws IOException {
         assertStepValidatorMatches(
-                WorkflowStepFactory.WorkflowSteps.UNDEPLOY_MODEL,
-                UndeployModelStep.NAME,
-                UndeployModelStep.REQUIRED_INPUTS,
-                UndeployModelStep.PROVIDED_OUTPUTS
+            WorkflowStepFactory.WorkflowSteps.UNDEPLOY_MODEL,
+            UndeployModelStep.NAME,
+            UndeployModelStep.REQUIRED_INPUTS,
+            UndeployModelStep.PROVIDED_OUTPUTS
+        );
+    }
+
+    public void testDeleteModelStepValidator() throws IOException {
+        assertStepValidatorMatches(
+            WorkflowStepFactory.WorkflowSteps.DELETE_MODEL,
+            DeleteModelStep.NAME,
+            DeleteModelStep.REQUIRED_INPUTS,
+            DeleteModelStep.PROVIDED_OUTPUTS
         );
     }
 

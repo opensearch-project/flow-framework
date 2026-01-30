@@ -44,7 +44,6 @@ import static org.opensearch.flowframework.common.CommonValue.NAME_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.OPENSEARCH_ML;
 import static org.opensearch.flowframework.common.CommonValue.PIPELINE_ID;
 import static org.opensearch.flowframework.common.CommonValue.REGISTER_MODEL_STATUS;
-import static org.opensearch.flowframework.common.CommonValue.SUCCESS;
 import static org.opensearch.flowframework.common.CommonValue.TYPE;
 import static org.opensearch.flowframework.common.CommonValue.URL;
 import static org.opensearch.flowframework.common.CommonValue.VERSION_FIELD;
@@ -219,10 +218,16 @@ public class WorkflowStepFactory {
         ),
 
         /** Undeploy Model Step */
-        UNDEPLOY_MODEL(UndeployModelStep.NAME, UndeployModelStep.REQUIRED_INPUTS, UndeployModelStep.PROVIDED_OUTPUTS, List.of(OPENSEARCH_ML), null),
+        UNDEPLOY_MODEL(
+            UndeployModelStep.NAME,
+            UndeployModelStep.REQUIRED_INPUTS,
+            UndeployModelStep.PROVIDED_OUTPUTS,
+            List.of(OPENSEARCH_ML),
+            null
+        ),
 
         /** Delete Model Step */
-        DELETE_MODEL(DeleteModelStep.NAME, List.of(MODEL_ID), List.of(MODEL_ID), List.of(OPENSEARCH_ML), null),
+        DELETE_MODEL(DeleteModelStep.NAME, DeleteModelStep.REQUIRED_INPUTS, DeleteModelStep.PROVIDED_OUTPUTS, List.of(OPENSEARCH_ML), null),
 
         /** Delete Connector Step */
         DELETE_CONNECTOR(DeleteConnectorStep.NAME, List.of(CONNECTOR_ID), List.of(CONNECTOR_ID), List.of(OPENSEARCH_ML), null),

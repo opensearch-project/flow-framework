@@ -49,6 +49,7 @@ public class UndeployModelStep implements WorkflowStep {
     public static final Set<String> OPTIONAL_INPUTS = Collections.emptySet();
     /** Provided output keys */
     public static final Set<String> PROVIDED_OUTPUTS = Set.of(SUCCESS);
+
     /**
      * Instantiate this class
      * @param mlClient Machine Learning client to perform the undeploy
@@ -67,8 +68,6 @@ public class UndeployModelStep implements WorkflowStep {
         String tenantId
     ) {
         PlainActionFuture<WorkflowData> undeployModelFuture = PlainActionFuture.newFuture();
-
-
 
         try {
             Map<String, Object> inputs = ParseUtils.getInputsFromPreviousSteps(
