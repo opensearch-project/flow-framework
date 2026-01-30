@@ -46,7 +46,6 @@ import static org.opensearch.flowframework.common.CommonValue.PIPELINE_ID;
 import static org.opensearch.flowframework.common.CommonValue.REGISTER_MODEL_STATUS;
 import static org.opensearch.flowframework.common.CommonValue.URL;
 import static org.opensearch.flowframework.common.CommonValue.VERSION_FIELD;
-import static org.opensearch.flowframework.common.WorkflowResources.INDEX_NAME;
 import static org.opensearch.flowframework.common.WorkflowResources.MODEL_ID;
 
 /**
@@ -296,7 +295,13 @@ public class WorkflowStepFactory {
         ),
 
         /** Update Index Step */
-        UPDATE_INDEX(UpdateIndexStep.NAME, List.of(INDEX_NAME, CONFIGURATIONS), List.of(INDEX_NAME), Collections.emptyList(), null),
+        UPDATE_INDEX(
+            UpdateIndexStep.NAME,
+            UpdateIndexStep.REQUIRED_INPUTS,
+            UpdateIndexStep.PROVIDED_OUTPUTS,
+            Collections.emptyList(),
+            null
+        ),
 
         /** Delete Search Pipeline Step */
         DELETE_SEARCH_PIPELINE(
