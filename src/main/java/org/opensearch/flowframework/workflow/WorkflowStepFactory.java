@@ -219,7 +219,7 @@ public class WorkflowStepFactory {
         ),
 
         /** Undeploy Model Step */
-        UNDEPLOY_MODEL(UndeployModelStep.NAME, List.of(MODEL_ID), List.of(SUCCESS), List.of(OPENSEARCH_ML), null),
+        UNDEPLOY_MODEL(UndeployModelStep.NAME, UndeployModelStep.REQUIRED_INPUTS, UndeployModelStep.PROVIDED_OUTPUTS, List.of(OPENSEARCH_ML), null),
 
         /** Delete Model Step */
         DELETE_MODEL(DeleteModelStep.NAME, List.of(MODEL_ID), List.of(MODEL_ID), List.of(OPENSEARCH_ML), null),
