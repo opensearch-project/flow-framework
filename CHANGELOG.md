@@ -3,13 +3,10 @@ All notable changes to this project are documented in this file.
 
 Inspired from [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
-## [Unreleased 3.x](https://github.com/opensearch-project/flow-framework/compare/3.4...HEAD)
+## [Unreleased 3.x](https://github.com/opensearch-project/flow-framework/compare/3.5...HEAD)
 ### Features
 ### Enhancements
 ### Bug Fixes
-- Fix substitution templates for OpenSearch 3.x compatibility by removing `_doc` mapping ([#1301](https://github.com/opensearch-project/flow-framework/pull/1301))
-- Fixed user permission validation to correctly handle null users and backend roles ([#1292](https://github.com/opensearch-project/flow-framework/pull/1292))
-
 ### Infrastructure
 ### Documentation
 ### Maintenance
