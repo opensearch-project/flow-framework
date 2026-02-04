@@ -66,7 +66,7 @@ buildscript {
 }
 
 plugins {
-    id "de.undercouch.download" version "5.6.0"
+    id "de.undercouch.download" version "5.7.0"
     id "org.gradle.test-retry" version "1.6.4" apply false
     id "io.github.surpsg.delta-coverage" version "2.5.0"
 }
