@@ -33,7 +33,7 @@ jobs:
         run: |
           plugin_version=`./gradlew properties -q | grep "opensearch_build:" | awk '{print $2}'`
           echo plugin_version $plugin_version
-          ./gradlew assemble -Pcrypto.standard=FIPS-140-3
+          ./gradlew assemble "-Pcrypto.standard=FIPS-140-3"
           echo "Creating ./src/test/resources/org/opensearch/flowframework/bwc/flow-framework/$plugin_version ..."
           mkdir -p ./src/test/resources/org/opensearch/flowframework/bwc/flow-framework/$plugin_version
           echo "Copying ./build/distributions/*.zip to ./src/test/resources/org/opensearch/flowframework/bwc/flow-framework/$plugin_version ..."
@@ -44,4 +44,4 @@ jobs:
       - name: Run Flow Framework Backwards Compatibility Tests
         run: |
           echo "Running backwards compatibility tests ..."
-          ./gradlew bwcTestSuite -Dtests.security.manager=false -Pcrypto.standard=FIPS-140-3
+          ./gradlew bwcTestSuite -Dtests.security.manager=false "-Pcrypto.standard=FIPS-140-3"
