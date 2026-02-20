@@ -3,6 +3,7 @@ import org.opensearch.gradle.testclusters.OpenSearchCluster
 import org.opensearch.gradle.testclusters.StandaloneRestIntegTestTask
 import org.opensearch.gradle.test.RestIntegTestTask
 import org.opensearch.gradle.VersionProperties
+import org.opensearch.gradle.info.FipsBuildParams
 import java.util.concurrent.Callable
 import java.nio.file.Paths
 
@@ -224,7 +225,12 @@ dependencies {
     implementation("software.amazon.cryptography:aws-cryptographic-material-providers:${awsCryptoMaterialProvidersVersion}")
     implementation("org.dafny:DafnyRuntime:${dafnyRuntimeVersion}")
     implementation("software.amazon.smithy.dafny:conversion:${smithyDafnyVersion}")
-    implementation("org.bouncycastle:bc-fips:${versions.bouncycastle_jce}")
+    // When building with -Pcrypto.standard=FIPS-140-3, bcFips jar is provided by OpenSearch
+    if (FipsBuildParams.isInFipsMode()) {
+        compileOnly("org.bouncycastle:bc-fips:${versions.bouncycastle_jce}")
+    } else {
+        implementation("org.bouncycastle:bc-fips:${versions.bouncycastle_jce}")
+    }
     implementation("jakarta.json.bind:jakarta.json.bind-api:${jakartaJsonBindVersion}")
     implementation("org.glassfish:jakarta.json:${jakartaJsonVersion}")
     implementation("org.eclipse:yasson:${yassonVersion}")

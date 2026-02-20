@@ -50,4 +50,5 @@ jobs:
             -Dsecurity.enabled=true \
             -Dhttps=true \
             -Dresource_sharing.enabled=${{ matrix.resource_sharing_flag }} \
+            -Pcrypto.standard=FIPS-140-3 \
             --tests '*IT'"
