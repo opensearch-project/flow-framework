@@ -203,7 +203,7 @@ dependencies {
     api("org.opensearch:opensearch-ml-client:${opensearch_build}")
     // json, jsonpath, and commons-text are required by MLClient but must be provided by calling plugins
     implementation('org.json:json:20251224')
-    implementation('com.jayway.jsonpath:json-path:2.10.0') {
+    implementation('com.jayway.jsonpath:json-path:3.0.0') {
         // conflicts with OpenSearch versions
         exclude group: 'org.slf4j', module: 'slf4j-api'
         exclude group: 'net.minidev', module: 'json-smart'
