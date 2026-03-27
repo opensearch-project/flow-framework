@@ -4,6 +4,7 @@
         - [Java](#java)
     - [Setup](#setup)
     - [Build](#build)
+        - [FIPS Crypto Configuration](#fips-crypto-configuration)
         - [Building from the command line](#building-from-the-command-line)
         - [Building from the IDE](#building-from-the-ide)
     - [Backports](#backports)
@@ -35,6 +36,15 @@ The Flow Framework `main` branch targets JDK 21. To ease backporting to `2.x`, m
 ### Build
 
 This package uses the [Gradle](https://docs.gradle.org/current/userguide/userguide.html) build system. Gradle comes with excellent documentation that should be your first stop when trying to figure out how to operate or modify the build. we also use the OpenSearch build tools for Gradle. These tools are idiosyncratic and don't always follow the conventions and instructions for building regular Java code using Gradle. Not everything in this package will work the way it's described in the Gradle documentation. If you encounter such a situation, the OpenSearch build tools [source code](https://github.com/opensearch-project/OpenSearch/tree/main/buildSrc/src/main/groovy/org/opensearch/gradle) is your best bet for figuring out what's going on.
+
+#### FIPS Crypto Configuration
+
+The `gradle.properties` file includes `crypto.standard=FIPS-140-3` by default, so there is no need to pass `-Pcrypto.standard=FIPS-140-3` on the command line. All build and test commands automatically use this setting.
+
+To build without FIPS, override the property:
+```
+./gradlew assemble -Pcrypto.standard=any-supported
+```
 
 #### Building from the command line
 
