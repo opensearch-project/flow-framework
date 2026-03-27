@@ -53,7 +53,7 @@ jobs:
       - name: Build and Run Tests
         shell: bash
         run: |
-          ./gradlew check -x integTest -x yamlRestTest -x spotlessJava "-Pcrypto.standard=FIPS-140-3"
+          ./gradlew check -x integTest -x yamlRestTest -x spotlessJava
       - name: Upload Coverage Report
         if: contains(matrix.os, 'ubuntu') && contains(matrix.java, '21')
         uses: codecov/codecov-action@v5
@@ -80,7 +80,7 @@ jobs:
       - name: Build and Run Tests
         shell: bash
         run: |
-          ./gradlew integTest yamlRestTest "-Pcrypto.standard=FIPS-140-3"
+          ./gradlew integTest yamlRestTest
   integMultiNodeTest:
     needs: [spotless, javadoc]
     strategy:
@@ -100,7 +100,7 @@ jobs:
       - name: Build and Run Tests
         shell: bash
         run: |
-          ./gradlew integTest -PnumNodes=3 "-Pcrypto.standard=FIPS-140-3"
+          ./gradlew integTest -PnumNodes=3
   integTenantAwareTest:
     needs: [spotless, javadoc]
     strategy:
@@ -123,4 +123,4 @@ jobs:
       - name: Build and Run Tests
         shell: bash
         run: |
-          ./gradlew integTest "-Dtests.rest.tenantaware=true" "-Pcrypto.standard=FIPS-140-3"
+          ./gradlew integTest "-Dtests.rest.tenantaware=true"
