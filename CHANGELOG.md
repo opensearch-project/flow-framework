@@ -9,6 +9,7 @@ Inspired from [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 - Add agentic search workflow template with conversational agent ([#1353](https://github.com/opensearch-project/flow-framework/pull/1353))
 ### Enhancements
 ### Bug Fixes
+- Fix hard-coded region in Bedrock template URLs ([#1354](https://github.com/opensearch-project/flow-framework/pull/1354))
 ### Infrastructure
 ### Documentation
 ### Maintenance
