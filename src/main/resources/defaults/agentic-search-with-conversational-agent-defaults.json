@@ -16,7 +16,7 @@
   "register_agent.name": "Conversational Agent for Agentic Search",
   "register_agent.description": "Conversational agent for agentic search with memory",
   "register_agent.type": "conversational",
-  "register_agent.llm_interface": "bedrock/converse",
+  "register_agent.llm_interface": "bedrock/converse/claude",
   "register_agent.max_iteration": "20",
   "query_planning_tool.response_filter": "$.output.message.content[0].text",
   "create_search_pipeline.pipeline_id": "agentic-search-conversational-pipeline"
