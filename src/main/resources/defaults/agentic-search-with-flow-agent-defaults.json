@@ -1,0 +1,21 @@
+{
+  "template.name": "agentic_search_with_flow_agent",
+  "template.description": "Setting up agentic search with a flow agent and Bedrock Claude",
+  "create_connector.name": "Amazon Bedrock Connector: Claude 4 Sonnet",
+  "create_connector.description": "Connector to Amazon Bedrock Claude model for agentic search",
+  "create_connector.protocol": "aws_sigv4",
+  "create_connector.region": "us-west-2",
+  "create_connector.model": "us.anthropic.claude-sonnet-4-20250514-v1:0",
+  "create_connector.credential.access_key": "",
+  "create_connector.credential.secret_key": "",
+  "create_connector.credential.session_token": "",
+  "create_connector.actions.url": "https://bedrock-runtime.${parameters.region}.amazonaws.com/model/${parameters.model}/converse",
+  "create_connector.actions.request_body": "{ \"system\": [{\"text\": \"${parameters.system_prompt}\"}], \"messages\": [${parameters._chat_history:-}{\"role\":\"user\",\"content\":[{\"text\":\"${parameters.user_prompt}\"}]}${parameters._interactions:-}]${parameters.tool_configs:-} }",
+  "register_remote_model.name": "Bedrock Claude model for agentic search",
+  "register_remote_model.description": "Model used for query planning in agentic search",
+  "register_agent.name": "Flow Agent for Agentic Search",
+  "register_agent.description": "Flow agent for agentic search",
+  "register_agent.type": "flow",
+  "query_planning_tool.response_filter": "$.output.message.content[0].text",
+  "create_search_pipeline.pipeline_id": "agentic-search-pipeline"
+}

@@ -163,6 +163,13 @@ public enum DefaultUseCases {
         "defaults/conversational-search-rag-tool-defaults.json",
         "substitutionTemplates/conversational-search-with-bedrock-rag-tool-template.json",
         List.of(CREATE_CONNECTOR_CREDENTIAL_ACCESS_KEY, CREATE_CONNECTOR_CREDENTIAL_SECRET_KEY, CREATE_CONNECTOR_CREDENTIAL_SESSION_TOKEN)
+    ),
+    /** defaults file and substitution ready template for agentic search with flow agent */
+    AGENTIC_SEARCH_WITH_FLOW_AGENT(
+        "agentic_search_with_flow_agent",
+        "defaults/agentic-search-with-flow-agent-defaults.json",
+        "substitutionTemplates/agentic-search-with-flow-agent-template.json",
+        List.of(CREATE_CONNECTOR_CREDENTIAL_ACCESS_KEY, CREATE_CONNECTOR_CREDENTIAL_SECRET_KEY, CREATE_CONNECTOR_CREDENTIAL_SESSION_TOKEN)
     );
 
     private final String useCaseName;
