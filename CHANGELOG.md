@@ -11,6 +11,7 @@ Inspired from [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 ### Bug Fixes
 - Add response processor to flow agent agentic search template ([#1367](https://github.com/opensearch-project/flow-framework/pull/1367))
 - Fix hard-coded region in Bedrock template URLs ([#1354](https://github.com/opensearch-project/flow-framework/pull/1354))
+- Add missing fields to workflow steps matching ml-commons builders ([#1360](https://github.com/opensearch-project/flow-framework/pull/1360))
 ### Infrastructure
 ### Documentation
 ### Maintenance

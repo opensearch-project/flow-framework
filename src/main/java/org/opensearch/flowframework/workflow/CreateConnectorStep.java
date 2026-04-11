@@ -26,7 +26,6 @@ import org.opensearch.ml.common.transport.connector.MLCreateConnectorResponse;
 import org.opensearch.secure_sm.AccessController;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
@@ -35,8 +34,14 @@ import java.util.Map.Entry;
 import java.util.Set;
 
 import static org.opensearch.flowframework.common.CommonValue.ACTIONS_FIELD;
+import static org.opensearch.flowframework.common.CommonValue.ADD_ALL_BACKEND_ROLES;
+import static org.opensearch.flowframework.common.CommonValue.BACKEND_ROLES_FIELD;
+import static org.opensearch.flowframework.common.CommonValue.CLIENT_CONFIG_FIELD;
+import static org.opensearch.flowframework.common.CommonValue.CONNECTOR_URL_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.CREDENTIAL_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.DESCRIPTION_FIELD;
+import static org.opensearch.flowframework.common.CommonValue.HEADERS_FIELD;
+import static org.opensearch.flowframework.common.CommonValue.MODEL_ACCESS_MODE;
 import static org.opensearch.flowframework.common.CommonValue.NAME_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.PARAMETERS_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.PROTOCOL_FIELD;
@@ -68,7 +73,14 @@ public class CreateConnectorStep implements WorkflowStep {
         ACTIONS_FIELD
     );
     /** Optional input keys */
-    public static final Set<String> OPTIONAL_INPUTS = Collections.emptySet();
+    public static final Set<String> OPTIONAL_INPUTS = Set.of(
+        BACKEND_ROLES_FIELD,
+        ADD_ALL_BACKEND_ROLES,
+        MODEL_ACCESS_MODE,
+        CLIENT_CONFIG_FIELD,
+        CONNECTOR_URL_FIELD,
+        HEADERS_FIELD
+    );
     /** Provided output keys */
     public static final Set<String> PROVIDED_OUTPUTS = Set.of(CONNECTOR_ID);
 
@@ -149,7 +161,17 @@ public class CreateConnectorStep implements WorkflowStep {
                 throw new FlowFrameworkException("Exception in connector configuration", RestStatus.UNAUTHORIZED);
             }
 
-            MLCreateConnectorInput mlInput = MLCreateConnectorInput.builder()
+            @SuppressWarnings("unchecked")
+            List<String> backendRoles = (List<String>) inputs.get(BACKEND_ROLES_FIELD);
+            Boolean addAllBackendRoles = ParseUtils.parseIfExists(inputs, ADD_ALL_BACKEND_ROLES, Boolean.class);
+            String accessMode = (String) inputs.get(MODEL_ACCESS_MODE);
+            @SuppressWarnings("unchecked")
+            Map<String, Object> clientConfigMap = (Map<String, Object>) inputs.get(CLIENT_CONFIG_FIELD);
+            String connectorUrl = (String) inputs.get(CONNECTOR_URL_FIELD);
+            @SuppressWarnings("unchecked")
+            Map<String, String> headers = (Map<String, String>) inputs.get(HEADERS_FIELD);
+
+            MLCreateConnectorInput.MLCreateConnectorInputBuilder mlInputBuilder = MLCreateConnectorInput.builder()
                 .name(name)
                 .description(description)
                 .version(version)
@@ -157,8 +179,34 @@ public class CreateConnectorStep implements WorkflowStep {
                 .parameters(parameters)
                 .credential(credentials)
                 .actions(actions)
-                .tenantId(tenantId)
-                .build();
+                .tenantId(tenantId);
+
+            if (backendRoles != null) {
+                mlInputBuilder.backendRoles(backendRoles);
+            }
+            if (addAllBackendRoles != null) {
+                mlInputBuilder.addAllBackendRoles(addAllBackendRoles);
+            }
+            if (accessMode != null) {
+                mlInputBuilder.access(org.opensearch.ml.common.AccessMode.from(accessMode));
+            }
+            if (clientConfigMap != null) {
+                mlInputBuilder.connectorClientConfig(
+                    org.opensearch.ml.common.connector.ConnectorClientConfig.builder()
+                        .maxConnections((Integer) clientConfigMap.get("max_connection"))
+                        .connectionTimeout((Integer) clientConfigMap.get("connection_timeout"))
+                        .readTimeout((Integer) clientConfigMap.get("read_timeout"))
+                        .build()
+                );
+            }
+            if (connectorUrl != null) {
+                mlInputBuilder.url(connectorUrl);
+            }
+            if (headers != null) {
+                mlInputBuilder.headers(headers);
+            }
+
+            MLCreateConnectorInput mlInput = mlInputBuilder.build();
 
             mlClient.createConnector(mlInput, actionListener);
         } catch (FlowFrameworkException e) {
@@ -196,6 +244,7 @@ public class CreateConnectorStep implements WorkflowStep {
             @SuppressWarnings("unchecked")
             ConnectorAction action = ConnectorAction.builder()
                 .actionType(ActionType.valueOf(actionType.toUpperCase(Locale.ROOT)))
+                .name((String) map.get(ConnectorAction.NAME_FIELD))
                 .method((String) map.get(ConnectorAction.METHOD_FIELD))
                 .url((String) map.get(ConnectorAction.URL_FIELD))
                 .headers((Map<String, String>) map.get(ConnectorAction.HEADERS_FIELD))

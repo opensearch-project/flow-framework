@@ -24,6 +24,9 @@ import org.opensearch.flowframework.util.ApiSpecFetcher;
 import org.opensearch.ml.client.MachineLearningNodeClient;
 import org.opensearch.ml.common.MLTask;
 import org.opensearch.ml.common.MLTaskState;
+import org.opensearch.ml.common.controller.MLRateLimiter;
+import org.opensearch.ml.common.model.Guardrails;
+import org.opensearch.ml.common.model.MLDeploySetting;
 import org.opensearch.ml.common.transport.register.MLRegisterModelInput;
 import org.opensearch.ml.common.transport.register.MLRegisterModelResponse;
 import org.opensearch.rest.RestRequest;
@@ -123,6 +126,120 @@ public class RegisterLocalPretrainedModelStepTests extends OpenSearchTestCase {
     @AfterClass
     public static void cleanup() {
         ThreadPool.terminate(testThreadPool, 500, TimeUnit.MILLISECONDS);
+    }
+
+    public void testRegisterLocalPretrainedModelWithOptionalFields() throws Exception {
+
+        String taskId = "abcd";
+        String modelId = "model-id";
+        String status = MLTaskState.COMPLETED.name();
+
+        doAnswer(invocation -> {
+            ActionListener<MLRegisterModelResponse> actionListener = invocation.getArgument(1);
+            MLRegisterModelResponse output = new MLRegisterModelResponse(taskId, status, null);
+            actionListener.onResponse(output);
+            return null;
+        }).when(machineLearningNodeClient).register(any(MLRegisterModelInput.class), any());
+
+        doAnswer(invocation -> {
+            ActionListener<MLTask> actionListener = invocation.getArgument(2);
+            MLTask output = MLTask.builder().taskId(taskId).modelId(modelId).state(MLTaskState.COMPLETED).async(false).build();
+            actionListener.onResponse(output);
+            return null;
+        }).when(machineLearningNodeClient).getTask(any(), nullable(String.class), any());
+
+        doAnswer(invocation -> {
+            ActionListener<WorkflowData> updateResponseListener = invocation.getArgument(5);
+            updateResponseListener.onResponse(new WorkflowData(Map.of(MODEL_ID, modelId), "test-id", "test-node-id"));
+            return null;
+        }).when(flowFrameworkIndicesHandler)
+            .addResourceToStateIndex(any(WorkflowData.class), anyString(), anyString(), anyString(), any(), any());
+
+        WorkflowData optionalFieldsData = new WorkflowData(
+            Map.ofEntries(
+                Map.entry("name", "xyz"),
+                Map.entry("version", "1.0.0"),
+                Map.entry("model_format", "TORCH_SCRIPT"),
+                Map.entry(MODEL_GROUP_ID, "abcdefg"),
+                Map.entry("description", "desc"),
+                Map.entry("is_enabled", true),
+                Map.entry("backend_roles", List.of("role1")),
+                Map.entry("add_all_backend_roles", false),
+                Map.entry("access_mode", "public")
+            ),
+            "test-id",
+            "test-node-id"
+        );
+
+        PlainActionFuture<WorkflowData> future = registerLocalPretrainedModelStep.execute(
+            optionalFieldsData.getNodeId(),
+            optionalFieldsData,
+            Collections.emptyMap(),
+            Collections.emptyMap(),
+            Collections.emptyMap(),
+            null
+        );
+
+        future.actionGet();
+
+        verify(machineLearningNodeClient, times(1)).register(any(MLRegisterModelInput.class), any());
+        assertEquals(modelId, future.get().getContent().get(MODEL_ID));
+        assertEquals(status, future.get().getContent().get(REGISTER_MODEL_STATUS));
+    }
+
+    public void testRegisterLocalPretrainedModelWithRateLimiterDeploySettingGuardrailsNodeIds() throws Exception {
+
+        String taskId = "abcd";
+        String modelId = "model-id";
+        String status = MLTaskState.COMPLETED.name();
+
+        doAnswer(invocation -> {
+            ActionListener<MLRegisterModelResponse> actionListener = invocation.getArgument(1);
+            actionListener.onResponse(new MLRegisterModelResponse(taskId, status, null));
+            return null;
+        }).when(machineLearningNodeClient).register(any(MLRegisterModelInput.class), any());
+
+        doAnswer(invocation -> {
+            ActionListener<MLTask> actionListener = invocation.getArgument(2);
+            actionListener.onResponse(MLTask.builder().taskId(taskId).modelId(modelId).state(MLTaskState.COMPLETED).async(false).build());
+            return null;
+        }).when(machineLearningNodeClient).getTask(any(), nullable(String.class), any());
+
+        doAnswer(invocation -> {
+            ActionListener<WorkflowData> updateResponseListener = invocation.getArgument(5);
+            updateResponseListener.onResponse(new WorkflowData(Map.of(MODEL_ID, modelId), "test-id", "test-node-id"));
+            return null;
+        }).when(flowFrameworkIndicesHandler)
+            .addResourceToStateIndex(any(WorkflowData.class), anyString(), anyString(), anyString(), any(), any());
+
+        WorkflowData data = new WorkflowData(
+            Map.ofEntries(
+                Map.entry("name", "xyz"),
+                Map.entry("version", "1.0.0"),
+                Map.entry("model_format", "TORCH_SCRIPT"),
+                Map.entry(MODEL_GROUP_ID, "abcdefg"),
+                Map.entry("rate_limiter", new MLRateLimiter("10", TimeUnit.SECONDS)),
+                Map.entry("deploy_setting", new MLDeploySetting(true, 60L)),
+                Map.entry("guardrails", Guardrails.builder().type("model").build()),
+                Map.entry("model_node_ids", new String[] { "node1", "node2" })
+            ),
+            "test-id",
+            "test-node-id"
+        );
+
+        PlainActionFuture<WorkflowData> future = registerLocalPretrainedModelStep.execute(
+            data.getNodeId(),
+            data,
+            Collections.emptyMap(),
+            Collections.emptyMap(),
+            Collections.emptyMap(),
+            null
+        );
+
+        future.actionGet();
+
+        verify(machineLearningNodeClient, times(1)).register(any(MLRegisterModelInput.class), any());
+        assertEquals(modelId, future.get().getContent().get(MODEL_ID));
     }
 
     public void testRegisterLocalPretrainedModelSuccess() throws Exception {

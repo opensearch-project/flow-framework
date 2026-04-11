@@ -81,6 +81,69 @@ public class CreateConnectorStepTests extends OpenSearchTestCase {
         );
     }
 
+    public void testCreateConnectorWithOptionalFields() throws IOException, ExecutionException, InterruptedException {
+        Map<String, String> params = Map.ofEntries(Map.entry("endpoint", "endpoint"), Map.entry("temp", "7"));
+        Map<String, String> credentials = Map.ofEntries(Map.entry("key1", "value1"), Map.entry("key2", "value2"));
+        Map<?, ?>[] actions = new Map<?, ?>[] {
+            Map.ofEntries(
+                Map.entry(ConnectorAction.ACTION_TYPE_FIELD, ConnectorAction.ActionType.PREDICT.name()),
+                Map.entry(ConnectorAction.NAME_FIELD, "predict-action"),
+                Map.entry(ConnectorAction.METHOD_FIELD, "post"),
+                Map.entry(ConnectorAction.URL_FIELD, "foo.test"),
+                Map.entry(ConnectorAction.REQUEST_BODY_FIELD, "{ \"model\": \"${parameters.model}\" }")
+            ) };
+
+        WorkflowData optionalInputData = new WorkflowData(
+            Map.ofEntries(
+                Map.entry(CommonValue.NAME_FIELD, "test"),
+                Map.entry(CommonValue.DESCRIPTION_FIELD, "description"),
+                Map.entry(CommonValue.VERSION_FIELD, "1"),
+                Map.entry(CommonValue.PROTOCOL_FIELD, "http"),
+                Map.entry(CommonValue.PARAMETERS_FIELD, params),
+                Map.entry(CommonValue.CREDENTIAL_FIELD, credentials),
+                Map.entry(CommonValue.ACTIONS_FIELD, actions),
+                Map.entry(CommonValue.BACKEND_ROLES_FIELD, List.of("role1", "role2")),
+                Map.entry(CommonValue.ADD_ALL_BACKEND_ROLES, true),
+                Map.entry(CommonValue.MODEL_ACCESS_MODE, "public"),
+                Map.entry(CommonValue.CLIENT_CONFIG_FIELD, Map.of("max_connection", 30, "connection_timeout", 30, "read_timeout", 30)),
+                Map.entry(CommonValue.CONNECTOR_URL_FIELD, "http://mcp.example.com"),
+                Map.entry(CommonValue.HEADERS_FIELD, Map.of("Content-Type", "application/json"))
+            ),
+            "test-id",
+            "test-node-id"
+        );
+
+        String connectorId = "connect";
+        CreateConnectorStep createConnectorStep = new CreateConnectorStep(machineLearningNodeClient, flowFrameworkIndicesHandler);
+
+        doAnswer(invocation -> {
+            ActionListener<MLCreateConnectorResponse> actionListener = invocation.getArgument(1);
+            MLCreateConnectorResponse output = new MLCreateConnectorResponse(connectorId);
+            actionListener.onResponse(output);
+            return null;
+        }).when(machineLearningNodeClient).createConnector(any(MLCreateConnectorInput.class), any());
+
+        doAnswer(invocation -> {
+            ActionListener<WorkflowData> updateResponseListener = invocation.getArgument(5);
+            updateResponseListener.onResponse(new WorkflowData(Map.of(CONNECTOR_ID, connectorId), "test-id", "test-node-id"));
+            return null;
+        }).when(flowFrameworkIndicesHandler)
+            .addResourceToStateIndex(any(WorkflowData.class), anyString(), anyString(), anyString(), any(), any());
+
+        PlainActionFuture<WorkflowData> future = createConnectorStep.execute(
+            optionalInputData.getNodeId(),
+            optionalInputData,
+            Collections.emptyMap(),
+            Collections.emptyMap(),
+            Collections.emptyMap(),
+            null
+        );
+
+        verify(machineLearningNodeClient).createConnector(any(MLCreateConnectorInput.class), any());
+        assertTrue(future.isDone());
+        assertEquals(connectorId, future.get().getContent().get(CONNECTOR_ID));
+    }
+
     public void testCreateConnector() throws IOException, ExecutionException, InterruptedException {
 
         String connectorId = "connect";
