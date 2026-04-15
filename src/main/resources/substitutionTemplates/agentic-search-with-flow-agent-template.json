@@ -99,6 +99,13 @@
                     "agent_id": "${{register_agent.agent_id}}"
                   }
                 }
+              ],
+              "response_processors": [
+                {
+                  "agentic_context": {
+                    "dsl_query": true
+                  }
+                }
               ]
             }
           }
