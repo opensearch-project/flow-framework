@@ -32,6 +32,7 @@ import static org.opensearch.ml.common.agent.MLToolSpec.CONFIG_FIELD;
 import static org.opensearch.ml.common.agent.MLToolSpec.DESCRIPTION_FIELD;
 import static org.opensearch.ml.common.agent.MLToolSpec.INCLUDE_OUTPUT_IN_AGENT_RESPONSE;
 import static org.opensearch.ml.common.agent.MLToolSpec.PARAMETERS_FIELD;
+import static org.opensearch.ml.common.agent.MLToolSpec.RUN_TIME_RESOURCES_FIELD;
 import static org.opensearch.ml.common.agent.MLToolSpec.TOOL_NAME_FIELD;
 import static org.opensearch.ml.common.agent.MLToolSpec.TOOL_TYPE_FIELD;
 
@@ -54,7 +55,8 @@ public class ToolStep implements WorkflowStep {
         PARAMETERS_FIELD,
         ATTRIBUTES_FIELD,
         CONFIG_FIELD,
-        INCLUDE_OUTPUT_IN_AGENT_RESPONSE
+        INCLUDE_OUTPUT_IN_AGENT_RESPONSE,
+        RUN_TIME_RESOURCES_FIELD
     );
     /** Provided output keys */
     public static final Set<String> PROVIDED_OUTPUTS = Set.of(TOOLS_FIELD);
@@ -98,6 +100,8 @@ public class ToolStep implements WorkflowStep {
             Map<String, String> attributes = (Map<String, String>) inputs.get(ATTRIBUTES_FIELD);
             @SuppressWarnings("unchecked")
             Map<String, String> config = (Map<String, String>) inputs.getOrDefault(CONFIG_FIELD, Collections.emptyMap());
+            @SuppressWarnings("unchecked")
+            Map<String, Object> runtimeResources = (Map<String, Object>) inputs.get(RUN_TIME_RESOURCES_FIELD);
 
             MLToolSpec.MLToolSpecBuilder builder = MLToolSpec.builder();
 
@@ -118,6 +122,10 @@ public class ToolStep implements WorkflowStep {
                 builder.includeOutputInAgentResponse(includeOutputInAgentResponse);
             }
             builder.configMap(config);
+
+            if (runtimeResources != null) {
+                builder.runtimeResources(runtimeResources);
+            }
 
             MLToolSpec mlToolSpec = builder.build();
 
