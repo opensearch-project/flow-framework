@@ -9,6 +9,7 @@
 package org.opensearch.flowframework.workflow;
 
 import org.opensearch.Version;
+import org.opensearch.action.admin.cluster.node.info.PluginsAndModules;
 import org.opensearch.cluster.service.ClusterService;
 import org.opensearch.common.settings.ClusterSettings;
 import org.opensearch.common.settings.Setting;
@@ -26,6 +27,8 @@ import org.opensearch.flowframework.model.Workflow;
 import org.opensearch.flowframework.model.WorkflowEdge;
 import org.opensearch.flowframework.model.WorkflowNode;
 import org.opensearch.ml.client.MachineLearningNodeClient;
+import org.opensearch.plugins.PluginInfo;
+import org.opensearch.plugins.PluginsService;
 import org.opensearch.test.OpenSearchTestCase;
 import org.opensearch.threadpool.ScalingExecutorBuilder;
 import org.opensearch.threadpool.TestThreadPool;
@@ -830,6 +833,43 @@ public class WorkflowProcessSorterTests extends OpenSearchTestCase {
         assertTrue(reprovisionWorkflowStepNames.contains(UpdateSearchPipelineStep.NAME));
         // Assert update index step in the sequence
         assertTrue(reprovisionWorkflowStepNames.contains(UpdateIndexStep.NAME));
+    }
+
+    public void testValidate() throws Exception {
+        WorkflowNode createConnector = new WorkflowNode(
+            "workflow_step_1",
+            CreateConnectorStep.NAME,
+            Collections.emptyMap(),
+            Map.ofEntries(
+                Map.entry("name", "My Valid Connector"),
+                Map.entry("description", "A valid description."),
+                Map.entry("version", "1"),
+                Map.entry("protocol", "http"),
+                Map.entry("parameters", "{}"),
+                Map.entry("credential", "{}"),
+                Map.entry("actions", "[]")
+            )
+        );
+        WorkflowNode registerModel = new WorkflowNode(
+            "workflow_step_2",
+            RegisterRemoteModelStep.NAME,
+            Map.ofEntries(Map.entry("workflow_step_1", CONNECTOR_ID)),
+            Map.ofEntries(Map.entry("name", "Valid Model"), Map.entry("function_name", "remote"), Map.entry("description", "Valid desc"))
+        );
+        WorkflowEdge edge = new WorkflowEdge(createConnector.id(), registerModel.id());
+        Workflow workflow = new Workflow(Collections.emptyMap(), List.of(createConnector, registerModel), List.of(edge));
+        List<ProcessNode> sortedProcessNodes = workflowProcessSorter.sortProcessNodes(workflow, "123", Collections.emptyMap(), null);
+
+        PluginsService pluginsService = mock(PluginsService.class);
+        PluginsAndModules pluginsAndModules = mock(PluginsAndModules.class);
+        when(pluginsService.info()).thenReturn(pluginsAndModules);
+        when(pluginsAndModules.getPluginInfos()).thenReturn(
+            List.of(
+                new PluginInfo("opensearch-flow-framework", "", "", Version.CURRENT, "", "", List.of(), false),
+                new PluginInfo("opensearch-ml", "", "", Version.CURRENT, "", "", List.of(), false)
+            )
+        );
+        workflowProcessSorter.validate(sortedProcessNodes, pluginsService);
     }
 
     public void testSuccessfulFieldValueValidation() throws Exception {
