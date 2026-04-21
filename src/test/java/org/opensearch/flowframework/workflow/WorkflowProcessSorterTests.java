@@ -832,4 +832,84 @@ public class WorkflowProcessSorterTests extends OpenSearchTestCase {
         assertTrue(reprovisionWorkflowStepNames.contains(UpdateIndexStep.NAME));
     }
 
+    public void testSuccessfulFieldValueValidation() throws Exception {
+        WorkflowNode createConnector = new WorkflowNode(
+            "workflow_step_1",
+            CreateConnectorStep.NAME,
+            Collections.emptyMap(),
+            Map.ofEntries(
+                Map.entry("name", "My Valid Connector"),
+                Map.entry("description", "A valid description."),
+                Map.entry("version", "1"),
+                Map.entry("protocol", "http"),
+                Map.entry("parameters", "{}"),
+                Map.entry("credential", "{}"),
+                Map.entry("actions", "[]")
+            )
+        );
+        Workflow workflow = new Workflow(Collections.emptyMap(), List.of(createConnector), Collections.emptyList());
+        List<ProcessNode> sortedProcessNodes = workflowProcessSorter.sortProcessNodes(workflow, "123", Collections.emptyMap(), null);
+        workflowProcessSorter.validateFieldValues(sortedProcessNodes);
+    }
+
+    public void testFieldValueValidationInvalidName() throws Exception {
+        WorkflowNode createConnector = new WorkflowNode(
+            "workflow_step_1",
+            CreateConnectorStep.NAME,
+            Collections.emptyMap(),
+            Map.ofEntries(
+                Map.entry("name", "Bad<script>Name"),
+                Map.entry("description", "A valid description."),
+                Map.entry("version", "1"),
+                Map.entry("protocol", "http"),
+                Map.entry("parameters", "{}"),
+                Map.entry("credential", "{}"),
+                Map.entry("actions", "[]")
+            )
+        );
+        Workflow workflow = new Workflow(Collections.emptyMap(), List.of(createConnector), Collections.emptyList());
+        List<ProcessNode> sortedProcessNodes = workflowProcessSorter.sortProcessNodes(workflow, "123", Collections.emptyMap(), null);
+        FlowFrameworkException ex = expectThrows(
+            FlowFrameworkException.class,
+            () -> workflowProcessSorter.validateFieldValues(sortedProcessNodes)
+        );
+        assertTrue(ex.getMessage().contains("Model connector name"));
+        assertEquals(RestStatus.BAD_REQUEST, ex.getRestStatus());
+    }
+
+    public void testFieldValueValidationInvalidDescription() throws Exception {
+        WorkflowNode registerModel = new WorkflowNode(
+            "workflow_step_1",
+            RegisterRemoteModelStep.NAME,
+            Collections.emptyMap(),
+            Map.ofEntries(
+                Map.entry("name", "Valid Model Name"),
+                Map.entry("function_name", "remote"),
+                Map.entry("description", "Bad<script>Desc"),
+                Map.entry("connector_id", "abc123")
+            )
+        );
+        Workflow workflow = new Workflow(Collections.emptyMap(), List.of(registerModel), Collections.emptyList());
+        List<ProcessNode> sortedProcessNodes = workflowProcessSorter.sortProcessNodes(workflow, "123", Collections.emptyMap(), null);
+        FlowFrameworkException ex = expectThrows(
+            FlowFrameworkException.class,
+            () -> workflowProcessSorter.validateFieldValues(sortedProcessNodes)
+        );
+        assertTrue(ex.getMessage().contains("Model description"));
+        assertEquals(RestStatus.BAD_REQUEST, ex.getRestStatus());
+    }
+
+    public void testFieldValueValidationSkipsNonMlSteps() throws Exception {
+        WorkflowNode createIndex = new WorkflowNode(
+            "workflow_step_1",
+            CreateIndexStep.NAME,
+            Collections.emptyMap(),
+            Map.ofEntries(Map.entry("index_name", "my-index"), Map.entry("configurations", "{}"))
+        );
+        Workflow workflow = new Workflow(Collections.emptyMap(), List.of(createIndex), Collections.emptyList());
+        List<ProcessNode> sortedProcessNodes = workflowProcessSorter.sortProcessNodes(workflow, "123", Collections.emptyMap(), null);
+        // Should not throw - non-ML steps are skipped
+        workflowProcessSorter.validateFieldValues(sortedProcessNodes);
+    }
+
 }
