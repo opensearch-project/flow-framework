@@ -25,28 +25,41 @@ import org.opensearch.flowframework.exception.WorkflowStepException;
 import org.opensearch.flowframework.indices.FlowFrameworkIndicesHandler;
 import org.opensearch.flowframework.util.ParseUtils;
 import org.opensearch.ml.client.MachineLearningNodeClient;
+import org.opensearch.ml.common.AccessMode;
 import org.opensearch.ml.common.FunctionName;
+import org.opensearch.ml.common.controller.MLRateLimiter;
 import org.opensearch.ml.common.model.BaseModelConfig;
+import org.opensearch.ml.common.model.Guardrails;
+import org.opensearch.ml.common.model.MLDeploySetting;
 import org.opensearch.ml.common.model.MLModelFormat;
 import org.opensearch.ml.common.transport.register.MLRegisterModelInput;
 import org.opensearch.ml.common.transport.register.MLRegisterModelInput.MLRegisterModelInputBuilder;
 import org.opensearch.threadpool.ThreadPool;
 
 import java.nio.charset.StandardCharsets;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
 import static org.opensearch.flowframework.common.CommonValue.ADDITIONAL_CONFIG;
+import static org.opensearch.flowframework.common.CommonValue.ADD_ALL_BACKEND_ROLES;
 import static org.opensearch.flowframework.common.CommonValue.ALL_CONFIG;
+import static org.opensearch.flowframework.common.CommonValue.BACKEND_ROLES_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.DEPLOY_FIELD;
+import static org.opensearch.flowframework.common.CommonValue.DEPLOY_SETTING_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.DESCRIPTION_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.FUNCTION_NAME;
+import static org.opensearch.flowframework.common.CommonValue.GUARDRAILS_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.INTERFACE_FIELD;
+import static org.opensearch.flowframework.common.CommonValue.IS_ENABLED_FIELD;
+import static org.opensearch.flowframework.common.CommonValue.MODEL_ACCESS_MODE;
 import static org.opensearch.flowframework.common.CommonValue.MODEL_CONFIG;
 import static org.opensearch.flowframework.common.CommonValue.MODEL_CONTENT_HASH_VALUE;
 import static org.opensearch.flowframework.common.CommonValue.MODEL_FORMAT;
+import static org.opensearch.flowframework.common.CommonValue.MODEL_NODE_IDS_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.MODEL_TYPE;
 import static org.opensearch.flowframework.common.CommonValue.NAME_FIELD;
+import static org.opensearch.flowframework.common.CommonValue.RATE_LIMITER_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.URL;
 import static org.opensearch.flowframework.common.CommonValue.VERSION_FIELD;
 import static org.opensearch.flowframework.common.WorkflowResources.MODEL_GROUP_ID;
@@ -116,6 +129,15 @@ public abstract class AbstractRegisterLocalModelStep extends AbstractRetryableWo
             String modelGroupId = (String) inputs.get(MODEL_GROUP_ID);
             String modelInterface = (String) inputs.get(INTERFACE_FIELD);
             final Boolean deploy = ParseUtils.parseIfExists(inputs, DEPLOY_FIELD, Boolean.class);
+            final Boolean isEnabled = ParseUtils.parseIfExists(inputs, IS_ENABLED_FIELD, Boolean.class);
+            MLRateLimiter rateLimiter = (MLRateLimiter) inputs.get(RATE_LIMITER_FIELD);
+            MLDeploySetting deploySetting = (MLDeploySetting) inputs.get(DEPLOY_SETTING_FIELD);
+            Guardrails guardrails = (Guardrails) inputs.get(GUARDRAILS_FIELD);
+            @SuppressWarnings("unchecked")
+            List<String> backendRoles = (List<String>) inputs.get(BACKEND_ROLES_FIELD);
+            Boolean addAllBackendRoles = ParseUtils.parseIfExists(inputs, ADD_ALL_BACKEND_ROLES, Boolean.class);
+            String accessMode = (String) inputs.get(MODEL_ACCESS_MODE);
+            String[] modelNodeIds = (String[]) inputs.get(MODEL_NODE_IDS_FIELD);
 
             // Build register model input
             MLRegisterModelInputBuilder mlInputBuilder = MLRegisterModelInput.builder()
@@ -179,6 +201,30 @@ public abstract class AbstractRegisterLocalModelStep extends AbstractRetryableWo
             }
             if (deploy != null) {
                 mlInputBuilder.deployModel(deploy);
+            }
+            if (isEnabled != null) {
+                mlInputBuilder.isEnabled(isEnabled);
+            }
+            if (rateLimiter != null) {
+                mlInputBuilder.rateLimiter(rateLimiter);
+            }
+            if (deploySetting != null) {
+                mlInputBuilder.deploySetting(deploySetting);
+            }
+            if (guardrails != null) {
+                mlInputBuilder.guardrails(guardrails);
+            }
+            if (backendRoles != null) {
+                mlInputBuilder.backendRoles(backendRoles);
+            }
+            if (addAllBackendRoles != null) {
+                mlInputBuilder.addAllBackendRoles(addAllBackendRoles);
+            }
+            if (accessMode != null) {
+                mlInputBuilder.accessMode(AccessMode.from(accessMode));
+            }
+            if (modelNodeIds != null) {
+                mlInputBuilder.modelNodeIds(modelNodeIds);
             }
 
             MLRegisterModelInput mlInput = mlInputBuilder.build();

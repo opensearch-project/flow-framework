@@ -20,6 +20,9 @@ import org.opensearch.flowframework.indices.FlowFrameworkIndicesHandler;
 import org.opensearch.flowframework.util.ApiSpecFetcher;
 import org.opensearch.ml.client.MachineLearningNodeClient;
 import org.opensearch.ml.common.MLTaskState;
+import org.opensearch.ml.common.controller.MLRateLimiter;
+import org.opensearch.ml.common.model.Guardrails;
+import org.opensearch.ml.common.model.MLDeploySetting;
 import org.opensearch.ml.common.transport.register.MLRegisterModelInput;
 import org.opensearch.ml.common.transport.register.MLRegisterModelResponse;
 import org.opensearch.rest.RestRequest;
@@ -31,6 +34,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.mockito.Mock;
@@ -38,6 +42,7 @@ import org.mockito.MockitoAnnotations;
 
 import static org.opensearch.flowframework.common.CommonValue.DEPLOY_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.INTERFACE_FIELD;
+import static org.opensearch.flowframework.common.CommonValue.IS_ENABLED_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.ML_COMMONS_API_SPEC_YAML_URI;
 import static org.opensearch.flowframework.common.CommonValue.REGISTER_MODEL_STATUS;
 import static org.opensearch.flowframework.common.WorkflowResources.CONNECTOR_ID;
@@ -80,6 +85,100 @@ public class RegisterRemoteModelStepTests extends OpenSearchTestCase {
             "test-id",
             "test-node-id"
         );
+    }
+
+    public void testRegisterRemoteModelWithOptionalFields() throws Exception {
+
+        String taskId = "abcd";
+        String modelId = "efgh";
+        String status = MLTaskState.CREATED.name();
+
+        doAnswer(invocation -> {
+            ActionListener<MLRegisterModelResponse> actionListener = invocation.getArgument(1);
+            MLRegisterModelResponse output = new MLRegisterModelResponse(taskId, status, modelId);
+            actionListener.onResponse(output);
+            return null;
+        }).when(mlNodeClient).register(any(MLRegisterModelInput.class), any());
+
+        doAnswer(invocation -> {
+            ActionListener<WorkflowData> updateResponseListener = invocation.getArgument(5);
+            updateResponseListener.onResponse(new WorkflowData(Map.of(MODEL_ID, modelId), "test-id", "test-node-id"));
+            return null;
+        }).when(flowFrameworkIndicesHandler)
+            .addResourceToStateIndex(any(WorkflowData.class), anyString(), anyString(), anyString(), any(), any());
+
+        WorkflowData optionalFieldsData = new WorkflowData(
+            Map.ofEntries(
+                Map.entry("name", "xyz"),
+                Map.entry(CONNECTOR_ID, "abcdefg"),
+                Map.entry(IS_ENABLED_FIELD, true),
+                Map.entry("backend_roles", List.of("role1")),
+                Map.entry("add_all_backend_roles", false),
+                Map.entry("access_mode", "public")
+            ),
+            "test-id",
+            "test-node-id"
+        );
+
+        PlainActionFuture<WorkflowData> future = this.registerRemoteModelStep.execute(
+            optionalFieldsData.getNodeId(),
+            optionalFieldsData,
+            Collections.emptyMap(),
+            Collections.emptyMap(),
+            Collections.emptyMap(),
+            null
+        );
+
+        verify(mlNodeClient, times(1)).register(any(MLRegisterModelInput.class), any());
+        assertTrue(future.isDone());
+        assertEquals(modelId, future.get().getContent().get(MODEL_ID));
+        assertEquals(status, future.get().getContent().get(REGISTER_MODEL_STATUS));
+    }
+
+    public void testRegisterRemoteModelWithGuardrailsRateLimiterDeploySetting() throws Exception {
+
+        String taskId = "abcd";
+        String modelId = "efgh";
+        String status = MLTaskState.CREATED.name();
+
+        doAnswer(invocation -> {
+            ActionListener<MLRegisterModelResponse> actionListener = invocation.getArgument(1);
+            actionListener.onResponse(new MLRegisterModelResponse(taskId, status, modelId));
+            return null;
+        }).when(mlNodeClient).register(any(MLRegisterModelInput.class), any());
+
+        doAnswer(invocation -> {
+            ActionListener<WorkflowData> updateResponseListener = invocation.getArgument(5);
+            updateResponseListener.onResponse(new WorkflowData(Map.of(MODEL_ID, modelId), "test-id", "test-node-id"));
+            return null;
+        }).when(flowFrameworkIndicesHandler)
+            .addResourceToStateIndex(any(WorkflowData.class), anyString(), anyString(), anyString(), any(), any());
+
+        WorkflowData data = new WorkflowData(
+            Map.ofEntries(
+                Map.entry("name", "xyz"),
+                Map.entry(CONNECTOR_ID, "abcdefg"),
+                Map.entry("guardrails", Guardrails.builder().type("model").build()),
+                Map.entry("rate_limiter", new MLRateLimiter("10", TimeUnit.SECONDS)),
+                Map.entry("deploy_setting", new MLDeploySetting(true, 60L)),
+                Map.entry("model_node_ids", new String[] { "node1", "node2" })
+            ),
+            "test-id",
+            "test-node-id"
+        );
+
+        PlainActionFuture<WorkflowData> future = this.registerRemoteModelStep.execute(
+            data.getNodeId(),
+            data,
+            Collections.emptyMap(),
+            Collections.emptyMap(),
+            Collections.emptyMap(),
+            null
+        );
+
+        verify(mlNodeClient, times(1)).register(any(MLRegisterModelInput.class), any());
+        assertTrue(future.isDone());
+        assertEquals(modelId, future.get().getContent().get(MODEL_ID));
     }
 
     public void testRegisterRemoteModelSuccess() throws Exception {

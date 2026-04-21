@@ -23,21 +23,32 @@ import org.opensearch.flowframework.exception.WorkflowStepException;
 import org.opensearch.flowframework.indices.FlowFrameworkIndicesHandler;
 import org.opensearch.flowframework.util.ParseUtils;
 import org.opensearch.ml.client.MachineLearningNodeClient;
+import org.opensearch.ml.common.AccessMode;
 import org.opensearch.ml.common.FunctionName;
+import org.opensearch.ml.common.controller.MLRateLimiter;
 import org.opensearch.ml.common.model.Guardrails;
+import org.opensearch.ml.common.model.MLDeploySetting;
 import org.opensearch.ml.common.transport.register.MLRegisterModelInput;
 import org.opensearch.ml.common.transport.register.MLRegisterModelInput.MLRegisterModelInputBuilder;
 import org.opensearch.ml.common.transport.register.MLRegisterModelResponse;
 
 import java.nio.charset.StandardCharsets;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import static org.opensearch.flowframework.common.CommonValue.ADD_ALL_BACKEND_ROLES;
+import static org.opensearch.flowframework.common.CommonValue.BACKEND_ROLES_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.DEPLOY_FIELD;
+import static org.opensearch.flowframework.common.CommonValue.DEPLOY_SETTING_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.DESCRIPTION_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.GUARDRAILS_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.INTERFACE_FIELD;
+import static org.opensearch.flowframework.common.CommonValue.IS_ENABLED_FIELD;
+import static org.opensearch.flowframework.common.CommonValue.MODEL_ACCESS_MODE;
+import static org.opensearch.flowframework.common.CommonValue.MODEL_NODE_IDS_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.NAME_FIELD;
+import static org.opensearch.flowframework.common.CommonValue.RATE_LIMITER_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.REGISTER_MODEL_STATUS;
 import static org.opensearch.flowframework.common.WorkflowResources.CONNECTOR_ID;
 import static org.opensearch.flowframework.common.WorkflowResources.MODEL_GROUP_ID;
@@ -66,7 +77,14 @@ public class RegisterRemoteModelStep implements WorkflowStep {
         DESCRIPTION_FIELD,
         DEPLOY_FIELD,
         GUARDRAILS_FIELD,
-        INTERFACE_FIELD
+        INTERFACE_FIELD,
+        IS_ENABLED_FIELD,
+        RATE_LIMITER_FIELD,
+        DEPLOY_SETTING_FIELD,
+        BACKEND_ROLES_FIELD,
+        ADD_ALL_BACKEND_ROLES,
+        MODEL_ACCESS_MODE,
+        MODEL_NODE_IDS_FIELD
     );
     /** Provided output keys */
     public static final Set<String> PROVIDED_OUTPUTS = Set.of(MODEL_ID, REGISTER_MODEL_STATUS);
@@ -110,6 +128,14 @@ public class RegisterRemoteModelStep implements WorkflowStep {
             Guardrails guardRails = (Guardrails) inputs.get(GUARDRAILS_FIELD);
             String modelInterface = (String) inputs.get(INTERFACE_FIELD);
             final Boolean deploy = ParseUtils.parseIfExists(inputs, DEPLOY_FIELD, Boolean.class);
+            final Boolean isEnabled = ParseUtils.parseIfExists(inputs, IS_ENABLED_FIELD, Boolean.class);
+            MLRateLimiter rateLimiter = (MLRateLimiter) inputs.get(RATE_LIMITER_FIELD);
+            MLDeploySetting deploySetting = (MLDeploySetting) inputs.get(DEPLOY_SETTING_FIELD);
+            @SuppressWarnings("unchecked")
+            List<String> backendRoles = (List<String>) inputs.get(BACKEND_ROLES_FIELD);
+            Boolean addAllBackendRoles = ParseUtils.parseIfExists(inputs, ADD_ALL_BACKEND_ROLES, Boolean.class);
+            String accessMode = (String) inputs.get(MODEL_ACCESS_MODE);
+            String[] modelNodeIds = (String[]) inputs.get(MODEL_NODE_IDS_FIELD);
 
             MLRegisterModelInputBuilder builder = MLRegisterModelInput.builder()
                 .functionName(FunctionName.REMOTE)
@@ -128,6 +154,27 @@ public class RegisterRemoteModelStep implements WorkflowStep {
             }
             if (guardRails != null) {
                 builder.guardrails(guardRails);
+            }
+            if (isEnabled != null) {
+                builder.isEnabled(isEnabled);
+            }
+            if (rateLimiter != null) {
+                builder.rateLimiter(rateLimiter);
+            }
+            if (deploySetting != null) {
+                builder.deploySetting(deploySetting);
+            }
+            if (backendRoles != null) {
+                builder.backendRoles(backendRoles);
+            }
+            if (addAllBackendRoles != null) {
+                builder.addAllBackendRoles(addAllBackendRoles);
+            }
+            if (accessMode != null) {
+                builder.accessMode(AccessMode.from(accessMode));
+            }
+            if (modelNodeIds != null) {
+                builder.modelNodeIds(modelNodeIds);
             }
             if (modelInterface != null) {
                 try {

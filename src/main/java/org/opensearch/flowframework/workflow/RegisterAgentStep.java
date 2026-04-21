@@ -28,8 +28,10 @@ import org.opensearch.ml.client.MachineLearningNodeClient;
 import org.opensearch.ml.common.agent.LLMSpec;
 import org.opensearch.ml.common.agent.MLAgent;
 import org.opensearch.ml.common.agent.MLAgent.MLAgentBuilder;
+import org.opensearch.ml.common.agent.MLAgentModelSpec;
 import org.opensearch.ml.common.agent.MLMemorySpec;
 import org.opensearch.ml.common.agent.MLToolSpec;
+import org.opensearch.ml.common.contextmanager.ContextManagementTemplate;
 import org.opensearch.ml.common.transport.agent.MLRegisterAgentResponse;
 
 import java.nio.charset.StandardCharsets;
@@ -45,11 +47,14 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 import static org.opensearch.flowframework.common.CommonValue.APP_TYPE_FIELD;
+import static org.opensearch.flowframework.common.CommonValue.CONTEXT_MANAGEMENT_FIELD;
+import static org.opensearch.flowframework.common.CommonValue.CONTEXT_MANAGEMENT_NAME_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.CREATED_TIME;
 import static org.opensearch.flowframework.common.CommonValue.DESCRIPTION_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.LAST_UPDATED_TIME_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.LLM;
 import static org.opensearch.flowframework.common.CommonValue.MEMORY_FIELD;
+import static org.opensearch.flowframework.common.CommonValue.MODEL_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.NAME_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.PARAMETERS_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.TOOLS_FIELD;
@@ -137,6 +142,22 @@ public class RegisterAgentStep implements WorkflowStep {
             }
         };
 
+        Set<String> requiredKeys = Set.of(NAME_FIELD, TYPE);
+        Set<String> optionalKeys = Set.of(
+            DESCRIPTION_FIELD,
+            LLM,
+            MODEL_FIELD,
+            TOOLS_FIELD,
+            TOOLS_ORDER_FIELD,
+            PARAMETERS_FIELD,
+            MEMORY_FIELD,
+            CREATED_TIME,
+            LAST_UPDATED_TIME_FIELD,
+            APP_TYPE_FIELD,
+            CONTEXT_MANAGEMENT_NAME_FIELD,
+            CONTEXT_MANAGEMENT_FIELD
+        );
+
         try {
             Map<String, Object> inputs = ParseUtils.getInputsFromPreviousSteps(
                 REQUIRED_INPUTS,
@@ -161,6 +182,9 @@ public class RegisterAgentStep implements WorkflowStep {
             Instant createdTime = Instant.now();
             Instant lastUpdateTime = createdTime;
             String appType = (String) inputs.get(APP_TYPE_FIELD);
+            String contextManagementName = (String) inputs.get(CONTEXT_MANAGEMENT_NAME_FIELD);
+            String contextManagementField = (String) inputs.get(CONTEXT_MANAGEMENT_FIELD);
+            String modelField = (String) inputs.get(MODEL_FIELD);
 
             String llmModelId = null;
             Map<String, String> llmParameters = new HashMap<>();
@@ -211,6 +235,45 @@ public class RegisterAgentStep implements WorkflowStep {
                 .lastUpdateTime(lastUpdateTime)
                 .appType(appType)
                 .tenantId(tenantId);
+
+            if (contextManagementName != null) {
+                builder.contextManagementName(contextManagementName);
+            }
+            if (contextManagementField != null) {
+                try {
+                    BytesReference cmBytes = new BytesArray(contextManagementField.getBytes(StandardCharsets.UTF_8));
+                    var cmParser = XContentHelper.createParser(
+                        org.opensearch.core.xcontent.NamedXContentRegistry.EMPTY,
+                        org.opensearch.core.xcontent.DeprecationHandler.IGNORE_DEPRECATIONS,
+                        cmBytes,
+                        MediaTypeRegistry.JSON
+                    );
+                    cmParser.nextToken();
+                    builder.contextManagement(ContextManagementTemplate.parse(cmParser));
+                } catch (Exception ex) {
+                    String errorMessage = "Failed to parse context_management field: " + ex.getMessage();
+                    logger.error(errorMessage, ex);
+                    registerAgentModelFuture.onFailure(new WorkflowStepException(errorMessage, RestStatus.BAD_REQUEST));
+                    return registerAgentModelFuture;
+                }
+            }
+            if (modelField != null) {
+                Map<String, Object> modelMap = getParseFieldMap(modelField);
+                MLAgentModelSpec.MLAgentModelSpecBuilder modelSpecBuilder = MLAgentModelSpec.builder();
+                modelSpecBuilder.modelId((String) modelMap.get(MLAgentModelSpec.MODEL_ID_FIELD));
+                modelSpecBuilder.modelProvider((String) modelMap.get(MLAgentModelSpec.MODEL_PROVIDER_FIELD));
+                @SuppressWarnings("unchecked")
+                Map<String, String> modelCred = (Map<String, String>) modelMap.get(MLAgentModelSpec.CREDENTIAL_FIELD);
+                if (modelCred != null) {
+                    modelSpecBuilder.credential(modelCred);
+                }
+                @SuppressWarnings("unchecked")
+                Map<String, String> modelParams = (Map<String, String>) modelMap.get(MLAgentModelSpec.MODEL_PARAMETERS_FIELD);
+                if (modelParams != null) {
+                    modelSpecBuilder.modelParameters(modelParams);
+                }
+                builder.model(modelSpecBuilder.build());
+            }
 
             MLAgent mlAgent = builder.build();
 
@@ -298,6 +361,7 @@ public class RegisterAgentStep implements WorkflowStep {
         }
         sessionId = (String) map.get(MLMemorySpec.SESSION_ID_FIELD);
         windowSize = (Integer) map.get(MLMemorySpec.WINDOW_SIZE_FIELD);
+        String memoryContainerId = (String) map.get(MLMemorySpec.MEMORY_CONTAINER_ID_FIELD);
 
         MLMemorySpec.MLMemorySpecBuilder builder = MLMemorySpec.builder();
 
@@ -307,6 +371,9 @@ public class RegisterAgentStep implements WorkflowStep {
         }
         if (windowSize != null) {
             builder.windowSize(windowSize);
+        }
+        if (memoryContainerId != null) {
+            builder.memoryContainerId(memoryContainerId);
         }
 
         return builder.build();

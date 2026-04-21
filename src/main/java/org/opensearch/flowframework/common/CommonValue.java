@@ -9,7 +9,7 @@
 package org.opensearch.flowframework.common;
 
 import org.opensearch.Version;
-import org.opensearch.common.xcontent.XContentContraints;
+import org.opensearch.common.xcontent.XContentConstraints;
 
 /**
  * Representation of common values that are used across project
@@ -60,11 +60,11 @@ public class CommonValue {
     /** The last provisioned time field */
     public static final String LAST_PROVISIONED_TIME_FIELD = "last_provisioned_time";
     /** Maximum allowed JSON size in bytes (~50MB). */
-    public static final int MAX_JSON_SIZE = XContentContraints.DEFAULT_MAX_STRING_LEN; // 50000000
+    public static final int MAX_JSON_SIZE = XContentConstraints.DEFAULT_MAX_STRING_LEN; // 50000000
     /** Maximum allowed name length for JSON keys(50000b). */
-    public static final int MAX_JSON_NAME_LENGTH = XContentContraints.DEFAULT_MAX_NAME_LEN; // 50000
+    public static final int MAX_JSON_NAME_LENGTH = XContentConstraints.DEFAULT_MAX_NAME_LEN; // 50000
     /** Maximum allowed nesting depth for JSON structures. */
-    public static final int MAX_JSON_NESTING_DEPTH = XContentContraints.DEFAULT_MAX_DEPTH; // 1000
+    public static final int MAX_JSON_NESTING_DEPTH = XContentConstraints.DEFAULT_MAX_DEPTH; // 1000
 
     /*
      * Constants associated with Rest or Transport actions
@@ -197,10 +197,36 @@ public class CommonValue {
     public static final String LLM = "llm";
     /** Guardrails field */
     public static final String GUARDRAILS_FIELD = "guardrails";
+    /** Is Enabled field */
+    public static final String IS_ENABLED_FIELD = "is_enabled";
+    /** Rate Limiter field */
+    public static final String RATE_LIMITER_FIELD = "rate_limiter";
+    /** Deploy Setting field */
+    public static final String DEPLOY_SETTING_FIELD = "deploy_setting";
+    /** Model Node IDs field */
+    public static final String MODEL_NODE_IDS_FIELD = "model_node_ids";
     /** Delay field */
     public static final String DELAY_FIELD = "delay";
     /** Model Interface Field */
     public static final String INTERFACE_FIELD = "interface";
+    /** Client Config field */
+    public static final String CLIENT_CONFIG_FIELD = "client_config";
+    /** Connector URL field */
+    public static final String CONNECTOR_URL_FIELD = "url";
+    /** Connector Headers field */
+    public static final String HEADERS_FIELD = "headers";
+    /** Model field for agent */
+    public static final String MODEL_FIELD = "model";
+    /** Context Management Name field for agent */
+    public static final String CONTEXT_MANAGEMENT_NAME_FIELD = "context_management_name";
+    /** Context Management field for agent */
+    public static final String CONTEXT_MANAGEMENT_FIELD = "context_management";
+    /** Memory Container ID field */
+    public static final String MEMORY_CONTAINER_ID_FIELD = "memory_container_id";
+    /** Runtime Resources field for tool */
+    public static final String RUNTIME_RESOURCES_FIELD = "runtime_resources";
+    /** Connector Action Name field */
+    public static final String CONNECTOR_ACTION_NAME_FIELD = "name";
     /** The source index field for reindex */
     public static final String SOURCE_INDEX = "source_index";
     /** The destination index field for reindex */

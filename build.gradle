@@ -3,12 +3,13 @@ import org.opensearch.gradle.testclusters.OpenSearchCluster
 import org.opensearch.gradle.testclusters.StandaloneRestIntegTestTask
 import org.opensearch.gradle.test.RestIntegTestTask
 import org.opensearch.gradle.VersionProperties
+import org.opensearch.gradle.info.FipsBuildParams
 import java.util.concurrent.Callable
 import java.nio.file.Paths
 
 buildscript {
     ext {
-        opensearch_version = System.getProperty("opensearch.version", "3.5.0-SNAPSHOT")
+        opensearch_version = System.getProperty("opensearch.version", "3.6.0-SNAPSHOT")
         buildVersionQualifier = System.getProperty("build.version_qualifier", "")
         isSnapshot = "true" == System.getProperty("build.snapshot", "true")
         version_tokens = opensearch_version.tokenize('-')
@@ -40,14 +41,14 @@ buildscript {
         dafnyRuntimeVersion = "4.11.0"
         smithyDafnyVersion = "0.1.2"
         gsonVersion = "2.13.2"
-        junitJupiterVersion = "5.14.2"
+        junitJupiterVersion = "5.14.3"
         jakartaJsonBindVersion = "3.0.1"
         jakartaJsonVersion = "2.0.1"
         commonsTextVersion = "1.15.0"
         yassonVersion = "3.0.4"
         parssonVersion = "1.1.7"
-        swaggerVersion = "2.1.37"
-        swaggerCoreVersion = "2.2.42"
+        swaggerVersion = "2.1.40"
+        swaggerCoreVersion = "2.2.48"
         awaitilityVersion= "4.3.0"
     }
 
@@ -61,12 +62,12 @@ buildscript {
 
     dependencies {
         classpath "org.opensearch.gradle:build-tools:${opensearch_version}"
-        classpath "com.diffplug.spotless:spotless-plugin-gradle:8.2.1"
+        classpath "com.diffplug.spotless:spotless-plugin-gradle:8.4.0"
     }
 }
 
 plugins {
-    id "de.undercouch.download" version "5.6.0"
+    id "de.undercouch.download" version "5.7.0"
     id "org.gradle.test-retry" version "1.6.4" apply false
     id "io.github.surpsg.delta-coverage" version "2.5.0"
 }
@@ -202,13 +203,13 @@ dependencies {
     api("org.opensearch:opensearch-ml-client:${opensearch_build}")
     // json, jsonpath, and commons-text are required by MLClient but must be provided by calling plugins
     implementation('org.json:json:20251224')
-    implementation('com.jayway.jsonpath:json-path:2.10.0') {
+    implementation('com.jayway.jsonpath:json-path:3.0.0') {
         // conflicts with OpenSearch versions
         exclude group: 'org.slf4j', module: 'slf4j-api'
         exclude group: 'net.minidev', module: 'json-smart'
     }
     // needed to use MLIndex class mappings at (test) runtime but must be provided by calling plugins
-    compileOnly('com.networknt:json-schema-validator:3.0.0') {
+    compileOnly('com.networknt:json-schema-validator:3.0.2') {
         exclude group: 'com.fasterxml.jackson.core', module: 'jackson-databind'
         exclude group: 'com.fasterxml.jackson.dataformat', module: 'jackson-dataformat-yaml'
         exclude group: 'org.yml', module: 'snakeyaml'
@@ -224,7 +225,8 @@ dependencies {
     implementation("software.amazon.cryptography:aws-cryptographic-material-providers:${awsCryptoMaterialProvidersVersion}")
     implementation("org.dafny:DafnyRuntime:${dafnyRuntimeVersion}")
     implementation("software.amazon.smithy.dafny:conversion:${smithyDafnyVersion}")
-    implementation("org.bouncycastle:bc-fips:${versions.bouncycastle_jce}")
+    // bc-fips is bundled in OpenSearch core lib/ (since 3.6), always provided at runtime
+    compileOnly("org.bouncycastle:bc-fips:${versions.bouncycastle_jce}")
     implementation("jakarta.json.bind:jakarta.json.bind-api:${jakartaJsonBindVersion}")
     implementation("org.glassfish:jakarta.json:${jakartaJsonVersion}")
     implementation("org.eclipse:yasson:${yassonVersion}")

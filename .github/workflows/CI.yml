@@ -51,11 +51,12 @@ jobs:
           java-version: ${{ matrix.java }}
           distribution: temurin
       - name: Build and Run Tests
+        shell: bash
         run: |
           ./gradlew check -x integTest -x yamlRestTest -x spotlessJava
       - name: Upload Coverage Report
         if: contains(matrix.os, 'ubuntu') && contains(matrix.java, '21')
-        uses: codecov/codecov-action@v5
+        uses: codecov/codecov-action@v6
         env:
           CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
         with:
@@ -77,6 +78,7 @@ jobs:
           java-version: ${{ matrix.java }}
           distribution: temurin
       - name: Build and Run Tests
+        shell: bash
         run: |
           ./gradlew integTest yamlRestTest
   integMultiNodeTest:
@@ -96,6 +98,7 @@ jobs:
           java-version: ${{ matrix.java }}
           distribution: temurin
       - name: Build and Run Tests
+        shell: bash
         run: |
           ./gradlew integTest -PnumNodes=3
   integTenantAwareTest:
@@ -118,5 +121,6 @@ jobs:
           java-version: ${{ matrix.java }}
           distribution: temurin
       - name: Build and Run Tests
+        shell: bash
         run: |
           ./gradlew integTest "-Dtests.rest.tenantaware=true"

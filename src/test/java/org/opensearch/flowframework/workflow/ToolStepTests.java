@@ -212,4 +212,36 @@ public class ToolStepTests extends OpenSearchTestCase {
         MLToolSpec mlToolSpec = (MLToolSpec) tools;
         assertEquals(mlToolSpec.getParameters(), Map.of(AGENT_ID, mockedAgentId));
     }
+
+    public void testToolWithRuntimeResources() throws ExecutionException, InterruptedException {
+        ToolStep toolStep = new ToolStep();
+
+        WorkflowData inputDataWithRuntimeResources = new WorkflowData(
+            Map.ofEntries(
+                Map.entry("type", "type"),
+                Map.entry("name", "name"),
+                Map.entry("description", "description"),
+                Map.entry("parameters", Collections.emptyMap()),
+                Map.entry("include_output_in_agent_response", false),
+                Map.entry("runtime_resources", Map.of("resource_key", "resource_value"))
+            ),
+            "test-id",
+            "test-node-id"
+        );
+
+        PlainActionFuture<WorkflowData> future = toolStep.execute(
+            inputDataWithRuntimeResources.getNodeId(),
+            inputDataWithRuntimeResources,
+            Collections.emptyMap(),
+            Collections.emptyMap(),
+            Collections.emptyMap(),
+            null
+        );
+        assertTrue(future.isDone());
+        Object tools = future.get().getContent().get("tools");
+        assertEquals(MLToolSpec.class, tools.getClass());
+        MLToolSpec mlToolSpec = (MLToolSpec) tools;
+        assertNotNull(mlToolSpec.getRuntimeResources());
+        assertEquals("resource_value", mlToolSpec.getRuntimeResources().get("resource_key"));
+    }
 }

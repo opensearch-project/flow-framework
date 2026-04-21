@@ -1,0 +1,138 @@
+{
+  "name": "${{template.name}}",
+  "description": "${{template.description}}",
+  "use_case": "AGENTIC_SEARCH_WITH_FLOW_AGENT",
+  "version": {
+    "template": "1.0.0",
+    "compatibility": [
+      "3.2.0",
+      "3.6.0"
+    ]
+  },
+  "workflows": {
+    "provision": {
+      "nodes": [
+        {
+          "id": "create_connector",
+          "type": "create_connector",
+          "user_inputs": {
+            "name": "${{create_connector.name}}",
+            "description": "${{create_connector.description}}",
+            "version": "1",
+            "protocol": "${{create_connector.protocol}}",
+            "parameters": {
+              "region": "${{create_connector.region}}",
+              "service_name": "bedrock",
+              "model": "${{create_connector.model}}"
+            },
+            "credential": {
+              "access_key": "${{create_connector.credential.access_key}}",
+              "secret_key": "${{create_connector.credential.secret_key}}",
+              "session_token": "${{create_connector.credential.session_token}}"
+            },
+            "actions": [
+              {
+                "action_type": "predict",
+                "method": "POST",
+                "url": "${{create_connector.actions.url}}",
+                "headers": {
+                  "content-type": "application/json"
+                },
+                "request_body": "${{create_connector.actions.request_body}}"
+              }
+            ]
+          }
+        },
+        {
+          "id": "register_model",
+          "type": "register_remote_model",
+          "previous_node_inputs": {
+            "create_connector": "parameters"
+          },
+          "user_inputs": {
+            "name": "${{register_remote_model.name}}",
+            "function_name": "remote",
+            "description": "${{register_remote_model.description}}",
+            "deploy": true
+          }
+        },
+        {
+          "id": "query_planning_tool",
+          "type": "create_tool",
+          "previous_node_inputs": {
+            "register_model": "model_id"
+          },
+          "user_inputs": {
+            "type": "QueryPlanningTool",
+            "name": "QueryPlanningTool",
+            "parameters": {
+              "model_id": "${{register_model.model_id}}",
+              "response_filter": "${{query_planning_tool.response_filter}}"
+            }
+          }
+        },
+        {
+          "id": "register_agent",
+          "type": "register_agent",
+          "previous_node_inputs": {
+            "register_model": "model_id",
+            "query_planning_tool": "tools"
+          },
+          "user_inputs": {
+            "name": "${{register_agent.name}}",
+            "type": "${{register_agent.type}}",
+            "description": "${{register_agent.description}}"
+          }
+        },
+        {
+          "id": "create_search_pipeline",
+          "type": "create_search_pipeline",
+          "previous_node_inputs": {
+            "register_agent": "agent_id"
+          },
+          "user_inputs": {
+            "pipeline_id": "${{create_search_pipeline.pipeline_id}}",
+            "configurations": {
+              "request_processors": [
+                {
+                  "agentic_query_translator": {
+                    "agent_id": "${{register_agent.agent_id}}"
+                  }
+                }
+              ],
+              "response_processors": [
+                {
+                  "agentic_context": {
+                    "dsl_query": true
+                  }
+                }
+              ]
+            }
+          }
+        }
+      ],
+      "edges": [
+        {
+          "source": "create_connector",
+          "dest": "register_model"
+        },
+        {
+          "source": "register_model",
+          "dest": "query_planning_tool"
+        },
+        {
+          "source": "query_planning_tool",
+          "dest": "register_agent"
+        },
+        {
+          "source": "register_model",
+          "dest": "register_agent"
+        },
+        {
+          "source": "register_agent",
+          "dest": "create_search_pipeline"
+        }
+      ]
+    }
+  }
+}

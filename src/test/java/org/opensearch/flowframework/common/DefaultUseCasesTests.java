@@ -41,4 +41,40 @@ public class DefaultUseCasesTests extends OpenSearchTestCase {
             () -> DefaultUseCases.getSubstitutionReadyFileByUseCaseName("invalid_use_case")
         );
     }
+
+    public void testAgenticSearchWithFlowAgentDefaults() throws FlowFrameworkException {
+        String defaultsFile = DefaultUseCases.getDefaultsFileByUseCaseName("agentic_search_with_flow_agent");
+        assertEquals("defaults/agentic-search-with-flow-agent-defaults.json", defaultsFile);
+    }
+
+    public void testAgenticSearchWithFlowAgentTemplate() throws FlowFrameworkException {
+        String templateFile = DefaultUseCases.getSubstitutionReadyFileByUseCaseName("agentic_search_with_flow_agent");
+        assertEquals("substitutionTemplates/agentic-search-with-flow-agent-template.json", templateFile);
+    }
+
+    public void testAgenticSearchWithFlowAgentRequiredParams() {
+        var params = DefaultUseCases.getRequiredParamsByUseCaseName("agentic_search_with_flow_agent");
+        assertEquals(3, params.size());
+        assertTrue(params.contains("create_connector.credential.access_key"));
+        assertTrue(params.contains("create_connector.credential.secret_key"));
+        assertTrue(params.contains("create_connector.credential.session_token"));
+    }
+
+    public void testAgenticSearchWithConversationalAgentDefaults() throws FlowFrameworkException {
+        String defaultsFile = DefaultUseCases.getDefaultsFileByUseCaseName("agentic_search_with_conversational_agent");
+        assertEquals("defaults/agentic-search-with-conversational-agent-defaults.json", defaultsFile);
+    }
+
+    public void testAgenticSearchWithConversationalAgentTemplate() throws FlowFrameworkException {
+        String templateFile = DefaultUseCases.getSubstitutionReadyFileByUseCaseName("agentic_search_with_conversational_agent");
+        assertEquals("substitutionTemplates/agentic-search-with-conversational-agent-template.json", templateFile);
+    }
+
+    public void testAgenticSearchWithConversationalAgentRequiredParams() {
+        var params = DefaultUseCases.getRequiredParamsByUseCaseName("agentic_search_with_conversational_agent");
+        assertEquals(3, params.size());
+        assertTrue(params.contains("create_connector.credential.access_key"));
+        assertTrue(params.contains("create_connector.credential.secret_key"));
+        assertTrue(params.contains("create_connector.credential.session_token"));
+    }
 }
