@@ -60,6 +60,7 @@ import static org.opensearch.flowframework.common.CommonValue.PARAMETERS_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.TOOLS_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.TOOLS_ORDER_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.TYPE;
+import static org.opensearch.flowframework.common.WorkflowResources.AGENT_ID;
 import static org.opensearch.flowframework.exception.WorkflowStepException.getSafeException;
 import static org.opensearch.flowframework.util.ParseUtils.getStringToStringMap;
 
@@ -75,7 +76,22 @@ public class RegisterAgentStep implements WorkflowStep {
 
     /** The name of this step, used as a key in the template and the {@link WorkflowStepFactory} */
     public static final String NAME = "register_agent";
-
+    /** Required input keys **/
+    public static final Set<String> REQUIRED_INPUTS = Set.of(NAME_FIELD, TYPE);
+    /** Optional input keys */
+    public static final Set<String> OPTIONAL_INPUTS = Set.of(
+        DESCRIPTION_FIELD,
+        LLM,
+        TOOLS_FIELD,
+        TOOLS_ORDER_FIELD,
+        PARAMETERS_FIELD,
+        MEMORY_FIELD,
+        CREATED_TIME,
+        LAST_UPDATED_TIME_FIELD,
+        APP_TYPE_FIELD
+    );
+    /** Provided output keys */
+    public static final Set<String> PROVIDED_OUTPUTS = Set.of(AGENT_ID);
     /** The model ID for the LLM */
     public static final String MODEL_ID = "model_id";
 
@@ -144,8 +160,8 @@ public class RegisterAgentStep implements WorkflowStep {
 
         try {
             Map<String, Object> inputs = ParseUtils.getInputsFromPreviousSteps(
-                requiredKeys,
-                optionalKeys,
+                REQUIRED_INPUTS,
+                OPTIONAL_INPUTS,
                 currentNodeInputs,
                 outputs,
                 previousNodeInputs,
