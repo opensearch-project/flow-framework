@@ -20,14 +20,15 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      - name: Checkout Flow Framework
+        uses: actions/checkout@v6
+
       - name: Setup Java ${{ matrix.java }}
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
           java-version: ${{ matrix.java }}
-
-      - name: Checkout Flow Framework
-        uses: actions/checkout@v6
+          cache: gradle
 
       - name: Assemble Flow Framework
         run: |
