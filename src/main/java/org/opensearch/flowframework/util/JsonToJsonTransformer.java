@@ -8,13 +8,6 @@
  */
 package org.opensearch.flowframework.util;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.core.StreamReadConstraints;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ArrayNode;
-import com.fasterxml.jackson.databind.node.ObjectNode;
-
 import org.opensearch.core.common.Strings;
 import org.opensearch.flowframework.common.CommonValue;
 
@@ -26,8 +19,18 @@ import java.util.regex.Pattern;
 import com.jayway.jsonpath.Configuration;
 import com.jayway.jsonpath.JsonPath;
 import com.jayway.jsonpath.Option;
-import com.jayway.jsonpath.spi.json.JacksonJsonProvider;
-import com.jayway.jsonpath.spi.mapper.JacksonMappingProvider;
+import com.jayway.jsonpath.spi.json.Jackson3JsonProvider;
+import com.jayway.jsonpath.spi.mapper.Jackson3MappingProvider;
+import tools.jackson.core.StreamReadConstraints;
+import tools.jackson.core.json.JsonFactory;
+import tools.jackson.core.json.JsonFactoryBuilder;
+import tools.jackson.databind.DeserializationFeature;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.introspect.DefaultAccessorNamingStrategy;
+import tools.jackson.databind.json.JsonMapper;
+import tools.jackson.databind.node.ArrayNode;
+import tools.jackson.databind.node.ObjectNode;
 
 /**
  * Transforms an input JSON into the desired output JSON using
@@ -90,12 +93,14 @@ public final class JsonToJsonTransformer {
             .maxNameLength(CommonValue.MAX_JSON_NAME_LENGTH)
             .build();
 
-        MAPPER = new ObjectMapper();
-        MAPPER.getFactory().setStreamReadConstraints(constraints);
+        MAPPER = JsonMapper.builder(new JsonFactoryBuilder(new JsonFactory()).streamReadConstraints(constraints).build())
+            .accessorNaming(new DefaultAccessorNamingStrategy.Provider().withFirstCharAcceptance(true, true))
+            .configure(DeserializationFeature.FAIL_ON_TRAILING_TOKENS, false)
+            .build();
 
         JSON_PATH_CFG = Configuration.builder()
-            .jsonProvider(new JacksonJsonProvider(MAPPER))
-            .mappingProvider(new JacksonMappingProvider(MAPPER))
+            .jsonProvider(new Jackson3JsonProvider(MAPPER))
+            .mappingProvider(new Jackson3MappingProvider(MAPPER))
             .options(Option.ALWAYS_RETURN_LIST, Option.SUPPRESS_EXCEPTIONS)
             .build();
     }
@@ -112,9 +117,8 @@ public final class JsonToJsonTransformer {
      * @return transformed JSON as a string
      * @throws IllegalArgumentException if input parameters are null/empty, input JSON
      *                                 cannot be parsed, or mapping is malformed
-     * @throws JsonProcessingException if the output JSON cannot be serialized
      */
-    public static String transform(String inputJson, String mappingRules) throws IllegalArgumentException, JsonProcessingException {
+    public static String transform(String inputJson, String mappingRules) throws IllegalArgumentException {
         if (Strings.isNullOrEmpty(inputJson)) {
             throw new IllegalArgumentException("inputJson must not be null or empty");
         }
@@ -153,14 +157,14 @@ public final class JsonToJsonTransformer {
      */
     private static void buildOutputFromMapping(ObjectNode outputNode, JsonNode mappingNode, String inputDocument) {
         // TERMINATION: Type validation - reject non-object mappings
-        if (mappingNode.isTextual()) {
+        if (mappingNode.isString()) {
             throw new IllegalArgumentException("Root mapping cannot be a JsonPath string - it must be an object");
         } else if (!mappingNode.isObject()) {
             throw new IllegalArgumentException("Mapping contains unsupported node type: " + mappingNode.getNodeType());
         }
 
         // Process each property in the object mapping
-        Iterator<Map.Entry<String, JsonNode>> fields = mappingNode.fields();
+        Iterator<Map.Entry<String, JsonNode>> fields = mappingNode.properties().iterator();
 
         while (fields.hasNext()) {
             Map.Entry<String, JsonNode> entry = fields.next();
@@ -170,7 +174,7 @@ public final class JsonToJsonTransformer {
             // Determine property type and delegate to appropriate handler
             if (isArrayProperty(propertyKey)) {
                 processArrayProperty(outputNode, propertyKey, propertyValue, inputDocument);
-            } else if (propertyValue.isTextual()) {
+            } else if (propertyValue.isString()) {
                 processSimpleProperty(outputNode, propertyKey, propertyValue, inputDocument);
             } else if (propertyValue.isObject()) {
                 // Handle nested object - create nested node and recurse
@@ -196,7 +200,7 @@ public final class JsonToJsonTransformer {
      * @param inputDocument the source document as JSON string
      */
     private static void processSimpleProperty(ObjectNode outputNode, String propertyKey, JsonNode jsonPathNode, String inputDocument) {
-        String jsonPath = jsonPathNode.asText();
+        String jsonPath = jsonPathNode.asString();
         List<?> extracted = JsonPath.using(JSON_PATH_CFG).parse(inputDocument).read(jsonPath);
 
         if (extracted == null || extracted.isEmpty()) {
@@ -307,14 +311,14 @@ public final class JsonToJsonTransformer {
      * @return new mapping with substituted indices
      */
     private static JsonNode substituteWildcardsInMapping(JsonNode mapping, int index) {
-        if (mapping.isTextual()) {
-            String jsonPath = mapping.asText();
+        if (mapping.isString()) {
+            String jsonPath = mapping.asString();
             String substituted = WILDCARD_PATTERN.matcher(jsonPath).replaceFirst("[" + index + "]");
 
-            return MAPPER.getNodeFactory().textNode(substituted);
+            return MAPPER.getNodeFactory().stringNode(substituted);
         } else if (mapping.isObject()) {
             ObjectNode result = MAPPER.createObjectNode();
-            Iterator<Map.Entry<String, JsonNode>> fields = mapping.fields();
+            Iterator<Map.Entry<String, JsonNode>> fields = mapping.properties().iterator();
             while (fields.hasNext()) {
                 Map.Entry<String, JsonNode> entry = fields.next();
                 result.set(entry.getKey(), substituteWildcardsInMapping(entry.getValue(), index));
@@ -353,8 +357,8 @@ public final class JsonToJsonTransformer {
      * @return first wildcard path found, or null
      */
     private static String findFirstWildcardPath(JsonNode mapping) {
-        if (mapping.isTextual()) {
-            String path = mapping.asText();
+        if (mapping.isString()) {
+            String path = mapping.asString();
             return path.contains("[*]") ? path : null;
         } else if (mapping.isObject()) {
             for (JsonNode element : mapping) {

@@ -8,11 +8,11 @@
  */
 package org.opensearch.flowframework.util;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-
 import org.opensearch.test.OpenSearchTestCase;
+
+import tools.jackson.core.exc.StreamReadException;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
 
 /**
  * Unit tests for {@link JsonToJsonTransformer}.
@@ -20,7 +20,7 @@ import org.opensearch.test.OpenSearchTestCase;
 public class JsonToJsonTransformerTests extends OpenSearchTestCase {
     private static final ObjectMapper MAPPER = new ObjectMapper();
 
-    public void testSimplePropertyMapping() throws JsonProcessingException {
+    public void testSimplePropertyMapping() {
         String inputJson = """
             {
               "user": {
@@ -51,7 +51,7 @@ public class JsonToJsonTransformerTests extends OpenSearchTestCase {
         assertJsonEquals(expectedOutput, actualOutput);
     }
 
-    public void testNestedObjectMapping() throws JsonProcessingException {
+    public void testNestedObjectMapping() {
         String inputJson = """
             {
               "company": {
@@ -88,7 +88,7 @@ public class JsonToJsonTransformerTests extends OpenSearchTestCase {
         assertJsonEquals(expectedOutput, actualOutput);
     }
 
-    public void testArrayWithWildcardMapping() throws JsonProcessingException {
+    public void testArrayWithWildcardMapping() {
         String inputJson = """
             {
               "item": {
@@ -163,7 +163,7 @@ public class JsonToJsonTransformerTests extends OpenSearchTestCase {
         assertJsonEquals(expectedOutput, actualOutput);
     }
 
-    public void testArrayWithExplicitIndexMapping() throws JsonProcessingException {
+    public void testArrayWithExplicitIndexMapping() {
         String inputJson = """
             {
               "products": [
@@ -207,7 +207,7 @@ public class JsonToJsonTransformerTests extends OpenSearchTestCase {
         assertJsonEquals(expectedOutput, actualOutput);
     }
 
-    public void testMixedArrayAndObjectMapping() throws JsonProcessingException {
+    public void testMixedArrayAndObjectMapping() {
         String inputJson = """
             {
               "order": {
@@ -265,7 +265,7 @@ public class JsonToJsonTransformerTests extends OpenSearchTestCase {
         assertJsonEquals(expectedOutput, actualOutput);
     }
 
-    public void testEmptyArrayMapping() throws JsonProcessingException {
+    public void testEmptyArrayMapping() {
         String inputJson = """
             {
               "data": {
@@ -292,7 +292,7 @@ public class JsonToJsonTransformerTests extends OpenSearchTestCase {
         assertJsonEquals(expectedOutput, actualOutput);
     }
 
-    public void testNonExistentPathMapping() throws JsonProcessingException {
+    public void testNonExistentPathMapping() {
         String inputJson = """
             {
               "user": {
@@ -319,7 +319,7 @@ public class JsonToJsonTransformerTests extends OpenSearchTestCase {
         assertJsonEquals(expectedOutput, actualOutput);
     }
 
-    public void testMultipleValueExtraction() throws JsonProcessingException {
+    public void testMultipleValueExtraction() {
         String inputJson = """
             {
               "tags": ["red", "blue", "green"],
@@ -345,7 +345,7 @@ public class JsonToJsonTransformerTests extends OpenSearchTestCase {
         assertJsonEquals(expectedOutput, actualOutput);
     }
 
-    public void testDeepNestedStructure() throws JsonProcessingException {
+    public void testDeepNestedStructure() {
         String inputJson = """
             {
               "level1": {
@@ -425,8 +425,8 @@ public class JsonToJsonTransformerTests extends OpenSearchTestCase {
         String inputJson = "{}";
         String invalidMappingJson = "{ invalid json }";
 
-        JsonProcessingException exception = assertThrows(
-            JsonProcessingException.class,
+        StreamReadException exception = assertThrows(
+            StreamReadException.class,
             () -> JsonToJsonTransformer.transform(inputJson, invalidMappingJson)
         );
         assertTrue("Failed to parse mapping rules", exception.getMessage().contains("Unexpected character"));
@@ -465,7 +465,7 @@ public class JsonToJsonTransformerTests extends OpenSearchTestCase {
         assertTrue(exception.getMessage().contains("Unsupported array index format"));
     }
 
-    public void testComplexRealWorldScenario() throws JsonProcessingException {
+    public void testComplexRealWorldScenario() {
         String inputJson = """
             {
               "response": {
@@ -566,7 +566,7 @@ public class JsonToJsonTransformerTests extends OpenSearchTestCase {
     /**
      * Helper method to compare JSON strings for structural equality using Jackson.
      */
-    private static void assertJsonEquals(String expected, String actual) throws JsonProcessingException {
+    private static void assertJsonEquals(String expected, String actual) {
         JsonNode expectedNode = MAPPER.readTree(expected);
         JsonNode actualNode = MAPPER.readTree(actual);
         assertEquals("JSON structures do not match", expectedNode, actualNode);

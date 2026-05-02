@@ -8,11 +8,6 @@
  */
 package org.opensearch.flowframework.util;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.core.StreamReadConstraints;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-
 import org.opensearch.flowframework.common.CommonValue;
 
 import java.util.ArrayList;
@@ -23,6 +18,16 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
+
+import tools.jackson.core.JacksonException;
+import tools.jackson.core.StreamReadConstraints;
+import tools.jackson.core.json.JsonFactory;
+import tools.jackson.core.json.JsonFactoryBuilder;
+import tools.jackson.databind.DeserializationFeature;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.introspect.DefaultAccessorNamingStrategy;
+import tools.jackson.databind.json.JsonMapper;
 
 /**
  * Utility class for analyzing and mapping relationships between input and
@@ -59,8 +64,10 @@ public class JsonToJsonRecommender {
             .maxNameLength(CommonValue.MAX_JSON_NAME_LENGTH)
             .build();
 
-        MAPPER = new ObjectMapper();
-        MAPPER.getFactory().setStreamReadConstraints(constraints);
+        MAPPER = JsonMapper.builder(new JsonFactoryBuilder(new JsonFactory()).streamReadConstraints(constraints).build())
+            .accessorNaming(new DefaultAccessorNamingStrategy.Provider().withFirstCharAcceptance(true, true))
+            .configure(DeserializationFeature.FAIL_ON_TRAILING_TOKENS, false)
+            .build();
     }
 
     /**
@@ -72,10 +79,9 @@ public class JsonToJsonRecommender {
      * @param outputJson Output JSON string to map against
      * @return StringFormatResult containing transformation recommendations
      * @throws IllegalArgumentException if input validation fails
-     * @throws JsonProcessingException  if JSON parsing fails
+     * @throws JacksonException  if JSON parsing fails
      */
-    public static StringFormatResult getRecommendationInStringFormat(String inputJson, String outputJson) throws IllegalArgumentException,
-        JsonProcessingException {
+    public static StringFormatResult getRecommendationInStringFormat(String inputJson, String outputJson) throws IllegalArgumentException {
         // Input validation
         validateInputStrings(inputJson, outputJson);
 
@@ -160,9 +166,9 @@ public class JsonToJsonRecommender {
      *
      * @param mappedPath The nested mapped path structure to write
      * @return The mapped path as a pretty JSON string
-     * @throws JsonProcessingException if JSON processing fails
+     * @throws JacksonException if JSON processing fails
      */
-    public static String WriteMappedPathAsString(Map<String, Object> mappedPath) throws JsonProcessingException {
+    public static String WriteMappedPathAsString(Map<String, Object> mappedPath) {
         return MAPPER.writerWithDefaultPrettyPrinter().writeValueAsString(mappedPath);
     }
 
@@ -173,10 +179,9 @@ public class JsonToJsonRecommender {
      * @param outputJson Output JSON string to map against
      * @return Detailed field-to-field mappings as a formatted JSON string
      * @throws IllegalArgumentException if input validation fails
-     * @throws JsonProcessingException  if JSON parsing fails
+     * @throws JacksonException  if JSON parsing fails
      */
-    public static String getRecommendationDetailedInStringFormat(String inputJson, String outputJson) throws IllegalArgumentException,
-        JsonProcessingException {
+    public static String getRecommendationDetailedInStringFormat(String inputJson, String outputJson) throws IllegalArgumentException {
         return getRecommendationInStringFormat(inputJson, outputJson).detailedJsonPathString;
     }
 
@@ -187,10 +192,9 @@ public class JsonToJsonRecommender {
      * @param outputJson Output JSON string to map against
      * @return Generalized JSONPath suggestions as a formatted JSON string
      * @throws IllegalArgumentException if input validation fails
-     * @throws JsonProcessingException  if JSON parsing fails
+     * @throws JacksonException  if JSON parsing fails
      */
-    public static String getRecommendationGeneralizedInStringFormat(String inputJson, String outputJson) throws IllegalArgumentException,
-        JsonProcessingException {
+    public static String getRecommendationGeneralizedInStringFormat(String inputJson, String outputJson) throws IllegalArgumentException {
         return getRecommendationInStringFormat(inputJson, outputJson).generalizedJsonPathString;
     }
 
@@ -265,7 +269,7 @@ public class JsonToJsonRecommender {
         }
 
         if (node.isObject()) {
-            var fields = node.fields();
+            var fields = node.properties().iterator();
             while (fields.hasNext()) {
                 var entry = fields.next();
                 String key = entry.getKey();
@@ -298,7 +302,7 @@ public class JsonToJsonRecommender {
 
         int maxDepth = 0;
         if (node.isObject()) {
-            var fields = node.fields();
+            var fields = node.properties().iterator();
             while (fields.hasNext()) {
                 var entry = fields.next();
                 int childDepth = getJsonNodeNestingDepth(entry.getValue());
@@ -341,7 +345,7 @@ public class JsonToJsonRecommender {
     private static void createIndexRecursive(JsonNode node, String path, Map<String, String> invertedIndex) {
         if (node.isObject()) {
             // Process object properties recursively
-            var fields = node.fields();
+            var fields = node.properties().iterator();
             while (fields.hasNext()) {
                 var entry = fields.next();
                 String newPath = path.isEmpty() ? entry.getKey() : path + "." + entry.getKey();
@@ -354,7 +358,7 @@ public class JsonToJsonRecommender {
             }
         } else {
             // Store primitive values with their paths
-            String value = node.asText();
+            String value = node.asString();
             invertedIndex.putIfAbsent(value, path); // Only store the first occurrence of a value
         }
     }
@@ -401,7 +405,7 @@ public class JsonToJsonRecommender {
 
         if (node.isObject()) {
             // Process object nodes recursively
-            var fields = node.fields();
+            var fields = node.properties().iterator();
             while (fields.hasNext()) {
                 var entry = fields.next();
                 String newPath = path.equals("$") ? "$." + entry.getKey() : path + "." + entry.getKey();
@@ -463,7 +467,7 @@ public class JsonToJsonRecommender {
 
         } else {
             // Process leaf values by finding matching input paths
-            String value = node.asText();
+            String value = node.asString();
             String matchingInputPath = inputIndex.get(value);
 
             if (matchingInputPath != null && !matchingInputPath.isEmpty()) {

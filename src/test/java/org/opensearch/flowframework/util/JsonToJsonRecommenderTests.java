@@ -8,13 +8,18 @@
  */
 package org.opensearch.flowframework.util;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.core.StreamReadConstraints;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-
 import org.opensearch.flowframework.common.CommonValue;
 import org.opensearch.test.OpenSearchTestCase;
+
+import tools.jackson.core.StreamReadConstraints;
+import tools.jackson.core.exc.StreamConstraintsException;
+import tools.jackson.core.exc.StreamReadException;
+import tools.jackson.core.json.JsonFactory;
+import tools.jackson.core.json.JsonFactoryBuilder;
+import tools.jackson.databind.DeserializationFeature;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.json.JsonMapper;
 
 /**
  * Unit tests for JsonToJsonRecommender methods.
@@ -34,11 +39,12 @@ public class JsonToJsonRecommenderTests extends OpenSearchTestCase {
             .maxNameLength(CommonValue.MAX_JSON_NAME_LENGTH + 10)
             .build();
 
-        MAPPER = new ObjectMapper();
-        MAPPER.getFactory().setStreamReadConstraints(constraints);
+        MAPPER = JsonMapper.builder(new JsonFactoryBuilder(new JsonFactory()).streamReadConstraints(constraints).build())
+            .configure(DeserializationFeature.FAIL_ON_TRAILING_TOKENS, false)
+            .build();
     }
 
-    public void testSimpleNestedStructures() throws JsonProcessingException, IllegalArgumentException {
+    public void testSimpleNestedStructures() throws IllegalArgumentException {
         String inputJson = """
             {
               "level1": {
@@ -77,7 +83,7 @@ public class JsonToJsonRecommenderTests extends OpenSearchTestCase {
         );
     }
 
-    public void testArrayToArrayWithGeneralized() throws JsonProcessingException, IllegalArgumentException {
+    public void testArrayToArrayWithGeneralized() throws IllegalArgumentException {
         String inputJson = """
             {"numbers": [1, 2, 3, 4, 5]}
             """;
@@ -122,7 +128,7 @@ public class JsonToJsonRecommenderTests extends OpenSearchTestCase {
         );
     }
 
-    public void testArrayToArrayCannotBeGeneralized() throws JsonProcessingException, IllegalArgumentException {
+    public void testArrayToArrayCannotBeGeneralized() throws IllegalArgumentException {
         String inputJson = """
             {"numbers": [1, 2, 3, 4, 5]}
             """;
@@ -154,7 +160,7 @@ public class JsonToJsonRecommenderTests extends OpenSearchTestCase {
         assertTrue("Generalized JSON should not contain wildcard patterns", !output.generalizedJsonPathString.contains("\"values[*]\""));
     }
 
-    public void testOneToManyMapping() throws JsonProcessingException, IllegalArgumentException {
+    public void testOneToManyMapping() throws IllegalArgumentException {
         String inputJson = """
             {
                 "user": {
@@ -205,7 +211,7 @@ public class JsonToJsonRecommenderTests extends OpenSearchTestCase {
         assertTrue("Generalized JSON should use wildcard pattern", output.generalizedJsonPathString.contains("\"skills[*]\""));
     }
 
-    public void testManyToOneMapping() throws JsonProcessingException, IllegalArgumentException {
+    public void testManyToOneMapping() throws IllegalArgumentException {
         String inputJson = """
             [
                 {
@@ -262,7 +268,7 @@ public class JsonToJsonRecommenderTests extends OpenSearchTestCase {
         );
     }
 
-    public void testComplexArrayToArray() throws JsonProcessingException, IllegalArgumentException {
+    public void testComplexArrayToArray() throws IllegalArgumentException {
         String inputJson = """
             {
               "item": {
@@ -362,7 +368,7 @@ public class JsonToJsonRecommenderTests extends OpenSearchTestCase {
         );
     }
 
-    public void testComplexArrayToArrayWithPartialInputGeneralization() throws JsonProcessingException, IllegalArgumentException {
+    public void testComplexArrayToArrayWithPartialInputGeneralization() throws IllegalArgumentException {
         String inputJson = """
             {
               "item": {
@@ -465,7 +471,7 @@ public class JsonToJsonRecommenderTests extends OpenSearchTestCase {
         );
     }
 
-    public void testComplexArrayToArrayWithPartialOutputGeneralization() throws JsonProcessingException, IllegalArgumentException {
+    public void testComplexArrayToArrayWithPartialOutputGeneralization() throws IllegalArgumentException {
         String inputJson = """
             {
               "item": {
@@ -570,7 +576,7 @@ public class JsonToJsonRecommenderTests extends OpenSearchTestCase {
         );
     }
 
-    public void testComplexArrayToArrayWithPartialOutputAndInputGeneralization() throws JsonProcessingException, IllegalArgumentException {
+    public void testComplexArrayToArrayWithPartialOutputAndInputGeneralization() throws IllegalArgumentException {
         String inputJson = """
             {
               "item": {
@@ -726,11 +732,11 @@ public class JsonToJsonRecommenderTests extends OpenSearchTestCase {
         String invalidJson = "{invalid json}";
         String validJson = "{\"test_key\": \"test_value\"}";
 
-        // Should throw JsonProcessingException for invalid input JSON
-        expectThrows(JsonProcessingException.class, () -> JsonToJsonRecommender.getRecommendationInStringFormat(invalidJson, validJson));
+        // Should throw StreamReadException for invalid input JSON
+        expectThrows(StreamReadException.class, () -> JsonToJsonRecommender.getRecommendationInStringFormat(invalidJson, validJson));
 
-        // Should throw JsonProcessingException for invalid output JSON
-        expectThrows(JsonProcessingException.class, () -> JsonToJsonRecommender.getRecommendationInStringFormat(validJson, invalidJson));
+        // Should throw StreamReadException for invalid output JSON
+        expectThrows(StreamReadException.class, () -> JsonToJsonRecommender.getRecommendationInStringFormat(validJson, invalidJson));
     }
 
     public void testGetRecommendationWithOversizedJson() {
@@ -745,9 +751,9 @@ public class JsonToJsonRecommenderTests extends OpenSearchTestCase {
         String largeJson = largeJsonBuilder.toString();
         String validJson = "{\"result\": \"test_value\"}";
 
-        // Should throw JsonProcessingException for oversized input JSON
-        JsonProcessingException inputException = expectThrows(
-            JsonProcessingException.class,
+        // Should throw StreamConstraintsException for oversized input JSON
+        StreamConstraintsException inputException = expectThrows(
+            StreamConstraintsException.class,
             () -> JsonToJsonRecommender.getRecommendationInStringFormat(largeJson, validJson)
         );
         assertTrue(
@@ -757,9 +763,9 @@ public class JsonToJsonRecommenderTests extends OpenSearchTestCase {
                 && inputException.getMessage().contains("StreamReadConstraints.getMaxStringLength()")
         );
 
-        // Should throw JsonProcessingException for oversized output JSON
-        JsonProcessingException outputException = expectThrows(
-            JsonProcessingException.class,
+        // Should throw StreamConstraintsException for oversized output JSON
+        StreamConstraintsException outputException = expectThrows(
+            StreamConstraintsException.class,
             () -> JsonToJsonRecommender.getRecommendationInStringFormat(validJson, largeJson)
         );
         assertTrue(
@@ -770,7 +776,7 @@ public class JsonToJsonRecommenderTests extends OpenSearchTestCase {
         );
     }
 
-    public void testGetRecommendationWithOversizedFieldName() throws JsonProcessingException {
+    public void testGetRecommendationWithOversizedFieldName() {
         // Create a JSON string with field name that exceeds the MAX_NAME_LEN limit
         // (50000 characters)
         StringBuilder longFieldNameBuilder = new StringBuilder();
@@ -782,9 +788,9 @@ public class JsonToJsonRecommenderTests extends OpenSearchTestCase {
         String inputJsonWithLongFieldName = "{\"" + longFieldName + "\": \"test_value\"}";
         String validJson = "{\"result\": \"test_value\"}";
 
-        // Should throw JsonProcessingException for oversized field name in input JSON
-        JsonProcessingException inputException = expectThrows(
-            JsonProcessingException.class,
+        // Should throw StreamConstraintsException for oversized field name in input JSON
+        StreamConstraintsException inputException = expectThrows(
+            StreamConstraintsException.class,
             () -> JsonToJsonRecommender.getRecommendationInStringFormat(inputJsonWithLongFieldName, validJson)
         );
         assertTrue(
@@ -794,9 +800,9 @@ public class JsonToJsonRecommenderTests extends OpenSearchTestCase {
                 && inputException.getMessage().contains("StreamReadConstraints.getMaxNameLength()")
         );
 
-        // Should throw JsonProcessingException for oversized field name in output JSON
-        JsonProcessingException outputException = expectThrows(
-            JsonProcessingException.class,
+        // Should throw StreamConstraintsException for oversized field name in output JSON
+        StreamConstraintsException outputException = expectThrows(
+            StreamConstraintsException.class,
             () -> JsonToJsonRecommender.getRecommendationInStringFormat(validJson, inputJsonWithLongFieldName)
         );
         assertTrue(
@@ -833,7 +839,7 @@ public class JsonToJsonRecommenderTests extends OpenSearchTestCase {
         );
     }
 
-    public void testGetRecommendationWithDeeplyNestedJson() throws JsonProcessingException {
+    public void testGetRecommendationWithDeeplyNestedJson() {
         // Create a deeply nested JSON that exceeds the nesting limit (1000 levels)
         StringBuilder deepJsonBuilder = new StringBuilder();
         for (int i = 0; i < 1001; i++) { // Exceed the limit of 1000
@@ -846,9 +852,9 @@ public class JsonToJsonRecommenderTests extends OpenSearchTestCase {
         String deepJson = deepJsonBuilder.toString();
         String validJson = "{\"result\": \"deep_value\"}";
 
-        // Should throw JsonProcessingException for deeply nested input JSON
-        JsonProcessingException inputException = expectThrows(
-            JsonProcessingException.class,
+        // Should throw StreamConstraintsException for deeply nested input JSON
+        StreamConstraintsException inputException = expectThrows(
+            StreamConstraintsException.class,
             () -> JsonToJsonRecommender.getRecommendationInStringFormat(deepJson, validJson)
         );
         assertTrue(
@@ -858,9 +864,9 @@ public class JsonToJsonRecommenderTests extends OpenSearchTestCase {
                 && inputException.getMessage().contains("StreamReadConstraints.getMaxNestingDepth()")
         );
 
-        // Should throw JsonProcessingException for deeply nested output JSON
-        JsonProcessingException outputException = expectThrows(
-            JsonProcessingException.class,
+        // Should throw StreamConstraintsException for deeply nested output JSON
+        StreamConstraintsException outputException = expectThrows(
+            StreamConstraintsException.class,
             () -> JsonToJsonRecommender.getRecommendationInStringFormat(validJson, deepJson)
         );
         assertTrue(
@@ -897,7 +903,7 @@ public class JsonToJsonRecommenderTests extends OpenSearchTestCase {
         );
     }
 
-    public void testGetRecommendationWithValidSizeAndNesting() throws JsonProcessingException, IllegalArgumentException {
+    public void testGetRecommendationWithValidSizeAndNesting() throws IllegalArgumentException {
         // Test JSON that's within both size and nesting limits
         StringBuilder validNestedJson = new StringBuilder();
         for (int i = 0; i < 999; i++) { // Well within the limit of 1000
