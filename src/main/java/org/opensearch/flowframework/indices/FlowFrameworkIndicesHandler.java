@@ -13,6 +13,8 @@ import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.message.ParameterizedMessageFactory;
 import org.opensearch.ExceptionsHelper;
 import org.opensearch.OpenSearchStatusException;
+import org.opensearch.OpenSearchWrapperException;
+import org.opensearch.ResourceAlreadyExistsException;
 import org.opensearch.action.DocWriteRequest.OpType;
 import org.opensearch.action.admin.indices.create.CreateIndexRequest;
 import org.opensearch.action.admin.indices.create.CreateIndexResponse;
@@ -215,10 +217,16 @@ public class FlowFrameworkIndicesHandler {
                         internalListener.onResponse(false);
                     }
                 }, e -> {
-                    String errorMessage = ParameterizedMessageFactory.INSTANCE.newMessage("Failed to create index {}", indexName)
-                        .getFormattedMessage();
-                    logger.error(errorMessage, e);
-                    internalListener.onFailure(new FlowFrameworkException(errorMessage, ExceptionsHelper.status(e)));
+                    if (e instanceof ResourceAlreadyExistsException
+                        || (e instanceof OpenSearchWrapperException && e.getCause() instanceof ResourceAlreadyExistsException)) {
+                        logger.info("Index {} already created by another request", indexName);
+                        internalListener.onResponse(true);
+                    } else {
+                        String errorMessage = ParameterizedMessageFactory.INSTANCE.newMessage("Failed to create index {}", indexName)
+                            .getFormattedMessage();
+                        logger.error(errorMessage, e);
+                        internalListener.onFailure(new FlowFrameworkException(errorMessage, ExceptionsHelper.status(e)));
+                    }
                 });
                 CreateIndexRequest request = new CreateIndexRequest(indexName).mapping("{\"_doc\":" + mapping + "}")
                     .settings(indexSettings);
