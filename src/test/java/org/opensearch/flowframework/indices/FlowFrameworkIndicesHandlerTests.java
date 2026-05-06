@@ -8,9 +8,12 @@
  */
 package org.opensearch.flowframework.indices;
 
+import org.opensearch.OpenSearchWrapperException;
+import org.opensearch.ResourceAlreadyExistsException;
 import org.opensearch.Version;
 import org.opensearch.action.DocWriteResponse.Result;
 import org.opensearch.action.admin.indices.create.CreateIndexRequest;
+import org.opensearch.action.admin.indices.create.CreateIndexResponse;
 import org.opensearch.action.admin.indices.mapping.put.PutMappingRequest;
 import org.opensearch.action.delete.DeleteRequest;
 import org.opensearch.action.delete.DeleteResponse;
@@ -292,6 +295,45 @@ public class FlowFrameworkIndicesHandlerTests extends OpenSearchTestCase {
         flowFrameworkIndicesHandler.initFlowFrameworkIndexIfAbsent(FlowFrameworkIndex.GLOBAL_CONTEXT, listener);
 
         verify(indicesAdminClient, times(1)).create(any(CreateIndexRequest.class), any());
+    }
+
+    public void testInitIndexIfAbsent_ResourceAlreadyExistsException() {
+        @SuppressWarnings("unchecked")
+        ActionListener<Boolean> listener = mock(ActionListener.class);
+        doAnswer(invocation -> {
+            ActionListener<CreateIndexResponse> actionListener = invocation.getArgument(1);
+            actionListener.onFailure(new ResourceAlreadyExistsException("index [.plugins-flow-framework-state] already exists"));
+            return null;
+        }).when(indicesAdminClient).create(any(CreateIndexRequest.class), any());
+
+        flowFrameworkIndicesHandler.initFlowFrameworkIndexIfAbsent(FlowFrameworkIndex.WORKFLOW_STATE, listener);
+
+        ArgumentCaptor<Boolean> captor = ArgumentCaptor.forClass(Boolean.class);
+        verify(listener).onResponse(captor.capture());
+        assertTrue(captor.getValue());
+    }
+
+    public void testInitIndexIfAbsent_WrappedResourceAlreadyExistsException() {
+        @SuppressWarnings("unchecked")
+        ActionListener<Boolean> listener = mock(ActionListener.class);
+        doAnswer(invocation -> {
+            ActionListener<CreateIndexResponse> actionListener = invocation.getArgument(1);
+            actionListener.onFailure(new TestWrappedException(new ResourceAlreadyExistsException("index already exists")));
+            return null;
+        }).when(indicesAdminClient).create(any(CreateIndexRequest.class), any());
+
+        flowFrameworkIndicesHandler.initFlowFrameworkIndexIfAbsent(FlowFrameworkIndex.WORKFLOW_STATE, listener);
+
+        ArgumentCaptor<Boolean> captor = ArgumentCaptor.forClass(Boolean.class);
+        verify(listener).onResponse(captor.capture());
+        assertTrue(captor.getValue());
+    }
+
+    // Helper class that implements OpenSearchWrapperException for testing
+    private static class TestWrappedException extends Exception implements OpenSearchWrapperException {
+        TestWrappedException(Throwable cause) {
+            super(cause);
+        }
     }
 
     public void testIsWorkflowProvisionedFailedParsing() {
