@@ -10,6 +10,7 @@ package org.opensearch.flowframework.workflow;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.opensearch.action.ActionRequestValidationException;
 import org.opensearch.common.unit.TimeValue;
 import org.opensearch.core.rest.RestStatus;
 import org.opensearch.flowframework.common.FlowFrameworkSettings;
@@ -21,6 +22,8 @@ import org.opensearch.flowframework.model.Workflow;
 import org.opensearch.flowframework.model.WorkflowEdge;
 import org.opensearch.flowframework.model.WorkflowNode;
 import org.opensearch.flowframework.util.ParseUtils;
+import org.opensearch.ml.common.utils.FieldDescriptor;
+import org.opensearch.ml.common.utils.StringUtils;
 import org.opensearch.plugins.PluginInfo;
 import org.opensearch.plugins.PluginsService;
 import org.opensearch.threadpool.ThreadPool;
@@ -39,6 +42,8 @@ import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import static org.opensearch.flowframework.common.CommonValue.DESCRIPTION_FIELD;
+import static org.opensearch.flowframework.common.CommonValue.NAME_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.PROVISION_WORKFLOW;
 import static org.opensearch.flowframework.common.CommonValue.PROVISION_WORKFLOW_THREAD_POOL;
 import static org.opensearch.flowframework.common.FlowFrameworkSettings.MAX_WORKFLOW_STEPS;
@@ -62,6 +67,22 @@ public class WorkflowProcessSorter {
         DeleteIndexStep.NAME,
         DeleteIngestPipelineStep.NAME,
         DeleteSearchPipelineStep.NAME
+    );
+
+    /** ML Commons step types that have name/description field validation, mapped to a human-readable label */
+    private static final Map<String, String> ML_COMMONS_VALIDATED_STEPS = Map.of(
+        CreateConnectorStep.NAME,
+        "Model connector",
+        RegisterRemoteModelStep.NAME,
+        "Model",
+        RegisterLocalCustomModelStep.NAME,
+        "Model",
+        RegisterLocalSparseEncodingModelStep.NAME,
+        "Model",
+        RegisterLocalPretrainedModelStep.NAME,
+        "Model",
+        RegisterModelGroupStep.NAME,
+        "Model group"
     );
 
     private WorkflowStepFactory workflowStepFactory;
@@ -437,6 +458,7 @@ public class WorkflowProcessSorter {
             .collect(Collectors.toList());
         validatePluginsInstalled(processNodes, installedPlugins);
         validateGraph(processNodes);
+        validateFieldValues(processNodes);
     }
 
     /**
@@ -506,6 +528,45 @@ public class WorkflowProcessSorter {
                         + expectedInputs.toString(),
                     RestStatus.BAD_REQUEST
                 );
+            }
+        }
+    }
+
+    /**
+     * Validates field values in process nodes using ML Commons validation methods.
+     * Checks that name and description fields in ML Commons steps contain only safe characters.
+     * @param processNodes A list of process nodes
+     * @throws Exception on validation failure
+     */
+    public void validateFieldValues(List<ProcessNode> processNodes) throws Exception {
+        Map<String, FieldDescriptor> fieldsToValidate = new HashMap<>();
+
+        for (ProcessNode processNode : processNodes) {
+            String nodeType = processNode.workflowStep().getName();
+            if (!ML_COMMONS_VALIDATED_STEPS.containsKey(nodeType)) {
+                continue;
+            }
+            Map<String, Object> userInputs = processNode.input().getContent();
+            String stepLabel = ML_COMMONS_VALIDATED_STEPS.get(nodeType);
+
+            Object nameValue = userInputs.get(NAME_FIELD);
+            if (nameValue instanceof String) {
+                fieldsToValidate.put(stepLabel + " name [node " + processNode.id() + "]", new FieldDescriptor((String) nameValue, true));
+            }
+
+            Object descValue = userInputs.get(DESCRIPTION_FIELD);
+            if (descValue instanceof String) {
+                fieldsToValidate.put(
+                    stepLabel + " description [node " + processNode.id() + "]",
+                    new FieldDescriptor((String) descValue, false)
+                );
+            }
+        }
+
+        if (!fieldsToValidate.isEmpty()) {
+            ActionRequestValidationException exception = StringUtils.validateFields(fieldsToValidate);
+            if (exception != null) {
+                throw new FlowFrameworkException(exception.getMessage(), RestStatus.BAD_REQUEST);
             }
         }
     }

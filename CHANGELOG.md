@@ -8,6 +8,7 @@ Inspired from [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 - Add agentic search workflow template with flow agent ([#1349](https://github.com/opensearch-project/flow-framework/pull/1349))
 - Add agentic search workflow template with conversational agent ([#1353](https://github.com/opensearch-project/flow-framework/pull/1353))
 ### Enhancements
+- Use ML Commons validation methods for name/description fields during workflow parsing ([#1368](https://github.com/opensearch-project/flow-framework/pull/1368))
 - Support Jackson 3.x release line ([#1376](https://github.com/opensearch-project/flow-framework/pull/1376))
 ### Bug Fixes
 - Handle ResourceAlreadyExistsException race condition in FlowFrameworkIndicesHandler ([#1378](https://github.com/opensearch-project/flow-framework/pull/1378))
