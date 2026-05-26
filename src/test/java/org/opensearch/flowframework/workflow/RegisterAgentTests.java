@@ -132,6 +132,7 @@ public class RegisterAgentTests extends OpenSearchTestCase {
 
         verify(machineLearningNodeClient).registerAgent(mlAgentArgumentCaptor.capture(), actionListenerCaptor.capture());
         assertEquals(llmParams, mlAgentArgumentCaptor.getValue().getLlm().getParameters());
+        assertEquals("flow-framework", mlAgentArgumentCaptor.getValue().getProvisionedBy());
 
         assertTrue(future.isDone());
         assertEquals(agentId, future.get().getContent().get(AGENT_ID));

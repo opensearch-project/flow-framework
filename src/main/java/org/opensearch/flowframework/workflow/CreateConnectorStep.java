@@ -179,7 +179,8 @@ public class CreateConnectorStep implements WorkflowStep {
                 .parameters(parameters)
                 .credential(credentials)
                 .actions(actions)
-                .tenantId(tenantId);
+                .tenantId(tenantId)
+                .provisionedBy("flow-framework");
 
             if (backendRoles != null) {
                 mlInputBuilder.backendRoles(backendRoles);

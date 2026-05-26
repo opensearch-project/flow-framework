@@ -41,6 +41,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
@@ -182,7 +183,9 @@ public class RegisterLocalCustomModelStepTests extends OpenSearchTestCase {
 
         future.actionGet();
 
-        verify(machineLearningNodeClient, times(1)).register(any(MLRegisterModelInput.class), any());
+        ArgumentCaptor<MLRegisterModelInput> captor = ArgumentCaptor.forClass(MLRegisterModelInput.class);
+        verify(machineLearningNodeClient, times(1)).register(captor.capture(), any());
+        assertEquals("flow-framework", captor.getValue().getProvisionedBy());
         verify(machineLearningNodeClient, times(1)).getTask(any(), nullable(String.class), any());
 
         assertEquals(modelId, future.get().getContent().get(MODEL_ID));

@@ -218,7 +218,8 @@ public class RegisterAgentStep implements WorkflowStep {
                 .createdTime(createdTime)
                 .lastUpdateTime(lastUpdateTime)
                 .appType(appType)
-                .tenantId(tenantId);
+                .tenantId(tenantId)
+                .provisionedBy("flow-framework");
 
             if (contextManagementName != null) {
                 builder.contextManagementName(contextManagementName);

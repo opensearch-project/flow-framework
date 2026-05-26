@@ -28,6 +28,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutionException;
 
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
@@ -172,7 +173,9 @@ public class CreateConnectorStepTests extends OpenSearchTestCase {
             null
         );
 
-        verify(machineLearningNodeClient).createConnector(any(MLCreateConnectorInput.class), any());
+        ArgumentCaptor<MLCreateConnectorInput> captor = ArgumentCaptor.forClass(MLCreateConnectorInput.class);
+        verify(machineLearningNodeClient).createConnector(captor.capture(), any());
+        assertEquals("flow-framework", captor.getValue().getProvisionedBy());
         assertTrue(future.isDone());
         assertEquals(connectorId, future.get().getContent().get(CONNECTOR_ID));
 
