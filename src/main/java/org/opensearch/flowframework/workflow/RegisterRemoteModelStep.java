@@ -141,7 +141,8 @@ public class RegisterRemoteModelStep implements WorkflowStep {
                 .functionName(FunctionName.REMOTE)
                 .modelName(modelName)
                 .connectorId(connectorId)
-                .tenantId(tenantId);
+                .tenantId(tenantId)
+                .provisionedBy("flow-framework");
 
             if (modelGroupId != null) {
                 builder.modelGroupId(modelGroupId);

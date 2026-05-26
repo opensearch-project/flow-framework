@@ -143,7 +143,8 @@ public abstract class AbstractRegisterLocalModelStep extends AbstractRetryableWo
             MLRegisterModelInputBuilder mlInputBuilder = MLRegisterModelInput.builder()
                 .modelName(modelName)
                 .version(modelVersion)
-                .modelFormat(MLModelFormat.from(modelFormat));
+                .modelFormat(MLModelFormat.from(modelFormat))
+                .provisionedBy("flow-framework");
 
             if (functionName != null) {
                 mlInputBuilder.functionName(FunctionName.from(functionName));
