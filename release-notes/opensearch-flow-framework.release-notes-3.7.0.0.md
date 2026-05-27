@@ -5,12 +5,12 @@ Compatible with OpenSearch and OpenSearch Dashboards version 3.7.0
 ### Features
 
 * Add missing fields to workflow steps matching ml-commons builders, enabling MCP connector creation and unified agent interface ([#1360](https://github.com/opensearch-project/flow-framework/pull/1360))
-* Set `provisioned_by` field on ML resources to enable adoption metrics attribution ([#1388](https://github.com/opensearch-project/flow-framework/pull/1388))
 * Add response processor to flow agent agentic search template for DSL query exposure ([#1367](https://github.com/opensearch-project/flow-framework/pull/1367))
 
 ### Enhancements
 
 * Validate name and description fields in ML Commons steps during workflow parsing using ML Commons validation methods ([#1368](https://github.com/opensearch-project/flow-framework/pull/1368))
+* Set `provisioned_by` field on ML resources to enable adoption metrics attribution ([#1388](https://github.com/opensearch-project/flow-framework/pull/1388))
 
 ### Bug Fixes
 
