@@ -12,7 +12,7 @@ on:
 
 jobs:
   Get-CI-Image-Tag:
-    uses: opensearch-project/opensearch-build/.github/workflows/get-ci-image-tag.yml@c2498b758c08fb7bc48476509a5fc1b8dd5f7493 # main
+    uses: opensearch-project/opensearch-build/.github/workflows/get-ci-image-tag.yml@b2d99a40d4cec48d1545cd41ed8e18f1817b165f # main
     with:
       product: opensearch
 
