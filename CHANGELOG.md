@@ -7,6 +7,7 @@ Inspired from [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 ### Features
 ### Enhancements
 ### Bug Fixes
+- Add jackson-databind dependency required by swagger-parser ([#1406](https://github.com/opensearch-project/flow-framework/pull/1406))
 ### Infrastructure
 ### Documentation
 ### Maintenance

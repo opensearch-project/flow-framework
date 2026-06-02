@@ -255,6 +255,8 @@ dependencies {
     // Jackson dependencies
     implementation("com.fasterxml.jackson.core:jackson-annotations:${versions.jackson_annotations}")
     implementation("tools.jackson.core:jackson-databind:${versions.jackson3_databind}")
+    // Required by swagger-parser at runtime (no longer provided transitively by upstream)
+    implementation("com.fasterxml.jackson.core:jackson-databind:${versions.jackson_databind}")
 
     testImplementation("org.junit.jupiter:junit-jupiter:${junitJupiterVersion}")
     testImplementation("com.fasterxml.jackson.datatype:jackson-datatype-jsr310:${versions.jackson_databind}")
