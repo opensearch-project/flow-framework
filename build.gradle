@@ -37,7 +37,7 @@ buildscript {
 
         // Version constants for dependencies
         awsEncryptionSdkVersion = "3.0.2"
-        awsCryptoMaterialProvidersVersion = "1.11.0"
+        awsCryptoMaterialProvidersVersion = "1.11.1"
         dafnyRuntimeVersion = "4.11.0"
         smithyDafnyVersion = "0.1.2"
         gsonVersion = "2.14.0"
@@ -308,6 +308,7 @@ dependencies {
                 force("software.amazon.awssdk:dynamodb:${versions.aws}")
                 force("org.dafny:DafnyRuntime:${dafnyRuntimeVersion}")
                 force("software.amazon.smithy.dafny:conversion:${smithyDafnyVersion}")
+                force("software.amazon.cryptography:aws-cryptographic-material-providers:${awsCryptoMaterialProvidersVersion}")
             }
         }
     }

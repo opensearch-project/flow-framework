@@ -10,4 +10,5 @@ Inspired from [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 ### Infrastructure
 ### Documentation
 ### Maintenance
+- Bump `software.amazon.cryptography:aws-cryptographic-material-providers` from 1.11.0 to 1.11.1 ([#1405](https://github.com/opensearch-project/flow-framework/pull/1405))
 ### Refactoring
