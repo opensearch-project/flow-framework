@@ -278,6 +278,10 @@ dependencies {
             force("com.google.errorprone:error_prone_annotations:${versions.error_prone_annotations}")
             force("org.apache.httpcomponents.core5:httpcore5:${versions.httpcore5}")
             force("org.apache.httpcomponents.core5:httpcore5-h2:${versions.httpcore5}")
+            // The Jackson 3.x BOM (tools.jackson:jackson-bom) transitively constrains jackson-annotations
+            // to an older version than the one declared via the version catalog, causing a version conflict.
+            // Pin to the catalog version to resolve it.
+            force("com.fasterxml.jackson.core:jackson-annotations:${versions.jackson_annotations}")
 
             if (System.getenv('REMOTE_METADATA_SDK_IMPL') == 'ddb-client') {
                 // OpenSearch Java client brings in different versions of the below dependencies.
