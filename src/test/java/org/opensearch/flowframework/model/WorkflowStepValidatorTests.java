@@ -10,11 +10,17 @@ package org.opensearch.flowframework.model;
 
 import org.opensearch.flowframework.workflow.CreateConnectorStep;
 import org.opensearch.flowframework.workflow.CreateIndexStep;
+import org.opensearch.flowframework.workflow.DeleteAgentStep;
+import org.opensearch.flowframework.workflow.DeleteConnectorStep;
 import org.opensearch.flowframework.workflow.DeleteIndexStep;
+import org.opensearch.flowframework.workflow.DeleteModelStep;
 import org.opensearch.flowframework.workflow.DeployModelStep;
+import org.opensearch.flowframework.workflow.RegisterAgentStep;
 import org.opensearch.flowframework.workflow.RegisterModelGroupStep;
 import org.opensearch.flowframework.workflow.RegisterRemoteModelStep;
 import org.opensearch.flowframework.workflow.ReindexStep;
+import org.opensearch.flowframework.workflow.UndeployModelStep;
+import org.opensearch.flowframework.workflow.UpdateIndexStep;
 import org.opensearch.flowframework.workflow.WorkflowStepFactory;
 import org.opensearch.test.OpenSearchTestCase;
 
@@ -108,6 +114,61 @@ public class WorkflowStepValidatorTests extends OpenSearchTestCase {
             RegisterModelGroupStep.NAME,
             RegisterModelGroupStep.REQUIRED_INPUTS,
             RegisterModelGroupStep.PROVIDED_OUTPUTS
+        );
+    }
+
+    public void testUndeployModelStepValidator() throws IOException {
+        assertStepValidatorMatches(
+            WorkflowStepFactory.WorkflowSteps.UNDEPLOY_MODEL,
+            UndeployModelStep.NAME,
+            UndeployModelStep.REQUIRED_INPUTS,
+            UndeployModelStep.PROVIDED_OUTPUTS
+        );
+    }
+
+    public void testDeleteModelStepValidator() throws IOException {
+        assertStepValidatorMatches(
+            WorkflowStepFactory.WorkflowSteps.DELETE_MODEL,
+            DeleteModelStep.NAME,
+            DeleteModelStep.REQUIRED_INPUTS,
+            DeleteModelStep.PROVIDED_OUTPUTS
+        );
+    }
+
+    public void testDeleteConnectorStepValidator() throws IOException {
+        assertStepValidatorMatches(
+            WorkflowStepFactory.WorkflowSteps.DELETE_CONNECTOR,
+            DeleteConnectorStep.NAME,
+            DeleteConnectorStep.REQUIRED_INPUTS,
+            DeleteConnectorStep.PROVIDED_OUTPUTS
+        );
+
+    }
+
+    public void testRegisterAgentStepValidator() throws IOException {
+        assertStepValidatorMatches(
+            WorkflowStepFactory.WorkflowSteps.REGISTER_AGENT,
+            RegisterAgentStep.NAME,
+            RegisterAgentStep.REQUIRED_INPUTS,
+            RegisterAgentStep.PROVIDED_OUTPUTS
+        );
+    }
+
+    public void testDeleteAgentStepValidator() throws IOException {
+        assertStepValidatorMatches(
+            WorkflowStepFactory.WorkflowSteps.DELETE_AGENT,
+            DeleteAgentStep.NAME,
+            DeleteAgentStep.REQUIRED_INPUTS,
+            DeleteAgentStep.PROVIDED_OUTPUTS
+        );
+    }
+
+    public void testUpdateIndexStepValidator() throws IOException {
+        assertStepValidatorMatches(
+            WorkflowStepFactory.WorkflowSteps.UPDATE_INDEX,
+            UpdateIndexStep.NAME,
+            UpdateIndexStep.REQUIRED_INPUTS,
+            UpdateIndexStep.PROVIDED_OUTPUTS
         );
     }
 
