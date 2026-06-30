@@ -54,8 +54,8 @@ buildscript {
 
     repositories {
         mavenLocal()
-        maven { url = "https://ci.opensearch.org/ci/dbc/snapshots/maven/" }
         maven { url = "https://ci.opensearch.org/maven2/" }
+        maven { url = "https://ci.opensearch.org/ci/dbc/snapshots/maven/" }
         mavenCentral()
         maven { url = "https://plugins.gradle.org/m2/" }
         maven { url = 'https://jitpack.io' }
@@ -186,8 +186,8 @@ java {
 
 repositories {
     mavenLocal()
-    maven { url = "https://ci.opensearch.org/ci/dbc/snapshots/maven/" }
     maven { url = "https://ci.opensearch.org/maven2/" }
+    maven { url = "https://ci.opensearch.org/ci/dbc/snapshots/maven/" }
     mavenCentral()
     maven { url = "https://plugins.gradle.org/m2/" }
 }
