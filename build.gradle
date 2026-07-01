@@ -227,6 +227,12 @@ dependencies {
         resolutionStrategy {
             force("com.google.guava:guava:33.4.0-jre") // CVE for 31.1, keep to force transitive dependencies
             force("org.apache.logging.log4j:log4j-core:2.25.4") // CVE-2026-34478, CVE-2026-34477, CVE-2026-34480
+            force("org.apache.logging.log4j:log4j-api:2.25.4") // align with log4j-core
+            force("com.fasterxml.jackson.core:jackson-core:2.18.8")
+            force("com.fasterxml.jackson.core:jackson-annotations:2.18.8")
+            force("com.fasterxml.jackson.core:jackson-databind:2.18.8")
+            force("com.fasterxml.jackson.datatype:jackson-datatype-jsr310:2.18.8")
+            force("com.fasterxml.jackson:jackson-bom:2.18.8")
         }
     }
 }
