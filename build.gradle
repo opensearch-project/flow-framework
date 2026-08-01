@@ -119,7 +119,7 @@ allprojects {
     project.ext.licenseUrl = 'http://www.apache.org/licenses/LICENSE-2.0.txt'
 
     checkstyle {
-        toolVersion = "latest.release"
+        toolVersion = "13.9.0"
     }
 
     // Avoid jar hell and other CVEs
