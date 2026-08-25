@@ -86,7 +86,14 @@ public class FlowFrameworkIndicesHandler {
     private final ClusterService clusterService;
     private final EncryptorUtils encryptorUtils;
     private static final Map<String, AtomicBoolean> indexMappingUpdated = new HashMap<>();
-    private static final Map<String, Object> indexSettings = Map.of("index.auto_expand_replicas", "0-1");
+    private static final Map<String, Object> indexCreationSettings = Map.of(
+        "index.number_of_shards",
+        "1",
+        "index.auto_expand_replicas",
+        "0-1"
+    );
+    // Cannot include final 'number_of_shards' setting in index updates
+    private static final Map<String, Object> indexUpdateSettings = Map.of("index.auto_expand_replicas", "0-1");
     private final NamedXContentRegistry xContentRegistry;
     private final boolean multiTenancyEnabled;
     // Retries in case of simultaneous updates
@@ -229,7 +236,7 @@ public class FlowFrameworkIndicesHandler {
                     }
                 });
                 CreateIndexRequest request = new CreateIndexRequest(indexName).mapping("{\"_doc\":" + mapping + "}")
-                    .settings(indexSettings);
+                    .settings(indexCreationSettings);
                 client.admin().indices().create(request, actionListener);
             } else {
                 logger.debug("index: {} is already created", indexName);
@@ -244,7 +251,7 @@ public class FlowFrameworkIndicesHandler {
                                     ActionListener.wrap(response -> {
                                         if (response.isAcknowledged()) {
                                             UpdateSettingsRequest updateSettingRequest = new UpdateSettingsRequest();
-                                            updateSettingRequest.indices(indexName).settings(indexSettings);
+                                            updateSettingRequest.indices(indexName).settings(indexUpdateSettings);
                                             client.admin()
                                                 .indices()
                                                 .updateSettings(updateSettingRequest, ActionListener.wrap(updateResponse -> {

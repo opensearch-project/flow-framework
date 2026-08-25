@@ -294,7 +294,10 @@ public class FlowFrameworkIndicesHandlerTests extends OpenSearchTestCase {
         ActionListener<Boolean> listener = mock(ActionListener.class);
         flowFrameworkIndicesHandler.initFlowFrameworkIndexIfAbsent(FlowFrameworkIndex.GLOBAL_CONTEXT, listener);
 
-        verify(indicesAdminClient, times(1)).create(any(CreateIndexRequest.class), any());
+        ArgumentCaptor<CreateIndexRequest> requestCaptor = ArgumentCaptor.forClass(CreateIndexRequest.class);
+        verify(indicesAdminClient, times(1)).create(requestCaptor.capture(), any());
+        assertEquals("1", requestCaptor.getValue().settings().get("index.number_of_shards"));
+        assertEquals("0-1", requestCaptor.getValue().settings().get("index.auto_expand_replicas"));
     }
 
     public void testInitIndexIfAbsent_ResourceAlreadyExistsException() {
