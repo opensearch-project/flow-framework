@@ -1,3 +1,8 @@
+/*
+ * Copyright OpenSearch Contributors
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
 allprojects {
     // Only wire the Eclipse JDT step when a spotless task is actually being run, so non-spotless
     // Gradle invocations (test, assemble) don't provision the formatter at configuration time.
