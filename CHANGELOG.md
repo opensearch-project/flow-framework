@@ -7,6 +7,7 @@ Inspired from [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 ### Features
 ### Enhancements
 ### Bug Fixes
+- Declare `workflow_state` as a child resource of `workflow` so state documents inherit the workflow's access shares ([#1455](https://github.com/opensearch-project/flow-framework/pull/1455))
 - Add jackson-databind dependency required by swagger-parser ([#1406](https://github.com/opensearch-project/flow-framework/pull/1406))
 - Set number_of_shards to 1 for plugin system indices ([#1407](https://github.com/opensearch-project/flow-framework/pull/1407))
 ### Infrastructure
