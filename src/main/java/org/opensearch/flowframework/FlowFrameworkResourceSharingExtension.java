@@ -49,6 +49,21 @@ public class FlowFrameworkResourceSharingExtension implements ResourceSharingExt
             public String resourceIndexName() {
                 return WORKFLOW_STATE_INDEX;
             }
+
+            // Workflow state documents are companion resources of the workflow
+            // (template) they track: access is inherited from the parent
+            // workflow's sharing record. This also covers state documents
+            // written without an authenticated user in the thread context
+            // (e.g. during provisioning steps executed under system context).
+            @Override
+            public String parentType() {
+                return CommonValue.WORKFLOW_RESOURCE_TYPE;
+            }
+
+            @Override
+            public String parentIdField() {
+                return CommonValue.WORKFLOW_ID_FIELD;
+            }
         });
     }
 
