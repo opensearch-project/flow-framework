@@ -50,7 +50,12 @@ buildscript {
 
     dependencies {
         classpath "org.opensearch.gradle:build-tools:${opensearch_version}"
-        classpath "com.diffplug.spotless:spotless-plugin-gradle:7.0.2"
+        // Spotless 8.10.x/7.x requires a Java 17+ runtime to resolve its plugin. Only put it on
+        // the buildscript classpath on Java 17+ so the Java 11 CI matrix doesn't fail resolving
+        // it. formatter/formatting.gradle applies it (also gated to Java 17+) only when available.
+        if (JavaVersion.current().isCompatibleWith(JavaVersion.VERSION_17)) {
+            classpath "com.diffplug.spotless:spotless-plugin-gradle:8.10.1"
+        }
     }
 }
 
@@ -66,7 +71,6 @@ apply plugin: 'opensearch.opensearchplugin'
 apply plugin: 'opensearch.yaml-rest-test'
 apply plugin: 'opensearch.pluginzip'
 // for formatting and license headers
-apply plugin: 'com.diffplug.spotless'
 apply from: 'formatter/formatting.gradle'
 // for javadocs and checks spotless doesn't do
 apply plugin: 'checkstyle'
