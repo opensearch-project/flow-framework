@@ -553,8 +553,8 @@ testClusters.integTest {
                 ']'
         )
         if (System.getProperty("resource_sharing.enabled") == "true") {
-            setting("plugins.security.experimental.resource_sharing.enabled", "true")
-            setting("plugins.security.experimental.resource_sharing.protected_types", "[\"workflow\", \"workflow_state\"]")
+            setting("plugins.security.resource_sharing.enabled", "true")
+            setting("plugins.security.resource_sharing.protected_types", "[\"workflow\", \"workflow_state\"]")
         }
         setSecure(true)
     }
