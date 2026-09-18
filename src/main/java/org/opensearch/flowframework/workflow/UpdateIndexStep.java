@@ -48,6 +48,12 @@ public class UpdateIndexStep implements WorkflowStep {
 
     /** The name of this step */
     public static final String NAME = "update_index";
+    /** Required input keys */
+    public static final Set<String> REQUIRED_INPUTS = Set.of(INDEX_NAME, CONFIGURATIONS);
+    /** Optional input keys */
+    public static final Set<String> OPTIONAL_INPUTS = Collections.emptySet();
+    /** Provided output keys */
+    public static final Set<String> PROVIDED_OUTPUTS = Set.of(INDEX_NAME);
 
     /**
      * Instantiate this class
@@ -69,14 +75,11 @@ public class UpdateIndexStep implements WorkflowStep {
     ) {
         PlainActionFuture<WorkflowData> updateIndexFuture = PlainActionFuture.newFuture();
 
-        Set<String> requiredKeys = Set.of(INDEX_NAME, CONFIGURATIONS);
-        Set<String> optionalKeys = Collections.emptySet();
-
         try {
 
             Map<String, Object> inputs = ParseUtils.getInputsFromPreviousSteps(
-                requiredKeys,
-                optionalKeys,
+                REQUIRED_INPUTS,
+                OPTIONAL_INPUTS,
                 currentNodeInputs,
                 outputs,
                 previousNodeInputs,
