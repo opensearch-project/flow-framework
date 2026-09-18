@@ -204,6 +204,12 @@ configurations {
     secureIntegTestPluginArchive
 }
 
+configurations.all {
+    resolutionStrategy {
+        force "org.bouncycastle:bctls-fips:2.1.24"
+    }
+}
+
 dependencies {
     // For resource access control
     compileOnly("org.opensearch:opensearch-security-spi:${opensearch_build}")
