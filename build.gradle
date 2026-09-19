@@ -50,7 +50,7 @@ buildscript {
         jakartaJsonBindVersion = "3.0.3"
         jakartaJsonVersion = "2.0.1"
         commonsTextVersion = "1.15.0"
-        yassonVersion = "3.0.4"
+        yassonVersion = "3.0.5"
         parssonVersion = "1.1.9"
         swaggerVersion = "2.1.48"
         swaggerCoreVersion = "2.2.55"
@@ -205,6 +205,16 @@ configurations {
 }
 
 dependencies {
+    // As of 3.0.5 Yasson moved from the org.eclipse groupId to org.eclipse.yasson. The old
+    // coordinate only publishes a relocation POM with no jar, and Gradle does not follow Maven
+    // relocation metadata, so anything still asking for org.eclipse:yasson would silently drop
+    // the JSON-B provider off the classpath. Redirect it to the new coordinate instead.
+    modules {
+        module("org.eclipse:yasson") {
+            replacedBy("org.eclipse.yasson:yasson", "Yasson moved to the org.eclipse.yasson groupId in 3.0.5")
+        }
+    }
+
     // For resource access control
     compileOnly("org.opensearch:opensearch-security-spi:${opensearch_build}")
 
@@ -237,7 +247,7 @@ dependencies {
     compileOnly("org.bouncycastle:bc-fips:${versions.bouncycastle_jce}")
     implementation("jakarta.json.bind:jakarta.json.bind-api:${jakartaJsonBindVersion}")
     implementation("org.glassfish:jakarta.json:${jakartaJsonVersion}")
-    implementation("org.eclipse:yasson:${yassonVersion}")
+    implementation("org.eclipse.yasson:yasson:${yassonVersion}")
     implementation("com.google.code.gson:gson:${gsonVersion}")
 
     // Swagger-Parser dependencies for API consistency tests
@@ -314,7 +324,7 @@ dependencies {
 
                 // Jakarta and Eclipse dependencies
                 force("jakarta.json.bind:jakarta.json.bind-api:${jakartaJsonBindVersion}")
-                force("org.eclipse:yasson:${yassonVersion}")
+                force("org.eclipse.yasson:yasson:${yassonVersion}")
                 force("org.eclipse.parsson:parsson:${parssonVersion}")
                 force("org.glassfish:jakarta.json:${jakartaJsonVersion}")
 
