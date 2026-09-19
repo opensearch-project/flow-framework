@@ -13,5 +13,6 @@ Inspired from [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 ### Infrastructure
 ### Documentation
 ### Maintenance
+- Deprecate `plugins.flow_framework.filter_by_backend_roles`, targeting removal in 4.0 ([#1490](https://github.com/opensearch-project/flow-framework/pull/1490))
 - Rename the resource sharing feature flag to the non-experimental key ([#1482](https://github.com/opensearch-project/flow-framework/pull/1482))
 ### Refactoring
