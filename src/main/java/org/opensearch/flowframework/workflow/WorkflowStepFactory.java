@@ -44,13 +44,8 @@ import static org.opensearch.flowframework.common.CommonValue.NAME_FIELD;
 import static org.opensearch.flowframework.common.CommonValue.OPENSEARCH_ML;
 import static org.opensearch.flowframework.common.CommonValue.PIPELINE_ID;
 import static org.opensearch.flowframework.common.CommonValue.REGISTER_MODEL_STATUS;
-import static org.opensearch.flowframework.common.CommonValue.SUCCESS;
-import static org.opensearch.flowframework.common.CommonValue.TYPE;
 import static org.opensearch.flowframework.common.CommonValue.URL;
 import static org.opensearch.flowframework.common.CommonValue.VERSION_FIELD;
-import static org.opensearch.flowframework.common.WorkflowResources.AGENT_ID;
-import static org.opensearch.flowframework.common.WorkflowResources.CONNECTOR_ID;
-import static org.opensearch.flowframework.common.WorkflowResources.INDEX_NAME;
 import static org.opensearch.flowframework.common.WorkflowResources.MODEL_ID;
 
 /**
@@ -219,19 +214,37 @@ public class WorkflowStepFactory {
         ),
 
         /** Undeploy Model Step */
-        UNDEPLOY_MODEL(UndeployModelStep.NAME, List.of(MODEL_ID), List.of(SUCCESS), List.of(OPENSEARCH_ML), null),
+        UNDEPLOY_MODEL(
+            UndeployModelStep.NAME,
+            UndeployModelStep.REQUIRED_INPUTS,
+            UndeployModelStep.PROVIDED_OUTPUTS,
+            List.of(OPENSEARCH_ML),
+            null
+        ),
 
         /** Delete Model Step */
-        DELETE_MODEL(DeleteModelStep.NAME, List.of(MODEL_ID), List.of(MODEL_ID), List.of(OPENSEARCH_ML), null),
+        DELETE_MODEL(DeleteModelStep.NAME, DeleteModelStep.REQUIRED_INPUTS, DeleteModelStep.PROVIDED_OUTPUTS, List.of(OPENSEARCH_ML), null),
 
         /** Delete Connector Step */
-        DELETE_CONNECTOR(DeleteConnectorStep.NAME, List.of(CONNECTOR_ID), List.of(CONNECTOR_ID), List.of(OPENSEARCH_ML), null),
+        DELETE_CONNECTOR(
+            DeleteConnectorStep.NAME,
+            DeleteConnectorStep.REQUIRED_INPUTS,
+            DeleteConnectorStep.PROVIDED_OUTPUTS,
+            List.of(OPENSEARCH_ML),
+            null
+        ),
 
         /** Register Agent Step */
-        REGISTER_AGENT(RegisterAgentStep.NAME, List.of(NAME_FIELD, TYPE), List.of(AGENT_ID), List.of(OPENSEARCH_ML), null),
+        REGISTER_AGENT(
+            RegisterAgentStep.NAME,
+            RegisterAgentStep.REQUIRED_INPUTS,
+            RegisterAgentStep.PROVIDED_OUTPUTS,
+            List.of(OPENSEARCH_ML),
+            null
+        ),
 
         /** Delete Agent Step */
-        DELETE_AGENT(DeleteAgentStep.NAME, List.of(AGENT_ID), List.of(AGENT_ID), List.of(OPENSEARCH_ML), null),
+        DELETE_AGENT(DeleteAgentStep.NAME, DeleteAgentStep.REQUIRED_INPUTS, DeleteAgentStep.PROVIDED_OUTPUTS, List.of(OPENSEARCH_ML), null),
 
         /** Create Tool Step */
         CREATE_TOOL(ToolStep.NAME, ToolStep.REQUIRED_INPUTS, ToolStep.PROVIDED_OUTPUTS, List.of(OPENSEARCH_ML), null),
@@ -282,7 +295,13 @@ public class WorkflowStepFactory {
         ),
 
         /** Update Index Step */
-        UPDATE_INDEX(UpdateIndexStep.NAME, List.of(INDEX_NAME, CONFIGURATIONS), List.of(INDEX_NAME), Collections.emptyList(), null),
+        UPDATE_INDEX(
+            UpdateIndexStep.NAME,
+            UpdateIndexStep.REQUIRED_INPUTS,
+            UpdateIndexStep.PROVIDED_OUTPUTS,
+            Collections.emptyList(),
+            null
+        ),
 
         /** Delete Search Pipeline Step */
         DELETE_SEARCH_PIPELINE(
