@@ -27,6 +27,7 @@ import org.junit.Before;
 
 import java.io.IOException;
 import java.security.Principal;
+import java.util.concurrent.atomic.AtomicReference;
 
 import org.mockito.ArgumentCaptor;
 
@@ -88,7 +89,10 @@ public class PluginClientTests extends OpenSearchTestCase {
 
         doAnswer(inv -> {
             CheckedRunnable<?> r = inv.getArgument(0);
-            r.run(); // may throw Exception; Mockito will surface it
+            try (ThreadContext.StoredContext ignored = threadContext.stashContext()) {
+                threadContext.putHeader("subject", "test-subject");
+                r.run(); // may throw Exception; Mockito will surface it
+            }
             return null;
         }).when(subject).runAs(any());
 
@@ -108,7 +112,7 @@ public class PluginClientTests extends OpenSearchTestCase {
             IllegalStateException.class,
             () -> pluginClient.execute(TEST_ACTION, new TestRequest(), ActionListener.wrap(r -> {}, e -> {}))
         );
-        assertTrue(ex.getMessage().contains("PluginClient is not initialized."));
+        assertTrue(ex.getMessage().contains("PluginClient is not initialized"));
     }
 
     public void testDelegatesExecuteAndRunsAsSubject_AndCapturesResponse() {
@@ -162,25 +166,55 @@ public class PluginClientTests extends OpenSearchTestCase {
         pluginClient.execute(TEST_ACTION, new TestRequest(), assertingListener);
     }
 
-    public void testCheckedExceptionFromRunAsIsWrapped() {
-        // Make runAs throw a checked Exception
-        doAnswer(inv -> { throw new Exception("boom"); }).when(subject).runAs(any());
+    public void testCallerContextIsRestoredForAnAsyncListener() {
+        threadContext.putHeader("foo", "orig");
 
-        RuntimeException ex = expectThrows(
-            RuntimeException.class,
-            () -> pluginClient.execute(TEST_ACTION, new TestRequest(), ActionListener.wrap(r -> {}, e -> {}))
+        AtomicReference<ActionListener<TestResponse>> pendingListener = new AtomicReference<>();
+        doAnswer(inv -> {
+            pendingListener.set(inv.getArgument(2));
+            return null;
+        }).when(delegate).execute(eq(TEST_ACTION), any(TestRequest.class), any());
+
+        AtomicReference<String> headerSeenByListener = new AtomicReference<>();
+        pluginClient.execute(
+            TEST_ACTION,
+            new TestRequest(),
+            ActionListener.wrap(r -> headerSeenByListener.set(threadContext.getHeader("foo")), e -> fail("Should not fail"))
         );
-        assertTrue(ex.getMessage().contains("boom"));
+
+        // A transport response arrives on a pooled thread that never carried the caller's context.
+        try (ThreadContext.StoredContext ignored = threadContext.stashContext()) {
+            pendingListener.get().onResponse(new TestResponse());
+        }
+
+        assertEquals("orig", headerSeenByListener.get());
     }
 
-    public void testRuntimeExceptionFromDelegateBubblesUp() {
+    public void testCheckedExceptionFromRunAsGoesToListener() {
+        doAnswer(inv -> { throw new Exception("boom"); }).when(subject).runAs(any());
+
+        @SuppressWarnings("unchecked")
+        ActionListener<TestResponse> userListener = mock(ActionListener.class);
+
+        pluginClient.execute(TEST_ACTION, new TestRequest(), userListener);
+
+        ArgumentCaptor<Exception> exCaptor = ArgumentCaptor.forClass(Exception.class);
+        verify(userListener, times(1)).onFailure(exCaptor.capture());
+        assertEquals("boom", exCaptor.getValue().getMessage());
+        verify(userListener, never()).onResponse(any());
+    }
+
+    public void testRuntimeExceptionFromDelegateGoesToListener() {
         doAnswer(inv -> { throw new IllegalStateException("delegate-broke"); }).when(delegate)
             .execute(eq(TEST_ACTION), any(TestRequest.class), any());
 
-        IllegalStateException ex = expectThrows(
-            IllegalStateException.class,
-            () -> pluginClient.execute(TEST_ACTION, new TestRequest(), ActionListener.wrap(r -> {}, e -> {}))
-        );
-        assertTrue(ex.getMessage().contains("delegate-broke"));
+        @SuppressWarnings("unchecked")
+        ActionListener<TestResponse> userListener = mock(ActionListener.class);
+
+        pluginClient.execute(TEST_ACTION, new TestRequest(), userListener);
+
+        ArgumentCaptor<Exception> exCaptor = ArgumentCaptor.forClass(Exception.class);
+        verify(userListener, times(1)).onFailure(exCaptor.capture());
+        assertTrue(exCaptor.getValue().getMessage().contains("delegate-broke"));
     }
 }
