@@ -19,7 +19,6 @@ import org.opensearch.cluster.service.ClusterService;
 import org.opensearch.common.inject.Inject;
 import org.opensearch.common.settings.Settings;
 import org.opensearch.common.unit.TimeValue;
-import org.opensearch.common.util.concurrent.ThreadContext;
 import org.opensearch.commons.authuser.User;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.core.rest.RestStatus;
@@ -151,10 +150,10 @@ public class ReprovisionWorkflowTransportAction extends HandledTransportAction<R
         String workflowId = request.getWorkflowId();
         User user = getUserContext(client);
 
-        try (ThreadContext.StoredContext context = client.threadPool().getThreadContext().stashContext()) {
+        try {
             verifyResourceAccessAndProcessRequest(
                 CommonValue.WORKFLOW_RESOURCE_TYPE,
-                () -> executeReprovisionRequest(request, tenantId, listener, context),
+                () -> executeReprovisionRequest(request, tenantId, listener),
                 () -> resolveUserAndExecute(
                     user,
                     workflowId,
@@ -163,8 +162,7 @@ public class ReprovisionWorkflowTransportAction extends HandledTransportAction<R
                     false,
                     flowFrameworkSettings.isMultiTenancyEnabled(),
                     listener,
-                    () -> executeReprovisionRequest(request, tenantId, listener, context),
-                    client,
+                    () -> executeReprovisionRequest(request, tenantId, listener),
                     sdkClient,
                     clusterService,
                     xContentRegistry
@@ -186,20 +184,13 @@ public class ReprovisionWorkflowTransportAction extends HandledTransportAction<R
      * @param request the reprovision request
      * @param tenantId
      * @param listener the action listener
-     * @param context the thread context
      */
-    private void executeReprovisionRequest(
-        ReprovisionWorkflowRequest request,
-        String tenantId,
-        ActionListener<WorkflowResponse> listener,
-        ThreadContext.StoredContext context
-    ) {
+    private void executeReprovisionRequest(ReprovisionWorkflowRequest request, String tenantId, ActionListener<WorkflowResponse> listener) {
         String workflowId = request.getWorkflowId();
         logger.info("Querying state for workflow: {}", workflowId);
         // Retrieve state and resources created
         GetWorkflowStateRequest getStateRequest = new GetWorkflowStateRequest(workflowId, true, tenantId);
         client.execute(GetWorkflowStateAction.INSTANCE, getStateRequest, ActionListener.wrap(response -> {
-            context.restore();
 
             State currentState = State.valueOf(response.getWorkflowState().getState());
             if (State.PROVISIONING.equals(currentState) || State.NOT_STARTED.equals(currentState)) {

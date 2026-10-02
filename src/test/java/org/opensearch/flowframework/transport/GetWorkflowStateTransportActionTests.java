@@ -30,6 +30,7 @@ import org.opensearch.flowframework.exception.FlowFrameworkException;
 import org.opensearch.flowframework.indices.FlowFrameworkIndicesHandler;
 import org.opensearch.flowframework.model.WorkflowState;
 import org.opensearch.flowframework.util.EncryptorUtils;
+import org.opensearch.flowframework.util.PluginClient;
 import org.opensearch.index.IndexNotFoundException;
 import org.opensearch.index.get.GetResult;
 import org.opensearch.remote.metadata.client.SdkClient;
@@ -86,9 +87,9 @@ public class GetWorkflowStateTransportActionTests extends OpenSearchTestCase {
             Collections.unmodifiableSet(new HashSet<>(Arrays.asList(FlowFrameworkSettings.FILTER_BY_BACKEND_ROLES)))
         );
         when(clusterService.getClusterSettings()).thenReturn(clusterSettings);
-        this.encryptorUtils = new EncryptorUtils(mock(ClusterService.class), client, sdkClient, xContentRegistry, false);
+        this.encryptorUtils = new EncryptorUtils(mock(ClusterService.class), sdkClient, xContentRegistry, false);
         this.flowFrameworkIndicesHandler = spy(
-            new FlowFrameworkIndicesHandler(client, sdkClient, clusterService, encryptorUtils, xContentRegistry, false)
+            new FlowFrameworkIndicesHandler(new PluginClient(client), sdkClient, clusterService, encryptorUtils, xContentRegistry, false)
         );
 
         this.getWorkflowStateTransportAction = new GetWorkflowStateTransportAction(

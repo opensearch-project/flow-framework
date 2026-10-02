@@ -20,7 +20,6 @@ import org.opensearch.cluster.service.ClusterService;
 import org.opensearch.common.inject.Inject;
 import org.opensearch.common.settings.Settings;
 import org.opensearch.common.unit.TimeValue;
-import org.opensearch.common.util.concurrent.ThreadContext;
 import org.opensearch.commons.authuser.User;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.core.rest.RestStatus;
@@ -195,7 +194,6 @@ public class CreateWorkflowTransportAction extends HandledTransportAction<Workfl
                     isMultitenancyEnabled,
                     listener,
                     function,
-                    client,
                     sdkClient,
                     clusterService,
                     xContentRegistry
@@ -397,39 +395,36 @@ public class CreateWorkflowTransportAction extends HandledTransportAction<Workfl
             // This is an existing workflow (PUT)
             // Fetch existing entry for time stamps
             logger.info("Querying existing workflow from global context: {}", workflowId);
-            try (ThreadContext.StoredContext context = client.threadPool().getThreadContext().stashContext()) {
-                sdkClient.getDataObjectAsync(
-                    GetDataObjectRequest.builder().index(GLOBAL_CONTEXT_INDEX).id(workflowId).tenantId(tenantId).build()
-                ).whenComplete((r, throwable) -> {
-                    if (throwable == null) {
-                        context.restore();
-                        try {
-                            GetResponse getResponse = r.parser() == null ? null : GetResponse.fromXContent(r.parser());
-                            if (getResponse.isExists()) {
-                                handleWorkflowExists(request, templateWithUser, getResponse, waitForTimeCompletion, listener);
-                            } else {
-                                String errorMessage = ParameterizedMessageFactory.INSTANCE.newMessage(
-                                    "Failed to retrieve template ({}) from global context.",
-                                    workflowId
-                                ).getFormattedMessage();
-                                logger.error(errorMessage);
-                                listener.onFailure(new FlowFrameworkException(errorMessage, RestStatus.NOT_FOUND));
-                            }
-                        } catch (IOException e) {
-                            logger.error("Failed to parse workflow getResponse: {}", workflowId, e);
-                            listener.onFailure(e);
+            sdkClient.getDataObjectAsync(
+                GetDataObjectRequest.builder().index(GLOBAL_CONTEXT_INDEX).id(workflowId).tenantId(tenantId).build()
+            ).whenComplete((r, throwable) -> {
+                if (throwable == null) {
+                    try {
+                        GetResponse getResponse = r.parser() == null ? null : GetResponse.fromXContent(r.parser());
+                        if (getResponse.isExists()) {
+                            handleWorkflowExists(request, templateWithUser, getResponse, waitForTimeCompletion, listener);
+                        } else {
+                            String errorMessage = ParameterizedMessageFactory.INSTANCE.newMessage(
+                                "Failed to retrieve template ({}) from global context.",
+                                workflowId
+                            ).getFormattedMessage();
+                            logger.error(errorMessage);
+                            listener.onFailure(new FlowFrameworkException(errorMessage, RestStatus.NOT_FOUND));
                         }
-                    } else {
-                        Exception exception = SdkClientUtils.unwrapAndConvertToException(throwable);
-                        String errorMessage = ParameterizedMessageFactory.INSTANCE.newMessage(
-                            "Failed to retrieve template ({}) from global context.",
-                            workflowId
-                        ).getFormattedMessage();
-                        logger.error(errorMessage, exception);
-                        listener.onFailure(new FlowFrameworkException(errorMessage, ExceptionsHelper.status(exception)));
+                    } catch (IOException e) {
+                        logger.error("Failed to parse workflow getResponse: {}", workflowId, e);
+                        listener.onFailure(e);
                     }
-                });
-            }
+                } else {
+                    Exception exception = SdkClientUtils.unwrapAndConvertToException(throwable);
+                    String errorMessage = ParameterizedMessageFactory.INSTANCE.newMessage(
+                        "Failed to retrieve template ({}) from global context.",
+                        workflowId
+                    ).getFormattedMessage();
+                    logger.error(errorMessage, exception);
+                    listener.onFailure(new FlowFrameworkException(errorMessage, ExceptionsHelper.status(exception)));
+                }
+            });
         }
     }
 
@@ -552,10 +547,9 @@ public class CreateWorkflowTransportAction extends HandledTransportAction<Workfl
                 .searchSourceBuilder(searchSourceBuilder)
                 .tenantId(tenantId)
                 .build();
-            try (ThreadContext.StoredContext context = client.threadPool().getThreadContext().stashContext()) {
+            try {
                 sdkClient.searchDataObjectAsync(searchRequest).whenComplete((r, throwable) -> {
                     if (throwable == null) {
-                        context.restore();
                         try {
                             SearchResponse searchResponse = SearchResponse.fromXContent(r.parser());
                             internalListener.onResponse(searchResponse.getHits().getTotalHits().value() < maxWorkflow);

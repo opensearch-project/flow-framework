@@ -18,7 +18,6 @@ import org.opensearch.action.support.HandledTransportAction;
 import org.opensearch.cluster.service.ClusterService;
 import org.opensearch.common.inject.Inject;
 import org.opensearch.common.settings.Settings;
-import org.opensearch.common.util.concurrent.ThreadContext;
 import org.opensearch.commons.authuser.User;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.core.rest.RestStatus;
@@ -104,11 +103,9 @@ public class DeleteWorkflowTransportAction extends HandledTransportAction<Workfl
 
             final boolean clearStatus = Booleans.parseBoolean(request.getParams().get(CLEAR_STATUS), false);
 
-            ThreadContext.StoredContext context = client.threadPool().getThreadContext().stashContext();
-
             verifyResourceAccessAndProcessRequest(
                 CommonValue.WORKFLOW_RESOURCE_TYPE,
-                () -> executeDeleteRequest(request, tenantId, listener, context),
+                () -> executeDeleteRequest(request, tenantId, listener),
                 () -> resolveUserAndExecute(
                     user,
                     workflowId,
@@ -117,8 +114,7 @@ public class DeleteWorkflowTransportAction extends HandledTransportAction<Workfl
                     clearStatus,
                     flowFrameworkSettings.isMultiTenancyEnabled(),
                     listener,
-                    () -> executeDeleteRequest(request, tenantId, listener, context),
-                    client,
+                    () -> executeDeleteRequest(request, tenantId, listener),
                     sdkClient,
                     clusterService,
                     xContentRegistry
@@ -136,14 +132,8 @@ public class DeleteWorkflowTransportAction extends HandledTransportAction<Workfl
      * @param request the workflow request
      * @param tenantId
      * @param listener the action listener
-     * @param context the thread context
      */
-    private void executeDeleteRequest(
-        WorkflowRequest request,
-        String tenantId,
-        ActionListener<DeleteResponse> listener,
-        ThreadContext.StoredContext context
-    ) {
+    private void executeDeleteRequest(WorkflowRequest request, String tenantId, ActionListener<DeleteResponse> listener) {
         String workflowId = request.getWorkflowId();
         DeleteDataObjectRequest deleteRequest = DeleteDataObjectRequest.builder()
             .index(GLOBAL_CONTEXT_INDEX)
@@ -151,7 +141,6 @@ public class DeleteWorkflowTransportAction extends HandledTransportAction<Workfl
             .tenantId(tenantId)
             .build();
         sdkClient.deleteDataObjectAsync(deleteRequest).whenComplete((r, throwable) -> {
-            context.restore();
             if (throwable == null) {
                 try {
                     DeleteResponse response = DeleteResponse.fromXContent(r.parser());
