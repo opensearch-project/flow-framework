@@ -18,7 +18,6 @@ import org.opensearch.action.get.GetResponse;
 import org.opensearch.cluster.service.ClusterService;
 import org.opensearch.common.Booleans;
 import org.opensearch.common.io.Streams;
-import org.opensearch.common.util.concurrent.ThreadContext;
 import org.opensearch.common.xcontent.LoggingDeprecationHandler;
 import org.opensearch.common.xcontent.XContentHelper;
 import org.opensearch.common.xcontent.XContentType;
@@ -321,7 +320,6 @@ public class ParseUtils {
      * @param isMultitenancyEnabled whether multitenancy is enabled
      * @param listener action listener
      * @param function workflow function
-     * @param client node client
      * @param sdkClient multitenant client
      * @param clusterService cluster service
      * @param xContentRegistry contentRegister to parse get response
@@ -335,7 +333,6 @@ public class ParseUtils {
         boolean isMultitenancyEnabled,
         ActionListener<? extends ActionResponse> listener,
         Runnable function,
-        Client client,
         SdkClient sdkClient,
         ClusterService clusterService,
         NamedXContentRegistry xContentRegistry
@@ -357,7 +354,6 @@ public class ParseUtils {
                     isMultitenancyEnabled,
                     listener,
                     function,
-                    client,
                     sdkClient,
                     clusterService,
                     xContentRegistry
@@ -431,7 +427,6 @@ public class ParseUtils {
      * @param isMultitenancyEnabled if multi tenancy is enabled
      * @param listener action listener
      * @param function workflow function
-     * @param client node client
      * @param sdkClient the tenant aware client
      * @param clusterService cluster service
      * @param xContentRegistry contentRegister to parse get response
@@ -445,43 +440,39 @@ public class ParseUtils {
         boolean isMultitenancyEnabled,
         ActionListener<? extends ActionResponse> listener,
         Runnable function,
-        Client client,
         SdkClient sdkClient,
         ClusterService clusterService,
         NamedXContentRegistry xContentRegistry
     ) {
         String index = statePresent ? WORKFLOW_STATE_INDEX : GLOBAL_CONTEXT_INDEX;
         if (FlowFrameworkIndicesHandler.doesIndexExistMultitenant(clusterService, index, isMultitenancyEnabled)) {
-            try (ThreadContext.StoredContext context = client.threadPool().getThreadContext().stashContext()) {
-                GetDataObjectRequest request = GetDataObjectRequest.builder().index(index).id(workflowId).tenantId(tenantId).build();
-                sdkClient.getDataObjectAsync(request).whenComplete((r, throwable) -> {
-                    if (throwable == null) {
-                        try {
-                            GetResponse getResponse = r.parser() == null ? null : GetResponse.fromXContent(r.parser());
-                            onGetWorkflowResponse(
-                                getResponse,
-                                requestUser,
-                                workflowId,
-                                tenantId,
-                                filterByEnabled,
-                                statePresent,
-                                isMultitenancyEnabled,
-                                listener,
-                                function,
-                                xContentRegistry,
-                                context
-                            );
-                        } catch (IOException e) {
-                            logger.error("Failed to parse workflow getResponse: {}", workflowId, e);
-                            listener.onFailure(e);
-                        }
-                    } else {
-                        Exception exception = SdkClientUtils.unwrapAndConvertToException(throwable);
-                        logger.error("Failed to get workflow: {}", workflowId, exception);
-                        listener.onFailure(exception);
+            GetDataObjectRequest request = GetDataObjectRequest.builder().index(index).id(workflowId).tenantId(tenantId).build();
+            sdkClient.getDataObjectAsync(request).whenComplete((r, throwable) -> {
+                if (throwable == null) {
+                    try {
+                        GetResponse getResponse = r.parser() == null ? null : GetResponse.fromXContent(r.parser());
+                        onGetWorkflowResponse(
+                            getResponse,
+                            requestUser,
+                            workflowId,
+                            tenantId,
+                            filterByEnabled,
+                            statePresent,
+                            isMultitenancyEnabled,
+                            listener,
+                            function,
+                            xContentRegistry
+                        );
+                    } catch (IOException e) {
+                        logger.error("Failed to parse workflow getResponse: {}", workflowId, e);
+                        listener.onFailure(e);
                     }
-                });
-            }
+                } else {
+                    Exception exception = SdkClientUtils.unwrapAndConvertToException(throwable);
+                    logger.error("Failed to get workflow: {}", workflowId, exception);
+                    listener.onFailure(exception);
+                }
+            });
         } else {
             String errorMessage = ParameterizedMessageFactory.INSTANCE.newMessage("Failed to retrieve template ({}).", workflowId)
                 .getFormattedMessage();
@@ -502,7 +493,6 @@ public class ParseUtils {
      * @param listener action listener
      * @param function workflow function
      * @param xContentRegistry contentRegister to parse get response
-     * @param context thread context
      */
     public static void onGetWorkflowResponse(
         GetResponse response,
@@ -514,14 +504,12 @@ public class ParseUtils {
         boolean isMultitenancyEnabled,
         ActionListener<? extends ActionResponse> listener,
         Runnable function,
-        NamedXContentRegistry xContentRegistry,
-        ThreadContext.StoredContext context
+        NamedXContentRegistry xContentRegistry
     ) {
         if (response.isExists()) {
             try (
                 XContentParser parser = RestHandlerUtils.createXContentParserFromRegistry(xContentRegistry, response.getSourceAsBytesRef())
             ) {
-                context.restore();
                 ensureExpectedToken(XContentParser.Token.START_OBJECT, parser.nextToken(), parser);
                 User resourceUser;
                 if (statePresent) {

@@ -39,6 +39,7 @@ import org.opensearch.flowframework.model.Workflow;
 import org.opensearch.flowframework.model.WorkflowEdge;
 import org.opensearch.flowframework.model.WorkflowNode;
 import org.opensearch.flowframework.util.EncryptorUtils;
+import org.opensearch.flowframework.util.PluginClient;
 import org.opensearch.flowframework.workflow.ProcessNode;
 import org.opensearch.flowframework.workflow.WorkflowData;
 import org.opensearch.flowframework.workflow.WorkflowProcessSorter;
@@ -103,7 +104,7 @@ public class ProvisionWorkflowTransportActionTests extends OpenSearchTestCase {
         );
         when(clusterService.getClusterSettings()).thenReturn(clusterSettings);
         this.flowFrameworkIndicesHandler = spy(
-            new FlowFrameworkIndicesHandler(client, sdkClient, clusterService, encryptorUtils, xContentRegistry(), false)
+            new FlowFrameworkIndicesHandler(new PluginClient(client), sdkClient, clusterService, encryptorUtils, xContentRegistry(), false)
         );
 
         this.provisionWorkflowTransportAction = new ProvisionWorkflowTransportAction(
