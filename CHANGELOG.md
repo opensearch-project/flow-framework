@@ -7,6 +7,7 @@ Inspired from [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 ### Features
 ### Enhancements
 ### Bug Fixes
+- Report a PluginClient synchronous failure through its listener instead of rethrowing it ([#1500](https://github.com/opensearch-project/flow-framework/pull/1500))
 - Declare `workflow_state` as a child resource of `workflow` so state documents inherit the workflow's access shares ([#1455](https://github.com/opensearch-project/flow-framework/pull/1455))
 - Add jackson-databind dependency required by swagger-parser ([#1406](https://github.com/opensearch-project/flow-framework/pull/1406))
 - Set number_of_shards to 1 for plugin system indices ([#1407](https://github.com/opensearch-project/flow-framework/pull/1407))
@@ -15,3 +16,4 @@ Inspired from [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 ### Maintenance
 - Rename the resource sharing feature flag to the non-experimental key ([#1482](https://github.com/opensearch-project/flow-framework/pull/1482))
 ### Refactoring
+- Reach the plugin's system indices through the plugin subject instead of stashing the thread context ([#1500](https://github.com/opensearch-project/flow-framework/pull/1500))
