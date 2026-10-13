@@ -1,0 +1,271 @@
+# This template creates connectors to OpenAI GPT 3.5
+#
+# It then creates tools in the Agent Framework to create an observability chat agent.
+#
+# To use:
+#  - update the "credential" fields under the create_openai_connector node.
+#  - if needed, update region
+#
+# After provisioning:
+#  - returns a workflow ID
+#  - use the status API to get the deployed model IDs and agent IDs
+#  - use those models and agents to create a chat experience
+---
+name: Observability Chat Agent
+description: Create an Observability Chat Agent using OpenAI GPT 3.5 model
+use_case: REGISTER_AGENT
+version:
+  template: 1.0.0
+  compatibility:
+  - 2.12.0
+  - 3.0.0
+# This section defines the provision workflow. Nodes are connected in a graph.
+# Either previous_node_inputs or explicit edges can be used to enforce ordering.
+workflows:
+  provision:
+    nodes:
+    #
+    # SETUP EXTERNAL MODEL
+    #
+    # Create a connector to an OpenAI model and deploy the model
+    - id: create_openai_connector
+      type: create_connector
+      user_inputs:
+        name: OpenAI Chat Connector
+        description: The connector to public OpenAI model service for GPT 3.5
+        version: '1'
+        protocol: http
+        parameters:
+          endpoint: api.openai.com
+          model: gpt-3.5-turbo
+        credential:
+          openAI_key: 'PUT_YOUR_API_KEY_HERE'
+        actions:
+        - action_type: predict
+          method: POST
+          url: https://${parameters.endpoint}/v1/chat/completions
+    - id: register_openai_model
+      type: register_remote_model
+      previous_node_inputs:
+        create_openai_connector: connector_id
+      user_inputs:
+        name: openAI-gpt-3.5-turbo
+        deploy: true
+    #
+    # SETUP LOCAL CUSTOM MODEL
+    #
+    # Create a connector to an OpenAI model and deploy the model
+    - id: register_sparse_model
+      type: register_local_custom_model
+      user_inputs:
+        name: neural-sparse/opensearch-neural-sparse-tokenizer-v1
+        version: 1.0.0
+        description: 'This is a neural sparse tokenizer model: It tokenize input sentence
+          into tokens and assign pre-defined weight from IDF to each. It serves only
+          in query.'
+        function_name: SPARSE_TOKENIZE
+        model_format: TORCH_SCRIPT
+        model_content_size_in_bytes: 567691
+        model_content_hash_value: b3487da9c58ac90541b720f3b367084f271d280c7f3bdc3e6d9c9a269fb31950
+        created_time: 1696913667239
+        model_type: sparse
+        embedding_dimension: '1'
+        framework_type: sentence_transformers
+        url: https://artifacts.opensearch.org/models/ml-models/amazon/neural-sparse/opensearch-neural-sparse-tokenizer-v1/1.0.0/torch_script/opensearch-neural-sparse-tokenizer-v1-1.0.0.zip
+    - id: deploy_sparse_model
+      type: deploy_model
+      previous_node_inputs:
+        register_sparse_model: model_id
+    #
+    # SETUP A VARIETY OF TOOLS FOR THE AGENT
+    #
+    - id: cat_index_tool
+      type: create_tool
+      user_inputs:
+        type: CatIndexTool
+        name: CatIndexTool
+        parameters: {}
+    - id: index_mapping_tool
+      type: create_tool
+      user_inputs:
+        type: IndexMappingTool
+        name: IndexMappingTool
+        parameters: {}
+    - id: visualization_tool
+      type: create_tool
+      user_inputs:
+        include_output_in_agent_response: true
+        type: VisualizationTool
+        name: VisualizationTool
+        parameters:
+          index: ".kibana"
+    - id: search_alerts_tool
+      type: create_tool
+      user_inputs:
+        type: SearchAlertsTool
+        name: SearchAlertsTool
+        parameters: {}
+    - id: search_monitors_tool
+      type: create_tool
+      user_inputs:
+        type: SearchMonitorsTool
+        name: SearchMonitorsTool
+        parameters: {}
+    - id: search_anomoly_detectors_tool
+      type: create_tool
+      user_inputs:
+        type: SearchAnomalyDetectorsTool
+        name: SearchAnomalyDetectorsTool
+        parameters: {}
+    - id: search_anomoly_results_tool
+      type: create_tool
+      user_inputs:
+        type: SearchAnomalyResultsTool
+        name: SearchAnomalyResultsTool
+        parameters: {}
+    - id: vector_db_tool
+      type: create_tool
+      user_inputs:
+        type: VectorDBTool
+        name: VectorDBTool
+        parameters:
+          model_id: ksNnFo0BY4jgIz2mWrHU
+          index: my_test_data
+          embedding_field: embedding
+          source_field: '["text"]'
+          input: "${parameters.question}"
+    - id: rag_tool
+      type: create_tool
+      user_inputs:
+        type: RAGTool
+        name: RAGTool
+        parameters:
+          inference_model_id: "${{ register_openai_model.model_id }}"
+          embedding_model_id: ksNnFo0BY4jgIz2mWrHU
+          index: my_test_data
+          embedding_field: embedding
+          source_field: '["text"]'
+          input: "${parameters.question}"
+          prompt: "\n\nHuman:\" turn\" You are a professional data analysist. You
+            will always answer question based on the given context first. If the answer
+            is not directly shown in the context, you will analyze the data and find
+            the answer. If you don't know the answer, just say don't know. \n\n Context:\n${parameters.output_field}\n\nHuman:${parameters.input}\n\nAssistant:"
+    - id: neural_sparse_knowledge_base_tool
+      type: create_tool
+      previous_node_inputs:
+        deploy_sparse_model: model_id
+      user_inputs:
+        name: OpensearchKnowledgeBaseTool
+        type: NeuralSparseSearchTool
+        description: 'A tool to search the Opensearch knowledge base, the knowledge
+          base consists of segments of OpenSearch documents. You should always search
+          data with this tool when encountering general questions about Opensearch.
+          But for questions about current concerete cluster, use this tool can not
+          help you. If this tool provides useful info, give the answer and also quote
+          the origin doc. If this tool can not provide knowledge you need, give answer
+          based on your own knowledge. Action Input: <natrual language keywords for
+          question>'
+        parameters:
+          index: knowledge_base
+          embedding_field: sparse_embedding
+          source_field: '["title","body"]'
+          doc_size: '10'
+          input: "${parameters.question}"
+    #
+    # CREATE A SUB AGENT THAT USES THE TOOLS
+    #
+    - id: sub_agent
+      type: register_agent
+      previous_node_inputs:
+        index_mapping_tool: tools
+        cat_index_tool: tools
+        index_mapping_tool: tools
+        visualization_tool: tools
+        search_alerts_tool: tools
+        search_monitors_tool: tools
+        search_anomoly_detectors_tool: tools
+        search_anomoly_results_tool: tools
+        vector_db_tool: tools
+        rag_tool: tools
+        neural_sparse_knowledge_base_tool: tools
+        register_openai_model: model_id
+      user_inputs:
+        parameters: {}
+        app_type: chatbot
+        name: Sub Agent
+        description: this is a test agent
+        llm.parameters:
+          max_iteration: '5'
+          stop_when_no_tool_found: 'true'
+          response_filter: "$.completion"
+        memory:
+          type: conversation_index
+        type: conversational
+    - id: agent_tool
+      type: create_tool
+      previous_node_inputs:
+        sub_agent: agent_id
+      user_inputs:
+        description: Agent Tool
+        include_output_in_agent_response: true
+        type: AgentTool
+        parameters:
+          max_iteration: '5'
+        name: AgentTool
+    #
+    # CREATE A SUGGESTOR TOOL
+    #
+    - id: ml_model_tool
+      type: create_tool
+      previous_node_inputs:
+        register_openai_model: model_id
+      user_inputs:
+        parameters:
+          prompt: "\n\nHuman:\" turn\" You are an AI that only speaks JSON. Do not
+            write normal text. Output should follow example JSON format: \n\n {\"response\":
+            [\"question1\", \"question2\"]}\n\n. \n\nHuman:\" turn\":You will be given
+            a chat history between OpenSearch Assistant and a Human.\nUse the context
+            provided to generate follow up questions the Human would ask to the Assistant.\nThe
+            Assistant can answer general questions about logs, traces and metrics.\nAssistant
+            can access a set of tools listed below to answer questions given by the
+            Human:\nQuestion suggestions generator tool\nHere's the chat history between
+            the human and the Assistant.\n${parameters.AgentTool.output}\nUse the
+            following steps to generate follow up questions Human may ask after the
+            response of the Assistant:\nStep 1. Use the chat history to understand
+            what human is trying to search and explore.\nStep 2. Understand what capabilities
+            the assistant has with the set of tools it has access to.\nStep 3. Use
+            the above context and generate follow up questions.Step4:You are an AI
+            that only speaks JSON. Do not write normal text. Output should follow
+            example JSON format: \n\n {\"response\": [\"question1\", \"question2\"]}
+            \n \n----------------\n\nAssistant:"
+        description: A general tool to answer any question.
+        alias: language_model_tool
+        include_output_in_agent_response: true
+        name: QuestionSuggestor
+        type: MLModelTool
+    #
+    # CREATE A ROOT AGENT USING SUB AGENT AND SUGGESTOR
+    - id: root_agent
+      type: register_agent
+      previous_node_inputs:
+        agent_tool: tools
+        register_openai_model: model_id
+        ml_model_tool: tools
+      user_inputs:
+        parameters:
+          prompt: Answer the question as best you can.
+        app_type: chatbot
+        name: Root agent
+        description: this is the root agent
+        tools_order:
+        - agent_tool
+        - ml_model_tool
+        memory:
+          type: conversation_index
+        type: flow
+    #
+    # SPECIAL CASE EDGE NOT INCLUDED IN PREVIOUS NODE INPUTS
+    #
+    edges:
+    - source: register_openai_model
+      dest: rag_tool

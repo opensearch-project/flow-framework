@@ -1,0 +1,64 @@
+{
+  "name": "Deploy Mistral Model",
+  "description": "Deploy a model using a connector to SageMaker Mistral model",
+  "use_case": "PROVISION",
+  "version": {
+    "template": "1.0.0",
+    "compatibility": [
+      "2.12.0",
+      "3.0.0"
+    ]
+  },
+  "workflows": {
+    "provision": {
+      "nodes": [
+        {
+          "id": "create_mistral_connector",
+          "type": "create_connector",
+          "user_inputs": {
+            "name": "sagemaker: mistral",
+            "description": "Test connector for Sagemaker mistral model",
+            "version": "1",
+            "protocol": "aws_sigv4",
+            "credential": {
+              "access_key": "PUT_YOUR_ACCESS_KEY_HERE",
+              "secret_key": "PUT_YOUR_SECRET_KEY_HERE"
+            },
+            "parameters": {
+              "region": "us-east-1",
+              "service_name": "sagemaker"
+            },
+            "actions": [
+              {
+                "action_type": "predict",
+                "method": "POST",
+                "headers": {
+                  "content-type": "application/json"
+                },
+                "url": "https://PUT_YOUR_CUSTOM_SAGEMAKER_ENDPOINT_HERE",
+                "request_body": "{\"prompt\":\"${parameters.prompt}\"}"
+              }
+            ]
+          }
+        },
+        {
+          "id": "register_mistral_model",
+          "type": "register_remote_model",
+          "previous_node_inputs": {
+            "create_mistral_connector": "connector_id"
+          },
+          "user_inputs": {
+            "name": "mistral fine-tuned model"
+          }
+        },
+        {
+          "id": "deploy_mistral_model",
+          "type": "deploy_model",
+          "previous_node_inputs": {
+            "register_mistral_model": "model_id"
+          }
+        }
+      ]
+    }
+  }
+}

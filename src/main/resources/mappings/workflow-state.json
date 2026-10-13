@@ -1,0 +1,92 @@
+{
+  "dynamic": false,
+  "_meta": {
+    "schema_version": 4
+  },
+  "properties": {
+    "schema_version": {
+      "type": "integer"
+    },
+    "workflow_id": {
+      "type": "keyword"
+    },
+    "error": {
+      "type": "text"
+    },
+    "state": {
+      "type": "keyword"
+    },
+    "provisioning_progress": {
+      "type": "keyword"
+    },
+    "provision_start_time": {
+      "type": "date",
+      "format": "strict_date_time||epoch_millis"
+    },
+    "provision_end_time": {
+      "type": "date",
+      "format": "strict_date_time||epoch_millis"
+    },
+    "user_outputs": {
+      "type": "object"
+    },
+    "user": {
+      "type": "nested",
+      "properties": {
+        "name": {
+          "type": "text",
+          "fields": {
+            "keyword": {
+              "type": "keyword",
+              "ignore_above": 256
+            }
+          }
+        },
+        "backend_roles": {
+          "type" : "text",
+          "fields" : {
+            "keyword" : {
+              "type" : "keyword"
+            }
+          }
+        },
+        "roles": {
+          "type" : "text",
+          "fields" : {
+            "keyword" : {
+              "type" : "keyword"
+            }
+          }
+        },
+        "custom_attribute_names": {
+          "type" : "text",
+          "fields" : {
+            "keyword" : {
+              "type" : "keyword"
+            }
+          }
+        }
+      }
+    },
+    "resources_created": {
+      "type": "nested",
+      "properties": {
+        "workflow_step_name": {
+          "type": "keyword"
+        },
+        "workflow_step_id": {
+          "type": "keyword"
+        },
+        "resource_type": {
+          "type": "keyword"
+        },
+        "resource_id": {
+          "type": "keyword"
+        }
+      }
+    },
+    "tenant_id": {
+      "type": "keyword"
+    }
+  }
+}

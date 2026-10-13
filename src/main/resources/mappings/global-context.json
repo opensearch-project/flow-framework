@@ -1,0 +1,97 @@
+{
+  "dynamic": false,
+  "_meta": {
+    "schema_version": 4
+  },
+  "properties": {
+    "workflow_id": {
+      "type": "keyword"
+    },
+    "name": {
+      "type": "text",
+      "fields": {
+        "keyword": {
+          "type": "keyword",
+          "ignore_above": 256
+        }
+      }
+    },
+    "description": {
+      "type": "text"
+    },
+    "use_case": {
+      "type": "keyword"
+    },
+    "version": {
+      "type": "nested",
+      "properties": {
+        "template": {
+          "type": "text"
+        },
+        "compatibility": {
+          "type": "text"
+        }
+      }
+    },
+    "workflows": {
+      "type": "object"
+    },
+    "user": {
+      "type": "nested",
+      "properties": {
+        "name": {
+          "type": "text",
+          "fields": {
+            "keyword": {
+              "type": "keyword",
+              "ignore_above": 256
+            }
+          }
+        },
+        "backend_roles": {
+          "type" : "text",
+          "fields" : {
+            "keyword" : {
+              "type" : "keyword"
+            }
+          }
+        },
+        "roles": {
+          "type" : "text",
+          "fields" : {
+            "keyword" : {
+              "type" : "keyword"
+            }
+          }
+        },
+        "custom_attribute_names": {
+          "type" : "text",
+          "fields" : {
+            "keyword" : {
+              "type" : "keyword"
+            }
+          }
+        }
+      }
+    },
+    "created_time": {
+      "type": "date",
+      "format": "strict_date_time||epoch_millis"
+    },
+    "last_updated_time": {
+      "type": "date",
+      "format": "strict_date_time||epoch_millis"
+    },
+    "last_provisioned_time": {
+      "type": "date",
+      "format": "strict_date_time||epoch_millis"
+    },
+    "tenant_id": {
+      "type": "keyword"
+    },
+    "ui_metadata": {
+      "type": "object",
+      "enabled": false
+    }
+  }
+}

@@ -1,0 +1,111 @@
+{
+  "name": "semantic search with local pretrained model",
+  "description": "Setting up semantic search, with a local pretrained embedding model",
+  "use_case": "SEMANTIC_SEARCH",
+  "version": {
+    "template": "1.0.0",
+    "compatibility": [
+      "2.12.0",
+      "3.0.0"
+    ]
+  },
+  "workflows": {
+    "provision": {
+      "nodes": [
+        {
+          "id": "create_openai_connector",
+          "type": "create_connector",
+          "user_inputs": {
+            "name": "OpenAI Chat Connector",
+            "description": "The connector to public OpenAI model service for text embedding model",
+            "version": "1",
+            "protocol": "http",
+            "parameters": {
+              "endpoint": "api.openai.com",
+              "model": "gpt-3.5-turbo",
+              "response_filter": "$.choices[0].message.content"
+            },
+            "credential": {
+              "openAI_key": "12345"
+            },
+            "actions": [
+              {
+                "action_type": "predict",
+                "method": "POST",
+                "url": "https://${parameters.endpoint}/v1/chat/completions"
+              }
+            ]
+          }
+        },
+        {
+          "id": "register_openai_model",
+          "type": "register_remote_model",
+          "previous_node_inputs": {
+            "create_openai_connector": "connector_id"
+          },
+          "user_inputs": {
+            "name": "openAI-gpt-3.5-turbo",
+            "deploy": true
+          }
+        },
+        {
+          "id": "create_ingest_pipeline",
+          "type": "create_ingest_pipeline",
+          "previous_node_inputs": {
+            "register_openai_model": "model_id"
+          },
+          "user_inputs": {
+            "pipeline_id": "nlp-ingest-pipeline",
+            "configurations": {
+              "description": "A text embedding pipeline",
+              "processors": [
+                {
+                  "text_embedding": {
+                    "model_id": "${{register_openai_model.model_id}}",
+                    "field_map": {
+                      "passage_text": "passage_embedding"
+                    }
+                  }
+                }
+              ]
+            }
+          }
+        },
+        {
+          "id": "create_index",
+          "type": "create_index",
+          "previous_node_inputs": {
+            "create_ingest_pipeline": "pipeline_id"
+          },
+          "user_inputs": {
+            "index_name": "my-nlp-index",
+            "configurations": {
+              "settings": {
+                "index.knn": true,
+                "default_pipeline": "${{create_ingest_pipeline.pipeline_id}}",
+                "index.number_of_shards": "2"
+              },
+              "mappings": {
+                "properties": {
+                  "passage_embedding": {
+                    "type": "knn_vector",
+                    "dimension": "768",
+                    "method": {
+                      "engine": "lucene",
+                      "space_type": "l2",
+                      "name": "hnsw",
+                      "parameters": {}
+                    }
+                  },
+                  "passage_text": {
+                    "type": "text"
+                  }
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}

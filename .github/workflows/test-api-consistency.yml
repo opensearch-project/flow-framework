@@ -1,0 +1,26 @@
+name: Daily API Consistency Test
+
+on:
+  schedule:
+    - cron: '0 8 * * *'  # Runs daily at 8 AM UTC
+  workflow_dispatch:
+
+jobs:
+  API-consistency-test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        java: [21]
+
+    steps:
+      - name: Checkout Flow Framework
+        uses: actions/checkout@f43a0e5ff2bd294095638e18286ca9a3d1956744 # v3
+
+      - name: Setup Java ${{ matrix.java }}
+        uses: actions/setup-java@17f84c3641ba7b8f6deff6309fc4c864478f5d62 # v3
+        with:
+          distribution: 'temurin'
+          java-version: ${{ matrix.java }}
+
+      - name: Run API Consistency Tests
+        run: ./gradlew test --tests "org.opensearch.flowframework.workflow.*"

@@ -1,0 +1,77 @@
+{
+  "name": "${{template.name}}",
+  "description": "${{template.description}}",
+  "use_case": "",
+  "version": {
+    "template": "1.0.0",
+    "compatibility": [
+      "2.12.0",
+      "3.0.0"
+    ]
+  },
+  "workflows": {
+    "provision": {
+      "nodes": [
+        {
+          "id": "register_local_sparse_encoding_model",
+          "type": "register_local_sparse_encoding_model",
+          "user_inputs": {
+            "name": "${{register_local_sparse_encoding_model.name}}",
+            "version": "${{register_local_sparse_encoding_model.version}}",
+            "description": "${{register_local_sparse_encoding_model.description}}",
+            "model_format": "${{register_local_sparse_encoding_model.model_format}}",
+            "deploy": true
+          }
+        },
+        {
+          "id": "create_ingest_pipeline",
+          "type": "create_ingest_pipeline",
+          "previous_node_inputs": {
+            "register_local_sparse_encoding_model": "model_id"
+          },
+          "user_inputs": {
+            "pipeline_id": "${{create_ingest_pipeline.pipeline_id}}",
+            "configurations": {
+              "description": "${{create_ingest_pipeline.description}}",
+              "processors": [
+                {
+                  "sparse_encoding": {
+                    "model_id": "${{register_local_sparse_encoding_model.model_id}}",
+                    "field_map": {
+                      "${{create_ingest_pipeline.text_embedding.field_map.input}}": "${{create_ingest_pipeline.text_embedding.field_map.output}}"
+                    }
+                  }
+                }
+              ]
+            }
+          }
+        },
+        {
+          "id": "create_index",
+          "type": "create_index",
+          "previous_node_inputs": {
+            "create_ingest_pipeline": "pipeline_id"
+          },
+          "user_inputs": {
+            "index_name": "${{create_index.name}}",
+            "configurations": {
+              "settings": {
+                "default_pipeline": "${{create_ingest_pipeline.pipeline_id}}"
+              },
+              "mappings": {
+                  "properties": {
+                    "${{create_ingest_pipeline.text_embedding.field_map.output}}": {
+                      "type": "rank_features"
+                    },
+                    "${{create_ingest_pipeline.text_embedding.field_map.input}}": {
+                      "type": "text"
+                    }
+                  }
+                }
+            }
+          }
+        }
+      ]
+    }
+  }
+}

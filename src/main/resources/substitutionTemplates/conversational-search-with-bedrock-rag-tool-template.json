@@ -1,0 +1,218 @@
+{
+    "name": "${{template.name}}",
+    "description": "${{template.description}}",
+    "use_case": "CONVERSATION_SEARCH",
+    "version": {
+        "template": "1.0.0",
+        "compatibility": [
+            "2.12.0",
+            "3.0.0"
+        ]
+    },
+    "workflows": {
+        "provision": {
+            "nodes": [
+                {
+                    "id": "create_bedrock_connector",
+                    "type": "create_connector",
+                    "user_inputs": {
+                        "name": "${{create_bedrock_connector.name}}",
+                        "description": "Test connector for Amazon Bedrock",
+                        "version": "1",
+                        "protocol": "${{create_bedrock_connector.protocol}}",
+                        "credential": {
+                            "access_key": "${{create_bedrock_connector.credential.access_key}}",
+                            "secret_key": "${{create_bedrock_connector.credential.secret_key}}",
+                            "session_token": "${{create_bedrock_connector.credential.session_token}}"
+                        },
+                        "parameters": {
+                            "max_tokens_to_sample": "8000",
+                            "service_name": "bedrock",
+                            "temperature": "1.0E-4",
+                            "response_filter": "$.completion",
+                            "region": "${{create_bedrock_connector.region}}",
+                            "anthropic_version": "bedrock-2023-05-31"
+                        },
+                        "actions": [
+                              {
+                                "action_type": "PREDICT",
+                                "method": "POST",
+                                "url": "${{create_bedrock_connector.actions.url}}",
+                                "headers": {
+                                  "x-amz-content-sha256": "required",
+                                  "content-type": "application/json"
+                                },
+                                "request_body": "${{create_bedrock_connector.actions.request_body}}"
+                              }
+                        ]
+                    }
+                },
+                {
+                    "id": "create_embedding_connector",
+                    "type": "create_connector",
+                    "user_inputs": {
+                        "name": "${{create_embedding_connector.name}}",
+                        "description": "${{create_embedding_connector.description}}",
+                        "version": "1",
+                        "protocol": "${{create_embedding_connector.protocol}}",
+                        "credential": {
+                            "access_key": "${{create_bedrock_connector.credential.access_key}}",
+                            "secret_key": "${{create_bedrock_connector.credential.secret_key}}",
+                            "session_token": "${{create_bedrock_connector.credential.session_token}}"
+                        },
+                        "parameters": {
+                            "service_name": "bedrock",
+                            "model": "amazon.titan-embed-text-v2:0",
+                            "region": "us-west-2",
+                            "anthropic_version": "bedrock-2023-05-31"
+                        },
+                        "actions": [
+                              {
+                                "action_type": "PREDICT",
+                                "method": "POST",
+                                "url": "${{create_embedding_connector.actions.url}}",
+                                "headers": {
+                                  "x-amz-content-sha256": "required",
+                                  "content-type": "application/json"
+                                },
+                                "request_body": "${{create_embedding_connector.actions.request_body}}",
+                                "pre_process_function": "connector.pre_process.bedrock.embedding",
+                                "post_process_function": "connector.post_process.bedrock.embedding"
+                              }
+                        ]
+                    }
+                },
+
+                {
+                    "id": "register_bedrock_model",
+                    "type": "register_remote_model",
+                    "previous_node_inputs": {
+                        "create_bedrock_connector": "connector_id"
+                    },
+                    "user_inputs": {
+                        "name": "${{register_bedrock_model.name}}",
+                        "function_name": "remote",
+                        "description": "${{register_bedrock_model.description}}",
+                        "deploy": true
+                    }
+                },
+                {
+                    "id": "register_bedrock_embedding_model",
+                    "type": "register_remote_model",
+                    "previous_node_inputs": {
+                        "create_embedding_connector": "connector_id"
+                    },
+                    "user_inputs": {
+                        "name": "${{register_bedrock_embedding_model.name}}",
+                        "description": "${{register_bedrock_embedding_model.description}}",
+                        "function_name": "remote",
+                        "deploy": true
+                    }
+                },
+                {
+                    "id": "create_ingest_pipeline",
+                    "type": "create_ingest_pipeline",
+                    "previous_node_inputs": {
+                        "register_bedrock_embedding_model": "model_id"
+                    },
+                    "user_inputs": {
+                        "pipeline_id": "${{create_ingest_pipeline.pipeline_id}}",
+                        "configurations": {
+                            "description": "${{create_ingest_pipeline.description}}",
+                            "processors": [
+                                {
+                                    "text_embedding": {
+                                      "model_id": "${{register_bedrock_embedding_model.model_id}}",
+                                      "field_map": {
+                                        "${{text_embedding.field_map.input}}": "${{text_embedding.field_map.output}}"
+                                      }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                },
+                {
+                    "id": "create_index",
+                    "type": "create_index",
+                    "previous_node_inputs": {
+                        "create_ingest_pipeline": "pipeline_id"
+                    },
+                    "user_inputs": {
+                        "index_name": "${{create_index.name}}",
+                        "configurations": {
+                            "settings": {
+                                "index": {
+                                    "default_pipeline": "${{create_ingest_pipeline.pipeline_id}}",
+                                    "knn": "true"
+                                }
+                            },
+                            "mappings": {
+                                "properties": {
+                                  "${{text_embedding.field_map.input}}": {
+                                    "type": "text"
+                                  },
+                                  "${{text_embedding.field_map.output}}": {
+                                    "type": "knn_vector",
+                                    "method": {
+                                        "engine": "${{create_index.mappings.method.engine}}",
+                                        "space_type": "${{create_index.mappings.method.space_type}}",
+                                        "name": "${{create_index.mappings.method.name}}",
+                                        "parameters": {}
+                                    },
+                                    "dimension": "${{text_embedding.field_map.output.dimension}}"
+                                  }
+                                }
+                            }
+                        }
+                    }
+                },
+                {
+                    "id": "rag_tool",
+                    "type": "create_tool",
+                     "previous_node_inputs": {
+                        "register_bedrock_model": "model_id",
+                        "register_bedrock_embedding_model": "model_id"
+                    },
+                    "user_inputs": {
+                        "type": "RAGTool",
+                        "name": "RAGTool",
+                        "parameters": {
+                            "inference_model_id": "${{register_bedrock_model.model_id}}",
+                            "embedding_model_id": "${{register_bedrock_embedding_model.model_id}}",
+                            "index": "${{create_index.name}}",
+                            "embedding_field": "${{text_embedding.field_map.output}}",
+                            "source_field": "[\"${{text_embedding.field_map.input}}\"]",
+                            "query_type": "neural",
+                            "input": "${parameters.question}",
+                            "prompt": "${{rag_tool.parameters.prompt}}",
+                            "include_output_in_agent_response": true
+                        }
+                    }
+                },
+                {
+                    "id": "root_agent",
+                    "type": "register_agent",
+                    "previous_node_inputs": {
+                        "rag_tool": "tools"
+                    },
+                    "user_inputs": {
+                        "parameters": {
+                            "prompt": "${{root_agent.parameters.parameters}}"
+                        },
+                        "app_type": "chatbot",
+                        "name": "${{root_agent.name}}",
+                        "description": "${{root_agent.description}}",
+                        "tools_order": [
+                            "rag_tool"
+                        ],
+                        "memory": {
+                            "type": "conversation_index"
+                        },
+                        "type": "flow"
+                    }
+                }
+            ]
+        }
+    }
+}

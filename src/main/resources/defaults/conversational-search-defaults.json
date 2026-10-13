@@ -1,0 +1,20 @@
+{
+    "template.name": "deploy-cohere-chat-model",
+    "template.description": "A template to deploy a Cohere chat model",
+    "create_connector.name": "Cohere Chat Model",
+    "create_connector.description": "The connector to Cohere's public chat API",
+    "create_connector.protocol": "http",
+    "create_connector.model": "command",
+    "create_connector.endpoint": "api.cohere.ai",
+    "create_connector.credential.key": "123",
+    "create_connector.actions.url": "https://api.cohere.ai/v1/chat",
+    "create_connector.actions.request_body": "{ \"message\": \"${parameters.message}\", \"model\": \"${parameters.model}\" }",
+    "register_remote_model.name": "Cohere chat model",
+    "register_remote_model.description": "cohere-chat-model",
+    "create_search_pipeline.pipeline_id": "rag-pipeline",
+    "create_search_pipeline.retrieval_augmented_generation.tag": "openai_pipeline_demo",
+    "create_search_pipeline.retrieval_augmented_generation.description": "Demo pipeline using a Cohere chat model",
+    "create_search_pipeline.retrieval_augmented_generation.context_field_list": "[\"text\"]",
+    "create_search_pipeline.retrieval_augmented_generation.system_prompt": "You are a helpful assistant",
+    "create_search_pipeline.retrieval_augmented_generation.user_instructions": "Generate a concise and informative answer in less than 100 words for the given question"
+}

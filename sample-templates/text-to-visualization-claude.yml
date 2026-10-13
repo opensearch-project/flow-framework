@@ -1,0 +1,546 @@
+name: Text to visualization agents
+description: This template is to create all Agents required for text to visualization
+use_case: REGISTER_AGENTS
+version:
+  template: 1.0.0
+  compatibility:
+    - 2.18.0
+    - 3.0.0
+workflows:
+  provision:
+    user_params: {}
+    nodes:
+      - id: create_claude_connector
+        type: create_connector
+        previous_node_inputs: {}
+        user_inputs:
+          credential:
+            access_key: <YOUR_ACCESS_KEY>
+            secret_key: <YOUR_SECRET_KEY>
+            session_token: <YOUR_SESSION_TOKEN>
+          parameters:
+            endpoint: bedrock-runtime.us-east-1.amazonaws.com
+            content_type: application/json
+            auth: Sig_V4
+            max_tokens_to_sample: "8000"
+            service_name: bedrock
+            temperature: "0.0000"
+            response_filter: $.content[0].text
+            region: us-east-1
+            anthropic_version: bedrock-2023-05-31
+          version: "1"
+          name: Claude haiku runtime Connector
+          protocol: aws_sigv4
+          description: The connector to BedRock service for claude model
+          actions:
+            - action_type: predict
+              method: POST
+              url: https://bedrock-runtime.us-east-1.amazonaws.com/model/anthropic.claude-3-haiku-20240307-v1:0/invoke
+              headers:
+                content-type: application/json
+                x-amz-content-sha256: required
+              request_body: '{"messages":[{"role":"user","content":[{"type":"text","text":"${parameters.prompt}"}]}],"anthropic_version":"${parameters.anthropic_version}","max_tokens":${parameters.max_tokens_to_sample}}'
+      - id: register_claude_model
+        type: register_remote_model
+        previous_node_inputs:
+          create_claude_connector: connector_id
+        user_inputs:
+          name: claude-haiku
+          description: Claude model
+          deploy: true
+      - id: create_t2vega_tool
+        type: create_tool
+        previous_node_inputs:
+          register_claude_model: model_id
+        user_inputs:
+          parameters:
+            prompt: |
+              You're an expert at creating vega-lite visualization. No matter what the user asks, you should reply with a valid vega-lite specification in json.
+              Your task is to generate Vega-Lite specification in json based on the given sample data, the schema of the data, the PPL query to get the data and the user's input.
+              Let's start from dimension and metric/date. Now I have a question, I already transfer it to PPL and query my Opensearch cluster.
+              Then I get data. For the PPL, it will do aggregation like "stats AVG(field_1) as avg, COUNT(field_2) by field_3, field_4, field_5".
+              In this aggregation, the metric is [avg, COUNT(field_2)] , and then we judge the type of field_3,4,5. If only field_5 is type related to date, the dimension is [field_3, field_4], and date is [field_5]
+              For example, stats SUM(bytes) by span(timestamp, 1w), machine.os, response, then SUM(bytes) is metric and span(timestamp, 1w) is date, while machine.os, response are dimensions.
+              Notice: Some fields like 'span()....' will be the date, but not metric and dimension.
+              And one field will only count once in dimension count. You should always pick field name from schema
+              To summarize,
+              A dimension is a categorical variable that is used to group, segment, or categorize data. It is typically a qualitative attribute that provides context for metrics and is used to slice and dice data to see how different categories perform in relation to each other.
+              The dimension is not date related fields. The dimension and date are very closed. The only difference is date is related to datetime, while dimension is not.
+              A metric is a quantitative measure used to quantify or calculate some aspect of the data. Metrics are numerical and typically represent aggregated values like sums, averages, counts, or other statistical calculations.
+
+              If a ppl doesn't have aggregation using 'stats', then each field in output is dimension.
+              Otherwise, if a ppl use aggregation using 'stats' but doesn't group by using 'by', then each field in output is metric.
+
+              Then for each given PPL, you could give the metric and dimension and date. One field will in only one of the metric, dimension or date.
+
+              Then according to the metric number and dimension number of PPL result, you should first format the entrance code by metric_number, dimension_number, and date_number. For example, if metric_number = 1, dimension_number = 2, date_number=1, then the entrance code is  121.
+              I define several use case categories here according to the entrance code.
+              For each category, I will define the entrance condition (number of metric and dimension)
+              I will also give some defined attribute of generated vega-lite. Please refer to it to generate vega-lite.
+
+              Type 1:
+              Entrance code: <1, 1, 0>
+              Defined Attributes:
+                    {
+                    "title": "<title>",
+                    "description": "<description>",
+                    "mark": "bar",
+                    "encoding": {
+                      "x": {
+                        "field": "<metric name>",
+                        "type": "quantitative"
+                      },
+                      "y": {
+                        "field": "<dimension name>",
+                        "type": "nominal"
+                      }
+                    },
+                  }
+
+              Type 2:
+              Entrance code: <1, 2, 0>
+              Defined Attributes:
+              {
+                    "mark": "bar",
+                    "encoding": {
+                      "x": {
+                        "field": "<metric 1>",
+                        "type": "quantitative"
+                      },
+                      "y": {
+                        "field": "<dimension 1>",
+                        "type": "nominal"
+                      },
+                      "color": {
+                        "field": "<dimension 2>",
+                        "type": "nominal"
+                      }
+                    }
+                  }
+
+
+              Type 3
+              Entrance code: <3, 1, 0>
+              Defined Attributes:
+              {
+                  "mark": "point",
+                  "encoding": {
+                      "x": {
+                          "field": "<metric 1>",
+                          "type": "quantitative"
+                      },
+                      "y": {
+                          "field": "<metric 2>",
+                          "type": "quantitative"
+                      },
+                      "size": {
+                          "field": "<metric 3>",
+                          "type": "quantitative"
+                      },
+                      "color": {
+                          "field": "<dimension 1>",
+                          "type": "nominal"
+                      }
+                  }
+              }
+
+              Type 4
+              Entrance code: <2, 1, 0>
+              Defined Attributes:
+              {
+                  "mark": "point",
+                  "encoding": {
+                      "x": {
+                          "field": "<mtric 1>",
+                          "type": "quantitative"
+                      },
+                      "y": {
+                          "field": "<metric 2>",
+                          "type": "quantitative"
+                      },
+                      "color": {
+                          "field": "<dimension 1>",
+                          "type": "nominal"
+                      }
+                  }
+              }
+
+              Type 5:
+              Entrance code: <2, 1, 1>
+              Defined Attributes:
+              {
+                    "layer": [
+                      {
+                        "mark": "bar",
+                        "encoding": {
+                          "x": {
+                            "field": "<date 1>",
+                            "type": "temporal"
+                          },
+                          "y": {
+                            "field": "<metric 1>",
+                            "type": "quantitative",
+                            "axis": {
+                              "title": "<metric 1 name>"
+                            }
+                          },
+                          "color": {
+                            "field": "<dimension 1>",
+                            "type": "nominal"
+                          }
+                        }
+                      },
+                      {
+                        "mark": {
+                          "type": "line",
+                          "color": "red"
+                        },
+                        "encoding": {
+                          "x": {
+                            "field": "<date 1>",
+                            "type": "temporal"
+                          },
+                          "y": {
+                            "field": "<metric 2>",
+                            "type": "quantitative",
+                            "axis": {
+                              "title": "<metric 2 name>",
+                              "orient": "right"
+                            }
+                          },
+                          "color": {
+                            "field": "<dimension 1>",
+                            "type": "nominal"
+                          }
+                        }
+                      }
+                    ],
+                    "resolve": {
+                      "scale": {
+                        "y": "independent"
+                      }
+                    }
+                  }
+
+              Type 6:
+              Entrance code: <2, 0, 1>
+              Defined Attributes:
+              {
+                    "title": "<title>",
+                    "description": "<description>",
+                    "layer": [
+                      {
+                        "mark": "area",
+                        "encoding": {
+                          "x": {
+                            "field": "<date 1>",
+                            "type": "temporal"
+                          },
+                          "y": {
+                            "field": "<metric 1>",
+                            "type": "quantitative",
+                            "axis": {
+                              "title": "<metric 1 name>"
+                            }
+                          }
+                        }
+                      },
+                      {
+                        "mark": {
+                          "type": "line",
+                          "color": "black"
+                        },
+                        "encoding": {
+                          "x": {
+                            "field": "date",
+                            "type": "temporal"
+                          },
+                          "y": {
+                            "field": "metric 2",
+                            "type": "quantitative",
+                            "axis": {
+                              "title": "<metric 2 name>",
+                              "orient": "right"
+                            }
+                          }
+                        }
+                      }
+                    ],
+                    "resolve": {
+                      "scale": {
+                        "y": "independent"
+                      }
+                    }
+                  }
+
+              Type 7:
+              Entrance code: <1, 0, 1>
+              Defined Attributes:
+              {
+                    "title": "<title>",
+                    "description": "<description>",
+                    "mark": "line",
+                    "encoding": {
+                      "x": {
+                        "field": "<date 1>",
+                        "type": "temporal",
+                        "axis": {
+                          "title": "<date name>"
+                        }
+                      },
+                      "y": {
+                        "field": "<metric 1>",
+                        "type": "quantitative",
+                        "axis": {
+                          "title": "<metric name>"
+                        }
+                      }
+                    }
+                  }
+
+              Type 8:
+              Entrance code: <1, 1, 1>
+              Defined Attributes:
+              {
+                    "title": "<title>",
+                    "description": "<description>",
+                    "mark": "line",
+                    "encoding": {
+                      "x": {
+                        "field": "<date 1>",
+                        "type": "temporal",
+                        "axis": {
+                          "title": "<date name>"
+                        }
+                      },
+                      "y": {
+                        "field": "<metric 1>",
+                        "type": "quantitative",
+                        "axis": {
+                          "title": "<metric name>"
+                        }
+                      },
+                      "color": {
+                        "field": "<dimension 1>",
+                        "type": "nominal",
+                        "legend": {
+                          "title": "<dimension name>"
+                        }
+                      }
+                    }
+                  }
+
+              Type 9:
+              Entrance code: <1, 2, 1>
+              Defined Attributes:
+              {
+                    "title": "<title>",
+                    "description": "<description>",
+                    "mark": "line",
+                    "encoding": {
+                      "x": {
+                        "field": "<date 1>",
+                        "type": "temporal",
+                        "axis": {
+                          "title": "<date name>"
+                        }
+                      },
+                      "y": {
+                        "field": "<metric 1>",
+                        "type": "quantitative",
+                        "axis": {
+                          "title": "<metric 1>"
+                        }
+                      },
+                      "color": {
+                        "field": "<dimension 1>",
+                        "type": "nominal",
+                        "legend": {
+                          "title": "<dimension 1>"
+                        }
+                      },
+                      "facet": {
+                        "field": "<dimension 2>",
+                        "type": "nominal",
+                        "columns": 2
+                      }
+                    }
+                  }
+
+              Type 10:
+              Entrance code: all other code
+              All others type.
+              Use a table to show the result
+
+
+              Besides, here are some requirements:
+              1. Do not contain the key called 'data' in vega-lite specification.
+              2. If mark.type = point and shape.field is a field of the data, the definition of the shape should be inside the root "encoding" object, NOT in the "mark" object, for example, {"encoding": {"shape": {"field": "field_name"}}}
+              3. Please also generate title and description
+
+              The sample data in json format:
+              ${parameters.sampleData}
+
+              This is the schema of the data:
+              ${parameters.dataSchema}
+
+              The user used this PPL query to get the data: ${parameters.ppl}
+
+              The user's question is: ${parameters.input_question}
+
+              Notice: Some fields like 'span()....' will be the date, but not metric and dimension.
+              And one field will only count once in dimension count.  You should always pick field name from schema.
+               And when you code is <2, 1, 0>, it belongs type 4.
+                And when you code is <1, 2, 0>, it belongs type 9.
+
+
+              Now please reply a valid vega-lite specification in json based on above instructions.
+              Please return the number of dimension, metric and date. Then choose the type.
+              Please also return the type.
+              Finally return the vega-lite specification according to the type.
+              Please make sure all the key in the schema matches the word I given.
+              Your answer format should be:
+              Number of metrics:[list the metric name here, Don't use duplicate name]  <number of metrics {a}>
+              Number of dimensions:[list the dimension name here]  <number of dimension {b}>
+              Number of dates:[list the date name here]  <number of dates {c}>
+              Then format the entrance code by: <Number of metrics, Number of dimensions, Number of dates>
+              Type and its entrance code: <type number>: <its entrance code>
+              Then apply the vega-lite requirements of the type.
+              <vega-lite> {here is the vega-lite json} </vega-lite>
+
+              And don't use 'transformer' in your vega-lite and wrap your vega-lite json in <vega-lite> </vega-lite> tags
+          name: Text2Vega
+          type: MLModelTool
+      - id: create_instruction_based_t2vega_tool
+        type: create_tool
+        previous_node_inputs:
+          register_claude_model: model_id
+        user_inputs:
+          parameters:
+            prompt: |
+              You're an expert at creating vega-lite visualization. No matter what the user asks, you should reply with a valid vega-lite specification in json.
+              Your task is to generate Vega-Lite specification in json based on the given sample data, the schema of the data, the PPL query to get the data and the user's input.
+              Now I will give you some examples about how to create vega-lite
+              Simple description:
+              A bar chart encodes quantitative values as the extent of rectangular bars.
+              result vega-lite
+              {'mark': 'bar', 'encoding': {'x': {'field': 'X', 'type': 'nominal'}, 'y': {'field': 'Y', 'type': 'quantitative'}}}
+              Simple description:
+              A bar chart showing the US population distribution of age groups in 2000.
+              result vega-lite
+              {'mark': 'bar', 'encoding': {'x': {'aggregate': 'sum', 'field': 'X'}, 'y': {'field': 'Y'}}}
+              Simple description:
+              A bar chart that sorts the y-values by the x-values
+              result vega-lite
+              {'mark': 'bar', 'encoding': {'x': {'aggregate': 'sum', 'field': 'X'}, 'y': {'field': 'Y', 'type': 'ordinal', 'sort': '-x'}}}
+              Simple description:
+              A bar chart with bars grouped by field X, and colored by field C
+              result vega-lite
+              {'mark': 'bar', 'encoding': {'x': {'field': 'X'}, 'y': {'field': 'Y', 'type': 'quantitative'}, 'color': {'field': 'C'}, 'xOffset': {'field': 'C'}}}
+              Simple description:
+              A vertical bar chart with multiple bars for each X colored by field C, stacked on each other
+              result vega-lite
+              {'mark': 'bar', 'encoding': {'x': {'timeUnit': '...', 'field': 'X', 'type': 'ordinal'}, 'y': {'aggregate': 'count', 'type': 'quantitative'}, 'color': {'field': 'C', 'type': 'nominal'}}}
+              Simple description:
+              A horizontal bar chart with multiple bars for each X colored by field C, stacked next to each other
+              result vega-lite
+              {'mark': 'bar', 'encoding': {'x': {'aggregate': 'sum', 'field': 'X'}, 'y': {'field': 'Y'}, 'color': {'field': 'C'}}}
+              Simple description:
+              A stacked bar chart, where all stacks are normalized to sum to 100%
+              result vega-lite
+              {'mark': 'bar', 'encoding': {'x': {'field': 'X'}, 'y': {'aggregate': 'sum', 'field': 'Y', 'stack': 'normalize'}, 'color': {'field': 'C'}}}
+              Simple description:
+              A bar chart with overlayed bars by group and transparency
+              result vega-lite
+              {'mark': 'bar', 'encoding': {'x': {'field': 'X', 'type': 'ordinal'}, 'y': {'aggregate': 'sum', 'field': 'Y', 'stack': None}, 'color': {'field': 'C'}, 'opacity': {'value': 0.7}}}
+              Simple description:
+              A histogram is like a bar chart, after binning one field and aggregating the other
+              result vega-lite
+              {'mark': 'bar', 'encoding': {'x': {'bin': True, 'field': 'X'}, 'y': {'aggregate': 'count'}}}
+              Simple description:
+              A pie chart encodes proportional differences among a set of numeric values as the angular extent and area of a circular slice.
+              result vega-lite
+              {'mark': 'arc', 'encoding': {'theta': {'field': 'T', 'type': 'quantitative'}, 'color': {'field': 'C', 'type': 'nominal'}}}
+              Simple description:
+              Heatmap with binned quantitative variables on both axes
+              result vega-lite
+              {'mark': 'rect', 'encoding': {'x': {'bin': {'maxbins': 60}, 'field': 'X', 'type': 'quantitative'}, 'y': {'bin': {'maxbins': 40}, 'field': 'Y', 'type': 'quantitative'}, 'color': {'aggregate': 'count', 'type': 'quantitative'}}}
+              Simple description:
+              A scatterplot shows the relationship between two quantitative variables X and Y
+              result vega-lite
+              {'mark': 'point', 'encoding': {'x': {'field': 'X', 'type': 'quantitative'}, 'y': {'field': 'Y', 'type': 'quantitative'}}}
+              Simple description:
+              A scatterplot with data points from different groups having a different color and shape
+              result vega-lite
+              {'mark': 'point', 'encoding': {'x': {'field': 'X', 'type': 'quantitative'}, 'y': {'field': 'Y', 'type': 'quantitative'}, 'color': {'field': 'C', 'type': 'nominal'}, 'shape': {'field': 'C', 'type': 'nominal'}}}
+              Simple description:
+              A scatter plot where the marker size is proportional to a quantitative field
+              result vega-lite
+              {'mark': 'point', 'encoding': {'x': {'field': 'X', 'type': 'quantitative'}, 'y': {'field': 'Y', 'type': 'quantitative'}, 'size': {'field': 'S', 'type': 'quantitative'}}}
+              Simple description:
+              Show a quantitative variable over time, for different groups
+              result vega-lite
+              {'mark': 'line', 'encoding': {'x': {'field': 'X', 'type': 'temporal'}, 'y': {'field': 'Y', 'type': 'quantitative'}, 'color': {'field': 'C', 'type': 'nominal'}}}
+              Simple description:
+              Heatmap with ordinal or nominal variables on both axes
+              result vega-lite
+              {'mark': 'rect', 'encoding': {'y': {'field': 'Y', 'type': 'nominal'}, 'x': {'field': 'X', 'type': 'ordinal'}, 'color': {'aggregate': 'mean', 'field': 'C'}}}
+              Simple description:
+              Multiple line charts arranged next to each other horizontally
+              result vega-lite
+              {'mark': 'line', 'encoding': {'x': {'field': 'X', 'type': 'temporal'}, 'y': {'field': 'Y', 'type': 'quantitative'}, 'color': {'field': 'C', 'type': 'nominal'}, 'column': {'field': 'F'}}}
+              Simple description:
+              Multiple line charts arranged next to each other vertically
+              result vega-lite
+              {'mark': 'bar', 'encoding': {'x': {'field': 'X'}, 'y': {'aggregate': 'sum', 'field': 'Y'}, 'row': {'field': 'F'}}}
+              Simple description:
+              A line chart layed over a stacked bar chart, with independent y axes to accomodate different scales
+              result vega-lite
+              {'layer': [{'mark': 'bar', 'encoding': {'x': {'field': 'X', 'type': 'ordinal'}, 'y': {'field': 'Y1', 'type': 'quantitative'}, 'color': {'field': 'C', 'type': 'nominal'}}}, {'mark': 'line', 'encoding': {'x': {'field': 'X', 'type': 'temporal'}, 'y': {'field': 'Y2', 'type': 'quantitative'}, 'color': {'field': 'C', 'type': 'nominal'}}}], 'resolve': {'scale': {'y': 'independent'}}}
+              Simple description:
+              A line chart with highlighting two regions of time with rectangles
+              result vega-lite
+              {'layer': [{'mark': 'rect', 'data': {'values': [{'start': '...', 'end': '...', 'event': '...'}, {'start': '...', 'end': '...', 'event': '...'}]}, 'encoding': {'x': {'field': 'start', 'type': 'temporal'}, 'x2': {'field': 'end', 'type': 'temporal'}, 'color': {'field': 'event', 'type': 'nominal'}}}, {'mark': 'line', 'encoding': {'x': {'field': 'X', 'type': 'temporal'}, 'y': {'field': 'Y', 'type': 'quantitative'}, 'color': {'value': '#333'}}}]}
+              Simple description:
+              Placing a horizontal dashed rule at a specific y value, on top of a line chart
+              result vega-lite
+              {'layer': [{'mark': 'line', 'encoding': {'x': {'field': 'X', 'type': 'temporal'}, 'y': {'field': 'Y', 'type': 'quantitative'}, 'color': {'field': 'C', 'type': 'nominal'}}}, {'mark': {'type': 'rule', 'strokeDash': [2, 2], 'size': 2}, 'encoding': {'y': {'datum': '...', 'type': 'quantitative'}}}]}
+              Simple description:
+              Placing a vertical dashed rule at a specific x value, on top of a line chart
+              result vega-lite
+              {'layer': [{'mark': 'line', 'encoding': {'x': {'field': 'X', 'type': 'temporal'}, 'y': {'field': 'Y', 'type': 'quantitative'}, 'color': {'field': 'C', 'type': 'nominal'}}}, {'mark': {'type': 'rule', 'strokeDash': [2, 2], 'size': 2}, 'encoding': {'x': {'datum': {'year': '...', 'month': '...', 'date': '...', 'hours': '...', 'minutes': '...'}, 'type': 'temporal'}}}]}
+              Besides, here are some requirements:
+              1. Do not contain the key called 'data' in vega-lite specification.
+              2. If mark.type = point and shape.field is a field of the data, the definition of the shape should be inside the root "encoding" object, NOT in the "mark" object, for example, {"encoding": {"shape": {"field": "field_name"}}}
+              3. Please also generate title and description
+              The sample data in json format:
+              ${parameters.sampleData}
+              This is the schema of the data:
+              ${parameters.dataSchema}
+              The user used this PPL query to get the data: ${parameters.ppl}
+              The user's input question is: ${parameters.input_question}
+              The user's instruction on the visualization is: ${parameters.input_instruction}
+              Now please reply a valid vega-lite specification in json based on above instructions.
+              Please only contain vega-lite in your response.
+              For each x, y, don't use list.
+              For all key 'encoding', use key 'layer' to include it, like {"layer": [{"encoding": ...}, ...]}
+          name: Text2Vega
+          type: MLModelTool
+      - id: t2vega_agent
+        type: register_agent
+        previous_node_inputs:
+          create_t2vega_tool: tools
+        user_inputs:
+          parameters: {}
+          type: flow
+          name: t2vega agent
+          description: this is the t2vega agent that has a set of rules to generate the visualizations
+      - id: t2vega_instruction_based_agent
+        type: register_agent
+        previous_node_inputs:
+          create_instruction_based_t2vega_tool: tools
+        user_inputs:
+          parameters: {}
+          type: flow
+          name: t2vega instruction based agent
+          description: this is the t2vega agent that supports instructions

@@ -1,0 +1,47 @@
+name: Publish snapshots to maven
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - 'main'
+      - '[0-9]+.[0-9]+'
+      - '[0-9]+.x'
+
+jobs:
+  build-and-publish-snapshots:
+    strategy:
+      fail-fast: false
+    if: github.repository == 'opensearch-project/flow-framework'
+    runs-on: ubuntu-latest
+
+    permissions:
+      id-token: write
+      contents: write
+
+    steps:
+      - uses: actions/setup-java@c1e323688fd81a25caa38c78aa6df2d33d3e20d9 # v4
+        with:
+          distribution: temurin # Temurin is a distribution of adoptium
+          java-version: 21
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+
+      - name: Load secret
+        uses: 1password/load-secrets-action@70062d7a876d3eb6334754fa26efd2fbd90c32f2 # v5.0.1
+        with:
+          # Export loaded secrets as environment variables
+          export-env: true
+        env:
+          OP_SERVICE_ACCOUNT_TOKEN: ${{ secrets.OP_SERVICE_ACCOUNT_TOKEN }}
+          MAVEN_SNAPSHOTS_S3_REPO: op://opensearch-infra-secrets/maven-snapshots-s3/repo
+          MAVEN_SNAPSHOTS_S3_ROLE: op://opensearch-infra-secrets/maven-snapshots-s3/role
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@cabfdba3510de1431bac9dba27511d97497fc100 # v5
+        with:
+          role-to-assume: ${{ env.MAVEN_SNAPSHOTS_S3_ROLE }}
+          aws-region: us-east-1
+
+      - name: publish snapshots to maven
+        run: |
+          ./gradlew publishPluginZipPublicationToSnapshotsRepository

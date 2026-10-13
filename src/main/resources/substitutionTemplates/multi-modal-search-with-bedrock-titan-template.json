@@ -1,0 +1,126 @@
+{
+  "name": "${{template.name}}",
+  "description": "${{template.description}}",
+  "use_case": "MULTIMODAL_SEARCH",
+  "version": {
+    "template": "1.0.0",
+    "compatibility": [
+      "2.12.0",
+      "3.0.0"
+    ]
+  },
+  "workflows": {
+    "provision": {
+      "nodes": [
+        {
+          "id": "create_connector",
+          "type": "create_connector",
+          "user_inputs": {
+            "name": "${{create_connector.name}}",
+            "description": "${{create_connector.description}}",
+            "version": "1",
+            "protocol": "aws_sigv4",
+            "parameters": {
+              "region": "${{create_connector.region}}",
+              "service_name": "bedrock",
+              "input_docs_processed_step_size": "${{create_connector.input_docs_processed_step_size}}"
+            },
+            "credential": {
+              "access_key": "${{create_connector.credential.access_key}}",
+              "secret_key": "${{create_connector.credential.secret_key}}",
+              "session_token": "${{create_connector.credential.session_token}}"
+            },
+            "actions": [
+              {
+                "action_type": "predict",
+                "method": "POST",
+                "url": "${{create_connector.actions.url}}",
+                "headers": {
+                  "content-type": "application/json",
+                  "x-amz-content-sha256": "required"
+                },
+                "request_body": "${{create_connector.actions.request_body}}",
+                "pre_process_function": "${{create_connector.actions.pre_process_function}}",
+                "post_process_function": "${{create_connector.actions.post_process_function}}"
+              }
+            ]
+          }
+        },
+        {
+          "id": "register_model",
+          "type": "register_remote_model",
+          "previous_node_inputs": {
+            "create_connector": "parameters"
+          },
+          "user_inputs": {
+            "name": "${{register_remote_model.name}}",
+            "function_name": "remote",
+            "description": "${{register_remote_model.description}}",
+            "deploy" : true
+          }
+        },
+        {
+          "id": "create_ingest_pipeline",
+          "type": "create_ingest_pipeline",
+          "previous_node_inputs": {
+            "register_model": "model_id"
+          },
+          "user_inputs": {
+            "pipeline_id": "${{create_ingest_pipeline.pipeline_id}}",
+            "configurations": {
+              "description": "${{create_ingest_pipeline.description}}",
+              "processors": [
+                {
+                  "text_image_embedding": {
+                    "model_id": "${{register_model.model_id}}",
+                    "embedding": "${{text_image_embedding.embedding}}",
+                    "field_map": {
+                      "text": "${{text_image_embedding.field_map.text}}",
+                      "image": "${{text_image_embedding.field_map.image}}"
+                    }
+                  }
+                }
+              ]
+            }
+          }
+        },
+        {
+          "id": "create_index",
+          "type": "create_index",
+          "previous_node_inputs": {
+            "create_ingest_pipeline": "pipeline_id"
+          },
+          "user_inputs": {
+            "index_name": "${{create_index.name}}",
+            "configurations": {
+              "settings": {
+                "index.knn": true,
+                "default_pipeline": "${{create_ingest_pipeline.pipeline_id}}",
+                "number_of_shards": "${{create_index.settings.number_of_shards}}"
+              },
+              "mappings": {
+                  "properties": {
+                    "${{text_image_embedding.embedding}}": {
+                      "type": "knn_vector",
+                      "dimension": "${{text_image_embedding.field_map.output.dimension}}",
+                      "method": {
+                        "engine": "${{create_index.mappings.method.engine}}",
+                        "name": "${{create_index.mappings.method.name}}",
+                        "parameters": {}
+                      }
+                    },
+                    "${{text_image_embedding.field_map.text}}": {
+                      "type": "${{text_image_embedding.field_map.text.type}}"
+                    },
+                    "${{text_image_embedding.field_map.image}}": {
+                      "type": "${{text_image_embedding.field_map.image.type}}"
+                    }
+                  }
+                }
+            }
+          }
+        }
+      ]
+    }
+  }
+}

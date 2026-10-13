@@ -1,0 +1,13 @@
+{
+    "name": "noop",
+    "workflows": {
+      "provision": {
+        "nodes": [
+          {
+            "id": "no-op",
+            "type": "noop"
+          }
+        ]
+      }
+    }
+}

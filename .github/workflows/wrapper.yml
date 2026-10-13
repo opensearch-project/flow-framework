@@ -1,0 +1,17 @@
+name: Validate Gradle Wrapper
+on:
+  push:
+    branches-ignore:
+      - 'whitesource-remediate/**'
+      - 'backport/**'
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+jobs:
+  validate:
+    name: Validate
+    if: github.repository == 'opensearch-project/flow-framework'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+      - uses: gradle/actions/wrapper-validation@0b6dd653ba04f4f93bf581ec31e66cbd7dcb644d # v4
