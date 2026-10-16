@@ -53,7 +53,7 @@ import org.opensearch.flowframework.util.PluginClient;
 import org.opensearch.flowframework.workflow.CreateConnectorStep;
 import org.opensearch.flowframework.workflow.CreateIndexStep;
 import org.opensearch.flowframework.workflow.WorkflowData;
-import org.opensearch.identity.Subject;
+import org.opensearch.identity.PluginSubject;
 import org.opensearch.index.engine.VersionConflictEngineException;
 import org.opensearch.index.get.GetResult;
 import org.opensearch.remote.metadata.client.SdkClient;
@@ -126,7 +126,7 @@ public class FlowFrameworkIndicesHandlerTests extends OpenSearchTestCase {
         when(threadPool.getThreadContext()).thenReturn(threadContext);
         sdkClient = SdkClientFactory.createSdkClient(client, namedXContentRegistry, Collections.emptyMap());
         pluginClient = new PluginClient(client);
-        pluginClient.setSubject(subjectRunningInline());
+        pluginClient.setSubject(stashingSubject());
         flowFrameworkIndicesHandler = new FlowFrameworkIndicesHandler(
             pluginClient,
             sdkClient,
@@ -338,14 +338,17 @@ public class FlowFrameworkIndicesHandlerTests extends OpenSearchTestCase {
         assertTrue(captor.getValue());
     }
 
-    private static Subject subjectRunningInline() throws Exception {
-        Subject subject = mock(Subject.class);
+    private PluginSubject stashingSubject() throws Exception {
+        PluginSubject subject = mock(PluginSubject.class);
         Principal principal = mock(Principal.class);
         when(principal.getName()).thenReturn("test-subject");
         when(subject.getPrincipal()).thenReturn(principal);
+        // Stashes around the body as the real plugin subjects do.
         doAnswer(invocation -> {
             CheckedRunnable<?> runnable = invocation.getArgument(0);
-            runnable.run();
+            try (ThreadContext.StoredContext ignored = threadContext.stashContext()) {
+                runnable.run();
+            }
             return null;
         }).when(subject).runAs(any());
         return subject;
