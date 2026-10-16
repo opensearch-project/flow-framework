@@ -199,7 +199,7 @@ dependencies {
     implementation "software.amazon.cryptography:aws-cryptographic-material-providers:1.8.0"
     implementation "org.dafny:DafnyRuntime:4.9.1"
     implementation "software.amazon.smithy.dafny:conversion:0.1.1"
-    implementation 'org.bouncycastle:bcprov-jdk18on:1.84'
+    implementation "org.bouncycastle:bcprov-jdk18on:${versions.bouncycastle}" // CVE-2026-8763, CVE-2026-13506
     implementation "jakarta.json.bind:jakarta.json.bind-api:3.0.1"
     implementation "org.glassfish:jakarta.json:2.0.1"
     implementation "org.eclipse:yasson:3.0.4"
@@ -230,8 +230,9 @@ dependencies {
     configurations.all {
         resolutionStrategy {
             force("com.google.guava:guava:33.4.0-jre") // CVE for 31.1, keep to force transitive dependencies
-            force("org.apache.logging.log4j:log4j-core:2.25.4") // CVE-2026-34478, CVE-2026-34477, CVE-2026-34480
-            force("org.apache.logging.log4j:log4j-api:2.25.4") // align with log4j-core
+            force("com.google.errorprone:error_prone_annotations:${versions.error_prone_annotations}") // align with OpenSearch core
+            force("org.apache.logging.log4j:log4j-core:${versions.log4j}") // CVE-2026-34478, CVE-2026-34477, CVE-2026-34480, CVE-2026-49844
+            force("org.apache.logging.log4j:log4j-api:${versions.log4j}") // align with log4j-core
             force("com.fasterxml.jackson.core:jackson-core:2.18.9")
             force("com.fasterxml.jackson.core:jackson-annotations:2.18.9")
             force("com.fasterxml.jackson.core:jackson-databind:2.18.9")
