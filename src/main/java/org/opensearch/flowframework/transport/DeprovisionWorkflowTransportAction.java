@@ -169,10 +169,10 @@ public class DeprovisionWorkflowTransportAction extends HandledTransportAction<W
     private void executeDeprovisionRequest(WorkflowRequest request, String tenantId, ActionListener<WorkflowResponse> listener, User user) {
         String workflowId = request.getWorkflowId();
         String allowDelete = request.getParams().get(ALLOW_DELETE);
-        GetWorkflowStateRequest getStateRequest = new GetWorkflowStateRequest(workflowId, true, tenantId);
         logger.info("Querying state for workflow: {}", workflowId);
-        client.execute(GetWorkflowStateAction.INSTANCE, getStateRequest, ActionListener.wrap(response -> {
-
+        // Read as the plugin subject: the caller is already authorized on the workflow, and is not
+        // necessarily shared on its state document.
+        flowFrameworkIndicesHandler.getWorkflowState(workflowId, tenantId, ActionListener.wrap(workflowState -> {
             Set<String> deleteAllowedResources = Strings.tokenizeByCommaToSet(allowDelete);
             // Retrieve resources from workflow state and deprovision
             threadPool.executor(DEPROVISION_WORKFLOW_THREAD_POOL)
@@ -180,8 +180,8 @@ public class DeprovisionWorkflowTransportAction extends HandledTransportAction<W
                     () -> executeDeprovisionSequence(
                         workflowId,
                         tenantId,
-                        response.getWorkflowState().resourcesCreated(),
-                        response.getWorkflowState().getAllSharedPrincipals(),
+                        workflowState.resourcesCreated(),
+                        workflowState.getAllSharedPrincipals(),
                         deleteAllowedResources,
                         listener,
                         user

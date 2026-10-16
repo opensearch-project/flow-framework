@@ -66,6 +66,7 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.nullable;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -155,14 +156,14 @@ public class DeprovisionWorkflowTransportActionTests extends OpenSearchTestCase 
         WorkflowRequest workflowRequest = new WorkflowRequest(workflowId, null);
 
         doAnswer(invocation -> {
-            ActionListener<GetWorkflowStateResponse> responseListener = invocation.getArgument(2);
+            ActionListener<WorkflowState> responseListener = invocation.getArgument(2);
 
             WorkflowState state = WorkflowState.builder()
                 .resourcesCreated(List.of(new ResourceCreated("create_connector", "step_1", CONNECTOR_ID, "connectorId")))
                 .build();
-            responseListener.onResponse(new GetWorkflowStateResponse(state, true));
+            responseListener.onResponse(state);
             return null;
-        }).when(client).execute(any(GetWorkflowStateAction.class), any(GetWorkflowStateRequest.class), any());
+        }).when(flowFrameworkIndicesHandler).getWorkflowState(anyString(), nullable(String.class), any());
 
         doAnswer(invocation -> {
             Consumer<Boolean> booleanConsumer = invocation.getArgument(2);
@@ -196,6 +197,9 @@ public class DeprovisionWorkflowTransportActionTests extends OpenSearchTestCase 
             any(ResourceCreated.class),
             any()
         );
+        // The caller is authorized on the workflow, not necessarily on its state, so the state is read
+        // as the plugin rather than through the user-facing transport action.
+        verify(client, never()).execute(any(), any(GetWorkflowStateRequest.class), any());
     }
 
     public void testFailToDeprovision() throws Exception {
@@ -206,14 +210,14 @@ public class DeprovisionWorkflowTransportActionTests extends OpenSearchTestCase 
         WorkflowRequest workflowRequest = new WorkflowRequest(workflowId, null);
 
         doAnswer(invocation -> {
-            ActionListener<GetWorkflowStateResponse> responseListener = invocation.getArgument(2);
+            ActionListener<WorkflowState> responseListener = invocation.getArgument(2);
 
             WorkflowState state = WorkflowState.builder()
                 .resourcesCreated(List.of(new ResourceCreated("deploy_model", "step_1", MODEL_ID, "modelId")))
                 .build();
-            responseListener.onResponse(new GetWorkflowStateResponse(state, true));
+            responseListener.onResponse(state);
             return null;
-        }).when(client).execute(any(GetWorkflowStateAction.class), any(GetWorkflowStateRequest.class), any());
+        }).when(flowFrameworkIndicesHandler).getWorkflowState(anyString(), nullable(String.class), any());
 
         PlainActionFuture<WorkflowData> future = PlainActionFuture.newFuture();
         future.onFailure(new RuntimeException("rte"));
@@ -245,14 +249,14 @@ public class DeprovisionWorkflowTransportActionTests extends OpenSearchTestCase 
         ActionListener<WorkflowResponse> listener = mock(ActionListener.class);
 
         doAnswer(invocation -> {
-            ActionListener<GetWorkflowStateResponse> responseListener = invocation.getArgument(2);
+            ActionListener<WorkflowState> responseListener = invocation.getArgument(2);
 
             WorkflowState state = WorkflowState.builder()
                 .resourcesCreated(List.of(new ResourceCreated("create_index", "step_1", INDEX_NAME, "test-index")))
                 .build();
-            responseListener.onResponse(new GetWorkflowStateResponse(state, true));
+            responseListener.onResponse(state);
             return null;
-        }).when(client).execute(any(GetWorkflowStateAction.class), any(GetWorkflowStateRequest.class), any());
+        }).when(flowFrameworkIndicesHandler).getWorkflowState(anyString(), nullable(String.class), any());
 
         doAnswer(invocation -> {
             Consumer<Boolean> booleanConsumer = invocation.getArgument(2);
@@ -352,7 +356,7 @@ public class DeprovisionWorkflowTransportActionTests extends OpenSearchTestCase 
         WorkflowRequest workflowRequest = new WorkflowRequest(workflowId, null, Map.of(ALLOW_DELETE, "wrong-index,test-pipeline"));
 
         doAnswer(invocation -> {
-            ActionListener<GetWorkflowStateResponse> responseListener = invocation.getArgument(2);
+            ActionListener<WorkflowState> responseListener = invocation.getArgument(2);
 
             WorkflowState state = WorkflowState.builder()
                 .resourcesCreated(
@@ -363,9 +367,9 @@ public class DeprovisionWorkflowTransportActionTests extends OpenSearchTestCase 
                     )
                 )
                 .build();
-            responseListener.onResponse(new GetWorkflowStateResponse(state, true));
+            responseListener.onResponse(state);
             return null;
-        }).when(client).execute(any(GetWorkflowStateAction.class), any(GetWorkflowStateRequest.class), any());
+        }).when(flowFrameworkIndicesHandler).getWorkflowState(anyString(), nullable(String.class), any());
 
         PlainActionFuture<WorkflowData> future = PlainActionFuture.newFuture();
         future.onFailure(new RuntimeException("rte"));

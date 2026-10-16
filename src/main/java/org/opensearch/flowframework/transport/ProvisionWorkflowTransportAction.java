@@ -356,7 +356,15 @@ public class ProvisionWorkflowTransportAction extends HandledTransportAction<Wor
             }
         }, client.threadPool().executor(PROVISION_WORKFLOW_THREAD_POOL));
 
-        WorkflowTimeoutUtility.scheduleTimeoutHandler(client, client.threadPool(), workflowId, tenantId, listener, timeout, isResponseSent);
+        WorkflowTimeoutUtility.scheduleTimeoutHandler(
+            flowFrameworkIndicesHandler,
+            client.threadPool(),
+            workflowId,
+            tenantId,
+            listener,
+            timeout,
+            isResponseSent
+        );
     }
 
     /**
@@ -414,23 +422,19 @@ public class ProvisionWorkflowTransportAction extends HandledTransportAction<Wor
                 ActionListener.wrap(updateResponse -> {
                     logger.info("updated workflow {} state to {}", workflowId, State.COMPLETED);
                     if (isSyncExecution) {
-                        client.execute(
-                            GetWorkflowStateAction.INSTANCE,
-                            new GetWorkflowStateRequest(workflowId, false, tenantId),
-                            ActionListener.wrap(response -> {
-                                // We've completed provisioning and responding synchronously
-                                TenantAwareHelper.releaseProvision(tenantId);
-                                listener.onResponse(new WorkflowResponse(workflowId, response.getWorkflowState()));
-                            }, exception -> {
-                                String errorMessage = "Failed to get workflow state.";
-                                logger.error(errorMessage, exception);
-                                if (exception instanceof FlowFrameworkException) {
-                                    listener.onFailure(exception);
-                                } else {
-                                    listener.onFailure(new FlowFrameworkException(errorMessage, ExceptionsHelper.status(exception)));
-                                }
-                            })
-                        );
+                        flowFrameworkIndicesHandler.getWorkflowState(workflowId, tenantId, ActionListener.wrap(workflowState -> {
+                            // We've completed provisioning and responding synchronously
+                            TenantAwareHelper.releaseProvision(tenantId);
+                            listener.onResponse(new WorkflowResponse(workflowId, workflowState));
+                        }, exception -> {
+                            String errorMessage = "Failed to get workflow state.";
+                            logger.error(errorMessage, exception);
+                            if (exception instanceof FlowFrameworkException) {
+                                listener.onFailure(exception);
+                            } else {
+                                listener.onFailure(new FlowFrameworkException(errorMessage, ExceptionsHelper.status(exception)));
+                            }
+                        }));
                     } else {
                         // We've completed provisioning asynchronously
                         TenantAwareHelper.releaseProvision(tenantId);

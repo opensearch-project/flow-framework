@@ -189,10 +189,10 @@ public class ReprovisionWorkflowTransportAction extends HandledTransportAction<R
         String workflowId = request.getWorkflowId();
         logger.info("Querying state for workflow: {}", workflowId);
         // Retrieve state and resources created
-        GetWorkflowStateRequest getStateRequest = new GetWorkflowStateRequest(workflowId, true, tenantId);
-        client.execute(GetWorkflowStateAction.INSTANCE, getStateRequest, ActionListener.wrap(response -> {
-
-            State currentState = State.valueOf(response.getWorkflowState().getState());
+        // Read as the plugin subject: the caller is already authorized on the workflow, and is not
+        // necessarily shared on its state document.
+        flowFrameworkIndicesHandler.getWorkflowState(workflowId, tenantId, ActionListener.wrap(workflowState -> {
+            State currentState = State.valueOf(workflowState.getState());
             if (State.PROVISIONING.equals(currentState) || State.NOT_STARTED.equals(currentState)) {
                 String errorMessage = "The template can not be reprovisioned unless its provisioning state is DONE or FAILED: "
                     + workflowId;
@@ -200,7 +200,7 @@ public class ReprovisionWorkflowTransportAction extends HandledTransportAction<R
             }
 
             // Generate reprovision sequence
-            List<ResourceCreated> resourceCreated = response.getWorkflowState().resourcesCreated();
+            List<ResourceCreated> resourceCreated = workflowState.resourcesCreated();
 
             // Original template is retrieved from index, attempt to decrypt any exisiting credentials before processing
             Template originalTemplate = encryptorUtils.decryptTemplateCredentials(request.getOriginalTemplate());
@@ -234,8 +234,8 @@ public class ReprovisionWorkflowTransportAction extends HandledTransportAction<R
             );
 
             // Remove error field if any prior to subsequent execution
-            if (response.getWorkflowState().getError() != null) {
-                WorkflowState newState = WorkflowState.builder(response.getWorkflowState()).error(null).build();
+            if (workflowState.getError() != null) {
+                WorkflowState newState = WorkflowState.builder(workflowState).error(null).build();
                 flowFrameworkIndicesHandler.updateFlowFrameworkSystemIndexDoc(
                     workflowId,
                     tenantId,
@@ -360,7 +360,7 @@ public class ReprovisionWorkflowTransportAction extends HandledTransportAction<R
             }
         }, threadPool.executor(PROVISION_WORKFLOW_THREAD_POOL));
         WorkflowTimeoutUtility.scheduleTimeoutHandler(
-            client,
+            flowFrameworkIndicesHandler,
             threadPool,
             workflowId,
             template.getTenantId(),
@@ -438,23 +438,19 @@ public class ReprovisionWorkflowTransportAction extends HandledTransportAction<R
 
                     logger.info("updated workflow {} state to {}", workflowId, State.COMPLETED);
                     if (isSyncExecution) {
-                        client.execute(
-                            GetWorkflowStateAction.INSTANCE,
-                            new GetWorkflowStateRequest(workflowId, false, template.getTenantId()),
-                            ActionListener.wrap(response -> {
-                                // We've completed provisioning and responding synchronously
-                                TenantAwareHelper.releaseProvision(tenantId);
-                                listener.onResponse(new WorkflowResponse(workflowId, response.getWorkflowState()));
-                            }, exception -> {
-                                String errorMessage = "Failed to get workflow state.";
-                                logger.error(errorMessage, exception);
-                                if (exception instanceof FlowFrameworkException) {
-                                    listener.onFailure(exception);
-                                } else {
-                                    listener.onFailure(new FlowFrameworkException(errorMessage, ExceptionsHelper.status(exception)));
-                                }
-                            })
-                        );
+                        flowFrameworkIndicesHandler.getWorkflowState(workflowId, tenantId, ActionListener.wrap(workflowState -> {
+                            // We've completed provisioning and responding synchronously
+                            TenantAwareHelper.releaseProvision(tenantId);
+                            listener.onResponse(new WorkflowResponse(workflowId, workflowState));
+                        }, exception -> {
+                            String errorMessage = "Failed to get workflow state.";
+                            logger.error(errorMessage, exception);
+                            if (exception instanceof FlowFrameworkException) {
+                                listener.onFailure(exception);
+                            } else {
+                                listener.onFailure(new FlowFrameworkException(errorMessage, ExceptionsHelper.status(exception)));
+                            }
+                        }));
                     } else {
                         // We've completed provisioning asynchronously
                         TenantAwareHelper.releaseProvision(tenantId);
