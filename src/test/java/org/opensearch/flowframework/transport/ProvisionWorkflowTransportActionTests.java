@@ -22,6 +22,7 @@ import org.opensearch.common.unit.TimeValue;
 import org.opensearch.common.util.concurrent.OpenSearchExecutors;
 import org.opensearch.common.util.concurrent.ThreadContext;
 import org.opensearch.common.xcontent.XContentFactory;
+import org.opensearch.commons.authuser.User;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.core.common.bytes.BytesReference;
 import org.opensearch.core.index.shard.ShardId;
@@ -38,7 +39,9 @@ import org.opensearch.flowframework.model.Template;
 import org.opensearch.flowframework.model.Workflow;
 import org.opensearch.flowframework.model.WorkflowEdge;
 import org.opensearch.flowframework.model.WorkflowNode;
+import org.opensearch.flowframework.model.WorkflowState;
 import org.opensearch.flowframework.util.EncryptorUtils;
+import org.opensearch.flowframework.util.PluginClient;
 import org.opensearch.flowframework.workflow.ProcessNode;
 import org.opensearch.flowframework.workflow.WorkflowData;
 import org.opensearch.flowframework.workflow.WorkflowProcessSorter;
@@ -67,9 +70,11 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.nullable;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -103,7 +108,7 @@ public class ProvisionWorkflowTransportActionTests extends OpenSearchTestCase {
         );
         when(clusterService.getClusterSettings()).thenReturn(clusterSettings);
         this.flowFrameworkIndicesHandler = spy(
-            new FlowFrameworkIndicesHandler(client, sdkClient, clusterService, encryptorUtils, xContentRegistry(), false)
+            new FlowFrameworkIndicesHandler(new PluginClient(client), sdkClient, clusterService, encryptorUtils, xContentRegistry(), false)
         );
 
         this.provisionWorkflowTransportAction = new ProvisionWorkflowTransportAction(
@@ -332,5 +337,73 @@ public class ProvisionWorkflowTransportActionTests extends OpenSearchTestCase {
         assertTrue(responseCaptor.getValue().getMessage().startsWith("WorkflowStepException"));
         assertTrue(responseCaptor.getValue().getMessage().contains("Simulated failure during workflow execution"));
         assertTrue(responseCaptor.getValue().getMessage().endsWith("restStatus: BAD_REQUEST"));
+    }
+
+    public void testProvisionWorkflowSyncReadsStateAsThePlugin() {
+        String workflowId = "1";
+        @SuppressWarnings("unchecked")
+        ActionListener<WorkflowResponse> listener = mock(ActionListener.class);
+        WorkflowRequest workflowRequest = new WorkflowRequest(workflowId, null, Collections.emptyMap(), TimeValue.timeValueSeconds(5));
+
+        doAnswer(invocation -> {
+            ActionListener<GetResponse> responseListener = invocation.getArgument(1);
+            XContentBuilder builder = XContentFactory.jsonBuilder();
+            this.template.toXContent(builder, null);
+            GetResult getResult = new GetResult(GLOBAL_CONTEXT_INDEX, workflowId, 1, 1, 1, true, BytesReference.bytes(builder), null, null);
+            responseListener.onResponse(new GetResponse(getResult));
+            return null;
+        }).when(client).get(any(GetRequest.class), any());
+        when(encryptorUtils.decryptTemplateCredentials(any())).thenReturn(template);
+        doAnswer(invocation -> {
+            Consumer<Optional<ProvisioningProgress>> progressConsumer = invocation.getArgument(2);
+            progressConsumer.accept(Optional.of(ProvisioningProgress.NOT_STARTED));
+            return null;
+        }).when(flowFrameworkIndicesHandler).getProvisioningProgress(any(), any(), any(), any());
+        doAnswer(invocation -> {
+            ActionListener<UpdateResponse> actionListener = invocation.getArgument(3);
+            actionListener.onResponse(mock(UpdateResponse.class));
+            return null;
+        }).when(flowFrameworkIndicesHandler).updateFlowFrameworkSystemIndexDoc(any(), nullable(String.class), anyMap(), any());
+        doAnswer(invocation -> {
+            ActionListener<IndexResponse> responseListener = invocation.getArgument(2);
+            responseListener.onResponse(new IndexResponse(new ShardId(GLOBAL_CONTEXT_INDEX, "", 1), "1", 1L, 1L, 1L, true));
+            return null;
+        }).when(flowFrameworkIndicesHandler).updateTemplateInGlobalContext(any(), any(Template.class), any(), anyBoolean());
+        doAnswer(invocation -> {
+            ActionListener<WorkflowState> stateListener = invocation.getArgument(2);
+            stateListener.onResponse(
+                WorkflowState.builder()
+                    .workflowId(workflowId)
+                    .state("COMPLETED")
+                    .provisioningProgress(ProvisioningProgress.DONE.name())
+                    .user(new User("creator", List.of("backend_role"), List.of("role"), List.of()))
+                    .userOutputs(Map.of("output", "value"))
+                    .allSharedPrincipals(List.of("user:other"))
+                    .build()
+            );
+            return null;
+        }).when(flowFrameworkIndicesHandler).getWorkflowState(anyString(), nullable(String.class), any());
+
+        PlainActionFuture<WorkflowData> completed = PlainActionFuture.newFuture();
+        completed.onResponse(WorkflowData.EMPTY);
+        ProcessNode processNode = mock(ProcessNode.class);
+        when(processNode.execute()).thenReturn(completed);
+        when(workflowProcessSorter.sortProcessNodes(any(), any(), any(), any())).thenReturn(Collections.singletonList(processNode));
+
+        provisionWorkflowTransportAction.doExecute(mock(Task.class), workflowRequest, listener);
+
+        ArgumentCaptor<WorkflowResponse> responseCaptor = ArgumentCaptor.forClass(WorkflowResponse.class);
+        verify(listener, times(1)).onResponse(responseCaptor.capture());
+        WorkflowState returned = responseCaptor.getValue().getWorkflowState();
+        assertEquals("COMPLETED", returned.getState());
+        // The state document is read as the plugin, so the response must not carry its owner or sharing details.
+        assertNull(returned.getUser());
+        assertNull(returned.userOutputs());
+        assertNull(returned.getAllSharedPrincipals());
+        assertNull(returned.getProvisioningProgress());
+        verify(flowFrameworkIndicesHandler, times(1)).getWorkflowState(eq(workflowId), nullable(String.class), any());
+        // The caller is authorized on the workflow, not necessarily on its state, so the state is read
+        // as the plugin rather than through the user-facing transport action.
+        verify(client, never()).execute(any(), any(GetWorkflowStateRequest.class), any());
     }
 }

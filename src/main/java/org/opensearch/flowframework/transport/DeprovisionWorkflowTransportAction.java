@@ -19,7 +19,6 @@ import org.opensearch.action.support.PlainActionFuture;
 import org.opensearch.cluster.service.ClusterService;
 import org.opensearch.common.inject.Inject;
 import org.opensearch.common.settings.Settings;
-import org.opensearch.common.util.concurrent.ThreadContext;
 import org.opensearch.commons.authuser.User;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.core.common.Strings;
@@ -142,11 +141,10 @@ public class DeprovisionWorkflowTransportAction extends HandledTransportAction<W
         String workflowId = request.getWorkflowId();
         User user = getUserContext(client);
 
-        // Stash thread context to interact with system index
-        try (ThreadContext.StoredContext context = client.threadPool().getThreadContext().stashContext()) {
+        try {
             verifyResourceAccessAndProcessRequest(
                 CommonValue.WORKFLOW_RESOURCE_TYPE,
-                () -> executeDeprovisionRequest(request, tenantId, listener, context, user),
+                () -> executeDeprovisionRequest(request, tenantId, listener, user),
                 () -> resolveUserAndExecute(
                     user,
                     workflowId,
@@ -155,8 +153,7 @@ public class DeprovisionWorkflowTransportAction extends HandledTransportAction<W
                     true,
                     flowFrameworkSettings.isMultiTenancyEnabled(),
                     listener,
-                    () -> executeDeprovisionRequest(request, tenantId, listener, context, user),
-                    client,
+                    () -> executeDeprovisionRequest(request, tenantId, listener, user),
                     sdkClient,
                     clusterService,
                     xContentRegistry
@@ -169,20 +166,13 @@ public class DeprovisionWorkflowTransportAction extends HandledTransportAction<W
         }
     }
 
-    private void executeDeprovisionRequest(
-        WorkflowRequest request,
-        String tenantId,
-        ActionListener<WorkflowResponse> listener,
-        ThreadContext.StoredContext context,
-        User user
-    ) {
+    private void executeDeprovisionRequest(WorkflowRequest request, String tenantId, ActionListener<WorkflowResponse> listener, User user) {
         String workflowId = request.getWorkflowId();
         String allowDelete = request.getParams().get(ALLOW_DELETE);
-        GetWorkflowStateRequest getStateRequest = new GetWorkflowStateRequest(workflowId, true, tenantId);
         logger.info("Querying state for workflow: {}", workflowId);
-        client.execute(GetWorkflowStateAction.INSTANCE, getStateRequest, ActionListener.wrap(response -> {
-            context.restore();
-
+        // Read as the plugin subject: the caller is already authorized on the workflow, and is not
+        // necessarily shared on its state document.
+        flowFrameworkIndicesHandler.getWorkflowState(workflowId, tenantId, ActionListener.wrap(workflowState -> {
             Set<String> deleteAllowedResources = Strings.tokenizeByCommaToSet(allowDelete);
             // Retrieve resources from workflow state and deprovision
             threadPool.executor(DEPROVISION_WORKFLOW_THREAD_POOL)
@@ -190,8 +180,8 @@ public class DeprovisionWorkflowTransportAction extends HandledTransportAction<W
                     () -> executeDeprovisionSequence(
                         workflowId,
                         tenantId,
-                        response.getWorkflowState().resourcesCreated(),
-                        response.getWorkflowState().getAllSharedPrincipals(),
+                        workflowState.resourcesCreated(),
+                        workflowState.getAllSharedPrincipals(),
                         deleteAllowedResources,
                         listener,
                         user

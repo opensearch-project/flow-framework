@@ -74,8 +74,7 @@ public class SearchWorkflowTransportActionTests extends OpenSearchTestCase {
         doAnswer(invocation -> {
             SearchRequest request = invocation.getArgument(0);
             ActionListener<SearchResponse> responseListener = invocation.getArgument(3);
-            ThreadContext.StoredContext storedContext = mock(ThreadContext.StoredContext.class);
-            searchHandler.validateRole(request, null, null, null, responseListener, storedContext);
+            searchHandler.validateRole(request, null, null, null, responseListener);
             responseListener.onResponse(mock(SearchResponse.class));
             return null;
         }).when(searchHandler)

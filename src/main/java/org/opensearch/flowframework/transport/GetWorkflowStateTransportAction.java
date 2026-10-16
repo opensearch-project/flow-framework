@@ -17,7 +17,6 @@ import org.opensearch.action.support.HandledTransportAction;
 import org.opensearch.cluster.service.ClusterService;
 import org.opensearch.common.inject.Inject;
 import org.opensearch.common.settings.Settings;
-import org.opensearch.common.util.concurrent.ThreadContext;
 import org.opensearch.commons.authuser.User;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.core.xcontent.NamedXContentRegistry;
@@ -98,11 +97,11 @@ public class GetWorkflowStateTransportAction extends HandledTransportAction<GetW
         String workflowId = request.getWorkflowId();
         User user = ParseUtils.getUserContext(client);
 
-        try (ThreadContext.StoredContext context = client.threadPool().getThreadContext().stashContext()) {
+        try {
 
             verifyResourceAccessAndProcessRequest(
                 CommonValue.WORKFLOW_STATE_RESOURCE_TYPE,
-                () -> executeGetWorkflowStateRequest(request, tenantId, listener, context),
+                () -> executeGetWorkflowStateRequest(request, tenantId, listener),
                 () -> resolveUserAndExecute(
                     user,
                     workflowId,
@@ -111,8 +110,7 @@ public class GetWorkflowStateTransportAction extends HandledTransportAction<GetW
                     true,
                     flowFrameworkSettings.isMultiTenancyEnabled(),
                     listener,
-                    () -> executeGetWorkflowStateRequest(request, tenantId, listener, context),
-                    client,
+                    () -> executeGetWorkflowStateRequest(request, tenantId, listener),
                     sdkClient,
                     clusterService,
                     xContentRegistry
@@ -131,18 +129,16 @@ public class GetWorkflowStateTransportAction extends HandledTransportAction<GetW
      * @param request the get workflow state request
      * @param tenantId the tenant id
      * @param listener the action listener
-     * @param context the thread context
      */
     private void executeGetWorkflowStateRequest(
         GetWorkflowStateRequest request,
         String tenantId,
-        ActionListener<GetWorkflowStateResponse> listener,
-        ThreadContext.StoredContext context
+        ActionListener<GetWorkflowStateResponse> listener
     ) {
         String workflowId = request.getWorkflowId();
         flowFrameworkIndicesHandler.getWorkflowState(workflowId, tenantId, ActionListener.wrap(workflowState -> {
             GetWorkflowStateResponse workflowStateResponse = new GetWorkflowStateResponse(workflowState, request.getAll());
             listener.onResponse(workflowStateResponse);
-        }, listener::onFailure), context);
+        }, listener::onFailure));
     }
 }
