@@ -11,6 +11,7 @@ Inspired from [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 - Add jackson-databind dependency required by swagger-parser ([#1406](https://github.com/opensearch-project/flow-framework/pull/1406))
 - Set number_of_shards to 1 for plugin system indices ([#1407](https://github.com/opensearch-project/flow-framework/pull/1407))
 ### Infrastructure
+- Add SPDX license header checker and missing headers ([#1470](https://github.com/opensearch-project/flow-framework/pull/1470))
 ### Documentation
 ### Maintenance
 - Force jspecify to 1.0.1 to fix yamlRestTest dependency conflict ([#1492](https://github.com/opensearch-project/flow-framework/pull/1492))
