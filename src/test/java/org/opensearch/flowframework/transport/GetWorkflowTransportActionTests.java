@@ -29,6 +29,7 @@ import org.opensearch.flowframework.model.Workflow;
 import org.opensearch.flowframework.model.WorkflowEdge;
 import org.opensearch.flowframework.model.WorkflowNode;
 import org.opensearch.flowframework.util.EncryptorUtils;
+import org.opensearch.flowframework.util.PluginClient;
 import org.opensearch.index.get.GetResult;
 import org.opensearch.remote.metadata.client.SdkClient;
 import org.opensearch.remote.metadata.client.impl.SdkClientFactory;
@@ -75,7 +76,7 @@ public class GetWorkflowTransportActionTests extends OpenSearchTestCase {
         this.xContentRegistry = mock(NamedXContentRegistry.class);
         this.flowFrameworkSettings = mock(FlowFrameworkSettings.class);
         this.sdkClient = SdkClientFactory.createSdkClient(client, xContentRegistry, Collections.emptyMap());
-        this.encryptorUtils = new EncryptorUtils(mock(ClusterService.class), client, sdkClient, xContentRegistry, false);
+        this.encryptorUtils = new EncryptorUtils(mock(ClusterService.class), sdkClient, xContentRegistry, false);
         ClusterService clusterService = mock(ClusterService.class);
         ClusterSettings clusterSettings = new ClusterSettings(
             Settings.EMPTY,
@@ -83,7 +84,7 @@ public class GetWorkflowTransportActionTests extends OpenSearchTestCase {
         );
         when(clusterService.getClusterSettings()).thenReturn(clusterSettings);
         this.flowFrameworkIndicesHandler = spy(
-            new FlowFrameworkIndicesHandler(client, sdkClient, clusterService, encryptorUtils, xContentRegistry, false)
+            new FlowFrameworkIndicesHandler(new PluginClient(client), sdkClient, clusterService, encryptorUtils, xContentRegistry, false)
         );
 
         this.getTemplateTransportAction = new GetWorkflowTransportAction(

@@ -19,7 +19,6 @@ import org.opensearch.cluster.service.ClusterService;
 import org.opensearch.common.inject.Inject;
 import org.opensearch.common.settings.Settings;
 import org.opensearch.common.unit.TimeValue;
-import org.opensearch.common.util.concurrent.ThreadContext;
 import org.opensearch.commons.authuser.User;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.core.rest.RestStatus;
@@ -142,12 +141,11 @@ public class ProvisionWorkflowTransportAction extends HandledTransportAction<Wor
         String workflowId = request.getWorkflowId();
         User user = getUserContext(client);
 
-        // Stash thread context to interact with system index
-        try (ThreadContext.StoredContext context = client.threadPool().getThreadContext().stashContext()) {
+        try {
 
             verifyResourceAccessAndProcessRequest(
                 CommonValue.WORKFLOW_RESOURCE_TYPE,
-                () -> executeProvisionRequest(request, tenantId, listener, context),
+                () -> executeProvisionRequest(request, tenantId, listener),
                 () -> resolveUserAndExecute(
                     user,
                     workflowId,
@@ -156,8 +154,7 @@ public class ProvisionWorkflowTransportAction extends HandledTransportAction<Wor
                     false,
                     flowFrameworkSettings.isMultiTenancyEnabled(),
                     listener,
-                    () -> executeProvisionRequest(request, tenantId, listener, context),
-                    client,
+                    () -> executeProvisionRequest(request, tenantId, listener),
                     sdkClient,
                     clusterService,
                     xContentRegistry
@@ -185,18 +182,11 @@ public class ProvisionWorkflowTransportAction extends HandledTransportAction<Wor
      * @param request the workflow request
      * @param tenantId
      * @param listener the action listener
-     * @param context the thread context
      */
-    private void executeProvisionRequest(
-        WorkflowRequest request,
-        String tenantId,
-        ActionListener<WorkflowResponse> listener,
-        ThreadContext.StoredContext context
-    ) {
+    private void executeProvisionRequest(WorkflowRequest request, String tenantId, ActionListener<WorkflowResponse> listener) {
         String workflowId = request.getWorkflowId();
         logger.info("Querying workflow from global context: {}", workflowId);
         flowFrameworkIndicesHandler.getTemplate(workflowId, tenantId, ActionListener.wrap(response -> {
-            context.restore();
 
             if (!response.isExists()) {
                 String errorMessage = ParameterizedMessageFactory.INSTANCE.newMessage(
@@ -306,7 +296,7 @@ public class ProvisionWorkflowTransportAction extends HandledTransportAction<Wor
                 logger.error(errorMessage, exception);
                 listener.onFailure(new FlowFrameworkException(errorMessage, ExceptionsHelper.status(exception)));
             }
-        }), context);
+        }));
     }
 
     /**
@@ -366,7 +356,15 @@ public class ProvisionWorkflowTransportAction extends HandledTransportAction<Wor
             }
         }, client.threadPool().executor(PROVISION_WORKFLOW_THREAD_POOL));
 
-        WorkflowTimeoutUtility.scheduleTimeoutHandler(client, client.threadPool(), workflowId, tenantId, listener, timeout, isResponseSent);
+        WorkflowTimeoutUtility.scheduleTimeoutHandler(
+            flowFrameworkIndicesHandler,
+            client.threadPool(),
+            workflowId,
+            tenantId,
+            listener,
+            timeout,
+            isResponseSent
+        );
     }
 
     /**
@@ -424,23 +422,19 @@ public class ProvisionWorkflowTransportAction extends HandledTransportAction<Wor
                 ActionListener.wrap(updateResponse -> {
                     logger.info("updated workflow {} state to {}", workflowId, State.COMPLETED);
                     if (isSyncExecution) {
-                        client.execute(
-                            GetWorkflowStateAction.INSTANCE,
-                            new GetWorkflowStateRequest(workflowId, false, tenantId),
-                            ActionListener.wrap(response -> {
-                                // We've completed provisioning and responding synchronously
-                                TenantAwareHelper.releaseProvision(tenantId);
-                                listener.onResponse(new WorkflowResponse(workflowId, response.getWorkflowState()));
-                            }, exception -> {
-                                String errorMessage = "Failed to get workflow state.";
-                                logger.error(errorMessage, exception);
-                                if (exception instanceof FlowFrameworkException) {
-                                    listener.onFailure(exception);
-                                } else {
-                                    listener.onFailure(new FlowFrameworkException(errorMessage, ExceptionsHelper.status(exception)));
-                                }
-                            })
-                        );
+                        flowFrameworkIndicesHandler.getWorkflowState(workflowId, tenantId, ActionListener.wrap(workflowState -> {
+                            // We've completed provisioning and responding synchronously
+                            TenantAwareHelper.releaseProvision(tenantId);
+                            listener.onResponse(new WorkflowResponse(workflowId, workflowState));
+                        }, exception -> {
+                            String errorMessage = "Failed to get workflow state.";
+                            logger.error(errorMessage, exception);
+                            if (exception instanceof FlowFrameworkException) {
+                                listener.onFailure(exception);
+                            } else {
+                                listener.onFailure(new FlowFrameworkException(errorMessage, ExceptionsHelper.status(exception)));
+                            }
+                        }));
                     } else {
                         // We've completed provisioning asynchronously
                         TenantAwareHelper.releaseProvision(tenantId);

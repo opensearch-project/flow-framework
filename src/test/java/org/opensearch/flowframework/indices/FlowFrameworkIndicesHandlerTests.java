@@ -12,8 +12,10 @@ import org.opensearch.OpenSearchWrapperException;
 import org.opensearch.ResourceAlreadyExistsException;
 import org.opensearch.Version;
 import org.opensearch.action.DocWriteResponse.Result;
+import org.opensearch.action.admin.indices.create.CreateIndexAction;
 import org.opensearch.action.admin.indices.create.CreateIndexRequest;
 import org.opensearch.action.admin.indices.create.CreateIndexResponse;
+import org.opensearch.action.admin.indices.mapping.put.PutMappingAction;
 import org.opensearch.action.admin.indices.mapping.put.PutMappingRequest;
 import org.opensearch.action.delete.DeleteRequest;
 import org.opensearch.action.delete.DeleteResponse;
@@ -29,6 +31,7 @@ import org.opensearch.cluster.metadata.IndexMetadata;
 import org.opensearch.cluster.metadata.MappingMetadata;
 import org.opensearch.cluster.metadata.Metadata;
 import org.opensearch.cluster.service.ClusterService;
+import org.opensearch.common.CheckedRunnable;
 import org.opensearch.common.settings.Settings;
 import org.opensearch.common.util.concurrent.ThreadContext;
 import org.opensearch.common.xcontent.XContentFactory;
@@ -46,20 +49,21 @@ import org.opensearch.flowframework.model.Template;
 import org.opensearch.flowframework.model.Workflow;
 import org.opensearch.flowframework.model.WorkflowState;
 import org.opensearch.flowframework.util.EncryptorUtils;
+import org.opensearch.flowframework.util.PluginClient;
 import org.opensearch.flowframework.workflow.CreateConnectorStep;
 import org.opensearch.flowframework.workflow.CreateIndexStep;
 import org.opensearch.flowframework.workflow.WorkflowData;
+import org.opensearch.identity.PluginSubject;
 import org.opensearch.index.engine.VersionConflictEngineException;
 import org.opensearch.index.get.GetResult;
 import org.opensearch.remote.metadata.client.SdkClient;
 import org.opensearch.remote.metadata.client.impl.SdkClientFactory;
 import org.opensearch.test.OpenSearchTestCase;
 import org.opensearch.threadpool.ThreadPool;
-import org.opensearch.transport.client.AdminClient;
 import org.opensearch.transport.client.Client;
-import org.opensearch.transport.client.IndicesAdminClient;
 
 import java.io.IOException;
+import java.security.Principal;
 import java.time.Instant;
 import java.util.Collections;
 import java.util.HashMap;
@@ -77,6 +81,7 @@ import static org.opensearch.flowframework.common.CommonValue.GLOBAL_CONTEXT_IND
 import static org.opensearch.flowframework.common.CommonValue.WORKFLOW_STATE_INDEX;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
@@ -94,8 +99,7 @@ public class FlowFrameworkIndicesHandlerTests extends OpenSearchTestCase {
     @Mock
     private EncryptorUtils encryptorUtils;
     private FlowFrameworkIndicesHandler flowFrameworkIndicesHandler;
-    private AdminClient adminClient;
-    private IndicesAdminClient indicesAdminClient;
+    private PluginClient pluginClient;
     private ThreadContext threadContext;
     @Mock
     protected ClusterService clusterService;
@@ -121,22 +125,20 @@ public class FlowFrameworkIndicesHandlerTests extends OpenSearchTestCase {
         when(client.threadPool()).thenReturn(threadPool);
         when(threadPool.getThreadContext()).thenReturn(threadContext);
         sdkClient = SdkClientFactory.createSdkClient(client, namedXContentRegistry, Collections.emptyMap());
+        pluginClient = new PluginClient(client);
+        pluginClient.setSubject(stashingSubject());
         flowFrameworkIndicesHandler = new FlowFrameworkIndicesHandler(
-            client,
+            pluginClient,
             sdkClient,
             clusterService,
             encryptorUtils,
             xContentRegistry(),
             false
         );
-        adminClient = mock(AdminClient.class);
-        indicesAdminClient = mock(IndicesAdminClient.class);
         metadata = mock(Metadata.class);
 
         when(client.threadPool()).thenReturn(threadPool);
         when(threadPool.getThreadContext()).thenReturn(threadContext);
-        when(client.admin()).thenReturn(adminClient);
-        when(adminClient.indices()).thenReturn(indicesAdminClient);
         when(clusterService.state()).thenReturn(ClusterState.builder(new ClusterName("test cluster")).build());
         when(metadata.indices()).thenReturn(Map.of(GLOBAL_CONTEXT_INDEX, indexMetadata));
 
@@ -177,7 +179,7 @@ public class FlowFrameworkIndicesHandlerTests extends OpenSearchTestCase {
     public void testDoesIndexExistMultitenant() {
         assertTrue(FlowFrameworkIndicesHandler.doesIndexExistMultitenant(null, null, true));
         FlowFrameworkIndicesHandler flowFrameworkIndicesHandlerMultitenant = new FlowFrameworkIndicesHandler(
-            client,
+            pluginClient,
             sdkClient,
             clusterService,
             encryptorUtils,
@@ -260,7 +262,11 @@ public class FlowFrameworkIndicesHandlerTests extends OpenSearchTestCase {
         ArgumentCaptor<PutMappingRequest> putMappingRequestArgumentCaptor = ArgumentCaptor.forClass(PutMappingRequest.class);
         @SuppressWarnings({ "unchecked" })
         ArgumentCaptor<ActionListener<AcknowledgedResponse>> listenerCaptor = ArgumentCaptor.forClass(ActionListener.class);
-        verify(indicesAdminClient, times(1)).putMapping(putMappingRequestArgumentCaptor.capture(), listenerCaptor.capture());
+        verify(client, times(1)).execute(
+            eq(PutMappingAction.INSTANCE),
+            putMappingRequestArgumentCaptor.capture(),
+            listenerCaptor.capture()
+        );
         PutMappingRequest capturedRequest = putMappingRequestArgumentCaptor.getValue();
         assertEquals(index.getIndexName(), capturedRequest.indices()[0]);
     }
@@ -295,7 +301,7 @@ public class FlowFrameworkIndicesHandlerTests extends OpenSearchTestCase {
         flowFrameworkIndicesHandler.initFlowFrameworkIndexIfAbsent(FlowFrameworkIndex.GLOBAL_CONTEXT, listener);
 
         ArgumentCaptor<CreateIndexRequest> requestCaptor = ArgumentCaptor.forClass(CreateIndexRequest.class);
-        verify(indicesAdminClient, times(1)).create(requestCaptor.capture(), any());
+        verify(client, times(1)).execute(eq(CreateIndexAction.INSTANCE), requestCaptor.capture(), any());
         assertEquals("1", requestCaptor.getValue().settings().get("index.number_of_shards"));
         assertEquals("0-1", requestCaptor.getValue().settings().get("index.auto_expand_replicas"));
     }
@@ -304,10 +310,10 @@ public class FlowFrameworkIndicesHandlerTests extends OpenSearchTestCase {
         @SuppressWarnings("unchecked")
         ActionListener<Boolean> listener = mock(ActionListener.class);
         doAnswer(invocation -> {
-            ActionListener<CreateIndexResponse> actionListener = invocation.getArgument(1);
+            ActionListener<CreateIndexResponse> actionListener = invocation.getArgument(2);
             actionListener.onFailure(new ResourceAlreadyExistsException("index [.plugins-flow-framework-state] already exists"));
             return null;
-        }).when(indicesAdminClient).create(any(CreateIndexRequest.class), any());
+        }).when(client).execute(eq(CreateIndexAction.INSTANCE), any(CreateIndexRequest.class), any());
 
         flowFrameworkIndicesHandler.initFlowFrameworkIndexIfAbsent(FlowFrameworkIndex.WORKFLOW_STATE, listener);
 
@@ -320,16 +326,32 @@ public class FlowFrameworkIndicesHandlerTests extends OpenSearchTestCase {
         @SuppressWarnings("unchecked")
         ActionListener<Boolean> listener = mock(ActionListener.class);
         doAnswer(invocation -> {
-            ActionListener<CreateIndexResponse> actionListener = invocation.getArgument(1);
+            ActionListener<CreateIndexResponse> actionListener = invocation.getArgument(2);
             actionListener.onFailure(new TestWrappedException(new ResourceAlreadyExistsException("index already exists")));
             return null;
-        }).when(indicesAdminClient).create(any(CreateIndexRequest.class), any());
+        }).when(client).execute(eq(CreateIndexAction.INSTANCE), any(CreateIndexRequest.class), any());
 
         flowFrameworkIndicesHandler.initFlowFrameworkIndexIfAbsent(FlowFrameworkIndex.WORKFLOW_STATE, listener);
 
         ArgumentCaptor<Boolean> captor = ArgumentCaptor.forClass(Boolean.class);
         verify(listener).onResponse(captor.capture());
         assertTrue(captor.getValue());
+    }
+
+    private PluginSubject stashingSubject() throws Exception {
+        PluginSubject subject = mock(PluginSubject.class);
+        Principal principal = mock(Principal.class);
+        when(principal.getName()).thenReturn("test-subject");
+        when(subject.getPrincipal()).thenReturn(principal);
+        // Stashes around the body as the real plugin subjects do.
+        doAnswer(invocation -> {
+            CheckedRunnable<?> runnable = invocation.getArgument(0);
+            try (ThreadContext.StoredContext ignored = threadContext.stashContext()) {
+                runnable.run();
+            }
+            return null;
+        }).when(subject).runAs(any());
+        return subject;
     }
 
     // Helper class that implements OpenSearchWrapperException for testing

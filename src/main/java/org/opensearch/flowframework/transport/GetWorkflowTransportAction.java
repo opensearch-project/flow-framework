@@ -17,7 +17,6 @@ import org.opensearch.action.support.HandledTransportAction;
 import org.opensearch.cluster.service.ClusterService;
 import org.opensearch.common.inject.Inject;
 import org.opensearch.common.settings.Settings;
-import org.opensearch.common.util.concurrent.ThreadContext;
 import org.opensearch.commons.authuser.User;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.core.rest.RestStatus;
@@ -106,11 +105,11 @@ public class GetWorkflowTransportAction extends HandledTransportAction<WorkflowR
             User user = getUserContext(client);
 
             // Retrieve workflow by ID
-            try (ThreadContext.StoredContext context = client.threadPool().getThreadContext().stashContext()) {
+            try {
 
                 verifyResourceAccessAndProcessRequest(
                     CommonValue.WORKFLOW_RESOURCE_TYPE,
-                    () -> executeGetRequest(request, tenantId, listener, context),
+                    () -> executeGetRequest(request, tenantId, listener),
                     () -> resolveUserAndExecute(
                         user,
                         workflowId,
@@ -119,8 +118,7 @@ public class GetWorkflowTransportAction extends HandledTransportAction<WorkflowR
                         false,
                         flowFrameworkSettings.isMultiTenancyEnabled(),
                         listener,
-                        () -> executeGetRequest(request, tenantId, listener, context),
-                        client,
+                        () -> executeGetRequest(request, tenantId, listener),
                         sdkClient,
                         clusterService,
                         xContentRegistry
@@ -146,14 +144,8 @@ public class GetWorkflowTransportAction extends HandledTransportAction<WorkflowR
      * Execute the get request against the global context index
      * @param request the workflow request
      * @param listener the action listener
-     * @param context the thread context
      */
-    private void executeGetRequest(
-        WorkflowRequest request,
-        String tenantId,
-        ActionListener<GetWorkflowResponse> listener,
-        ThreadContext.StoredContext context
-    ) {
+    private void executeGetRequest(WorkflowRequest request, String tenantId, ActionListener<GetWorkflowResponse> listener) {
         String workflowId = request.getWorkflowId();
         logger.info("Querying workflow from global context: {}", workflowId);
         flowFrameworkIndicesHandler.getTemplate(workflowId, tenantId, ActionListener.wrap(response -> {
@@ -177,6 +169,6 @@ public class GetWorkflowTransportAction extends HandledTransportAction<WorkflowR
             ).getFormattedMessage();
             logger.error(errorMessage, exception);
             listener.onFailure(new FlowFrameworkException(errorMessage, ExceptionsHelper.status(exception)));
-        }), context);
+        }));
     }
 }

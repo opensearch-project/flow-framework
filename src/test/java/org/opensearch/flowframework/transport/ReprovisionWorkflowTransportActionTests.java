@@ -37,6 +37,7 @@ import org.opensearch.remote.metadata.client.SdkClient;
 import org.opensearch.remote.metadata.client.impl.SdkClientFactory;
 import org.opensearch.tasks.Task;
 import org.opensearch.test.OpenSearchTestCase;
+import org.opensearch.threadpool.Scheduler;
 import org.opensearch.threadpool.ThreadPool;
 import org.opensearch.transport.TransportService;
 import org.opensearch.transport.client.Client;
@@ -58,6 +59,7 @@ import static org.mockito.ArgumentMatchers.nullable;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -143,16 +145,16 @@ public class ReprovisionWorkflowTransportActionTests extends OpenSearchTestCase 
         // Stub state and resources created
         doAnswer(invocation -> {
 
-            ActionListener<GetWorkflowStateResponse> listener = invocation.getArgument(2);
+            ActionListener<WorkflowState> listener = invocation.getArgument(2);
 
             WorkflowState state = mock(WorkflowState.class);
             ResourceCreated resourceCreated = new ResourceCreated("stepName", workflowId, "resourceType", "resourceId");
             when(state.getState()).thenReturn(State.COMPLETED.toString());
             when(state.resourcesCreated()).thenReturn(List.of(resourceCreated));
             when(state.getError()).thenReturn(null);
-            listener.onResponse(new GetWorkflowStateResponse(state, true));
+            listener.onResponse(state);
             return null;
-        }).when(client).execute(any(), any(GetWorkflowStateRequest.class), any());
+        }).when(flowFrameworkIndicesHandler).getWorkflowState(anyString(), nullable(String.class), any());
 
         // Stub reprovision sequence creation
         when(workflowProcessSorter.createReprovisionSequence(any(), any(), any(), any(), any())).thenReturn(
@@ -174,6 +176,9 @@ public class ReprovisionWorkflowTransportActionTests extends OpenSearchTestCase 
         ArgumentCaptor<WorkflowResponse> responseCaptor = ArgumentCaptor.forClass(WorkflowResponse.class);
         verify(listener, times(1)).onResponse(responseCaptor.capture());
         assertEquals(workflowId, responseCaptor.getValue().getWorkflowId());
+        // The caller is authorized on the workflow, not necessarily on its state, so the state is read
+        // as the plugin rather than through the user-facing transport action.
+        verify(client, never()).execute(any(), any(GetWorkflowStateRequest.class), any());
     }
 
     public void testReprovisionProvisioningWorkflow() throws Exception {
@@ -193,15 +198,15 @@ public class ReprovisionWorkflowTransportActionTests extends OpenSearchTestCase 
         // Stub state and resources created
         doAnswer(invocation -> {
 
-            ActionListener<GetWorkflowStateResponse> listener = invocation.getArgument(2);
+            ActionListener<WorkflowState> listener = invocation.getArgument(2);
 
             WorkflowState state = mock(WorkflowState.class);
             ResourceCreated resourceCreated = new ResourceCreated("stepName", workflowId, "resourceType", "resourceId");
             when(state.getState()).thenReturn(State.PROVISIONING.toString());
             when(state.resourcesCreated()).thenReturn(List.of(resourceCreated));
-            listener.onResponse(new GetWorkflowStateResponse(state, true));
+            listener.onResponse(state);
             return null;
-        }).when(client).execute(any(), any(GetWorkflowStateRequest.class), any());
+        }).when(flowFrameworkIndicesHandler).getWorkflowState(anyString(), nullable(String.class), any());
 
         @SuppressWarnings("unchecked")
         ActionListener<WorkflowResponse> listener = mock(ActionListener.class);
@@ -233,15 +238,15 @@ public class ReprovisionWorkflowTransportActionTests extends OpenSearchTestCase 
         // Stub state and resources created
         doAnswer(invocation -> {
 
-            ActionListener<GetWorkflowStateResponse> listener = invocation.getArgument(2);
+            ActionListener<WorkflowState> listener = invocation.getArgument(2);
 
             WorkflowState state = mock(WorkflowState.class);
             ResourceCreated resourceCreated = new ResourceCreated("stepName", workflowId, "resourceType", "resourceId");
             when(state.getState()).thenReturn(State.NOT_STARTED.toString());
             when(state.resourcesCreated()).thenReturn(List.of(resourceCreated));
-            listener.onResponse(new GetWorkflowStateResponse(state, true));
+            listener.onResponse(state);
             return null;
-        }).when(client).execute(any(), any(GetWorkflowStateRequest.class), any());
+        }).when(flowFrameworkIndicesHandler).getWorkflowState(anyString(), nullable(String.class), any());
 
         @SuppressWarnings("unchecked")
         ActionListener<WorkflowResponse> listener = mock(ActionListener.class);
@@ -273,16 +278,16 @@ public class ReprovisionWorkflowTransportActionTests extends OpenSearchTestCase 
         // Stub state and resources created
         doAnswer(invocation -> {
 
-            ActionListener<GetWorkflowStateResponse> listener = invocation.getArgument(2);
+            ActionListener<WorkflowState> listener = invocation.getArgument(2);
 
             WorkflowState state = mock(WorkflowState.class);
             ResourceCreated resourceCreated = new ResourceCreated("stepName", workflowId, "resourceType", "resourceId");
             when(state.getState()).thenReturn(State.COMPLETED.toString());
             when(state.resourcesCreated()).thenReturn(List.of(resourceCreated));
             when(state.getError()).thenReturn(null);
-            listener.onResponse(new GetWorkflowStateResponse(state, true));
+            listener.onResponse(state);
             return null;
-        }).when(client).execute(any(), any(GetWorkflowStateRequest.class), any());
+        }).when(flowFrameworkIndicesHandler).getWorkflowState(anyString(), nullable(String.class), any());
 
         // Stub reprovision sequence creation
         when(workflowProcessSorter.createReprovisionSequence(any(), any(), any(), any(), any())).thenReturn(
@@ -323,10 +328,10 @@ public class ReprovisionWorkflowTransportActionTests extends OpenSearchTestCase 
         // Stub state index retrieval failure
         doAnswer(invocation -> {
 
-            ActionListener<GetWorkflowStateResponse> listener = invocation.getArgument(2);
+            ActionListener<WorkflowState> listener = invocation.getArgument(2);
             listener.onFailure(new Exception("failed"));
             return null;
-        }).when(client).execute(any(), any(GetWorkflowStateRequest.class), any());
+        }).when(flowFrameworkIndicesHandler).getWorkflowState(anyString(), nullable(String.class), any());
 
         @SuppressWarnings("unchecked")
         ActionListener<WorkflowResponse> listener = mock(ActionListener.class);
@@ -354,15 +359,15 @@ public class ReprovisionWorkflowTransportActionTests extends OpenSearchTestCase 
 
         // Stub state and resources created
         doAnswer(invocation -> {
-            ActionListener<GetWorkflowStateResponse> listener = invocation.getArgument(2);
+            ActionListener<WorkflowState> listener = invocation.getArgument(2);
             WorkflowState state = mock(WorkflowState.class);
             ResourceCreated resourceCreated = new ResourceCreated("stepName", workflowId, "resourceType", "resourceId");
             when(state.getState()).thenReturn(State.COMPLETED.toString());
             when(state.resourcesCreated()).thenReturn(List.of(resourceCreated));
             when(state.getError()).thenReturn(null);
-            listener.onResponse(new GetWorkflowStateResponse(state, true));
+            listener.onResponse(state);
             return null;
-        }).when(client).execute(any(), any(GetWorkflowStateRequest.class), any());
+        }).when(flowFrameworkIndicesHandler).getWorkflowState(anyString(), nullable(String.class), any());
 
         // Create a failed future for the workflow execution
         PlainActionFuture<WorkflowData> failedFuture = PlainActionFuture.newFuture();
@@ -399,4 +404,59 @@ public class ReprovisionWorkflowTransportActionTests extends OpenSearchTestCase 
         assertTrue(exceptionCaptor.getValue().getMessage().startsWith("Simulated failure during workflow execution"));
     }
 
+    public void testReprovisionWorkflowSyncReadsStateAsThePlugin() throws Exception {
+        String workflowId = "1";
+
+        Template mockTemplate = mock(Template.class);
+        Map<String, Workflow> mockWorkflows = new HashMap<>();
+        mockWorkflows.put(PROVISION_WORKFLOW, mock(Workflow.class));
+        when(mockTemplate.workflows()).thenReturn(mockWorkflows);
+        when(workflowProcessSorter.sortProcessNodes(any(), any(), any(), any())).thenReturn(List.of());
+        doNothing().when(workflowProcessSorter).validate(any(), any());
+        when(encryptorUtils.decryptTemplateCredentials(any())).thenReturn(mockTemplate);
+
+        doAnswer(invocation -> {
+            ActionListener<WorkflowState> listener = invocation.getArgument(2);
+            listener.onResponse(
+                WorkflowState.builder().workflowId(workflowId).state(State.COMPLETED.toString()).resourcesCreated(List.of()).build()
+            );
+            return null;
+        }).when(flowFrameworkIndicesHandler).getWorkflowState(anyString(), nullable(String.class), any());
+
+        PlainActionFuture<WorkflowData> completed = PlainActionFuture.newFuture();
+        completed.onResponse(WorkflowData.EMPTY);
+        ProcessNode processNode = mock(ProcessNode.class);
+        when(processNode.execute()).thenReturn(completed);
+        WorkflowStep step = mock(WorkflowStep.class);
+        when(step.getName()).thenReturn("FakeStep");
+        when(processNode.workflowStep()).thenReturn(step);
+        when(workflowProcessSorter.createReprovisionSequence(any(), any(), any(), any(), any())).thenReturn(List.of(processNode));
+
+        doAnswer(invocation -> {
+            ActionListener<UpdateResponse> actionListener = invocation.getArgument(3);
+            actionListener.onResponse(mock(UpdateResponse.class));
+            return null;
+        }).when(flowFrameworkIndicesHandler).updateFlowFrameworkSystemIndexDoc(any(), nullable(String.class), anyMap(), any());
+        when(client.threadPool().schedule(any(Runnable.class), any(TimeValue.class), anyString())).thenReturn(
+            mock(Scheduler.ScheduledCancellable.class)
+        );
+
+        @SuppressWarnings("unchecked")
+        ActionListener<WorkflowResponse> listener = mock(ActionListener.class);
+        ReprovisionWorkflowRequest request = new ReprovisionWorkflowRequest(
+            workflowId,
+            mockTemplate,
+            mockTemplate,
+            TimeValue.timeValueSeconds(5)
+        );
+
+        reprovisionWorkflowTransportAction.doExecute(mock(Task.class), request, listener);
+
+        ArgumentCaptor<WorkflowResponse> responseCaptor = ArgumentCaptor.forClass(WorkflowResponse.class);
+        verify(listener, times(1)).onResponse(responseCaptor.capture());
+        assertEquals(State.COMPLETED.toString(), responseCaptor.getValue().getWorkflowState().getState());
+        // Both the initial read and the read after completion go to the state index as the plugin.
+        verify(flowFrameworkIndicesHandler, times(2)).getWorkflowState(anyString(), nullable(String.class), any());
+        verify(client, never()).execute(any(), any(GetWorkflowStateRequest.class), any());
+    }
 }
