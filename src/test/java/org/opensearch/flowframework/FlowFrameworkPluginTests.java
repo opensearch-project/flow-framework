@@ -8,11 +8,19 @@
  */
 package org.opensearch.flowframework;
 
+import org.opensearch.action.admin.indices.create.CreateIndexAction;
+import org.opensearch.action.admin.indices.create.CreateIndexRequest;
+import org.opensearch.cluster.ClusterState;
 import org.opensearch.cluster.service.ClusterService;
+import org.opensearch.common.CheckedRunnable;
 import org.opensearch.common.settings.ClusterSettings;
 import org.opensearch.common.settings.Setting;
 import org.opensearch.common.settings.Settings;
+import org.opensearch.common.util.concurrent.ThreadContext;
+import org.opensearch.core.action.ActionListener;
 import org.opensearch.env.Environment;
+import org.opensearch.flowframework.indices.FlowFrameworkIndicesHandler;
+import org.opensearch.identity.PluginSubject;
 import org.opensearch.indices.SystemIndexDescriptor;
 import org.opensearch.test.OpenSearchTestCase;
 import org.opensearch.threadpool.TestThreadPool;
@@ -22,9 +30,12 @@ import org.opensearch.transport.client.Client;
 import org.opensearch.transport.client.ClusterAdminClient;
 
 import java.io.IOException;
+import java.security.Principal;
 import java.util.Collection;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -41,7 +52,10 @@ import static org.opensearch.flowframework.common.FlowFrameworkSettings.REMOTE_M
 import static org.opensearch.flowframework.common.FlowFrameworkSettings.REMOTE_METADATA_TYPE;
 import static org.opensearch.flowframework.common.FlowFrameworkSettings.TASK_REQUEST_RETRY_DURATION;
 import static org.opensearch.flowframework.common.FlowFrameworkSettings.WORKFLOW_REQUEST_TIMEOUT;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 public class FlowFrameworkPluginTests extends OpenSearchTestCase {
@@ -114,6 +128,55 @@ public class FlowFrameworkPluginTests extends OpenSearchTestCase {
 
             Collection<SystemIndexDescriptor> systemIndexDescriptors = ffp.getSystemIndexDescriptors(Settings.EMPTY);
             assertEquals(3, systemIndexDescriptors.size());
+        }
+    }
+
+    public void testAssignSubjectGivesThePluginClientItsSubject() throws IOException {
+        when(clusterService.state()).thenReturn(ClusterState.EMPTY_STATE);
+        AtomicInteger runs = new AtomicInteger();
+        PluginSubject subject = new PluginSubject() {
+            @Override
+            public Principal getPrincipal() {
+                return () -> "plugin:flow-framework";
+            }
+
+            @Override
+            public <E extends Exception> void runAs(CheckedRunnable<E> runnable) throws E {
+                runs.incrementAndGet();
+                try (ThreadContext.StoredContext ignored = threadPool.getThreadContext().stashContext()) {
+                    runnable.run();
+                }
+            }
+        };
+
+        try (FlowFrameworkPlugin ffp = new FlowFrameworkPlugin()) {
+            FlowFrameworkIndicesHandler indicesHandler = ffp.createComponents(
+                client,
+                clusterService,
+                threadPool,
+                null,
+                null,
+                null,
+                environment,
+                null,
+                null,
+                null,
+                null
+            )
+                .stream()
+                .filter(FlowFrameworkIndicesHandler.class::isInstance)
+                .map(FlowFrameworkIndicesHandler.class::cast)
+                .findFirst()
+                .orElseThrow();
+            ffp.assignSubject(subject);
+
+            // The indices handler reaches the system indices only through the plugin's own client.
+            AtomicReference<Exception> failure = new AtomicReference<>();
+            indicesHandler.initConfigIndexIfAbsent(ActionListener.wrap(r -> {}, failure::set));
+
+            assertNull("creating the index must not fail", failure.get());
+            assertEquals("the create index action must run as the assigned subject", 1, runs.get());
+            verify(client).execute(eq(CreateIndexAction.INSTANCE), any(CreateIndexRequest.class), any());
         }
     }
 }

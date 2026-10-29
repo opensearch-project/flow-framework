@@ -20,4 +20,4 @@ Inspired from [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 - Rename the resource sharing feature flag to the non-experimental key ([#1482](https://github.com/opensearch-project/flow-framework/pull/1482))
 ### Refactoring
 - Reach the plugin's system indices through the plugin subject instead of stashing the thread context ([#1500](https://github.com/opensearch-project/flow-framework/pull/1500))
-- Restore the caller's thread context in `PluginClient` with core's `ContextPreservingActionListener` and type its subject as `PluginSubject` ([#1500](https://github.com/opensearch-project/flow-framework/pull/1500))
+- Make `PluginClient` a subclass of the shared `PluginClient` in common-utils ([#1500](https://github.com/opensearch-project/flow-framework/pull/1500))
