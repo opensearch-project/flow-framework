@@ -52,6 +52,7 @@ import org.opensearch.test.OpenSearchTestCase;
 import org.opensearch.threadpool.ThreadPool;
 import org.opensearch.transport.TransportService;
 import org.opensearch.transport.client.Client;
+import org.junit.After;
 
 import java.io.IOException;
 import java.time.Instant;
@@ -66,6 +67,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.ArgumentMatchers;
 
 import static org.opensearch.action.DocWriteResponse.Result.UPDATED;
+import static org.opensearch.flowframework.TestHelpers.deprecatedSettingWarning;
 import static org.opensearch.flowframework.common.CommonValue.GLOBAL_CONTEXT_INDEX;
 import static org.opensearch.flowframework.common.CommonValue.UPDATE_WORKFLOW_FIELDS;
 import static org.opensearch.flowframework.common.CommonValue.WAIT_FOR_COMPLETION_TIMEOUT;
@@ -178,6 +180,13 @@ public class CreateWorkflowTransportActionTests extends OpenSearchTestCase {
             null,
             Collections.emptyList()
         );
+    }
+
+    @After
+    public void allowFilterByBackendRolesDeprecation() {
+        // Some tests here set the deprecated filter_by_backend_roles setting; whether the warning is emitted depends on
+        // when the setting is first read, so tolerate it without requiring it.
+        allowedWarnings(deprecatedSettingWarning(FlowFrameworkSettings.FILTER_BY_BACKEND_ROLES));
     }
 
     public void testValidation_withoutProvision_Success() {

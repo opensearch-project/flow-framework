@@ -174,6 +174,21 @@ public class TestHelpers {
         return clusterSettings;
     }
 
+    /**
+     * The warning header OpenSearch emits when a setting marked {@link Setting.Property#Deprecated} is set. Tests that
+     * set such a setting must account for the warning, otherwise {@code OpenSearchTestCase} fails them on unexpected
+     * warning headers.
+     *
+     * @param setting the deprecated setting
+     * @return the expected deprecation warning message
+     */
+    public static String deprecatedSettingWarning(Setting<?> setting) {
+        return "["
+            + setting.getKey()
+            + "] setting was deprecated in OpenSearch and will be removed in a future release! "
+            + "See the breaking changes documentation for the next major version.";
+    }
+
     public static XContentBuilder builder() throws IOException {
         return XContentBuilder.builder(XContentType.JSON.xContent());
     }
