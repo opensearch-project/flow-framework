@@ -24,11 +24,13 @@ import org.opensearch.remote.metadata.client.impl.SdkClientFactory;
 import org.opensearch.test.OpenSearchTestCase;
 import org.opensearch.threadpool.ThreadPool;
 import org.opensearch.transport.client.Client;
+import org.junit.After;
 import org.junit.Before;
 
 import java.util.Collections;
 
 import static org.opensearch.flowframework.TestHelpers.clusterSetting;
+import static org.opensearch.flowframework.TestHelpers.deprecatedSettingWarning;
 import static org.opensearch.flowframework.TestHelpers.matchAllRequest;
 import static org.opensearch.flowframework.common.FlowFrameworkSettings.FILTER_BY_BACKEND_ROLES;
 import static org.mockito.ArgumentMatchers.any;
@@ -72,6 +74,13 @@ public class SearchHandlerTests extends OpenSearchTestCase {
 
         request = mock(SearchRequest.class);
         listener = mock(ActionListener.class);
+    }
+
+    @After
+    public void allowFilterByBackendRolesDeprecation() {
+        // These tests set the deprecated filter_by_backend_roles setting; whether the warning is emitted during setup
+        // or during the test body depends on when the setting is first read, so tolerate it either way.
+        allowedWarnings(deprecatedSettingWarning(FILTER_BY_BACKEND_ROLES));
     }
 
     public void testSearchException() {
