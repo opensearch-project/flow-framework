@@ -25,7 +25,6 @@ import org.opensearch.common.xcontent.json.JsonXContent;
 import org.opensearch.commons.ConfigConstants;
 import org.opensearch.commons.authuser.User;
 import org.opensearch.core.action.ActionListener;
-import org.opensearch.core.action.ActionResponse;
 import org.opensearch.core.common.bytes.BytesReference;
 import org.opensearch.core.rest.RestStatus;
 import org.opensearch.core.xcontent.NamedXContentRegistry;
@@ -279,6 +278,56 @@ public class ParseUtils {
     }
 
     /**
+     * Reads a workflow state after the checks that the get workflow state API applies to the requesting user.
+     * <p>
+     * When resource sharing is not enabled for workflow states, the tenant and, with
+     * {@code plugins.flow_framework.filter_by_backend_roles}, the user's backend roles are checked against the state
+     * document before it is read.
+     *
+     * @param requestedUser the user making the request, or null when security is disabled
+     * @param workflowId the workflow id
+     * @param tenantId the tenant id
+     * @param filterByEnabled whether backend role filtering is enabled
+     * @param isMultitenancyEnabled whether multitenancy is enabled
+     * @param flowFrameworkIndicesHandler reads the state document
+     * @param listener receives the workflow state, or the failure of the check or the read
+     * @param sdkClient the multitenant client
+     * @param clusterService the cluster service
+     * @param xContentRegistry parses the state document for the check
+     */
+    public static void getWorkflowStateIfPermitted(
+        User requestedUser,
+        String workflowId,
+        String tenantId,
+        Boolean filterByEnabled,
+        boolean isMultitenancyEnabled,
+        FlowFrameworkIndicesHandler flowFrameworkIndicesHandler,
+        ActionListener<WorkflowState> listener,
+        SdkClient sdkClient,
+        ClusterService clusterService,
+        NamedXContentRegistry xContentRegistry
+    ) {
+        Runnable read = () -> flowFrameworkIndicesHandler.getWorkflowState(workflowId, tenantId, listener);
+        verifyResourceAccessAndProcessRequest(
+            CommonValue.WORKFLOW_STATE_RESOURCE_TYPE,
+            read,
+            () -> resolveUserAndExecute(
+                requestedUser,
+                workflowId,
+                tenantId,
+                filterByEnabled,
+                true,
+                isMultitenancyEnabled,
+                listener,
+                read,
+                sdkClient,
+                clusterService,
+                xContentRegistry
+            )
+        );
+    }
+
+    /**
      * Add user backend roles filter to search source builder=
      * @param user the user
      * @param searchSourceBuilder search builder
@@ -331,7 +380,7 @@ public class ParseUtils {
         Boolean filterByEnabled,
         Boolean statePresent,
         boolean isMultitenancyEnabled,
-        ActionListener<? extends ActionResponse> listener,
+        ActionListener<?> listener,
         Runnable function,
         SdkClient sdkClient,
         ClusterService clusterService,
@@ -438,7 +487,7 @@ public class ParseUtils {
         Boolean filterByEnabled,
         Boolean statePresent,
         boolean isMultitenancyEnabled,
-        ActionListener<? extends ActionResponse> listener,
+        ActionListener<?> listener,
         Runnable function,
         SdkClient sdkClient,
         ClusterService clusterService,
@@ -502,7 +551,7 @@ public class ParseUtils {
         Boolean filterByEnabled,
         Boolean statePresent,
         boolean isMultitenancyEnabled,
-        ActionListener<? extends ActionResponse> listener,
+        ActionListener<?> listener,
         Runnable function,
         NamedXContentRegistry xContentRegistry
     ) {

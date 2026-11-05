@@ -14,13 +14,13 @@ import org.opensearch.ExceptionsHelper;
 import org.opensearch.common.unit.TimeValue;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.flowframework.exception.FlowFrameworkException;
-import org.opensearch.flowframework.indices.FlowFrameworkIndicesHandler;
 import org.opensearch.flowframework.model.WorkflowState;
 import org.opensearch.flowframework.transport.WorkflowResponse;
 import org.opensearch.threadpool.Scheduler;
 import org.opensearch.threadpool.ThreadPool;
 
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.Consumer;
 
 import static org.opensearch.flowframework.common.CommonValue.PROVISION_WORKFLOW_THREAD_POOL;
 
@@ -38,20 +38,18 @@ public class WorkflowTimeoutUtility {
     /**
      * Schedules a timeout task for a workflow execution.
      *
-     * @param flowFrameworkIndicesHandler reads the workflow state if the task times out
+     * @param readState     reads the workflow state if the task times out
      * @param threadPool    The thread pool to schedule the timeout task.
      * @param workflowId    The unique identifier of the workflow being executed.
-     * @param tenantId      The tenant id.
      * @param listener      The listener to notify when the task completes or times out.
      * @param timeout       The timeout duration in milliseconds.
      * @param isResponseSent An atomic boolean to ensure the response is sent only once.
      * @return A wrapped ActionListener with timeout cancellation logic.
      */
     public static ActionListener<WorkflowResponse> scheduleTimeoutHandler(
-        FlowFrameworkIndicesHandler flowFrameworkIndicesHandler,
+        Consumer<ActionListener<WorkflowState>> readState,
         ThreadPool threadPool,
         final String workflowId,
-        final String tenantId,
         ActionListener<WorkflowResponse> listener,
         long timeout,
         AtomicBoolean isResponseSent
@@ -59,7 +57,7 @@ public class WorkflowTimeoutUtility {
         // Ensure timeout is within the valid range (non-negative)
         long adjustedTimeout = Math.max(timeout, TimeValue.timeValueMillis(0).millis());
         Scheduler.ScheduledCancellable scheduledCancellable = threadPool.schedule(
-            new WorkflowTimeoutListener(flowFrameworkIndicesHandler, workflowId, tenantId, listener, isResponseSent),
+            new WorkflowTimeoutListener(readState, workflowId, listener, isResponseSent),
             TimeValue.timeValueMillis(adjustedTimeout),
             PROVISION_WORKFLOW_THREAD_POOL
         );
@@ -71,22 +69,19 @@ public class WorkflowTimeoutUtility {
      * A listener that handles timeout for a workflow execution.
      */
     private static class WorkflowTimeoutListener implements Runnable {
-        private final FlowFrameworkIndicesHandler flowFrameworkIndicesHandler;
+        private final Consumer<ActionListener<WorkflowState>> readState;
         private final String workflowId;
-        private final String tenantId;
         private final ActionListener<WorkflowResponse> listener;
         private final AtomicBoolean isResponseSent;
 
         WorkflowTimeoutListener(
-            FlowFrameworkIndicesHandler flowFrameworkIndicesHandler,
+            Consumer<ActionListener<WorkflowState>> readState,
             String workflowId,
-            String tenantId,
             ActionListener<WorkflowResponse> listener,
             AtomicBoolean isResponseSent
         ) {
-            this.flowFrameworkIndicesHandler = flowFrameworkIndicesHandler;
+            this.readState = readState;
             this.workflowId = workflowId;
-            this.tenantId = tenantId;
             this.listener = listener;
             this.isResponseSent = isResponseSent;
         }
@@ -96,7 +91,7 @@ public class WorkflowTimeoutUtility {
             // This AtomicBoolean ensures that the timeout logic is executed only once, preventing duplicate responses.
             if (isResponseSent.compareAndSet(false, true)) {
                 logger.warn("Workflow execution timed out for workflowId: {}", workflowId);
-                fetchWorkflowStateAfterTimeout(flowFrameworkIndicesHandler, workflowId, tenantId, listener);
+                fetchWorkflowStateAfterTimeout(readState, workflowId, listener);
             }
         }
     }
@@ -175,23 +170,17 @@ public class WorkflowTimeoutUtility {
     /**
      * Reads the workflow state after a timeout and responds with it, or with an UNKNOWN state if the read fails.
      *
-     * @param flowFrameworkIndicesHandler reads the workflow state from the state index
+     * @param readState   reads the workflow state
      * @param workflowId  The unique identifier of the workflow.
-     * @param tenantId    The tenant id
      * @param listener    The listener to notify with the updated state or failure.
      */
     public static void fetchWorkflowStateAfterTimeout(
-        final FlowFrameworkIndicesHandler flowFrameworkIndicesHandler,
+        final Consumer<ActionListener<WorkflowState>> readState,
         final String workflowId,
-        final String tenantId,
         final ActionListener<WorkflowResponse> listener
     ) {
         logger.info("Fetching workflow state after timeout");
-        // Read as the plugin subject: the caller is already authorized on the workflow, and is not
-        // necessarily shared on its state document.
-        flowFrameworkIndicesHandler.getWorkflowState(
-            workflowId,
-            tenantId,
+        readState.accept(
             ActionListener.wrap(
                 workflowState -> listener.onResponse(new WorkflowResponse(workflowId, workflowState)),
                 // we don't want to fail the listener as provisioning is still ongoing

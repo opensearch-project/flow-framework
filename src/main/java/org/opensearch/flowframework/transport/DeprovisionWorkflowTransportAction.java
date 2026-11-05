@@ -170,8 +170,8 @@ public class DeprovisionWorkflowTransportAction extends HandledTransportAction<W
         String workflowId = request.getWorkflowId();
         String allowDelete = request.getParams().get(ALLOW_DELETE);
         logger.info("Querying state for workflow: {}", workflowId);
-        // Read as the plugin subject: the caller is already authorized on the workflow, and is not
-        // necessarily shared on its state document.
+        // Read as the plugin subject. The checks above already covered this state document, or with resource
+        // sharing the workflow, which a nested get state action would not inherit.
         flowFrameworkIndicesHandler.getWorkflowState(workflowId, tenantId, ActionListener.wrap(workflowState -> {
             Set<String> deleteAllowedResources = Strings.tokenizeByCommaToSet(allowDelete);
             // Retrieve resources from workflow state and deprovision

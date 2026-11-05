@@ -10,8 +10,9 @@ package org.opensearch.flowframework.util;
 
 import org.opensearch.common.unit.TimeValue;
 import org.opensearch.core.action.ActionListener;
+import org.opensearch.core.rest.RestStatus;
 import org.opensearch.flowframework.TestHelpers;
-import org.opensearch.flowframework.indices.FlowFrameworkIndicesHandler;
+import org.opensearch.flowframework.exception.FlowFrameworkException;
 import org.opensearch.flowframework.model.WorkflowState;
 import org.opensearch.flowframework.transport.WorkflowResponse;
 import org.opensearch.test.OpenSearchTestCase;
@@ -28,16 +29,14 @@ import static org.opensearch.flowframework.common.CommonValue.PROVISION_WORKFLOW
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.ArgumentMatchers.isNull;
-import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 public class WorkflowTimeoutUtilityTests extends OpenSearchTestCase {
 
-    private FlowFrameworkIndicesHandler mockIndicesHandler;
     private ThreadPool mockThreadPool;
     private Scheduler.ScheduledCancellable mockScheduledCancellable;
     private AtomicBoolean isResponseSent;
@@ -46,7 +45,6 @@ public class WorkflowTimeoutUtilityTests extends OpenSearchTestCase {
     @Override
     public void setUp() throws Exception {
         super.setUp();
-        mockIndicesHandler = mock(FlowFrameworkIndicesHandler.class);
         mockThreadPool = mock(ThreadPool.class);
         mockScheduledCancellable = mock(Scheduler.ScheduledCancellable.class);
         isResponseSent = new AtomicBoolean(false);
@@ -62,10 +60,9 @@ public class WorkflowTimeoutUtilityTests extends OpenSearchTestCase {
         long timeout = 1000L;
 
         ActionListener<WorkflowResponse> returnedListener = WorkflowTimeoutUtility.scheduleTimeoutHandler(
-            mockIndicesHandler,
+            stateListener -> fail("the state is read only when the timeout fires"),
             mockThreadPool,
             workflowId,
-            null,
             mockListener,
             timeout,
             isResponseSent
@@ -133,16 +130,31 @@ public class WorkflowTimeoutUtilityTests extends OpenSearchTestCase {
         String workflowId = "testWorkflowId";
         ActionListener<WorkflowResponse> mockListener = mock(ActionListener.class);
 
-        doAnswer(invocation -> {
-            ActionListener<WorkflowState> stateListener = invocation.getArgument(2);
-            stateListener.onResponse(WorkflowState.builder().workflowId(workflowId).state("PROVISIONING").build());
-            return null;
-        }).when(mockIndicesHandler).getWorkflowState(eq(workflowId), isNull(), any());
-
-        WorkflowTimeoutUtility.fetchWorkflowStateAfterTimeout(mockIndicesHandler, workflowId, null, mockListener);
+        WorkflowTimeoutUtility.fetchWorkflowStateAfterTimeout(
+            stateListener -> stateListener.onResponse(WorkflowState.builder().workflowId(workflowId).state("PROVISIONING").build()),
+            workflowId,
+            mockListener
+        );
 
         ArgumentCaptor<WorkflowResponse> responseCaptor = ArgumentCaptor.forClass(WorkflowResponse.class);
         verify(mockListener, times(1)).onResponse(responseCaptor.capture());
         assertEquals("PROVISIONING", responseCaptor.getValue().getWorkflowState().getState());
+    }
+
+    @SuppressWarnings("unchecked")
+    public void testFetchWorkflowStateAfterTimeoutRespondsUnknownWhenTheReadIsDenied() {
+        String workflowId = "testWorkflowId";
+        ActionListener<WorkflowResponse> mockListener = mock(ActionListener.class);
+
+        WorkflowTimeoutUtility.fetchWorkflowStateAfterTimeout(
+            stateListener -> stateListener.onFailure(new FlowFrameworkException("denied", RestStatus.FORBIDDEN)),
+            workflowId,
+            mockListener
+        );
+
+        ArgumentCaptor<WorkflowResponse> responseCaptor = ArgumentCaptor.forClass(WorkflowResponse.class);
+        verify(mockListener, times(1)).onResponse(responseCaptor.capture());
+        verify(mockListener, never()).onFailure(any());
+        assertEquals("UNKNOWN", responseCaptor.getValue().getWorkflowState().getState());
     }
 }

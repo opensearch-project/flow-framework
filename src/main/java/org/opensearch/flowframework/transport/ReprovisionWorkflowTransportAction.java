@@ -66,6 +66,7 @@ import static org.opensearch.flowframework.common.CommonValue.RESOURCES_CREATED_
 import static org.opensearch.flowframework.common.CommonValue.STATE_FIELD;
 import static org.opensearch.flowframework.common.FlowFrameworkSettings.FILTER_BY_BACKEND_ROLES;
 import static org.opensearch.flowframework.util.ParseUtils.getUserContext;
+import static org.opensearch.flowframework.util.ParseUtils.getWorkflowStateIfPermitted;
 import static org.opensearch.flowframework.util.ParseUtils.resolveUserAndExecute;
 import static org.opensearch.flowframework.util.ParseUtils.verifyResourceAccessAndProcessRequest;
 
@@ -153,7 +154,7 @@ public class ReprovisionWorkflowTransportAction extends HandledTransportAction<R
         try {
             verifyResourceAccessAndProcessRequest(
                 CommonValue.WORKFLOW_RESOURCE_TYPE,
-                () -> executeReprovisionRequest(request, tenantId, listener),
+                () -> executeReprovisionRequest(request, user, tenantId, listener),
                 () -> resolveUserAndExecute(
                     user,
                     workflowId,
@@ -162,7 +163,7 @@ public class ReprovisionWorkflowTransportAction extends HandledTransportAction<R
                     false,
                     flowFrameworkSettings.isMultiTenancyEnabled(),
                     listener,
-                    () -> executeReprovisionRequest(request, tenantId, listener),
+                    () -> executeReprovisionRequest(request, user, tenantId, listener),
                     sdkClient,
                     clusterService,
                     xContentRegistry
@@ -182,16 +183,20 @@ public class ReprovisionWorkflowTransportAction extends HandledTransportAction<R
     /**
      * Execute the reprovision request
      * @param request the reprovision request
+     * @param user the user making the request
      * @param tenantId
      * @param listener the action listener
      */
-    private void executeReprovisionRequest(ReprovisionWorkflowRequest request, String tenantId, ActionListener<WorkflowResponse> listener) {
+    private void executeReprovisionRequest(
+        ReprovisionWorkflowRequest request,
+        User user,
+        String tenantId,
+        ActionListener<WorkflowResponse> listener
+    ) {
         String workflowId = request.getWorkflowId();
         logger.info("Querying state for workflow: {}", workflowId);
         // Retrieve state and resources created
-        // Read as the plugin subject: the caller is already authorized on the workflow, and is not
-        // necessarily shared on its state document.
-        flowFrameworkIndicesHandler.getWorkflowState(workflowId, tenantId, ActionListener.wrap(workflowState -> {
+        getWorkflowStateAsUser(user, workflowId, tenantId, ActionListener.wrap(workflowState -> {
             State currentState = State.valueOf(workflowState.getState());
             if (State.PROVISIONING.equals(currentState) || State.NOT_STARTED.equals(currentState)) {
                 String errorMessage = "The template can not be reprovisioned unless its provisioning state is DONE or FAILED: "
@@ -272,10 +277,11 @@ public class ReprovisionWorkflowTransportAction extends HandledTransportAction<R
                         .lastProvisionedTime(Instant.now())
                         .build();
                     if (request.getWaitForCompletionTimeout() == TimeValue.MINUS_ONE) {
-                        executeWorkflowAsync(workflowId, updatedTemplateWithProvisionedTime, reprovisionProcessSequence, listener);
+                        executeWorkflowAsync(workflowId, user, updatedTemplateWithProvisionedTime, reprovisionProcessSequence, listener);
                     } else {
                         executeWorkflowSync(
                             workflowId,
+                            user,
                             updatedTemplate,
                             reprovisionProcessSequence,
                             listener,
@@ -313,12 +319,14 @@ public class ReprovisionWorkflowTransportAction extends HandledTransportAction<R
     /**
      * Retrieves a thread from the provision thread pool to execute a workflow
      * @param workflowId The id of the workflow
+     * @param user The user making the request
      * @param template The updated template to store upon successful execution
      * @param workflowSequence The sorted workflow to execute
      * @param listener ActionListener for any failures that don't get caught earlier in below step
      */
     private void executeWorkflowAsync(
         String workflowId,
+        User user,
         Template template,
         List<ProcessNode> workflowSequence,
         ActionListener<WorkflowResponse> listener
@@ -326,7 +334,7 @@ public class ReprovisionWorkflowTransportAction extends HandledTransportAction<R
         try {
             threadPool.executor(PROVISION_WORKFLOW_THREAD_POOL).execute(() -> {
                 updateTemplate(template, workflowId);
-                executeWorkflow(template, workflowSequence, workflowId, listener, false);
+                executeWorkflow(template, workflowSequence, workflowId, user, listener, false);
             });
         } catch (Exception exception) {
             listener.onFailure(new FlowFrameworkException("Failed to execute workflow " + workflowId, ExceptionsHelper.status(exception)));
@@ -335,6 +343,7 @@ public class ReprovisionWorkflowTransportAction extends HandledTransportAction<R
 
     private void executeWorkflowSync(
         String workflowId,
+        User user,
         Template template,
         List<ProcessNode> workflowSequence,
         ActionListener<WorkflowResponse> listener,
@@ -344,7 +353,7 @@ public class ReprovisionWorkflowTransportAction extends HandledTransportAction<R
         CompletableFuture.runAsync(() -> {
             try {
                 updateTemplate(template, workflowId);
-                executeWorkflow(template, workflowSequence, workflowId, new ActionListener<>() {
+                executeWorkflow(template, workflowSequence, workflowId, user, new ActionListener<>() {
                     @Override
                     public void onResponse(WorkflowResponse workflowResponse) {
                         WorkflowTimeoutUtility.handleResponse(workflowId, workflowResponse, isResponseSent, listener);
@@ -360,13 +369,34 @@ public class ReprovisionWorkflowTransportAction extends HandledTransportAction<R
             }
         }, threadPool.executor(PROVISION_WORKFLOW_THREAD_POOL));
         WorkflowTimeoutUtility.scheduleTimeoutHandler(
-            flowFrameworkIndicesHandler,
+            stateListener -> getWorkflowStateAsUser(user, workflowId, template.getTenantId(), stateListener),
             threadPool,
             workflowId,
-            template.getTenantId(),
             listener,
             timeout,
             isResponseSent
+        );
+    }
+
+    /**
+     * Reads the workflow state as the plugin, after the checks that the get workflow state API applies to the user.
+     * @param user the user making the request
+     * @param workflowId the workflow id
+     * @param tenantId the tenant id
+     * @param listener receives the workflow state or the failure
+     */
+    private void getWorkflowStateAsUser(User user, String workflowId, String tenantId, ActionListener<WorkflowState> listener) {
+        getWorkflowStateIfPermitted(
+            user,
+            workflowId,
+            tenantId,
+            filterByEnabled,
+            flowFrameworkSettings.isMultiTenancyEnabled(),
+            flowFrameworkIndicesHandler,
+            listener,
+            sdkClient,
+            clusterService,
+            xContentRegistry
         );
     }
 
@@ -388,11 +418,13 @@ public class ReprovisionWorkflowTransportAction extends HandledTransportAction<R
      * @param template The template to store after reprovisioning completes successfully
      * @param workflowSequence The topologically sorted workflow to execute
      * @param workflowId The workflowId associated with the workflow that is executing
+     * @param user The user making the request
      */
     private void executeWorkflow(
         Template template,
         List<ProcessNode> workflowSequence,
         String workflowId,
+        User user,
         ActionListener<WorkflowResponse> listener,
         boolean isSyncExecution
     ) {
@@ -438,7 +470,7 @@ public class ReprovisionWorkflowTransportAction extends HandledTransportAction<R
 
                     logger.info("updated workflow {} state to {}", workflowId, State.COMPLETED);
                     if (isSyncExecution) {
-                        flowFrameworkIndicesHandler.getWorkflowState(workflowId, tenantId, ActionListener.wrap(workflowState -> {
+                        getWorkflowStateAsUser(user, workflowId, tenantId, ActionListener.wrap(workflowState -> {
                             // We've completed provisioning and responding synchronously
                             TenantAwareHelper.releaseProvision(tenantId);
                             listener.onResponse(new WorkflowResponse(workflowId, workflowState));
