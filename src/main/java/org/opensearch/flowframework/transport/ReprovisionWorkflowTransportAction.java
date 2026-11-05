@@ -350,6 +350,7 @@ public class ReprovisionWorkflowTransportAction extends HandledTransportAction<R
         long timeout
     ) {
         AtomicBoolean isResponseSent = new AtomicBoolean(false);
+        String tenantId = template.getTenantId();
         CompletableFuture.runAsync(() -> {
             try {
                 updateTemplate(template, workflowId);
@@ -369,7 +370,7 @@ public class ReprovisionWorkflowTransportAction extends HandledTransportAction<R
             }
         }, threadPool.executor(PROVISION_WORKFLOW_THREAD_POOL));
         WorkflowTimeoutUtility.scheduleTimeoutHandler(
-            stateListener -> getWorkflowStateForUser(user, workflowId, template.getTenantId(), stateListener),
+            stateListener -> getWorkflowStateForUser(user, workflowId, tenantId, stateListener),
             threadPool,
             workflowId,
             listener,
@@ -380,10 +381,6 @@ public class ReprovisionWorkflowTransportAction extends HandledTransportAction<R
 
     /**
      * Reads the workflow state as the plugin after the state document checks of {@code GetWorkflowStateTransportAction}.
-     * @param user the user making the request
-     * @param workflowId the workflow id
-     * @param tenantId the tenant id
-     * @param listener receives the workflow state or the failure
      */
     private void getWorkflowStateForUser(User user, String workflowId, String tenantId, ActionListener<WorkflowState> listener) {
         getWorkflowStateIfPermitted(

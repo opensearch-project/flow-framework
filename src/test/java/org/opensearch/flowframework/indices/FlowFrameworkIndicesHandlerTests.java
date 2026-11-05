@@ -337,19 +337,7 @@ public class FlowFrameworkIndicesHandlerTests extends OpenSearchTestCase {
     }
 
     public void testGetTemplateReportsAnAbsentDocumentWhenTheStoreReturnsNoParser() {
-        // A remote metadata store returns no parser for an absent document.
-        SdkClient remoteSdkClient = mock(SdkClient.class);
-        when(remoteSdkClient.getDataObjectAsync(any(GetDataObjectRequest.class))).thenReturn(
-            CompletableFuture.completedFuture(mock(GetDataObjectResponse.class))
-        );
-        FlowFrameworkIndicesHandler handler = new FlowFrameworkIndicesHandler(
-            pluginClient,
-            remoteSdkClient,
-            clusterService,
-            encryptorUtils,
-            xContentRegistry(),
-            true
-        );
+        FlowFrameworkIndicesHandler handler = handlerOverAbsentRemoteDocument();
         @SuppressWarnings("unchecked")
         ActionListener<GetResponse> listener = mock(ActionListener.class);
 
@@ -362,19 +350,7 @@ public class FlowFrameworkIndicesHandlerTests extends OpenSearchTestCase {
     }
 
     public void testGetWorkflowStateReturnsNotFoundWhenTheStoreReturnsNoParser() {
-        // A remote metadata store returns no parser for an absent document.
-        SdkClient remoteSdkClient = mock(SdkClient.class);
-        when(remoteSdkClient.getDataObjectAsync(any(GetDataObjectRequest.class))).thenReturn(
-            CompletableFuture.completedFuture(mock(GetDataObjectResponse.class))
-        );
-        FlowFrameworkIndicesHandler handler = new FlowFrameworkIndicesHandler(
-            pluginClient,
-            remoteSdkClient,
-            clusterService,
-            encryptorUtils,
-            xContentRegistry(),
-            true
-        );
+        FlowFrameworkIndicesHandler handler = handlerOverAbsentRemoteDocument();
         @SuppressWarnings("unchecked")
         ActionListener<WorkflowState> listener = mock(ActionListener.class);
 
@@ -385,6 +361,15 @@ public class FlowFrameworkIndicesHandlerTests extends OpenSearchTestCase {
         FlowFrameworkException exception = (FlowFrameworkException) exceptionCaptor.getValue();
         assertEquals(RestStatus.NOT_FOUND, exception.getRestStatus());
         assertEquals("Fail to find workflow status of 1", exception.getMessage());
+    }
+
+    /** Builds a handler over a remote metadata store that returns no parser, as it does for an absent document. */
+    private FlowFrameworkIndicesHandler handlerOverAbsentRemoteDocument() {
+        SdkClient remoteSdkClient = mock(SdkClient.class);
+        when(remoteSdkClient.getDataObjectAsync(any(GetDataObjectRequest.class))).thenReturn(
+            CompletableFuture.completedFuture(mock(GetDataObjectResponse.class))
+        );
+        return new FlowFrameworkIndicesHandler(pluginClient, remoteSdkClient, clusterService, encryptorUtils, xContentRegistry(), true);
     }
 
     public void testInitIndexIfAbsent_IndexExist_returnFalse() {

@@ -279,12 +279,8 @@ public class ParseUtils {
 
     /**
      * Reads a workflow state as the plugin after the state document checks that {@code GetWorkflowStateTransportAction}
-     * makes itself.
-     * <p>
-     * When resource sharing is not enabled for workflow states, the tenant and, with
-     * {@code plugins.flow_framework.filter_by_backend_roles}, the user's backend roles are checked against the state
-     * document. When it is enabled, the state is read directly: that action relies on the security plugin evaluating
-     * its request, and callers of this method have already been authorized on the parent workflow.
+     * makes itself: tenant and backend roles, unless resource sharing covers workflow states. Under resource sharing it
+     * reads directly, because callers have already been authorized on the parent workflow.
      *
      * @param requestedUser the user making the request, or null when security is disabled
      * @param workflowId the workflow id
@@ -504,7 +500,6 @@ public class ParseUtils {
                     try {
                         getResponse = r.parser() == null ? null : GetResponse.fromXContent(r.parser());
                     } catch (Exception e) {
-                        // Any parse failure, not only IOException, must reach the listener rather than the unobserved future
                         logger.error("Failed to parse workflow getResponse: {}", workflowId, e);
                         listener.onFailure(e);
                         return;

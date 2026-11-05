@@ -376,10 +376,6 @@ public class ProvisionWorkflowTransportAction extends HandledTransportAction<Wor
 
     /**
      * Reads the workflow state as the plugin after the state document checks of {@code GetWorkflowStateTransportAction}.
-     * @param user the user making the request
-     * @param workflowId the workflow id
-     * @param tenantId the tenant id
-     * @param listener receives the workflow state or the failure
      */
     private void getWorkflowStateForUser(User user, String workflowId, String tenantId, ActionListener<WorkflowState> listener) {
         getWorkflowStateIfPermitted(

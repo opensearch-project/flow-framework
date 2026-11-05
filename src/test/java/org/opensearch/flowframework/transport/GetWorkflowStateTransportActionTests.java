@@ -54,7 +54,6 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
@@ -276,7 +275,7 @@ public class GetWorkflowStateTransportActionTests extends OpenSearchTestCase {
         Settings settings = Settings.builder().put(FlowFrameworkSettings.FILTER_BY_BACKEND_ROLES.getKey(), true).build();
         ClusterService clusterService = mock(ClusterService.class);
         when(clusterService.getClusterSettings()).thenReturn(
-            new ClusterSettings(settings, Set.of(FlowFrameworkSettings.FILTER_BY_BACKEND_ROLES))
+            TestHelpers.clusterSetting(settings, FlowFrameworkSettings.FILTER_BY_BACKEND_ROLES)
         );
         ClusterState clusterState = mock(ClusterState.class);
         Metadata metadata = mock(Metadata.class);

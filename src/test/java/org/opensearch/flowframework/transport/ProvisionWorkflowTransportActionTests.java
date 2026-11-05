@@ -66,7 +66,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
@@ -479,7 +478,7 @@ public class ProvisionWorkflowTransportActionTests extends OpenSearchTestCase {
         Settings settings = Settings.builder().put(FlowFrameworkSettings.FILTER_BY_BACKEND_ROLES.getKey(), true).build();
         ClusterService clusterService = mock(ClusterService.class);
         when(clusterService.getClusterSettings()).thenReturn(
-            new ClusterSettings(settings, Set.of(FlowFrameworkSettings.FILTER_BY_BACKEND_ROLES))
+            TestHelpers.clusterSetting(settings, FlowFrameworkSettings.FILTER_BY_BACKEND_ROLES)
         );
         ClusterState clusterState = mock(ClusterState.class);
         Metadata metadata = mock(Metadata.class);
