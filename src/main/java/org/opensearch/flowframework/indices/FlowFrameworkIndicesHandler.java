@@ -44,6 +44,7 @@ import org.opensearch.flowframework.util.ParseUtils;
 import org.opensearch.flowframework.util.PluginClient;
 import org.opensearch.flowframework.workflow.WorkflowData;
 import org.opensearch.index.IndexNotFoundException;
+import org.opensearch.index.get.GetResult;
 import org.opensearch.remote.metadata.client.DeleteDataObjectRequest;
 import org.opensearch.remote.metadata.client.GetDataObjectRequest;
 import org.opensearch.remote.metadata.client.PutDataObjectRequest;
@@ -72,6 +73,8 @@ import static org.opensearch.flowframework.common.CommonValue.SCHEMA_VERSION_FIE
 import static org.opensearch.flowframework.common.CommonValue.WORKFLOW_STATE_INDEX;
 import static org.opensearch.flowframework.common.CommonValue.WORKFLOW_STATE_INDEX_MAPPING;
 import static org.opensearch.flowframework.common.WorkflowResources.getResourceByWorkflowStep;
+import static org.opensearch.index.seqno.SequenceNumbers.UNASSIGNED_PRIMARY_TERM;
+import static org.opensearch.index.seqno.SequenceNumbers.UNASSIGNED_SEQ_NO;
 
 /**
  * A handler for operations on system indices in the AI Flow Framework plugin
@@ -565,13 +568,30 @@ public class FlowFrameworkIndicesHandler {
             .build();
         sdkClient.getDataObjectAsync(getRequest).whenComplete((r, throwable) -> {
             if (throwable == null) {
+                GetResponse getResponse;
                 try {
-                    GetResponse getResponse = GetResponse.fromXContent(r.parser());
-                    listener.onResponse(getResponse);
-                } catch (IOException e) {
+                    // A remote metadata store returns no parser for an absent document
+                    getResponse = r.parser() == null
+                        ? new GetResponse(
+                            new GetResult(
+                                GLOBAL_CONTEXT_INDEX,
+                                documentId,
+                                UNASSIGNED_SEQ_NO,
+                                UNASSIGNED_PRIMARY_TERM,
+                                -1,
+                                false,
+                                null,
+                                null,
+                                null
+                            )
+                        )
+                        : GetResponse.fromXContent(r.parser());
+                } catch (Exception e) {
                     logger.error("Failed to parse get response", e);
                     listener.onFailure(new FlowFrameworkException("Failed to parse get response", INTERNAL_SERVER_ERROR));
+                    return;
                 }
+                listener.onResponse(getResponse);
             } else {
                 Exception exception = SdkClientUtils.unwrapAndConvertToException(throwable);
                 String errorMessage = ParameterizedMessageFactory.INSTANCE.newMessage("Failed to get template {}", documentId)
@@ -598,7 +618,7 @@ public class FlowFrameworkIndicesHandler {
         sdkClient.getDataObjectAsync(getRequest).whenComplete((r, throwable) -> {
             if (throwable == null) {
                 try {
-                    GetResponse getResponse = GetResponse.fromXContent(r.parser());
+                    GetResponse getResponse = r.parser() == null ? null : GetResponse.fromXContent(r.parser());
                     if (getResponse != null && getResponse.isExists()) {
                         try (
                             XContentParser parser = ParseUtils.createXContentParserFromRegistry(

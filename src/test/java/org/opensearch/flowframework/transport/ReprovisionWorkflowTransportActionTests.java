@@ -493,9 +493,19 @@ public class ReprovisionWorkflowTransportActionTests extends OpenSearchTestCase 
     }
 
     public void testReprovisionReadsStateWhenBackendRolesMatchTemplateAndState() throws Exception {
+        doAnswer(invocation -> {
+            ActionListener<WorkflowState> stateListener = invocation.getArgument(2);
+            stateListener.onResponse(WorkflowState.builder().workflowId("1").state(State.PROVISIONING.name()).build());
+            return null;
+        }).when(flowFrameworkIndicesHandler).getWorkflowState(eq("1"), nullable(String.class), any());
+
         ActionListener<WorkflowResponse> listener = reprovisionWithBackendRoleFilter("role-a", "role-a");
 
-        verify(listener, never()).onFailure(any());
+        // Both checks pass and reprovision acts on the state it read.
+        ArgumentCaptor<Exception> exceptionCaptor = ArgumentCaptor.forClass(Exception.class);
+        verify(listener, times(1)).onFailure(exceptionCaptor.capture());
+        assertEquals(RestStatus.BAD_REQUEST, ((FlowFrameworkException) exceptionCaptor.getValue()).getRestStatus());
+        assertTrue(exceptionCaptor.getValue().getMessage().startsWith("The template can not be reprovisioned unless"));
         verify(client, times(1)).get(argThat(r -> WORKFLOW_STATE_INDEX.equals(r.index())), any());
         verify(flowFrameworkIndicesHandler, times(1)).getWorkflowState(eq("1"), nullable(String.class), any());
     }

@@ -40,11 +40,13 @@ import org.opensearch.common.xcontent.XContentFactory;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.core.common.bytes.BytesReference;
 import org.opensearch.core.index.shard.ShardId;
+import org.opensearch.core.rest.RestStatus;
 import org.opensearch.core.xcontent.NamedXContentRegistry;
 import org.opensearch.core.xcontent.ToXContentObject;
 import org.opensearch.core.xcontent.XContentBuilder;
 import org.opensearch.flowframework.TestHelpers;
 import org.opensearch.flowframework.common.WorkflowResources;
+import org.opensearch.flowframework.exception.FlowFrameworkException;
 import org.opensearch.flowframework.model.ProvisioningProgress;
 import org.opensearch.flowframework.model.ResourceCreated;
 import org.opensearch.flowframework.model.Template;
@@ -58,6 +60,8 @@ import org.opensearch.flowframework.workflow.WorkflowData;
 import org.opensearch.identity.PluginSubject;
 import org.opensearch.index.engine.VersionConflictEngineException;
 import org.opensearch.index.get.GetResult;
+import org.opensearch.remote.metadata.client.GetDataObjectRequest;
+import org.opensearch.remote.metadata.client.GetDataObjectResponse;
 import org.opensearch.remote.metadata.client.SdkClient;
 import org.opensearch.remote.metadata.client.impl.SdkClientFactory;
 import org.opensearch.test.OpenSearchTestCase;
@@ -72,6 +76,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Consumer;
 
@@ -288,6 +293,10 @@ public class FlowFrameworkIndicesHandlerTests extends OpenSearchTestCase {
         verify(listener, times(1)).onFailure(exceptionCaptor.capture());
         verify(listener, never()).onResponse(any());
         assertEquals("Failed to update index setting for: " + GLOBAL_CONTEXT_INDEX, exceptionCaptor.getValue().getMessage());
+
+        // The mapping is not marked up to date, so the next call updates it again.
+        flowFrameworkIndicesHandler.initFlowFrameworkIndexIfAbsent(FlowFrameworkIndex.GLOBAL_CONTEXT, listener);
+        verify(client, times(2)).execute(eq(PutMappingAction.INSTANCE), any(PutMappingRequest.class), any());
     }
 
     /**
@@ -325,6 +334,57 @@ public class FlowFrameworkIndicesHandlerTests extends OpenSearchTestCase {
         ActionListener<Boolean> listener = mock(ActionListener.class);
         flowFrameworkIndicesHandler.initFlowFrameworkIndexIfAbsent(index, listener);
         return listener;
+    }
+
+    public void testGetTemplateReportsAnAbsentDocumentWhenTheStoreReturnsNoParser() {
+        // A remote metadata store returns no parser for an absent document.
+        SdkClient remoteSdkClient = mock(SdkClient.class);
+        when(remoteSdkClient.getDataObjectAsync(any(GetDataObjectRequest.class))).thenReturn(
+            CompletableFuture.completedFuture(mock(GetDataObjectResponse.class))
+        );
+        FlowFrameworkIndicesHandler handler = new FlowFrameworkIndicesHandler(
+            pluginClient,
+            remoteSdkClient,
+            clusterService,
+            encryptorUtils,
+            xContentRegistry(),
+            true
+        );
+        @SuppressWarnings("unchecked")
+        ActionListener<GetResponse> listener = mock(ActionListener.class);
+
+        handler.getTemplate("1", "tenant", listener);
+
+        ArgumentCaptor<GetResponse> responseCaptor = ArgumentCaptor.forClass(GetResponse.class);
+        verify(listener, times(1)).onResponse(responseCaptor.capture());
+        assertFalse(responseCaptor.getValue().isExists());
+        assertEquals("1", responseCaptor.getValue().getId());
+    }
+
+    public void testGetWorkflowStateReturnsNotFoundWhenTheStoreReturnsNoParser() {
+        // A remote metadata store returns no parser for an absent document.
+        SdkClient remoteSdkClient = mock(SdkClient.class);
+        when(remoteSdkClient.getDataObjectAsync(any(GetDataObjectRequest.class))).thenReturn(
+            CompletableFuture.completedFuture(mock(GetDataObjectResponse.class))
+        );
+        FlowFrameworkIndicesHandler handler = new FlowFrameworkIndicesHandler(
+            pluginClient,
+            remoteSdkClient,
+            clusterService,
+            encryptorUtils,
+            xContentRegistry(),
+            true
+        );
+        @SuppressWarnings("unchecked")
+        ActionListener<WorkflowState> listener = mock(ActionListener.class);
+
+        handler.getWorkflowState("1", "tenant", listener);
+
+        ArgumentCaptor<Exception> exceptionCaptor = ArgumentCaptor.forClass(Exception.class);
+        verify(listener, times(1)).onFailure(exceptionCaptor.capture());
+        FlowFrameworkException exception = (FlowFrameworkException) exceptionCaptor.getValue();
+        assertEquals(RestStatus.NOT_FOUND, exception.getRestStatus());
+        assertEquals("Fail to find workflow status of 1", exception.getMessage());
     }
 
     public void testInitIndexIfAbsent_IndexExist_returnFalse() {

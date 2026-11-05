@@ -196,7 +196,7 @@ public class ReprovisionWorkflowTransportAction extends HandledTransportAction<R
         String workflowId = request.getWorkflowId();
         logger.info("Querying state for workflow: {}", workflowId);
         // Retrieve state and resources created
-        getWorkflowStateAsUser(user, workflowId, tenantId, ActionListener.wrap(workflowState -> {
+        getWorkflowStateForUser(user, workflowId, tenantId, ActionListener.wrap(workflowState -> {
             State currentState = State.valueOf(workflowState.getState());
             if (State.PROVISIONING.equals(currentState) || State.NOT_STARTED.equals(currentState)) {
                 String errorMessage = "The template can not be reprovisioned unless its provisioning state is DONE or FAILED: "
@@ -369,7 +369,7 @@ public class ReprovisionWorkflowTransportAction extends HandledTransportAction<R
             }
         }, threadPool.executor(PROVISION_WORKFLOW_THREAD_POOL));
         WorkflowTimeoutUtility.scheduleTimeoutHandler(
-            stateListener -> getWorkflowStateAsUser(user, workflowId, template.getTenantId(), stateListener),
+            stateListener -> getWorkflowStateForUser(user, workflowId, template.getTenantId(), stateListener),
             threadPool,
             workflowId,
             listener,
@@ -379,13 +379,13 @@ public class ReprovisionWorkflowTransportAction extends HandledTransportAction<R
     }
 
     /**
-     * Reads the workflow state as the plugin, after the checks that the get workflow state API applies to the user.
+     * Reads the workflow state as the plugin after the state document checks of {@code GetWorkflowStateTransportAction}.
      * @param user the user making the request
      * @param workflowId the workflow id
      * @param tenantId the tenant id
      * @param listener receives the workflow state or the failure
      */
-    private void getWorkflowStateAsUser(User user, String workflowId, String tenantId, ActionListener<WorkflowState> listener) {
+    private void getWorkflowStateForUser(User user, String workflowId, String tenantId, ActionListener<WorkflowState> listener) {
         getWorkflowStateIfPermitted(
             user,
             workflowId,
@@ -470,7 +470,7 @@ public class ReprovisionWorkflowTransportAction extends HandledTransportAction<R
 
                     logger.info("updated workflow {} state to {}", workflowId, State.COMPLETED);
                     if (isSyncExecution) {
-                        getWorkflowStateAsUser(user, workflowId, tenantId, ActionListener.wrap(workflowState -> {
+                        getWorkflowStateForUser(user, workflowId, tenantId, ActionListener.wrap(workflowState -> {
                             // We've completed provisioning and responding synchronously
                             TenantAwareHelper.releaseProvision(tenantId);
                             listener.onResponse(new WorkflowResponse(workflowId, workflowState));

@@ -76,10 +76,12 @@ import org.mockito.ArgumentCaptor;
 
 import static org.opensearch.flowframework.TestHelpers.deprecatedSettingWarning;
 import static org.opensearch.flowframework.common.CommonValue.GLOBAL_CONTEXT_INDEX;
+import static org.opensearch.flowframework.common.CommonValue.WORKFLOW_STATE_INDEX;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.nullable;
 import static org.mockito.Mockito.doAnswer;
@@ -454,6 +456,8 @@ public class ProvisionWorkflowTransportActionTests extends OpenSearchTestCase {
             ArgumentCaptor<WorkflowResponse> responseCaptor = ArgumentCaptor.forClass(WorkflowResponse.class);
             verify(listener, times(1)).onResponse(responseCaptor.capture());
             assertEquals("UNKNOWN", responseCaptor.getValue().getWorkflowState().getState());
+            // The unknown state comes from the denied state check, not from a failed read.
+            verify(client, times(1)).get(argThat(r -> WORKFLOW_STATE_INDEX.equals(r.index())), any());
             verify(flowFrameworkIndicesHandler, never()).getWorkflowState(anyString(), nullable(String.class), any());
         } finally {
             running.onResponse(WorkflowData.EMPTY);
