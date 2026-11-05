@@ -252,7 +252,7 @@ public class FlowFrameworkIndicesHandler {
                                             pluginClient.admin()
                                                 .indices()
                                                 .updateSettings(updateSettingRequest, ActionListener.wrap(updateResponse -> {
-                                                    if (response.isAcknowledged()) {
+                                                    if (updateResponse.isAcknowledged()) {
                                                         indexMappingUpdated.get(indexName).set(true);
                                                         listener.onResponse(true);
                                                     } else {

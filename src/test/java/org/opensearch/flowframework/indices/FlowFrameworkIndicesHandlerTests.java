@@ -17,6 +17,8 @@ import org.opensearch.action.admin.indices.create.CreateIndexRequest;
 import org.opensearch.action.admin.indices.create.CreateIndexResponse;
 import org.opensearch.action.admin.indices.mapping.put.PutMappingAction;
 import org.opensearch.action.admin.indices.mapping.put.PutMappingRequest;
+import org.opensearch.action.admin.indices.settings.put.UpdateSettingsAction;
+import org.opensearch.action.admin.indices.settings.put.UpdateSettingsRequest;
 import org.opensearch.action.delete.DeleteRequest;
 import org.opensearch.action.delete.DeleteResponse;
 import org.opensearch.action.get.GetRequest;
@@ -84,6 +86,7 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -269,6 +272,59 @@ public class FlowFrameworkIndicesHandlerTests extends OpenSearchTestCase {
         );
         PutMappingRequest capturedRequest = putMappingRequestArgumentCaptor.getValue();
         assertEquals(index.getIndexName(), capturedRequest.indices()[0]);
+    }
+
+    public void testInitIndexIfAbsent_IndexExist_SettingsUpdated() {
+        ActionListener<Boolean> listener = updateMappingAndSettings(true);
+
+        verify(listener, times(1)).onResponse(true);
+        verify(listener, never()).onFailure(any());
+    }
+
+    public void testInitIndexIfAbsent_IndexExist_SettingsUpdateNotAcknowledged() {
+        ActionListener<Boolean> listener = updateMappingAndSettings(false);
+
+        ArgumentCaptor<Exception> exceptionCaptor = ArgumentCaptor.forClass(Exception.class);
+        verify(listener, times(1)).onFailure(exceptionCaptor.capture());
+        verify(listener, never()).onResponse(any());
+        assertEquals("Failed to update index setting for: " + GLOBAL_CONTEXT_INDEX, exceptionCaptor.getValue().getMessage());
+    }
+
+    /**
+     * Updates the mapping of an existing global context index at an old schema version, acknowledging the mapping
+     * update and answering the settings update as given.
+     *
+     * @param settingsAcknowledged whether the settings update is acknowledged
+     * @return the listener the handler reported to
+     */
+    private ActionListener<Boolean> updateMappingAndSettings(boolean settingsAcknowledged) {
+        FlowFrameworkIndex index = FlowFrameworkIndex.GLOBAL_CONTEXT;
+        ClusterState mockClusterState = mock(ClusterState.class);
+        Metadata mockMetadata = mock(Metadata.class);
+        when(clusterService.state()).thenReturn(mockClusterState);
+        when(mockClusterState.metadata()).thenReturn(mockMetadata);
+        when(mockClusterState.getMetadata()).thenReturn(mockMetadata);
+        when(mockMetadata.hasIndex(index.getIndexName())).thenReturn(true);
+        IndexMetadata mockIndexMetadata = mock(IndexMetadata.class);
+        when(mockMetadata.indices()).thenReturn(Map.of(index.getIndexName(), mockIndexMetadata));
+        MappingMetadata mockMappingMetadata = mock(MappingMetadata.class);
+        when(mockIndexMetadata.mapping()).thenReturn(mockMappingMetadata);
+        when(mockMappingMetadata.getSourceAsMap()).thenReturn(Map.of(META, Map.of(SCHEMA_VERSION_FIELD, 1)));
+        doAnswer(invocation -> {
+            ActionListener<AcknowledgedResponse> putMappingListener = invocation.getArgument(2);
+            putMappingListener.onResponse(new AcknowledgedResponse(true));
+            return null;
+        }).when(client).execute(eq(PutMappingAction.INSTANCE), any(PutMappingRequest.class), any());
+        doAnswer(invocation -> {
+            ActionListener<AcknowledgedResponse> updateSettingsListener = invocation.getArgument(2);
+            updateSettingsListener.onResponse(new AcknowledgedResponse(settingsAcknowledged));
+            return null;
+        }).when(client).execute(eq(UpdateSettingsAction.INSTANCE), any(UpdateSettingsRequest.class), any());
+
+        @SuppressWarnings("unchecked")
+        ActionListener<Boolean> listener = mock(ActionListener.class);
+        flowFrameworkIndicesHandler.initFlowFrameworkIndexIfAbsent(index, listener);
+        return listener;
     }
 
     public void testInitIndexIfAbsent_IndexExist_returnFalse() {
