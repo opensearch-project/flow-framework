@@ -28,12 +28,17 @@ import org.opensearch.common.settings.ClusterSettings;
 import org.opensearch.common.settings.Settings;
 import org.opensearch.common.unit.TimeValue;
 import org.opensearch.common.util.concurrent.ThreadContext;
+import org.opensearch.common.xcontent.XContentFactory;
+import org.opensearch.common.xcontent.json.JsonXContent;
 import org.opensearch.commons.ConfigConstants;
 import org.opensearch.core.action.ActionListener;
+import org.opensearch.core.common.bytes.BytesReference;
 import org.opensearch.core.index.shard.ShardId;
+import org.opensearch.core.rest.RestStatus;
 import org.opensearch.core.xcontent.NamedXContentRegistry;
 import org.opensearch.flowframework.TestHelpers;
 import org.opensearch.flowframework.common.FlowFrameworkSettings;
+import org.opensearch.flowframework.exception.FlowFrameworkException;
 import org.opensearch.flowframework.indices.FlowFrameworkIndicesHandler;
 import org.opensearch.flowframework.model.Template;
 import org.opensearch.flowframework.model.Workflow;
@@ -42,6 +47,8 @@ import org.opensearch.flowframework.model.WorkflowNode;
 import org.opensearch.flowframework.model.WorkflowState;
 import org.opensearch.flowframework.workflow.WorkflowProcessSorter;
 import org.opensearch.plugins.PluginsService;
+import org.opensearch.remote.metadata.client.GetDataObjectRequest;
+import org.opensearch.remote.metadata.client.GetDataObjectResponse;
 import org.opensearch.remote.metadata.client.SdkClient;
 import org.opensearch.remote.metadata.client.impl.SdkClientFactory;
 import org.opensearch.search.SearchHit;
@@ -61,12 +68,14 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 
 import org.mockito.ArgumentCaptor;
 import org.mockito.ArgumentMatchers;
 
 import static org.opensearch.action.DocWriteResponse.Result.UPDATED;
+import static org.opensearch.core.xcontent.ToXContent.EMPTY_PARAMS;
 import static org.opensearch.flowframework.TestHelpers.deprecatedSettingWarning;
 import static org.opensearch.flowframework.common.CommonValue.GLOBAL_CONTEXT_INDEX;
 import static org.opensearch.flowframework.common.CommonValue.UPDATE_WORKFLOW_FIELDS;
@@ -87,6 +96,7 @@ import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -595,6 +605,51 @@ public class CreateWorkflowTransportActionTests extends OpenSearchTestCase {
         verify(listener, times(1)).onResponse(responseCaptor.capture());
 
         assertEquals("1", responseCaptor.getValue().getWorkflowId());
+    }
+
+    public void testUpdateWorkflowReturnsNotFoundWhenTheTemplateIsGoneOnRead() throws IOException {
+        // A remote metadata store returns no parser for an absent document. The first read authorizes the update,
+        // the second finds the template gone.
+        GetResponse existing = TestHelpers.createGetResponse(template, "1", GLOBAL_CONTEXT_INDEX);
+        GetDataObjectResponse found = mock(GetDataObjectResponse.class);
+        when(found.parser()).thenReturn(
+            createParser(JsonXContent.jsonXContent, BytesReference.bytes(existing.toXContent(XContentFactory.jsonBuilder(), EMPTY_PARAMS)))
+        );
+        GetDataObjectResponse absent = mock(GetDataObjectResponse.class);
+        SdkClient remoteSdkClient = mock(SdkClient.class);
+        when(remoteSdkClient.getDataObjectAsync(any(GetDataObjectRequest.class))).thenReturn(
+            CompletableFuture.completedFuture(found),
+            CompletableFuture.completedFuture(absent)
+        );
+        CreateWorkflowTransportAction action = new CreateWorkflowTransportAction(
+            mock(TransportService.class),
+            mock(ActionFilters.class),
+            workflowProcessSorter,
+            flowFrameworkIndicesHandler,
+            flowFrameworkSettings,
+            client,
+            remoteSdkClient,
+            pluginsService,
+            clusterService,
+            xContentRegistry(),
+            Settings.EMPTY
+        );
+        @SuppressWarnings("unchecked")
+        ActionListener<WorkflowResponse> listener = mock(ActionListener.class);
+
+        action.doExecute(
+            mock(Task.class),
+            new WorkflowRequest("1", template, new String[] { "off" }, false, Collections.emptyMap(), false, null),
+            listener
+        );
+
+        ArgumentCaptor<Exception> exceptionCaptor = ArgumentCaptor.forClass(Exception.class);
+        verify(listener, times(1)).onFailure(exceptionCaptor.capture());
+        verify(listener, never()).onResponse(any());
+        FlowFrameworkException exception = (FlowFrameworkException) exceptionCaptor.getValue();
+        assertEquals(RestStatus.NOT_FOUND, exception.getRestStatus());
+        assertEquals("Failed to retrieve template (1) from global context.", exception.getMessage());
+        verify(remoteSdkClient, times(2)).getDataObjectAsync(any(GetDataObjectRequest.class));
     }
 
     public void testHandleReprovisionWithMinusOneTimeout() throws IOException {

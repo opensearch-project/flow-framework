@@ -401,7 +401,7 @@ public class CreateWorkflowTransportAction extends HandledTransportAction<Workfl
                 if (throwable == null) {
                     try {
                         GetResponse getResponse = r.parser() == null ? null : GetResponse.fromXContent(r.parser());
-                        if (getResponse.isExists()) {
+                        if (getResponse != null && getResponse.isExists()) {
                             handleWorkflowExists(request, templateWithUser, getResponse, waitForTimeCompletion, listener);
                         } else {
                             String errorMessage = ParameterizedMessageFactory.INSTANCE.newMessage(

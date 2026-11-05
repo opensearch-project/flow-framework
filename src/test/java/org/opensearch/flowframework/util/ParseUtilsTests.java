@@ -8,17 +8,24 @@
  */
 package org.opensearch.flowframework.util;
 
+import org.opensearch.cluster.service.ClusterService;
 import org.opensearch.common.xcontent.XContentFactory;
 import org.opensearch.commons.authuser.User;
+import org.opensearch.core.action.ActionListener;
 import org.opensearch.core.rest.RestStatus;
+import org.opensearch.core.xcontent.NamedXContentRegistry;
 import org.opensearch.core.xcontent.XContentBuilder;
 import org.opensearch.core.xcontent.XContentParser;
 import org.opensearch.core.xcontent.XContentParser.Token;
 import org.opensearch.flowframework.common.CommonValue;
 import org.opensearch.flowframework.exception.FlowFrameworkException;
+import org.opensearch.flowframework.transport.WorkflowResponse;
 import org.opensearch.flowframework.workflow.WorkflowData;
 import org.opensearch.ml.common.connector.ConnectorAction;
 import org.opensearch.ml.repackage.com.google.common.collect.ImmutableList;
+import org.opensearch.remote.metadata.client.GetDataObjectRequest;
+import org.opensearch.remote.metadata.client.GetDataObjectResponse;
+import org.opensearch.remote.metadata.client.SdkClient;
 import org.opensearch.search.builder.SearchSourceBuilder;
 import org.opensearch.test.OpenSearchTestCase;
 
@@ -29,8 +36,17 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.CompletableFuture;
+
+import org.mockito.ArgumentCaptor;
 
 import static org.opensearch.flowframework.util.ParseUtils.isAdmin;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 public class ParseUtilsTests extends OpenSearchTestCase {
     public void testResourceToStringToJson() throws IOException {
@@ -476,4 +492,50 @@ public class ParseUtilsTests extends OpenSearchTestCase {
         assertFalse(ParseUtils.checkUserPermissions(requestedUser, resourceUser, workflowId));
     }
 
+    public void testOnGetWorkflowResponseReturnsNotFoundForAnAbsentDocument() {
+        @SuppressWarnings("unchecked")
+        ActionListener<WorkflowResponse> listener = mock(ActionListener.class);
+        Runnable function = mock(Runnable.class);
+
+        ParseUtils.onGetWorkflowResponse(null, null, "1", null, true, false, false, listener, function, NamedXContentRegistry.EMPTY);
+
+        assertNotFound(listener);
+        verify(function, never()).run();
+    }
+
+    public void testGetWorkflowReturnsNotFoundWhenTheStoreReturnsNoParser() {
+        // A remote metadata store returns no parser for an absent document.
+        SdkClient sdkClient = mock(SdkClient.class);
+        when(sdkClient.getDataObjectAsync(any(GetDataObjectRequest.class))).thenReturn(
+            CompletableFuture.completedFuture(mock(GetDataObjectResponse.class))
+        );
+        @SuppressWarnings("unchecked")
+        ActionListener<WorkflowResponse> listener = mock(ActionListener.class);
+        Runnable function = mock(Runnable.class);
+
+        ParseUtils.getWorkflow(
+            null,
+            "1",
+            "tenant",
+            true,
+            false,
+            true,
+            listener,
+            function,
+            sdkClient,
+            mock(ClusterService.class),
+            NamedXContentRegistry.EMPTY
+        );
+
+        assertNotFound(listener);
+        verify(function, never()).run();
+    }
+
+    private static void assertNotFound(ActionListener<WorkflowResponse> listener) {
+        ArgumentCaptor<Exception> exceptionCaptor = ArgumentCaptor.forClass(Exception.class);
+        verify(listener, times(1)).onFailure(exceptionCaptor.capture());
+        FlowFrameworkException exception = (FlowFrameworkException) exceptionCaptor.getValue();
+        assertEquals(RestStatus.NOT_FOUND, exception.getRestStatus());
+        assertEquals("Failed to retrieve template (1) from global context.", exception.getMessage());
+    }
 }

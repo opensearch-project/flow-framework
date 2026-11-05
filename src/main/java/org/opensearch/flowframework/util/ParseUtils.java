@@ -532,7 +532,7 @@ public class ParseUtils {
 
     /**
      * Execute the function if user has permissions to access the resource
-     * @param response get response
+     * @param response get response, or null when the document is absent from a remote metadata store
      * @param requestUser the user to execute the request
      * @param workflowId workflow id
      * @param tenantId tenant id
@@ -555,7 +555,7 @@ public class ParseUtils {
         Runnable function,
         NamedXContentRegistry xContentRegistry
     ) {
-        if (response.isExists()) {
+        if (response != null && response.isExists()) {
             try (
                 XContentParser parser = RestHandlerUtils.createXContentParserFromRegistry(xContentRegistry, response.getSourceAsBytesRef())
             ) {
