@@ -399,20 +399,29 @@ public class CreateWorkflowTransportAction extends HandledTransportAction<Workfl
                 GetDataObjectRequest.builder().index(GLOBAL_CONTEXT_INDEX).id(workflowId).tenantId(tenantId).build()
             ).whenComplete((r, throwable) -> {
                 if (throwable == null) {
+                    GetResponse getResponse;
                     try {
-                        GetResponse getResponse = r.parser() == null ? null : GetResponse.fromXContent(r.parser());
-                        if (getResponse != null && getResponse.isExists()) {
-                            handleWorkflowExists(request, templateWithUser, getResponse, waitForTimeCompletion, listener);
-                        } else {
-                            String errorMessage = ParameterizedMessageFactory.INSTANCE.newMessage(
-                                "Failed to retrieve template ({}) from global context.",
-                                workflowId
-                            ).getFormattedMessage();
-                            logger.error(errorMessage);
-                            listener.onFailure(new FlowFrameworkException(errorMessage, RestStatus.NOT_FOUND));
-                        }
-                    } catch (IOException e) {
+                        getResponse = r.parser() == null ? null : GetResponse.fromXContent(r.parser());
+                    } catch (Exception e) {
                         logger.error("Failed to parse workflow getResponse: {}", workflowId, e);
+                        listener.onFailure(e);
+                        return;
+                    }
+                    if (getResponse == null || !getResponse.isExists()) {
+                        String errorMessage = ParameterizedMessageFactory.INSTANCE.newMessage(
+                            "Failed to retrieve template ({}) from global context.",
+                            workflowId
+                        ).getFormattedMessage();
+                        logger.error(errorMessage);
+                        listener.onFailure(new FlowFrameworkException(errorMessage, RestStatus.NOT_FOUND));
+                        return;
+                    }
+                    // Template.parse, reached through handleWorkflowExists, throws a FlowFrameworkException rather
+                    // than an IOException, and an escaping failure would leave the listener unnotified.
+                    try {
+                        handleWorkflowExists(request, templateWithUser, getResponse, waitForTimeCompletion, listener);
+                    } catch (Exception e) {
+                        logger.error("Failed to parse the stored template for workflow: {}", workflowId, e);
                         listener.onFailure(e);
                     }
                 } else {

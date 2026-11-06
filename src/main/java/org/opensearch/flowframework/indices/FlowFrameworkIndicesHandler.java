@@ -380,14 +380,16 @@ public class FlowFrameworkIndicesHandler {
             .build();
         sdkClient.putDataObjectAsync(request).whenComplete((r, throwable) -> {
             if (throwable == null) {
+                IndexResponse indexResponse;
                 try {
-                    IndexResponse indexResponse = IndexResponse.fromXContent(r.parser());
-                    listener.onResponse(indexResponse);
-                } catch (IOException e) {
+                    indexResponse = IndexResponse.fromXContent(r.parser());
+                } catch (Exception e) {
                     String errorMessage = "Failed to parse index response";
                     logger.error(errorMessage, e);
                     listener.onFailure(new FlowFrameworkException(errorMessage, INTERNAL_SERVER_ERROR));
+                    return;
                 }
+                listener.onResponse(indexResponse);
             } else {
                 Exception exception = SdkClientUtils.unwrapAndConvertToException(throwable);
                 String errorMessage = "Failed to index template in global context index";
@@ -453,13 +455,15 @@ public class FlowFrameworkIndicesHandler {
                 .build();
             sdkClient.putDataObjectAsync(putRequest).whenComplete((r, throwable) -> {
                 if (throwable == null) {
+                    IndexResponse indexResponse;
                     try {
-                        IndexResponse indexResponse = IndexResponse.fromXContent(r.parser());
-                        listener.onResponse(indexResponse);
-                    } catch (IOException e) {
+                        indexResponse = IndexResponse.fromXContent(r.parser());
+                    } catch (Exception e) {
                         logger.error("Failed to parse index response", e);
                         listener.onFailure(new FlowFrameworkException("Failed to parse index response", INTERNAL_SERVER_ERROR));
+                        return;
                     }
+                    listener.onResponse(indexResponse);
                 } else {
                     Exception exception = SdkClientUtils.unwrapAndConvertToException(throwable);
                     String errorMessage = "Failed to put state index document";

@@ -652,6 +652,63 @@ public class CreateWorkflowTransportActionTests extends OpenSearchTestCase {
         verify(remoteSdkClient, times(2)).getDataObjectAsync(any(GetDataObjectRequest.class));
     }
 
+    public void testUpdateWorkflowReportsAnUnparsableStoredTemplate() throws IOException {
+        // The first read authorizes the update, the second returns a template carrying a field this version does
+        // not recognize, as a newer node could write.
+        GetResponse existing = TestHelpers.createGetResponse(template, "1", GLOBAL_CONTEXT_INDEX);
+        GetDataObjectResponse found = mock(GetDataObjectResponse.class);
+        when(found.parser()).thenReturn(
+            createParser(JsonXContent.jsonXContent, BytesReference.bytes(existing.toXContent(XContentFactory.jsonBuilder(), EMPTY_PARAMS)))
+        );
+        GetResponse unparsable = TestHelpers.createGetResponse(
+            (builder, params) -> builder.startObject().field("name", "test").field("unrecognized_field", 1).endObject(),
+            "1",
+            GLOBAL_CONTEXT_INDEX
+        );
+        GetDataObjectResponse malformed = mock(GetDataObjectResponse.class);
+        when(malformed.parser()).thenReturn(
+            createParser(
+                JsonXContent.jsonXContent,
+                BytesReference.bytes(unparsable.toXContent(XContentFactory.jsonBuilder(), EMPTY_PARAMS))
+            )
+        );
+        SdkClient remoteSdkClient = mock(SdkClient.class);
+        when(remoteSdkClient.getDataObjectAsync(any(GetDataObjectRequest.class))).thenReturn(
+            CompletableFuture.completedFuture(found),
+            CompletableFuture.completedFuture(malformed)
+        );
+        CreateWorkflowTransportAction action = new CreateWorkflowTransportAction(
+            mock(TransportService.class),
+            mock(ActionFilters.class),
+            workflowProcessSorter,
+            flowFrameworkIndicesHandler,
+            flowFrameworkSettings,
+            client,
+            remoteSdkClient,
+            pluginsService,
+            clusterService,
+            xContentRegistry(),
+            Settings.EMPTY
+        );
+        @SuppressWarnings("unchecked")
+        ActionListener<WorkflowResponse> listener = mock(ActionListener.class);
+
+        // Template.parse throws a FlowFrameworkException, which is not an IOException. Before this was reported
+        // through the listener, it escaped the callback and the request received no response at all.
+        action.doExecute(
+            mock(Task.class),
+            new WorkflowRequest("1", template, new String[] { "off" }, false, Collections.emptyMap(), false, null),
+            listener
+        );
+
+        ArgumentCaptor<Exception> exceptionCaptor = ArgumentCaptor.forClass(Exception.class);
+        verify(listener, times(1)).onFailure(exceptionCaptor.capture());
+        verify(listener, never()).onResponse(any());
+        FlowFrameworkException exception = (FlowFrameworkException) exceptionCaptor.getValue();
+        assertEquals(RestStatus.BAD_REQUEST, exception.getRestStatus());
+        assertEquals("Unable to parse field [unrecognized_field] in a template object.", exception.getMessage());
+    }
+
     public void testHandleReprovisionWithMinusOneTimeout() throws IOException {
         @SuppressWarnings("unchecked")
         ActionListener<WorkflowResponse> listener = mock(ActionListener.class);
