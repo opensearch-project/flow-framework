@@ -15,7 +15,6 @@ import org.opensearch.OpenSearchStatusException;
 import org.opensearch.action.get.GetResponse;
 import org.opensearch.cluster.service.ClusterService;
 import org.opensearch.common.Nullable;
-import org.opensearch.common.util.concurrent.ThreadContext;
 import org.opensearch.commons.authuser.User;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.core.rest.RestStatus;
@@ -32,7 +31,6 @@ import org.opensearch.remote.metadata.client.PutDataObjectRequest;
 import org.opensearch.remote.metadata.client.SdkClient;
 import org.opensearch.remote.metadata.common.SdkClientUtils;
 import org.opensearch.search.fetch.subphase.FetchSourceContext;
-import org.opensearch.transport.client.Client;
 
 import javax.crypto.spec.SecretKeySpec;
 
@@ -81,7 +79,6 @@ public class EncryptorUtils {
     private static final String DEFAULT_TENANT_ID = "";
 
     private final ClusterService clusterService;
-    private final Client client;
     private final SdkClient sdkClient;
     private final Map<String, String> tenantMasterKeys;
     private final NamedXContentRegistry xContentRegistry;
@@ -90,21 +87,18 @@ public class EncryptorUtils {
     /**
      * Instantiates a new EncryptorUtils object
      * @param clusterService the cluster service
-     * @param client the node client
      * @param sdkClient the Multitenant Client
      * @param xContentRegistry the OpenSearch XContent Registry
      * @param multiTenancyEnabled whether multitenancy is enabled
      */
     public EncryptorUtils(
         ClusterService clusterService,
-        Client client,
         SdkClient sdkClient,
         NamedXContentRegistry xContentRegistry,
         boolean multiTenancyEnabled
     ) {
         this.tenantMasterKeys = new ConcurrentHashMap<>();
         this.clusterService = clusterService;
-        this.client = client;
         this.sdkClient = sdkClient;
         this.xContentRegistry = xContentRegistry;
         this.multiTenancyEnabled = multiTenancyEnabled;
@@ -334,36 +328,33 @@ public class EncryptorUtils {
             .overwriteIfExists(false)
             .dataObject(config)
             .build();
-        try (ThreadContext.StoredContext context = client.threadPool().getThreadContext().stashContext()) {
-            sdkClient.putDataObjectAsync(putRequest).whenComplete((r, throwable) -> {
-                context.restore();
-                if (throwable == null) {
-                    // Set generated key to master
-                    logger.info("Config has been initialized successfully");
-                    setMasterKey(tenantId, config.masterKey());
-                    listener.onResponse(true);
+        sdkClient.putDataObjectAsync(putRequest).whenComplete((r, throwable) -> {
+            if (throwable == null) {
+                // Set generated key to master
+                logger.info("Config has been initialized successfully");
+                setMasterKey(tenantId, config.masterKey());
+                listener.onResponse(true);
+            } else {
+                Exception exception = SdkClientUtils.unwrapAndConvertToException(throwable);
+                // In a race condition another thread may have already set the key
+                // In this case we ignore config.masterKey(), and fetch and cache existing key
+                if (exception instanceof OpenSearchStatusException
+                    && ((OpenSearchStatusException) exception).status() == RestStatus.CONFLICT) {
+                    logger.debug("Concurrent master key creation detected, retrying to get existing key");
+                    cacheMasterKeyFromConfigIndex(tenantId).handle((v, ex) -> {
+                        if (ex == null) {
+                            listener.onResponse(true);
+                        } else {
+                            listener.onFailure(SdkClientUtils.unwrapAndConvertToException(ex));
+                        }
+                        return null;
+                    });
                 } else {
-                    Exception exception = SdkClientUtils.unwrapAndConvertToException(throwable);
-                    // In a race condition another thread may have already set the key
-                    // In this case we ignore config.masterKey(), and fetch and cache existing key
-                    if (exception instanceof OpenSearchStatusException
-                        && ((OpenSearchStatusException) exception).status() == RestStatus.CONFLICT) {
-                        logger.debug("Concurrent master key creation detected, retrying to get existing key");
-                        cacheMasterKeyFromConfigIndex(tenantId).handle((v, ex) -> {
-                            if (ex == null) {
-                                listener.onResponse(true);
-                            } else {
-                                listener.onFailure(SdkClientUtils.unwrapAndConvertToException(ex));
-                            }
-                            return null;
-                        });
-                    } else {
-                        logger.error("Failed to index new master key in config for tenant id {}", tenantId, exception);
-                        listener.onFailure(exception);
-                    }
+                    logger.error("Failed to index new master key in config for tenant id {}", tenantId, exception);
+                    listener.onFailure(exception);
                 }
-            });
-        }
+            }
+        });
     }
 
     /**
@@ -389,54 +380,51 @@ public class EncryptorUtils {
     private CompletableFuture<Void> cacheMasterKeyFromConfigIndex(String tenantId) {
         // This method assumes the config index must exist
         final CompletableFuture<Void> resultFuture = new CompletableFuture<>();
-        try (ThreadContext.StoredContext context = client.threadPool().getThreadContext().stashContext()) {
-            FetchSourceContext fetchSourceContext = new FetchSourceContext(true);
-            String masterKeyId = tenantId == null ? MASTER_KEY : MASTER_KEY + "_" + hashString(tenantId);
-            sdkClient.getDataObjectAsync(
-                GetDataObjectRequest.builder()
-                    .index(CONFIG_INDEX)
-                    .id(masterKeyId)
-                    .tenantId(tenantId)
-                    .fetchSourceContext(fetchSourceContext)
-                    .build()
-            ).whenComplete((r, throwable) -> {
-                context.restore();
-                if (throwable == null) {
-                    try {
-                        GetResponse response = r.parser() == null ? null : GetResponse.fromXContent(r.parser());
-                        if (response != null && response.isExists()) {
-                            try (
-                                XContentParser parser = ParseUtils.createXContentParserFromRegistry(
-                                    xContentRegistry,
-                                    response.getSourceAsBytesRef()
-                                )
-                            ) {
-                                ensureExpectedToken(XContentParser.Token.START_OBJECT, parser.nextToken(), parser);
-                                Config config = Config.parse(parser);
-                                setMasterKey(tenantId, config.masterKey());
-                                resultFuture.complete(null);
-                            }
-                        } else {
-                            resultFuture.completeExceptionally(
-                                new FlowFrameworkException("Master key has not been initialized in config index", RestStatus.NOT_FOUND)
-                            );
+        FetchSourceContext fetchSourceContext = new FetchSourceContext(true);
+        String masterKeyId = tenantId == null ? MASTER_KEY : MASTER_KEY + "_" + hashString(tenantId);
+        sdkClient.getDataObjectAsync(
+            GetDataObjectRequest.builder()
+                .index(CONFIG_INDEX)
+                .id(masterKeyId)
+                .tenantId(tenantId)
+                .fetchSourceContext(fetchSourceContext)
+                .build()
+        ).whenComplete((r, throwable) -> {
+            if (throwable == null) {
+                try {
+                    GetResponse response = r.parser() == null ? null : GetResponse.fromXContent(r.parser());
+                    if (response != null && response.isExists()) {
+                        try (
+                            XContentParser parser = ParseUtils.createXContentParserFromRegistry(
+                                xContentRegistry,
+                                response.getSourceAsBytesRef()
+                            )
+                        ) {
+                            ensureExpectedToken(XContentParser.Token.START_OBJECT, parser.nextToken(), parser);
+                            Config config = Config.parse(parser);
+                            setMasterKey(tenantId, config.masterKey());
+                            resultFuture.complete(null);
                         }
-                    } catch (IOException e) {
-                        logger.error("Failed to parse config index getResponse", e);
+                    } else {
                         resultFuture.completeExceptionally(
-                            new FlowFrameworkException("Failed to parse config index getResponse", RestStatus.INTERNAL_SERVER_ERROR)
+                            new FlowFrameworkException("Master key has not been initialized in config index", RestStatus.NOT_FOUND)
                         );
                     }
-                } else {
-                    Exception exception = SdkClientUtils.unwrapAndConvertToException(throwable);
-                    logger.error("Failed to get master key from config index", exception);
+                } catch (IOException e) {
+                    logger.error("Failed to parse config index getResponse", e);
                     resultFuture.completeExceptionally(
-                        new FlowFrameworkException("Failed to get master key from config index", ExceptionsHelper.status(exception))
+                        new FlowFrameworkException("Failed to parse config index getResponse", RestStatus.INTERNAL_SERVER_ERROR)
                     );
                 }
-            });
-            return resultFuture;
-        }
+            } else {
+                Exception exception = SdkClientUtils.unwrapAndConvertToException(throwable);
+                logger.error("Failed to get master key from config index", exception);
+                resultFuture.completeExceptionally(
+                    new FlowFrameworkException("Failed to get master key from config index", ExceptionsHelper.status(exception))
+                );
+            }
+        });
+        return resultFuture;
     }
 
     private String hashString(String input) {

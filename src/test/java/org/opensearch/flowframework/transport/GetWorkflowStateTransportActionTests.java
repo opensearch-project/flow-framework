@@ -11,16 +11,21 @@ package org.opensearch.flowframework.transport;
 import org.opensearch.action.get.GetRequest;
 import org.opensearch.action.get.GetResponse;
 import org.opensearch.action.support.ActionFilters;
+import org.opensearch.cluster.ClusterState;
+import org.opensearch.cluster.metadata.Metadata;
 import org.opensearch.cluster.service.ClusterService;
 import org.opensearch.common.io.stream.BytesStreamOutput;
 import org.opensearch.common.settings.ClusterSettings;
 import org.opensearch.common.settings.Settings;
 import org.opensearch.common.util.concurrent.ThreadContext;
 import org.opensearch.common.xcontent.XContentFactory;
+import org.opensearch.commons.ConfigConstants;
+import org.opensearch.commons.authuser.User;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.core.common.bytes.BytesReference;
 import org.opensearch.core.common.io.stream.NamedWriteableAwareStreamInput;
 import org.opensearch.core.common.io.stream.StreamInput;
+import org.opensearch.core.rest.RestStatus;
 import org.opensearch.core.xcontent.NamedXContentRegistry;
 import org.opensearch.core.xcontent.ToXContent;
 import org.opensearch.core.xcontent.XContentBuilder;
@@ -30,6 +35,7 @@ import org.opensearch.flowframework.exception.FlowFrameworkException;
 import org.opensearch.flowframework.indices.FlowFrameworkIndicesHandler;
 import org.opensearch.flowframework.model.WorkflowState;
 import org.opensearch.flowframework.util.EncryptorUtils;
+import org.opensearch.flowframework.util.PluginClient;
 import org.opensearch.index.IndexNotFoundException;
 import org.opensearch.index.get.GetResult;
 import org.opensearch.remote.metadata.client.SdkClient;
@@ -46,12 +52,15 @@ import java.time.Instant;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
 
+import static org.opensearch.flowframework.TestHelpers.deprecatedSettingWarning;
 import static org.opensearch.flowframework.common.CommonValue.GLOBAL_CONTEXT_INDEX;
+import static org.opensearch.flowframework.common.CommonValue.WORKFLOW_STATE_INDEX;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
@@ -86,9 +95,9 @@ public class GetWorkflowStateTransportActionTests extends OpenSearchTestCase {
             Collections.unmodifiableSet(new HashSet<>(Arrays.asList(FlowFrameworkSettings.FILTER_BY_BACKEND_ROLES)))
         );
         when(clusterService.getClusterSettings()).thenReturn(clusterSettings);
-        this.encryptorUtils = new EncryptorUtils(mock(ClusterService.class), client, sdkClient, xContentRegistry, false);
+        this.encryptorUtils = new EncryptorUtils(mock(ClusterService.class), sdkClient, xContentRegistry, false);
         this.flowFrameworkIndicesHandler = spy(
-            new FlowFrameworkIndicesHandler(client, sdkClient, clusterService, encryptorUtils, xContentRegistry, false)
+            new FlowFrameworkIndicesHandler(new PluginClient(client), sdkClient, clusterService, encryptorUtils, xContentRegistry, false)
         );
 
         this.getWorkflowStateTransportAction = new GetWorkflowStateTransportAction(
@@ -241,4 +250,76 @@ public class GetWorkflowStateTransportActionTests extends OpenSearchTestCase {
         assertEquals("Failed to get workflow status of: " + workflowId, responseCaptor.getValue().getMessage());
     }
 
+    public void testGetWorkflowStateReturnsTheStateWithTheRequestedFields() {
+        WorkflowState state = WorkflowState.builder()
+            .workflowId("1")
+            .state("COMPLETED")
+            .user(new User("creator", List.of("role-a"), List.of(), List.of()))
+            .build();
+        stubStateDocument(state);
+
+        for (boolean all : new boolean[] { true, false }) {
+            @SuppressWarnings("unchecked")
+            ActionListener<GetWorkflowStateResponse> listener = mock(ActionListener.class);
+            getWorkflowStateTransportAction.doExecute(task, new GetWorkflowStateRequest("1", all, null), listener);
+
+            ArgumentCaptor<GetWorkflowStateResponse> responseCaptor = ArgumentCaptor.forClass(GetWorkflowStateResponse.class);
+            verify(listener, times(1)).onResponse(responseCaptor.capture());
+            assertEquals("COMPLETED", responseCaptor.getValue().getWorkflowState().getState());
+            // Only a request for all fields returns the stored user.
+            assertEquals(all, responseCaptor.getValue().getWorkflowState().getUser() != null);
+        }
+    }
+
+    public void testGetWorkflowStateDeniedWhenBackendRolesDoNotMatchTheState() {
+        Settings settings = Settings.builder().put(FlowFrameworkSettings.FILTER_BY_BACKEND_ROLES.getKey(), true).build();
+        ClusterService clusterService = mock(ClusterService.class);
+        when(clusterService.getClusterSettings()).thenReturn(
+            TestHelpers.clusterSetting(settings, FlowFrameworkSettings.FILTER_BY_BACKEND_ROLES)
+        );
+        ClusterState clusterState = mock(ClusterState.class);
+        Metadata metadata = mock(Metadata.class);
+        when(clusterService.state()).thenReturn(clusterState);
+        when(clusterState.metadata()).thenReturn(metadata);
+        when(metadata.hasIndex(WORKFLOW_STATE_INDEX)).thenReturn(true);
+        client.threadPool()
+            .getThreadContext()
+            .putTransient(ConfigConstants.OPENSEARCH_SECURITY_USER_INFO_THREAD_CONTEXT, "alice|role-a|engineering");
+        GetWorkflowStateTransportAction action = new GetWorkflowStateTransportAction(
+            mock(TransportService.class),
+            mock(ActionFilters.class),
+            flowFrameworkIndicesHandler,
+            flowFrameworkSettings,
+            client,
+            sdkClient,
+            xContentRegistry(),
+            clusterService,
+            settings
+        );
+        allowedWarnings(deprecatedSettingWarning(FlowFrameworkSettings.FILTER_BY_BACKEND_ROLES));
+        stubStateDocument(
+            WorkflowState.builder()
+                .workflowId("1")
+                .state("COMPLETED")
+                .user(new User("creator", List.of("role-b"), List.of(), List.of()))
+                .build()
+        );
+        @SuppressWarnings("unchecked")
+        ActionListener<GetWorkflowStateResponse> listener = mock(ActionListener.class);
+
+        action.doExecute(task, new GetWorkflowStateRequest("1", true, null), listener);
+
+        ArgumentCaptor<Exception> exceptionCaptor = ArgumentCaptor.forClass(Exception.class);
+        verify(listener, times(1)).onFailure(exceptionCaptor.capture());
+        assertEquals(RestStatus.FORBIDDEN, ((FlowFrameworkException) exceptionCaptor.getValue()).getRestStatus());
+        verify(flowFrameworkIndicesHandler, never()).getWorkflowState(any(), any(), any());
+    }
+
+    private void stubStateDocument(WorkflowState state) {
+        doAnswer(invocation -> {
+            ActionListener<GetResponse> responseListener = invocation.getArgument(1);
+            responseListener.onResponse(TestHelpers.createGetResponse(state, "1", WORKFLOW_STATE_INDEX));
+            return null;
+        }).when(client).get(any(GetRequest.class), any());
+    }
 }

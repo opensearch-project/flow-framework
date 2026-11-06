@@ -8,59 +8,19 @@
  */
 package org.opensearch.flowframework.util;
 
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
-import org.opensearch.ExceptionsHelper;
-import org.opensearch.action.ActionRequest;
-import org.opensearch.action.ActionType;
-import org.opensearch.common.util.concurrent.ThreadContext;
-import org.opensearch.core.action.ActionListener;
-import org.opensearch.core.action.ActionResponse;
-import org.opensearch.identity.Subject;
 import org.opensearch.transport.client.Client;
-import org.opensearch.transport.client.FilterClient;
 
 /**
- * A special client for executing transport actions as this plugin's system subject.
+ * Flow Framework's client that runs transport actions as this plugin's system subject.
  */
-public class PluginClient extends FilterClient {
-
-    private static final Logger logger = LogManager.getLogger(PluginClient.class);
-
-    private Subject subject;
+public final class PluginClient extends org.opensearch.commons.client.PluginClient {
 
     /**
-     * Constructor for PluginClient
-     * @param client the underlying client to wrap
+     * Wraps a client so its actions run as the plugin subject, which is assigned later.
+     *
+     * @param client the client whose actions this wraps
      */
     public PluginClient(Client client) {
         super(client);
-    }
-
-    /**
-     * Set the subject to use for executing transport actions.
-     * @param subject the subject to use
-     */
-    public void setSubject(Subject subject) {
-        this.subject = subject;
-    }
-
-    @Override
-    protected <Request extends ActionRequest, Response extends ActionResponse> void doExecute(
-        ActionType<Response> action,
-        Request request,
-        ActionListener<Response> listener
-    ) {
-        if (subject == null) {
-            throw new IllegalStateException("PluginClient is not initialized.");
-        }
-        try (ThreadContext.StoredContext ctx = threadPool().getThreadContext().stashContext()) {
-            subject.runAs(() -> {
-                logger.info("Running transport action with subject: {}", subject.getPrincipal().getName());
-                super.doExecute(action, request, ActionListener.runBefore(listener, ctx::restore));
-            });
-        } catch (Exception e) {
-            throw ExceptionsHelper.convertToRuntime(e);
-        }
     }
 }

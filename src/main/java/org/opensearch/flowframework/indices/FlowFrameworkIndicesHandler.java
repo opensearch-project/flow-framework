@@ -26,8 +26,6 @@ import org.opensearch.action.index.IndexResponse;
 import org.opensearch.action.update.UpdateResponse;
 import org.opensearch.cluster.metadata.IndexMetadata;
 import org.opensearch.cluster.service.ClusterService;
-import org.opensearch.common.util.concurrent.ThreadContext;
-import org.opensearch.common.util.concurrent.ThreadContext.StoredContext;
 import org.opensearch.common.xcontent.XContentType;
 import org.opensearch.commons.authuser.User;
 import org.opensearch.core.action.ActionListener;
@@ -43,15 +41,16 @@ import org.opensearch.flowframework.model.Template;
 import org.opensearch.flowframework.model.WorkflowState;
 import org.opensearch.flowframework.util.EncryptorUtils;
 import org.opensearch.flowframework.util.ParseUtils;
+import org.opensearch.flowframework.util.PluginClient;
 import org.opensearch.flowframework.workflow.WorkflowData;
 import org.opensearch.index.IndexNotFoundException;
+import org.opensearch.index.get.GetResult;
 import org.opensearch.remote.metadata.client.DeleteDataObjectRequest;
 import org.opensearch.remote.metadata.client.GetDataObjectRequest;
 import org.opensearch.remote.metadata.client.PutDataObjectRequest;
 import org.opensearch.remote.metadata.client.SdkClient;
 import org.opensearch.remote.metadata.client.UpdateDataObjectRequest;
 import org.opensearch.remote.metadata.common.SdkClientUtils;
-import org.opensearch.transport.client.Client;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -74,6 +73,8 @@ import static org.opensearch.flowframework.common.CommonValue.SCHEMA_VERSION_FIE
 import static org.opensearch.flowframework.common.CommonValue.WORKFLOW_STATE_INDEX;
 import static org.opensearch.flowframework.common.CommonValue.WORKFLOW_STATE_INDEX_MAPPING;
 import static org.opensearch.flowframework.common.WorkflowResources.getResourceByWorkflowStep;
+import static org.opensearch.index.seqno.SequenceNumbers.UNASSIGNED_PRIMARY_TERM;
+import static org.opensearch.index.seqno.SequenceNumbers.UNASSIGNED_SEQ_NO;
 
 /**
  * A handler for operations on system indices in the AI Flow Framework plugin
@@ -81,7 +82,7 @@ import static org.opensearch.flowframework.common.WorkflowResources.getResourceB
  */
 public class FlowFrameworkIndicesHandler {
     private static final Logger logger = LogManager.getLogger(FlowFrameworkIndicesHandler.class);
-    private final Client client;
+    private final PluginClient pluginClient;
     private final SdkClient sdkClient;
     private final ClusterService clusterService;
     private final EncryptorUtils encryptorUtils;
@@ -101,7 +102,7 @@ public class FlowFrameworkIndicesHandler {
 
     /**
      * constructor
-     * @param client the open search client
+     * @param pluginClient the client that runs as the plugin's own subject
      * @param sdkClient the remote metadata client
      * @param clusterService ClusterService
      * @param encryptorUtils encryption utility
@@ -109,14 +110,14 @@ public class FlowFrameworkIndicesHandler {
      * @param multiTenancyEnabled whether multitenancy is enabled
      */
     public FlowFrameworkIndicesHandler(
-        Client client,
+        PluginClient pluginClient,
         SdkClient sdkClient,
         ClusterService clusterService,
         EncryptorUtils encryptorUtils,
         NamedXContentRegistry xContentRegistry,
         boolean multiTenancyEnabled
     ) {
-        this.client = client;
+        this.pluginClient = pluginClient;
         this.sdkClient = sdkClient;
         this.clusterService = clusterService;
         this.encryptorUtils = encryptorUtils;
@@ -213,38 +214,37 @@ public class FlowFrameworkIndicesHandler {
         String indexName = index.getIndexName();
         String mapping = index.getMapping();
 
-        try (ThreadContext.StoredContext threadContext = client.threadPool().getThreadContext().stashContext()) {
-            ActionListener<Boolean> internalListener = ActionListener.runBefore(listener, threadContext::restore);
+        try {
             if (!FlowFrameworkIndicesHandler.doesIndexExistMultitenant(clusterService, indexName, multiTenancyEnabled)) {
                 ActionListener<CreateIndexResponse> actionListener = ActionListener.wrap(r -> {
                     if (r.isAcknowledged()) {
                         logger.info("create index: {}", indexName);
-                        internalListener.onResponse(true);
+                        listener.onResponse(true);
                     } else {
-                        internalListener.onResponse(false);
+                        listener.onResponse(false);
                     }
                 }, e -> {
                     if (e instanceof ResourceAlreadyExistsException
                         || (e instanceof OpenSearchWrapperException && e.getCause() instanceof ResourceAlreadyExistsException)) {
                         logger.info("Index {} already created by another request", indexName);
-                        internalListener.onResponse(true);
+                        listener.onResponse(true);
                     } else {
                         String errorMessage = ParameterizedMessageFactory.INSTANCE.newMessage("Failed to create index {}", indexName)
                             .getFormattedMessage();
                         logger.error(errorMessage, e);
-                        internalListener.onFailure(new FlowFrameworkException(errorMessage, ExceptionsHelper.status(e)));
+                        listener.onFailure(new FlowFrameworkException(errorMessage, ExceptionsHelper.status(e)));
                     }
                 });
                 CreateIndexRequest request = new CreateIndexRequest(indexName).mapping("{\"_doc\":" + mapping + "}")
                     .settings(indexCreationSettings);
-                client.admin().indices().create(request, actionListener);
+                pluginClient.admin().indices().create(request, actionListener);
             } else {
                 logger.debug("index: {} is already created", indexName);
                 if (indexMappingUpdated.containsKey(indexName) && !indexMappingUpdated.get(indexName).get()) {
                     shouldUpdateIndex(indexName, index.getVersion(), ActionListener.wrap(r -> {
                         if (r) {
                             // return true if update index is needed
-                            client.admin()
+                            pluginClient.admin()
                                 .indices()
                                 .putMapping(
                                     new PutMappingRequest().indices(indexName).source(mapping, XContentType.JSON),
@@ -252,14 +252,14 @@ public class FlowFrameworkIndicesHandler {
                                         if (response.isAcknowledged()) {
                                             UpdateSettingsRequest updateSettingRequest = new UpdateSettingsRequest();
                                             updateSettingRequest.indices(indexName).settings(indexUpdateSettings);
-                                            client.admin()
+                                            pluginClient.admin()
                                                 .indices()
                                                 .updateSettings(updateSettingRequest, ActionListener.wrap(updateResponse -> {
-                                                    if (response.isAcknowledged()) {
+                                                    if (updateResponse.isAcknowledged()) {
                                                         indexMappingUpdated.get(indexName).set(true);
-                                                        internalListener.onResponse(true);
+                                                        listener.onResponse(true);
                                                     } else {
-                                                        internalListener.onFailure(
+                                                        listener.onFailure(
                                                             new FlowFrameworkException(
                                                                 "Failed to update index setting for: " + indexName,
                                                                 INTERNAL_SERVER_ERROR
@@ -272,12 +272,12 @@ public class FlowFrameworkIndicesHandler {
                                                         indexName
                                                     ).getFormattedMessage();
                                                     logger.error(errorMessage, exception);
-                                                    internalListener.onFailure(
+                                                    listener.onFailure(
                                                         new FlowFrameworkException(errorMessage, ExceptionsHelper.status(exception))
                                                     );
                                                 }));
                                         } else {
-                                            internalListener.onFailure(
+                                            listener.onFailure(
                                                 new FlowFrameworkException("Failed to update index: " + indexName, INTERNAL_SERVER_ERROR)
                                             );
                                         }
@@ -287,15 +287,13 @@ public class FlowFrameworkIndicesHandler {
                                             indexName
                                         ).getFormattedMessage();
                                         logger.error(errorMessage, exception);
-                                        internalListener.onFailure(
-                                            new FlowFrameworkException(errorMessage, ExceptionsHelper.status(exception))
-                                        );
+                                        listener.onFailure(new FlowFrameworkException(errorMessage, ExceptionsHelper.status(exception)));
                                     })
                                 );
                         } else {
                             // no need to update index if it does not exist or the version is already up-to-date.
                             indexMappingUpdated.get(indexName).set(true);
-                            internalListener.onResponse(true);
+                            listener.onResponse(true);
                         }
                     }, e -> {
                         String errorMessage = ParameterizedMessageFactory.INSTANCE.newMessage(
@@ -303,11 +301,11 @@ public class FlowFrameworkIndicesHandler {
                             indexName
                         ).getFormattedMessage();
                         logger.error(errorMessage, e);
-                        internalListener.onFailure(new FlowFrameworkException(errorMessage, ExceptionsHelper.status(e)));
+                        listener.onFailure(new FlowFrameworkException(errorMessage, ExceptionsHelper.status(e)));
                     }));
                 } else {
                     // No need to update index if it's already updated.
-                    internalListener.onResponse(true);
+                    listener.onResponse(true);
                 }
             }
         } catch (Exception e) {
@@ -380,26 +378,23 @@ public class FlowFrameworkIndicesHandler {
             .tenantId(template.getTenantId())
             .dataObject(encryptorUtils.encryptTemplateCredentials(template))
             .build();
-        try (ThreadContext.StoredContext context = client.threadPool().getThreadContext().stashContext()) {
-            sdkClient.putDataObjectAsync(request).whenComplete((r, throwable) -> {
-                context.restore();
-                if (throwable == null) {
-                    try {
-                        IndexResponse indexResponse = IndexResponse.fromXContent(r.parser());
-                        listener.onResponse(indexResponse);
-                    } catch (IOException e) {
-                        String errorMessage = "Failed to parse index response";
-                        logger.error(errorMessage, e);
-                        listener.onFailure(new FlowFrameworkException(errorMessage, INTERNAL_SERVER_ERROR));
-                    }
-                } else {
-                    Exception exception = SdkClientUtils.unwrapAndConvertToException(throwable);
-                    String errorMessage = "Failed to index template in global context index";
-                    logger.error(errorMessage, exception);
-                    listener.onFailure(new FlowFrameworkException(errorMessage, ExceptionsHelper.status(exception)));
+        sdkClient.putDataObjectAsync(request).whenComplete((r, throwable) -> {
+            if (throwable == null) {
+                try {
+                    IndexResponse indexResponse = IndexResponse.fromXContent(r.parser());
+                    listener.onResponse(indexResponse);
+                } catch (IOException e) {
+                    String errorMessage = "Failed to parse index response";
+                    logger.error(errorMessage, e);
+                    listener.onFailure(new FlowFrameworkException(errorMessage, INTERNAL_SERVER_ERROR));
                 }
-            });
-        }
+            } else {
+                Exception exception = SdkClientUtils.unwrapAndConvertToException(throwable);
+                String errorMessage = "Failed to index template in global context index";
+                logger.error(errorMessage, exception);
+                listener.onFailure(new FlowFrameworkException(errorMessage, ExceptionsHelper.status(exception)));
+            }
+        });
     }
 
     /**
@@ -456,25 +451,22 @@ public class FlowFrameworkIndicesHandler {
                 .tenantId(tenantId)
                 .dataObject(state)
                 .build();
-            try (ThreadContext.StoredContext context = client.threadPool().getThreadContext().stashContext()) {
-                sdkClient.putDataObjectAsync(putRequest).whenComplete((r, throwable) -> {
-                    context.restore();
-                    if (throwable == null) {
-                        try {
-                            IndexResponse indexResponse = IndexResponse.fromXContent(r.parser());
-                            listener.onResponse(indexResponse);
-                        } catch (IOException e) {
-                            logger.error("Failed to parse index response", e);
-                            listener.onFailure(new FlowFrameworkException("Failed to parse index response", INTERNAL_SERVER_ERROR));
-                        }
-                    } else {
-                        Exception exception = SdkClientUtils.unwrapAndConvertToException(throwable);
-                        String errorMessage = "Failed to put state index document";
-                        logger.error(errorMessage, exception);
-                        listener.onFailure(new FlowFrameworkException(errorMessage, ExceptionsHelper.status(exception)));
+            sdkClient.putDataObjectAsync(putRequest).whenComplete((r, throwable) -> {
+                if (throwable == null) {
+                    try {
+                        IndexResponse indexResponse = IndexResponse.fromXContent(r.parser());
+                        listener.onResponse(indexResponse);
+                    } catch (IOException e) {
+                        logger.error("Failed to parse index response", e);
+                        listener.onFailure(new FlowFrameworkException("Failed to parse index response", INTERNAL_SERVER_ERROR));
                     }
-                });
-            }
+                } else {
+                    Exception exception = SdkClientUtils.unwrapAndConvertToException(throwable);
+                    String errorMessage = "Failed to put state index document";
+                    logger.error(errorMessage, exception);
+                    listener.onFailure(new FlowFrameworkException(errorMessage, ExceptionsHelper.status(exception)));
+                }
+            });
         }, e -> {
             String errorMessage = "Failed to create workflow_state index";
             logger.error(errorMessage, e);
@@ -553,19 +545,12 @@ public class FlowFrameworkIndicesHandler {
         Consumer<Boolean> booleanResultConsumer,
         ActionListener<T> listener
     ) {
-        try (ThreadContext.StoredContext context = client.threadPool().getThreadContext().stashContext()) {
-            getTemplate(
-                documentId,
-                tenantId,
-                ActionListener.wrap(response -> booleanResultConsumer.accept(response.isExists()), exception -> {
-                    String errorMessage = ParameterizedMessageFactory.INSTANCE.newMessage("Failed to get template {}", documentId)
-                        .getFormattedMessage();
-                    logger.error(errorMessage);
-                    listener.onFailure(new FlowFrameworkException(errorMessage, ExceptionsHelper.status(exception)));
-                }),
-                context
-            );
-        }
+        getTemplate(documentId, tenantId, ActionListener.wrap(response -> booleanResultConsumer.accept(response.isExists()), exception -> {
+            String errorMessage = ParameterizedMessageFactory.INSTANCE.newMessage("Failed to get template {}", documentId)
+                .getFormattedMessage();
+            logger.error(errorMessage);
+            listener.onFailure(new FlowFrameworkException(errorMessage, ExceptionsHelper.status(exception)));
+        }));
     }
 
     /**
@@ -574,24 +559,39 @@ public class FlowFrameworkIndicesHandler {
      * @param documentId document id
      * @param tenantId tenant id
      * @param listener action listener
-     * @param context the thread context
      */
-    public void getTemplate(String documentId, String tenantId, ActionListener<GetResponse> listener, StoredContext context) {
+    public void getTemplate(String documentId, String tenantId, ActionListener<GetResponse> listener) {
         GetDataObjectRequest getRequest = GetDataObjectRequest.builder()
             .index(GLOBAL_CONTEXT_INDEX)
             .id(documentId)
             .tenantId(tenantId)
             .build();
         sdkClient.getDataObjectAsync(getRequest).whenComplete((r, throwable) -> {
-            context.restore();
             if (throwable == null) {
+                GetResponse getResponse;
                 try {
-                    GetResponse getResponse = GetResponse.fromXContent(r.parser());
-                    listener.onResponse(getResponse);
-                } catch (IOException e) {
+                    // A remote metadata store returns no parser for an absent document
+                    getResponse = r.parser() == null
+                        ? new GetResponse(
+                            new GetResult(
+                                GLOBAL_CONTEXT_INDEX,
+                                documentId,
+                                UNASSIGNED_SEQ_NO,
+                                UNASSIGNED_PRIMARY_TERM,
+                                -1,
+                                false,
+                                null,
+                                null,
+                                null
+                            )
+                        )
+                        : GetResponse.fromXContent(r.parser());
+                } catch (Exception e) {
                     logger.error("Failed to parse get response", e);
                     listener.onFailure(new FlowFrameworkException("Failed to parse get response", INTERNAL_SERVER_ERROR));
+                    return;
                 }
+                listener.onResponse(getResponse);
             } else {
                 Exception exception = SdkClientUtils.unwrapAndConvertToException(throwable);
                 String errorMessage = ParameterizedMessageFactory.INSTANCE.newMessage("Failed to get template {}", documentId)
@@ -608,19 +608,17 @@ public class FlowFrameworkIndicesHandler {
      * @param workflowId workflow id
      * @param tenantId tenant id
      * @param listener action listener
-     * @param context the thread context
      */
-    public void getWorkflowState(String workflowId, String tenantId, ActionListener<WorkflowState> listener, StoredContext context) {
+    public void getWorkflowState(String workflowId, String tenantId, ActionListener<WorkflowState> listener) {
         GetDataObjectRequest getRequest = GetDataObjectRequest.builder()
             .index(WORKFLOW_STATE_INDEX)
             .id(workflowId)
             .tenantId(tenantId)
             .build();
         sdkClient.getDataObjectAsync(getRequest).whenComplete((r, throwable) -> {
-            context.restore();
             if (throwable == null) {
                 try {
-                    GetResponse getResponse = GetResponse.fromXContent(r.parser());
+                    GetResponse getResponse = r.parser() == null ? null : GetResponse.fromXContent(r.parser());
                     if (getResponse != null && getResponse.isExists()) {
                         try (
                             XContentParser parser = ParseUtils.createXContentParserFromRegistry(
@@ -679,18 +677,16 @@ public class FlowFrameworkIndicesHandler {
         Consumer<Optional<ProvisioningProgress>> provisioningProgressConsumer,
         ActionListener<T> listener
     ) {
-        try (ThreadContext.StoredContext context = client.threadPool().getThreadContext().stashContext()) {
-            getWorkflowState(workflowId, tenantId, ActionListener.wrap(workflowState -> {
-                provisioningProgressConsumer.accept(Optional.of(ProvisioningProgress.valueOf(workflowState.getProvisioningProgress())));
-            }, exception -> {
-                if (exception instanceof FlowFrameworkException
-                    && ((FlowFrameworkException) exception).getRestStatus() == RestStatus.NOT_FOUND) {
-                    provisioningProgressConsumer.accept(Optional.empty());
-                } else {
-                    listener.onFailure(exception);
-                }
-            }), context);
-        }
+        getWorkflowState(workflowId, tenantId, ActionListener.wrap(workflowState -> {
+            provisioningProgressConsumer.accept(Optional.of(ProvisioningProgress.valueOf(workflowState.getProvisioningProgress())));
+        }, exception -> {
+            if (exception instanceof FlowFrameworkException
+                && ((FlowFrameworkException) exception).getRestStatus() == RestStatus.NOT_FOUND) {
+                provisioningProgressConsumer.accept(Optional.empty());
+            } else {
+                listener.onFailure(exception);
+            }
+        }));
     }
 
     /**
@@ -710,21 +706,19 @@ public class FlowFrameworkIndicesHandler {
         Consumer<Boolean> canDeleteStateConsumer,
         ActionListener<T> listener
     ) {
-        try (ThreadContext.StoredContext context = client.threadPool().getThreadContext().stashContext()) {
-            getWorkflowState(workflowId, tenantId, ActionListener.wrap(workflowState -> {
-                canDeleteStateConsumer.accept(
-                    (clearStatus || workflowState.resourcesCreated().isEmpty())
-                        && !ProvisioningProgress.IN_PROGRESS.equals(ProvisioningProgress.valueOf(workflowState.getProvisioningProgress()))
-                );
-            }, exception -> {
-                if (exception instanceof FlowFrameworkException
-                    && ((FlowFrameworkException) exception).getRestStatus() == RestStatus.NOT_FOUND) {
-                    canDeleteStateConsumer.accept(Boolean.FALSE);
-                } else {
-                    listener.onFailure(exception);
-                }
-            }), context);
-        }
+        getWorkflowState(workflowId, tenantId, ActionListener.wrap(workflowState -> {
+            canDeleteStateConsumer.accept(
+                (clearStatus || workflowState.resourcesCreated().isEmpty())
+                    && !ProvisioningProgress.IN_PROGRESS.equals(ProvisioningProgress.valueOf(workflowState.getProvisioningProgress()))
+            );
+        }, exception -> {
+            if (exception instanceof FlowFrameworkException
+                && ((FlowFrameworkException) exception).getRestStatus() == RestStatus.NOT_FOUND) {
+                canDeleteStateConsumer.accept(Boolean.FALSE);
+            } else {
+                listener.onFailure(exception);
+            }
+        }));
     }
 
     /**
@@ -749,7 +743,7 @@ public class FlowFrameworkIndicesHandler {
             logger.error(errorMessage);
             listener.onFailure(new FlowFrameworkException(errorMessage, RestStatus.BAD_REQUEST));
         } else {
-            try (ThreadContext.StoredContext context = client.threadPool().getThreadContext().stashContext()) {
+            try {
                 UpdateDataObjectRequest updateRequest = UpdateDataObjectRequest.builder()
                     .index(WORKFLOW_STATE_INDEX)
                     .id(documentId)
@@ -758,7 +752,6 @@ public class FlowFrameworkIndicesHandler {
                     .retryOnConflict(RETRIES)
                     .build();
                 sdkClient.updateDataObjectAsync(updateRequest).whenComplete((r, throwable) -> {
-                    context.restore();
                     if (throwable == null) {
                         UpdateResponse response;
                         try {
@@ -816,7 +809,7 @@ public class FlowFrameworkIndicesHandler {
             logger.error(errorMessage);
             listener.onFailure(new FlowFrameworkException(errorMessage, RestStatus.BAD_REQUEST));
         } else {
-            try (ThreadContext.StoredContext context = client.threadPool().getThreadContext().stashContext()) {
+            try {
                 Map<String, Object> updatedContent = new HashMap<>(updatedFields);
                 UpdateDataObjectRequest updateRequest = UpdateDataObjectRequest.builder()
                     .index(WORKFLOW_STATE_INDEX)
@@ -827,7 +820,6 @@ public class FlowFrameworkIndicesHandler {
                     .build();
                 // TODO: decide what condition can be considered as an update conflict and add retry strategy
                 sdkClient.updateDataObjectAsync(updateRequest).whenComplete((r, throwable) -> {
-                    context.restore();
                     if (throwable == null) {
                         try {
                             UpdateResponse response = UpdateResponse.fromXContent(r.parser());
@@ -878,37 +870,32 @@ public class FlowFrameworkIndicesHandler {
             logger.error(errorMessage);
             listener.onFailure(new FlowFrameworkException(errorMessage, RestStatus.BAD_REQUEST));
         } else {
-            try (ThreadContext.StoredContext context = client.threadPool().getThreadContext().stashContext()) {
-                DeleteDataObjectRequest deleteRequest = DeleteDataObjectRequest.builder()
-                    .index(WORKFLOW_STATE_INDEX)
-                    .id(documentId)
-                    .tenantId(tenantId)
-                    .build();
-                sdkClient.deleteDataObjectAsync(deleteRequest).whenComplete((r, throwable) -> {
-                    context.restore();
-                    if (throwable == null) {
-                        try {
-                            DeleteResponse response = DeleteResponse.fromXContent(r.parser());
-                            logger.info("Deleted workflow state doc: {}", documentId);
-                            listener.onResponse(response);
-                        } catch (Exception e) {
-                            logger.error("Failed to parse delete response", e);
-                            listener.onFailure(
-                                new FlowFrameworkException("Failed to parse delete response", RestStatus.INTERNAL_SERVER_ERROR)
-                            );
-                        }
-                    } else {
-                        Exception exception = SdkClientUtils.unwrapAndConvertToException(throwable);
-                        String errorMessage = ParameterizedMessageFactory.INSTANCE.newMessage(
-                            "Failed to delete {} entry : {}",
-                            WORKFLOW_STATE_INDEX,
-                            documentId
-                        ).getFormattedMessage();
-                        logger.error(errorMessage, exception);
-                        listener.onFailure(new FlowFrameworkException(errorMessage, ExceptionsHelper.status(exception)));
+            DeleteDataObjectRequest deleteRequest = DeleteDataObjectRequest.builder()
+                .index(WORKFLOW_STATE_INDEX)
+                .id(documentId)
+                .tenantId(tenantId)
+                .build();
+            sdkClient.deleteDataObjectAsync(deleteRequest).whenComplete((r, throwable) -> {
+                if (throwable == null) {
+                    try {
+                        DeleteResponse response = DeleteResponse.fromXContent(r.parser());
+                        logger.info("Deleted workflow state doc: {}", documentId);
+                        listener.onResponse(response);
+                    } catch (Exception e) {
+                        logger.error("Failed to parse delete response", e);
+                        listener.onFailure(new FlowFrameworkException("Failed to parse delete response", RestStatus.INTERNAL_SERVER_ERROR));
                     }
-                });
-            }
+                } else {
+                    Exception exception = SdkClientUtils.unwrapAndConvertToException(throwable);
+                    String errorMessage = ParameterizedMessageFactory.INSTANCE.newMessage(
+                        "Failed to delete {} entry : {}",
+                        WORKFLOW_STATE_INDEX,
+                        documentId
+                    ).getFormattedMessage();
+                    logger.error(errorMessage, exception);
+                    listener.onFailure(new FlowFrameworkException(errorMessage, ExceptionsHelper.status(exception)));
+                }
+            });
         }
     }
 
@@ -935,16 +922,7 @@ public class FlowFrameworkIndicesHandler {
         }
         String resourceName = getResourceByWorkflowStep(workflowStepName);
         ResourceCreated newResource = new ResourceCreated(workflowStepName, nodeId, resourceName, resourceId);
-        try (ThreadContext.StoredContext context = client.threadPool().getThreadContext().stashContext()) {
-            getAndUpdateResourceInStateDocumentWithRetries(
-                workflowId,
-                tenantId,
-                newResource,
-                OpType.INDEX,
-                RETRIES,
-                ActionListener.runBefore(listener, context::restore)
-            );
-        }
+        getAndUpdateResourceInStateDocumentWithRetries(workflowId, tenantId, newResource, OpType.INDEX, RETRIES, listener);
     }
 
     /**
@@ -963,16 +941,7 @@ public class FlowFrameworkIndicesHandler {
         if (!validateStateIndexExists(workflowId, listener)) {
             return;
         }
-        try (ThreadContext.StoredContext context = client.threadPool().getThreadContext().stashContext()) {
-            getAndUpdateResourceInStateDocumentWithRetries(
-                workflowId,
-                tenantId,
-                resourceToDelete,
-                OpType.DELETE,
-                RETRIES,
-                ActionListener.runBefore(listener, context::restore)
-            );
-        }
+        getAndUpdateResourceInStateDocumentWithRetries(workflowId, tenantId, resourceToDelete, OpType.DELETE, RETRIES, listener);
     }
 
     private boolean validateStateIndexExists(String workflowId, ActionListener<WorkflowData> listener) {

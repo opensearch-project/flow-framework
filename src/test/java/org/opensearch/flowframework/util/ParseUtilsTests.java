@@ -8,18 +8,28 @@
  */
 package org.opensearch.flowframework.util;
 
+import org.opensearch.cluster.service.ClusterService;
 import org.opensearch.common.xcontent.XContentFactory;
 import org.opensearch.commons.authuser.User;
+import org.opensearch.core.action.ActionListener;
 import org.opensearch.core.rest.RestStatus;
+import org.opensearch.core.xcontent.NamedXContentRegistry;
 import org.opensearch.core.xcontent.XContentBuilder;
 import org.opensearch.core.xcontent.XContentParser;
 import org.opensearch.core.xcontent.XContentParser.Token;
 import org.opensearch.flowframework.common.CommonValue;
 import org.opensearch.flowframework.exception.FlowFrameworkException;
+import org.opensearch.flowframework.indices.FlowFrameworkIndicesHandler;
+import org.opensearch.flowframework.model.WorkflowState;
+import org.opensearch.flowframework.transport.WorkflowResponse;
 import org.opensearch.flowframework.workflow.WorkflowData;
 import org.opensearch.ml.common.connector.ConnectorAction;
 import org.opensearch.ml.repackage.com.google.common.collect.ImmutableList;
+import org.opensearch.remote.metadata.client.GetDataObjectRequest;
+import org.opensearch.remote.metadata.client.GetDataObjectResponse;
+import org.opensearch.remote.metadata.client.SdkClient;
 import org.opensearch.search.builder.SearchSourceBuilder;
+import org.opensearch.security.spi.resources.client.ResourceSharingClient;
 import org.opensearch.test.OpenSearchTestCase;
 
 import java.io.IOException;
@@ -29,8 +39,17 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.CompletableFuture;
+
+import org.mockito.ArgumentCaptor;
 
 import static org.opensearch.flowframework.util.ParseUtils.isAdmin;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 public class ParseUtilsTests extends OpenSearchTestCase {
     public void testResourceToStringToJson() throws IOException {
@@ -476,4 +495,112 @@ public class ParseUtilsTests extends OpenSearchTestCase {
         assertFalse(ParseUtils.checkUserPermissions(requestedUser, resourceUser, workflowId));
     }
 
+    public void testOnGetWorkflowResponseReturnsNotFoundForAnAbsentDocument() {
+        @SuppressWarnings("unchecked")
+        ActionListener<WorkflowResponse> listener = mock(ActionListener.class);
+        Runnable function = mock(Runnable.class);
+
+        ParseUtils.onGetWorkflowResponse(null, null, "1", null, true, false, false, listener, function, NamedXContentRegistry.EMPTY);
+
+        assertNotFound(listener);
+        verify(function, never()).run();
+    }
+
+    public void testGetWorkflowReturnsNotFoundWhenTheStoreReturnsNoParser() {
+        // A remote metadata store returns no parser for an absent document.
+        SdkClient sdkClient = mock(SdkClient.class);
+        when(sdkClient.getDataObjectAsync(any(GetDataObjectRequest.class))).thenReturn(
+            CompletableFuture.completedFuture(mock(GetDataObjectResponse.class))
+        );
+        @SuppressWarnings("unchecked")
+        ActionListener<WorkflowResponse> listener = mock(ActionListener.class);
+        Runnable function = mock(Runnable.class);
+
+        ParseUtils.getWorkflow(
+            null,
+            "1",
+            "tenant",
+            true,
+            false,
+            true,
+            listener,
+            function,
+            sdkClient,
+            mock(ClusterService.class),
+            NamedXContentRegistry.EMPTY
+        );
+
+        assertNotFound(listener);
+        verify(function, never()).run();
+    }
+
+    public void testGetWorkflowReportsAParseFailureThatIsNotAnIOException() throws IOException {
+        XContentParser parser = mock(XContentParser.class);
+        IllegalStateException parseFailure = new IllegalStateException("malformed response");
+        when(parser.nextToken()).thenThrow(parseFailure);
+        GetDataObjectResponse response = mock(GetDataObjectResponse.class);
+        when(response.parser()).thenReturn(parser);
+        SdkClient sdkClient = mock(SdkClient.class);
+        when(sdkClient.getDataObjectAsync(any(GetDataObjectRequest.class))).thenReturn(CompletableFuture.completedFuture(response));
+        @SuppressWarnings("unchecked")
+        ActionListener<WorkflowResponse> listener = mock(ActionListener.class);
+        Runnable function = mock(Runnable.class);
+
+        ParseUtils.getWorkflow(
+            null,
+            "1",
+            "tenant",
+            true,
+            false,
+            true,
+            listener,
+            function,
+            sdkClient,
+            mock(ClusterService.class),
+            NamedXContentRegistry.EMPTY
+        );
+
+        verify(listener, times(1)).onFailure(parseFailure);
+        verify(function, never()).run();
+    }
+
+    public void testGetWorkflowStateIfPermittedReadsDirectlyWhenResourceSharingCoversStates() {
+        ResourceSharingClient resourceSharingClient = mock(ResourceSharingClient.class);
+        when(resourceSharingClient.isFeatureEnabledForType(CommonValue.WORKFLOW_STATE_RESOURCE_TYPE)).thenReturn(true);
+        ResourceSharingClientAccessor.getInstance().setResourceSharingClient(resourceSharingClient);
+        try {
+            SdkClient sdkClient = mock(SdkClient.class);
+            FlowFrameworkIndicesHandler handler = mock(FlowFrameworkIndicesHandler.class);
+            @SuppressWarnings("unchecked")
+            ActionListener<WorkflowState> listener = mock(ActionListener.class);
+            User user = new User("alice", List.of("role-a"), List.of(), List.of());
+
+            ParseUtils.getWorkflowStateIfPermitted(
+                user,
+                "1",
+                "tenant",
+                true,
+                false,
+                handler,
+                listener,
+                sdkClient,
+                mock(ClusterService.class),
+                NamedXContentRegistry.EMPTY
+            );
+
+            // The state document is not fetched for a backend role check; it is read once.
+            verify(sdkClient, never()).getDataObjectAsync(any(GetDataObjectRequest.class));
+            verify(handler, times(1)).getWorkflowState("1", "tenant", listener);
+        } finally {
+            ResourceSharingClientAccessor.getInstance().setResourceSharingClient(null);
+        }
+    }
+
+    private static void assertNotFound(ActionListener<WorkflowResponse> listener) {
+        ArgumentCaptor<Exception> exceptionCaptor = ArgumentCaptor.forClass(Exception.class);
+        verify(listener, times(1)).onFailure(exceptionCaptor.capture());
+        FlowFrameworkException exception = (FlowFrameworkException) exceptionCaptor.getValue();
+        assertEquals(RestStatus.NOT_FOUND, exception.getRestStatus());
+        assertEquals("Failed to retrieve template (1) from global context.", exception.getMessage());
+    }
 }

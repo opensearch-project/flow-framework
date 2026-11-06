@@ -15,7 +15,6 @@ import org.opensearch.action.search.SearchResponse;
 import org.opensearch.cluster.service.ClusterService;
 import org.opensearch.common.settings.Setting;
 import org.opensearch.common.settings.Settings;
-import org.opensearch.common.util.concurrent.ThreadContext;
 import org.opensearch.commons.authuser.User;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.flowframework.exception.FlowFrameworkException;
@@ -74,11 +73,11 @@ public class SearchHandler {
     public void search(SearchRequest request, String tenantId, String resourceType, ActionListener<SearchResponse> actionListener) {
         // AccessController should take care of letting the user with right permission to view the workflow
         User user = ParseUtils.getUserContext(client);
-        try (ThreadContext.StoredContext context = client.threadPool().getThreadContext().stashContext()) {
+        try {
             logger.info("Searching workflows in global context");
             SearchSourceBuilder searchSourceBuilder = request.source();
             searchSourceBuilder.fetchSource(getSourceContext(user, searchSourceBuilder));
-            validateRole(request, tenantId, user, resourceType, actionListener, context);
+            validateRole(request, tenantId, user, resourceType, actionListener);
         } catch (Exception e) {
             logger.error("Failed to search workflows in global context", e);
             actionListener.onFailure(e);
@@ -92,32 +91,30 @@ public class SearchHandler {
      * @param user User
      * @param resourceType the resource type
      * @param listener ActionListener
-     * @param context ThreadContext
      */
     public void validateRole(
         SearchRequest request,
         String tenantId,
         User user,
         String resourceType,
-        ActionListener<SearchResponse> listener,
-        ThreadContext.StoredContext context
+        ActionListener<SearchResponse> listener
     ) {
         if (shouldUseResourceAuthz(resourceType)) {
             // When resource-sharing feature is enabled,
             // Search is handled DLS style in security plugin
-            doSearch(request, tenantId, ActionListener.runBefore(listener, context::restore));
+            doSearch(request, tenantId, listener);
         } else if (user == null || !filterByBackendRole || isAdmin(user)) {
             // Case 1: user == null when 1. Security is disabled. 2. When user is super-admin
             // Case 2: If Security is enabled and filter is disabled, proceed with search as
             // user is already authenticated to hit this API.
             // case 3: user is admin which means we don't have to check backend role filtering
-            doSearch(request, tenantId, ActionListener.runBefore(listener, context::restore));
+            doSearch(request, tenantId, listener);
         } else {
             // Security is enabled, filter is enabled and user isn't admin
             try {
                 ParseUtils.addUserBackendRolesFilter(user, request.source());
                 logger.debug("Filtering result by {}", user.getBackendRoles());
-                doSearch(request, tenantId, ActionListener.runBefore(listener, context::restore));
+                doSearch(request, tenantId, listener);
             } catch (Exception e) {
                 listener.onFailure(e);
             }

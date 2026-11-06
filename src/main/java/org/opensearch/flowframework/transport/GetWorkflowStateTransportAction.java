@@ -17,11 +17,9 @@ import org.opensearch.action.support.HandledTransportAction;
 import org.opensearch.cluster.service.ClusterService;
 import org.opensearch.common.inject.Inject;
 import org.opensearch.common.settings.Settings;
-import org.opensearch.common.util.concurrent.ThreadContext;
 import org.opensearch.commons.authuser.User;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.core.xcontent.NamedXContentRegistry;
-import org.opensearch.flowframework.common.CommonValue;
 import org.opensearch.flowframework.common.FlowFrameworkSettings;
 import org.opensearch.flowframework.exception.FlowFrameworkException;
 import org.opensearch.flowframework.indices.FlowFrameworkIndicesHandler;
@@ -33,8 +31,7 @@ import org.opensearch.transport.TransportService;
 import org.opensearch.transport.client.Client;
 
 import static org.opensearch.flowframework.common.FlowFrameworkSettings.FILTER_BY_BACKEND_ROLES;
-import static org.opensearch.flowframework.util.ParseUtils.resolveUserAndExecute;
-import static org.opensearch.flowframework.util.ParseUtils.verifyResourceAccessAndProcessRequest;
+import static org.opensearch.flowframework.util.ParseUtils.getWorkflowStateIfPermitted;
 
 //TODO: Currently we only get the workflow status but we should change to be able to get the
 // full template as well
@@ -98,25 +95,21 @@ public class GetWorkflowStateTransportAction extends HandledTransportAction<GetW
         String workflowId = request.getWorkflowId();
         User user = ParseUtils.getUserContext(client);
 
-        try (ThreadContext.StoredContext context = client.threadPool().getThreadContext().stashContext()) {
-
-            verifyResourceAccessAndProcessRequest(
-                CommonValue.WORKFLOW_STATE_RESOURCE_TYPE,
-                () -> executeGetWorkflowStateRequest(request, tenantId, listener, context),
-                () -> resolveUserAndExecute(
-                    user,
-                    workflowId,
-                    tenantId,
-                    filterByEnabled,
-                    true,
-                    flowFrameworkSettings.isMultiTenancyEnabled(),
-                    listener,
-                    () -> executeGetWorkflowStateRequest(request, tenantId, listener, context),
-                    client,
-                    sdkClient,
-                    clusterService,
-                    xContentRegistry
-                )
+        try {
+            getWorkflowStateIfPermitted(
+                user,
+                workflowId,
+                tenantId,
+                filterByEnabled,
+                flowFrameworkSettings.isMultiTenancyEnabled(),
+                flowFrameworkIndicesHandler,
+                ActionListener.wrap(
+                    workflowState -> listener.onResponse(new GetWorkflowStateResponse(workflowState, request.getAll())),
+                    listener::onFailure
+                ),
+                sdkClient,
+                clusterService,
+                xContentRegistry
             );
         } catch (Exception e) {
             String errorMessage = ParameterizedMessageFactory.INSTANCE.newMessage("Failed to get workflow: {}", workflowId)
@@ -124,25 +117,5 @@ public class GetWorkflowStateTransportAction extends HandledTransportAction<GetW
             logger.error(errorMessage, e);
             listener.onFailure(new FlowFrameworkException(errorMessage, ExceptionsHelper.status(e)));
         }
-    }
-
-    /**
-     * Execute the get workflow state request
-     * @param request the get workflow state request
-     * @param tenantId the tenant id
-     * @param listener the action listener
-     * @param context the thread context
-     */
-    private void executeGetWorkflowStateRequest(
-        GetWorkflowStateRequest request,
-        String tenantId,
-        ActionListener<GetWorkflowStateResponse> listener,
-        ThreadContext.StoredContext context
-    ) {
-        String workflowId = request.getWorkflowId();
-        flowFrameworkIndicesHandler.getWorkflowState(workflowId, tenantId, ActionListener.wrap(workflowState -> {
-            GetWorkflowStateResponse workflowStateResponse = new GetWorkflowStateResponse(workflowState, request.getAll());
-            listener.onResponse(workflowStateResponse);
-        }, listener::onFailure), context);
     }
 }

@@ -169,9 +169,9 @@ public class FlowFrameworkPlugin extends Plugin implements ActionPlugin, SystemI
             // TODO: Find a better thread pool or make one
             client.threadPool().executor(ThreadPool.Names.GENERIC)
         );
-        EncryptorUtils encryptorUtils = new EncryptorUtils(clusterService, client, sdkClient, xContentRegistry, multiTenancyEnabled);
+        EncryptorUtils encryptorUtils = new EncryptorUtils(clusterService, sdkClient, xContentRegistry, multiTenancyEnabled);
         FlowFrameworkIndicesHandler flowFrameworkIndicesHandler = new FlowFrameworkIndicesHandler(
-            client,
+            pluginClient,
             sdkClient,
             clusterService,
             encryptorUtils,
