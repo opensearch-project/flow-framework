@@ -13,6 +13,7 @@ Inspired from [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 - Move Yasson to the `org.eclipse.yasson` groupId so the JSON-B provider stays on the classpath
 - Report a failed settings update when updating a system index mapping ([#1500](https://github.com/opensearch-project/flow-framework/pull/1500))
 - Return 404 instead of failing when a remote metadata store has no workflow document ([#1500](https://github.com/opensearch-project/flow-framework/pull/1500))
+- Report a parse failure that is not an `IOException` to the listener instead of leaving the request unanswered ([#1524](https://github.com/opensearch-project/flow-framework/pull/1524))
 ### Infrastructure
 - Add SPDX license header checker and missing headers ([#1470](https://github.com/opensearch-project/flow-framework/pull/1470))
 ### Documentation
