@@ -3,24 +3,12 @@ All notable changes to this project are documented in this file.
 
 Inspired from [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
-## [Unreleased 3.x](https://github.com/opensearch-project/flow-framework/compare/3.7...HEAD)
+## [Unreleased 3.x](https://github.com/opensearch-project/flow-framework/compare/3.10...HEAD)
 ### Features
 ### Enhancements
 ### Bug Fixes
-- Declare `workflow_state` as a child resource of `workflow` so state documents inherit the workflow's access shares ([#1455](https://github.com/opensearch-project/flow-framework/pull/1455))
-- Add jackson-databind dependency required by swagger-parser ([#1406](https://github.com/opensearch-project/flow-framework/pull/1406))
-- Set number_of_shards to 1 for plugin system indices ([#1407](https://github.com/opensearch-project/flow-framework/pull/1407))
-- Move Yasson to the `org.eclipse.yasson` groupId so the JSON-B provider stays on the classpath
-- Report a failed settings update when updating a system index mapping ([#1500](https://github.com/opensearch-project/flow-framework/pull/1500))
-- Return 404 instead of failing when a remote metadata store has no workflow document ([#1500](https://github.com/opensearch-project/flow-framework/pull/1500))
 - Report a parse failure that is not an `IOException` to the listener instead of leaving the request unanswered ([#1524](https://github.com/opensearch-project/flow-framework/pull/1524))
 ### Infrastructure
-- Add SPDX license header checker and missing headers ([#1470](https://github.com/opensearch-project/flow-framework/pull/1470))
 ### Documentation
 ### Maintenance
-- Force jspecify to 1.0.1 to fix yamlRestTest dependency conflict ([#1492](https://github.com/opensearch-project/flow-framework/pull/1492))
-- Deprecate `plugins.flow_framework.filter_by_backend_roles`, targeting removal in 4.0 ([#1490](https://github.com/opensearch-project/flow-framework/pull/1490))
-- Rename the resource sharing feature flag to the non-experimental key ([#1482](https://github.com/opensearch-project/flow-framework/pull/1482))
 ### Refactoring
-- Reach the plugin's system indices through the plugin subject instead of stashing the thread context ([#1500](https://github.com/opensearch-project/flow-framework/pull/1500))
-- Make `PluginClient` a subclass of the shared `PluginClient` in common-utils ([#1500](https://github.com/opensearch-project/flow-framework/pull/1500))
