@@ -268,6 +268,33 @@ public class EncryptorUtilsTests extends OpenSearchTestCase {
         assertEquals(RestStatus.NOT_FOUND, ffException.status());
     }
 
+    public void testInitializeMasterKeyReportsAParseFailureThatIsNotAnIOException() throws IOException {
+        // reinitialize with blank master key
+        encryptorUtils = new EncryptorUtils(clusterService, sdkClient, xContentRegistry, false);
+
+        doAnswer(invocation -> {
+            // A config document carrying a field this version does not recognize, as a newer node could write
+            GetResponse getResponse = TestHelpers.createGetResponse(
+                (builder, params) -> builder.startObject().field(MASTER_KEY, testMasterKey).field("unrecognized_field", 1).endObject(),
+                MASTER_KEY,
+                CONFIG_INDEX
+            );
+            ActionListener<GetResponse> getRequestActionListener = invocation.getArgument(1);
+            getRequestActionListener.onResponse(getResponse);
+            return null;
+        }).when(client).get(any(GetRequest.class), any());
+
+        // Config.parse throws a FlowFrameworkException, which is not an IOException. Before this was reported
+        // through the future, it escaped the callback, the future was never completed, and this timed out.
+        CompletableFuture<Void> resultFuture = encryptorUtils.initializeMasterKeyIfAbsent(null);
+        ExecutionException executionException = assertThrows(ExecutionException.class, () -> resultFuture.get(5, TimeUnit.SECONDS));
+
+        FlowFrameworkException cause = (FlowFrameworkException) executionException.getCause();
+        assertEquals("Unable to parse field [unrecognized_field] in a config object.", cause.getMessage());
+        assertEquals(RestStatus.BAD_REQUEST, cause.status());
+        assertNull(encryptorUtils.getMasterKey(null));
+    }
+
     public void testEncryptDecryptTemplateCredential() {
         encryptorUtils.setMasterKey(null, testMasterKey);
 

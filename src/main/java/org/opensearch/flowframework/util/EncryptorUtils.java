@@ -34,7 +34,6 @@ import org.opensearch.search.fetch.subphase.FetchSourceContext;
 
 import javax.crypto.spec.SecretKeySpec;
 
-import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -391,31 +390,37 @@ public class EncryptorUtils {
                 .build()
         ).whenComplete((r, throwable) -> {
             if (throwable == null) {
+                String masterKey;
+                // Every parse failure is reported through the future. Config.parse throws a FlowFrameworkException,
+                // which is not an IOException, and an escaping failure would leave the future never completed.
                 try {
                     GetResponse response = r.parser() == null ? null : GetResponse.fromXContent(r.parser());
-                    if (response != null && response.isExists()) {
-                        try (
-                            XContentParser parser = ParseUtils.createXContentParserFromRegistry(
-                                xContentRegistry,
-                                response.getSourceAsBytesRef()
-                            )
-                        ) {
-                            ensureExpectedToken(XContentParser.Token.START_OBJECT, parser.nextToken(), parser);
-                            Config config = Config.parse(parser);
-                            setMasterKey(tenantId, config.masterKey());
-                            resultFuture.complete(null);
-                        }
-                    } else {
+                    if (response == null || !response.isExists()) {
                         resultFuture.completeExceptionally(
                             new FlowFrameworkException("Master key has not been initialized in config index", RestStatus.NOT_FOUND)
                         );
+                        return;
                     }
-                } catch (IOException e) {
+                    try (
+                        XContentParser parser = ParseUtils.createXContentParserFromRegistry(
+                            xContentRegistry,
+                            response.getSourceAsBytesRef()
+                        )
+                    ) {
+                        ensureExpectedToken(XContentParser.Token.START_OBJECT, parser.nextToken(), parser);
+                        masterKey = Config.parse(parser).masterKey();
+                    }
+                } catch (Exception e) {
                     logger.error("Failed to parse config index getResponse", e);
                     resultFuture.completeExceptionally(
-                        new FlowFrameworkException("Failed to parse config index getResponse", RestStatus.INTERNAL_SERVER_ERROR)
+                        e instanceof FlowFrameworkException
+                            ? e
+                            : new FlowFrameworkException("Failed to parse config index getResponse", RestStatus.INTERNAL_SERVER_ERROR)
                     );
+                    return;
                 }
+                setMasterKey(tenantId, masterKey);
+                resultFuture.complete(null);
             } else {
                 Exception exception = SdkClientUtils.unwrapAndConvertToException(throwable);
                 logger.error("Failed to get master key from config index", exception);
