@@ -35,11 +35,14 @@ import org.opensearch.common.xcontent.XContentFactory;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.core.common.bytes.BytesReference;
 import org.opensearch.core.index.shard.ShardId;
+import org.opensearch.core.rest.RestStatus;
 import org.opensearch.core.xcontent.NamedXContentRegistry;
 import org.opensearch.core.xcontent.ToXContentObject;
 import org.opensearch.core.xcontent.XContentBuilder;
+import org.opensearch.core.xcontent.XContentParser;
 import org.opensearch.flowframework.TestHelpers;
 import org.opensearch.flowframework.common.WorkflowResources;
+import org.opensearch.flowframework.exception.FlowFrameworkException;
 import org.opensearch.flowframework.model.ProvisioningProgress;
 import org.opensearch.flowframework.model.ResourceCreated;
 import org.opensearch.flowframework.model.Template;
@@ -51,6 +54,8 @@ import org.opensearch.flowframework.workflow.CreateIndexStep;
 import org.opensearch.flowframework.workflow.WorkflowData;
 import org.opensearch.index.engine.VersionConflictEngineException;
 import org.opensearch.index.get.GetResult;
+import org.opensearch.remote.metadata.client.PutDataObjectRequest;
+import org.opensearch.remote.metadata.client.PutDataObjectResponse;
 import org.opensearch.remote.metadata.client.SdkClient;
 import org.opensearch.remote.metadata.client.impl.SdkClientFactory;
 import org.opensearch.test.OpenSearchTestCase;
@@ -63,6 +68,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Consumer;
 
@@ -76,6 +82,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -260,6 +267,56 @@ public class FlowFrameworkIndicesHandlerTests extends OpenSearchTestCase {
         verify(indicesAdminClient, times(1)).putMapping(putMappingRequestArgumentCaptor.capture(), listenerCaptor.capture());
         PutMappingRequest capturedRequest = putMappingRequestArgumentCaptor.getValue();
         assertEquals(index.getIndexName(), capturedRequest.indices()[0]);
+    }
+
+    public void testPutTemplateReportsAnUnparsableIndexResponse() {
+        when(encryptorUtils.encryptTemplateCredentials(any())).thenReturn(template);
+        FlowFrameworkIndicesHandler handler = handlerOverUnparsablePutResponse();
+        @SuppressWarnings("unchecked")
+        ActionListener<IndexResponse> listener = mock(ActionListener.class);
+
+        handler.putTemplateToGlobalContext(template, listener);
+
+        assertParseFailureReported(listener);
+    }
+
+    public void testPutInitialStateReportsAnUnparsableIndexResponse() {
+        FlowFrameworkIndicesHandler handler = handlerOverUnparsablePutResponse();
+        @SuppressWarnings("unchecked")
+        ActionListener<IndexResponse> listener = mock(ActionListener.class);
+
+        handler.putInitialStateToWorkflowState("1", null, TestHelpers.randomUser(), listener);
+
+        assertParseFailureReported(listener);
+    }
+
+    /**
+     * Builds a handler over a remote metadata store whose put response cannot be parsed. A parse failure that is
+     * not an IOException used to escape the callback and leave the listener unnotified.
+     */
+    private FlowFrameworkIndicesHandler handlerOverUnparsablePutResponse() {
+        XContentParser parser = mock(XContentParser.class);
+        try {
+            when(parser.nextToken()).thenThrow(new IllegalStateException("malformed index response"));
+        } catch (IOException e) {
+            throw new AssertionError(e);
+        }
+        PutDataObjectResponse putResponse = mock(PutDataObjectResponse.class);
+        when(putResponse.parser()).thenReturn(parser);
+        SdkClient remoteSdkClient = mock(SdkClient.class);
+        when(remoteSdkClient.putDataObjectAsync(any(PutDataObjectRequest.class))).thenReturn(
+            CompletableFuture.completedFuture(putResponse)
+        );
+        return new FlowFrameworkIndicesHandler(client, remoteSdkClient, clusterService, encryptorUtils, xContentRegistry(), true);
+    }
+
+    private void assertParseFailureReported(ActionListener<IndexResponse> listener) {
+        ArgumentCaptor<Exception> exceptionCaptor = ArgumentCaptor.forClass(Exception.class);
+        verify(listener, times(1)).onFailure(exceptionCaptor.capture());
+        verify(listener, never()).onResponse(any());
+        FlowFrameworkException exception = (FlowFrameworkException) exceptionCaptor.getValue();
+        assertEquals(RestStatus.INTERNAL_SERVER_ERROR, exception.getRestStatus());
+        assertEquals("Failed to parse index response", exception.getMessage());
     }
 
     public void testInitIndexIfAbsent_IndexExist_returnFalse() {
