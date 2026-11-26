@@ -38,6 +38,12 @@ public class DeleteConnectorStep implements WorkflowStep {
 
     /** The name of this step, used as a key in the template and the {@link WorkflowStepFactory} */
     public static final String NAME = "delete_connector";
+    /** Required input keys **/
+    public static final Set<String> REQUIRED_INPUTS = Set.of(CONNECTOR_ID);
+    /** Optional input keys */
+    public static final Set<String> OPTIONAL_INPUTS = Collections.emptySet();
+    /** Provided output keys */
+    public static final Set<String> PROVIDED_OUTPUTS = Set.of(CONNECTOR_ID);
 
     /**
      * Instantiate this class
@@ -58,13 +64,10 @@ public class DeleteConnectorStep implements WorkflowStep {
     ) {
         PlainActionFuture<WorkflowData> deleteConnectorFuture = PlainActionFuture.newFuture();
 
-        Set<String> requiredKeys = Set.of(CONNECTOR_ID);
-        Set<String> optionalKeys = Collections.emptySet();
-
         try {
             Map<String, Object> inputs = ParseUtils.getInputsFromPreviousSteps(
-                requiredKeys,
-                optionalKeys,
+                REQUIRED_INPUTS,
+                OPTIONAL_INPUTS,
                 currentNodeInputs,
                 outputs,
                 previousNodeInputs,
